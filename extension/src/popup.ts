@@ -90,6 +90,7 @@ const store = {
 const shell = createWalletShell({
   host,
   surface: "extension",
+  onAccount: () => void openAccount(),
   menu: [
     { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
     { label: "Open the ATLAS desk", icon: "external", run: () => openUrl(ATLAS_DESK_URL) },
@@ -265,15 +266,6 @@ shell.panels.glossary.append(
 
 const toolsStatus = el("p", "fine");
 toolsStatus.setAttribute("role", "status");
-const debugToken = document.createElement("input");
-debugToken.type = "password";
-debugToken.id = "debug-token";
-debugToken.placeholder = "App Check debug token";
-debugToken.autocomplete = "off";
-debugToken.spellcheck = false;
-debugToken.addEventListener("change", () => void store.set({ appCheckDebugToken: debugToken.value.trim() }));
-const debugLabel = el("label", "field-label", "Cloud fallback token");
-debugLabel.htmlFor = "debug-token";
 const themeSlot = el("div");
 const version = hasChrome ? chrome.runtime.getManifest().version : "preview";
 const settingsHead = el("div", "panel-title");
@@ -288,10 +280,11 @@ shell.panels.settings.append(
     toolsStatus,
   ]),
   group("AI", [
-    el("p", "fine", "Explanations run on this device first with Gemini Nano. If Chrome does not have it, Firebase AI Logic answers in the cloud."),
-    debugLabel,
-    debugToken,
-    el("p", "fine", "The reCAPTCHA key does not cover extension pages, so cloud fallback needs a registered App Check debug token once."),
+    el("p", "fine", "Explanations run on this device first with Gemini Nano. If Chrome does not have it, Gemini answers in the cloud through Firebase AI Logic, via the ATLAS Explain web app with App Check in front. No setup needed."),
+  ]),
+  group("Account", [
+    el("p", "fine", "Sign in on atlas-explain.web.app in this Chrome profile and the extension uses the same account."),
+    row("user", "Account and sign-in", () => void openAccount()),
   ]),
   group("Privacy", [el("p", "fine", EXTENSION_PRIVACY_NOTE), el("p", "fine", LOCAL_ATLAS_PERMISSION_NOTE)]),
   group("About", [el("p", "fine", `ATLAS Explain ${version} · Apache-2.0 · ${SHORTCUT_HINT}`), row("external", "Open the web app", () => openUrl(EXPLAIN_WEB_URL))]),
@@ -334,7 +327,6 @@ async function boot(): Promise<void> {
     applyTheme(choice);
     void store.set({ theme: choice });
   }));
-  if (typeof stored.appCheckDebugToken === "string") debugToken.value = stored.appCheckDebugToken;
   history = parseHistory(stored.history);
   learned = parseLearned(stored.learned);
   if (!hasChrome) {
@@ -410,11 +402,10 @@ async function run(options: RunOptions): Promise<void> {
 
   const context = toPageContext(raw);
   const built = buildExtensionPrompt({ context, question: options.followUp ?? (options.highlight ? "" : question.value) });
-  const token = debugToken.value.trim() || null;
 
   // Entitlements come from Remote Config. Firebase loads only now, never when the popup opens.
   const cloudModule = navigator.onLine ? await import("./cloud").catch(() => null) : null;
-  const settingsNow = cloudModule ? await cloudModule.loadExtensionSettings(token) : parseRemoteSettings({}).settings;
+  const settingsNow = cloudModule ? await cloudModule.loadExtensionSettings() : parseRemoteSettings({}).settings;
   if (options.highlight && !extensionHighlightAllowed({
     billingEnabled: settingsNow.billingEnabled,
     plan: "free",
@@ -439,7 +430,7 @@ async function run(options: RunOptions): Promise<void> {
 
   showResult(loadingCard(2));
   try {
-    const cloud = await withDeadline(cloudModule.explainInCloud(built.prompt, token), EXPLAIN_DEADLINE_MS, "The answer took too long.");
+    const cloud = await withDeadline(cloudModule.explainInCloud(built.prompt), EXPLAIN_DEADLINE_MS, "The answer took too long.");
     if (cloud.blocked) {
       setBusy(false);
       showResult(limitCard(cloud.text));
@@ -622,6 +613,34 @@ async function openSidePanel(): Promise<void> {
   if (tab?.id == null) return;
   await chrome.sidePanel.setOptions({ tabId: tab.id, path: "popup.html", enabled: true });
   await chrome.sidePanel.open({ tabId: tab.id });
+}
+
+/* ---------- account (shared with the web app through the bridge) ---------- */
+
+async function openAccount(): Promise<void> {
+  const signInUrl = `${EXPLAIN_WEB_URL}/?account=open`;
+  const status = el("p", "fine", "Checking your account…");
+  status.setAttribute("role", "status");
+  const open = labelledButton("user", "Sign in on atlas-explain.web.app", "primary");
+  open.addEventListener("click", () => openUrl(signInUrl));
+  shell.openSheet("Account", [status, open, el("p", "fine", "The extension uses the account signed in on the ATLAS Explain web app in this Chrome profile. You can keep using it signed out.")]);
+  if (!hasChrome || !navigator.onLine) {
+    status.textContent = navigator.onLine ? "Account is available in Chrome." : "You are offline. Account status will show when you reconnect.";
+    return;
+  }
+  try {
+    const { readAccount } = await import("./cloud");
+    const view = await readAccount();
+    shell.setAccount(view);
+    if (view?.signedIn) {
+      status.textContent = `Signed in as ${view.label}.`;
+      open.replaceChildren(document.createTextNode("Manage account or sign out"));
+    } else {
+      status.textContent = "Signed out. Explanations still work; history stays in this browser.";
+    }
+  } catch {
+    status.textContent = "Account status could not be read right now. Explanations still work.";
+  }
 }
 
 function openUrl(url: string): void {

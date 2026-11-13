@@ -12,8 +12,11 @@ export const ALLOWED_PERMISSIONS = {
   scripting: "chrome.scripting",
 };
 export const ALLOWED_OPTIONAL_PERMISSIONS = { sidePanel: "chrome.sidePanel" };
-/** The only host the extension may read: the user's own ATLAS desk. */
-export const ALLOWED_HOSTS = ["http://localhost:3000/*"];
+/**
+ * Hosts the extension may reach: the user's own ATLAS desk, and our own web app, whose
+ * bridge page runs App Check-protected cloud calls and shares the web sign-in.
+ */
+export const ALLOWED_HOSTS = ["http://localhost:3000/*", "https://atlas-explain.web.app/*"];
 
 export function checkManifest(manifest, source) {
   const problems = [];
@@ -27,7 +30,7 @@ export function checkManifest(manifest, source) {
     else if (!source.includes(ALLOWED_OPTIONAL_PERMISSIONS[p])) problems.push(`optional permission "${p}" is never used`);
   }
   for (const h of manifest.host_permissions ?? []) {
-    if (!ALLOWED_HOSTS.includes(h)) problems.push(`host permission "${h}" is broader than the local ATLAS desk`);
+    if (!ALLOWED_HOSTS.includes(h)) problems.push(`host permission "${h}" is not the local ATLAS desk or the ATLAS Explain web app`);
   }
   for (const key of ["content_scripts", "web_accessible_resources", "externally_connectable", "optional_host_permissions"]) {
     if (manifest[key] != null) problems.push(`"${key}" widens the extension's reach; inject on demand with activeTab + scripting instead`);

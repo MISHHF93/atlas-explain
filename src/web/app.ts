@@ -396,6 +396,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
           }).catch(() => undefined);
         }
       });
+      if (new URLSearchParams(location.search).get("account") === "open") openAccount();
       const finished = await b.completeSignIn(() => window.prompt("Confirm the email address you used for the sign-in link") ?? null);
       if (finished) {
         shell.announce(finished);
