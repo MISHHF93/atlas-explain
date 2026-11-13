@@ -39,6 +39,7 @@ import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 import { twoSidedNodes } from "../wallet/two-sided";
 import { engineStrip } from "../wallet/engine";
+import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../core/follow-ups";
 import { isEngineState } from "../core/hybrid-engine";
 
 const THEME_KEY = "atlas-explain-theme";
@@ -580,7 +581,33 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       copyText,
       notes,
       onClear: () => showResult(emptyCard("Pick another sample or edit the card, then explain again.", undefined, "Cleared")),
+      ...keepGoing(copyText),
     });
+  }
+
+  /** Follow-ups re-run Explain on the same card with a new question; related terms fill the question box only. */
+  function keepGoing(answerText: string) {
+    const parsed = parseMoveCardJson(cardInput.value);
+    const topic = parsed.ok ? `the ${parsed.card.symbol} ${formatPct(parsed.card.movePct)} move` : "this move";
+    return {
+      followUps: FOLLOW_UPS.map((item) => ({
+        label: item.label,
+        run: () => {
+          questionInput.value = followUpQuestion(item.kind, topic);
+          void onExplain();
+        },
+      })),
+      related: relatedTerms(answerText).map((term) => ({
+        title: term.title,
+        run: () => {
+          questionInput.value = isGlossaryId(term.id)
+            ? conceptQuestion(term.id)
+            : `In educational terms, what does "${term.title}" add to a reading of this move? Do not give trade advice.`;
+          status.textContent = `${term.title} added to your question. Press Explain the move when ready. Nothing was sent.`;
+          questionInput.focus();
+        },
+      })),
+    };
   }
 
   async function loadHistory(): Promise<void> {

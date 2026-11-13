@@ -47,6 +47,7 @@ import { TWO_SIDED_SCHEMA, parseTwoSided, twoSidedCopyText } from "../../src/cor
 import { twoSidedNodes } from "../../src/wallet/two-sided";
 import { historyCard, learnCard } from "../../src/wallet/history-learn";
 import { engineStrip } from "../../src/wallet/engine";
+import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../../src/core/follow-ups";
 import { isEngineState } from "../../src/core/hybrid-engine";
 import { explainOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
@@ -58,7 +59,7 @@ interface PendingExplain {
   auto?: boolean;
 }
 
-type RunOptions = { highlight: boolean; fromPage: boolean; pending?: PendingExplain };
+type RunOptions = { highlight: boolean; fromPage: boolean; pending?: PendingExplain; followUp?: string };
 
 const hasChrome = typeof chrome !== "undefined" && Boolean(chrome.runtime?.id);
 const preview = new URLSearchParams(location.search);
@@ -369,7 +370,7 @@ async function run(options: RunOptions): Promise<void> {
   }
 
   const context = toPageContext(raw);
-  const built = buildExtensionPrompt({ context, question: options.highlight ? "" : question.value });
+  const built = buildExtensionPrompt({ context, question: options.followUp ?? (options.highlight ? "" : question.value) });
   const token = debugToken.value.trim() || null;
 
   // Entitlements come from Remote Config. Firebase loads only now, never when the popup opens.
@@ -437,12 +438,34 @@ function showExplanation(text: string, source: "on_device" | "in_cloud", selecti
     ...(twoSided ? { body: twoSidedNodes(twoSided) } : { text: plain }),
     copyText: twoSided ? twoSidedCopyText(twoSided, EXTENSION_DISCLAIMER) : plain,
     notes,
+    ...keepGoingFor(selection || question.value, text),
     onClear: () => {
       showResult(emptyCard(undefined, SHORTCUT_HINT));
       explainSelection.focus();
     },
   }));
   shell.announce("Explanation ready.");
+}
+
+/** Follow-ups re-ask about the same topic; related chips explain a glossary term found in the answer. */
+function keepGoingFor(topic: string, answerText: string) {
+  const subject = topic.trim();
+  if (!subject) return {};
+  return {
+    followUps: FOLLOW_UPS.map((item) => ({
+      label: item.label,
+      run: () => void run({
+        highlight: false,
+        fromPage: false,
+        pending: { selection: subject, title: "", url: "" },
+        followUp: followUpQuestion(item.kind, subject),
+      }),
+    })),
+    related: relatedTerms(`${subject}\n${answerText}`, subject).map((term) => ({
+      title: term.title,
+      run: () => askTerm(term),
+    })),
+  };
 }
 
 function fail(text: string, retry: boolean): void {
