@@ -726,3 +726,38 @@ textarea:focus-visible, input:focus-visible { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   .fresh-badge[data-fresh="live"]::before, .sk-line, .skeleton-row .asset-icon, .spark.enter svg path { animation: none; }
 }
+
+/* ---------- recent explanations + learn path ---------- */
+.history-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.history-item {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--atlas-radius);
+  border: 1px solid var(--atlas-line);
+  cursor: pointer;
+  transition: border-color var(--atlas-dur) ease, transform 120ms ease;
+}
+.history-item:hover { border-color: var(--atlas-accent); }
+.history-item:active { transform: scale(0.99); }
+.history-item:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 2px; }
+.history-text { font-size: var(--atlas-text-xs); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-meta { display: flex; align-items: center; gap: 0.4rem; }
+.learn-bar { height: 6px; border-radius: 999px; background: var(--atlas-line); overflow: hidden; }
+.learn-fill { display: block; height: 100%; background: var(--atlas-accent); border-radius: inherit; transition: width 420ms var(--atlas-ease); }
+.learn-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.2rem; font-size: var(--atlas-text-xs); }
+.learn-step { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 0.45rem; color: var(--atlas-muted); }
+.learn-step.current { color: var(--atlas-ink); font-weight: 700; }
+.learn-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--atlas-line); }
+.learn-step.current .learn-dot { border-color: var(--atlas-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--atlas-accent) 18%, transparent); }
+.learn-step.done .learn-dot { background: var(--atlas-accent); border-color: var(--atlas-accent); }
+.learn-lesson { border-top: 1px solid var(--atlas-line); padding-top: 0.5rem; animation: atlas-fade 240ms var(--atlas-ease); }
+.learn-lesson p { margin: 0; }
+.learn-term { font-weight: 700; font-size: var(--atlas-text-sm); margin-top: 0.15rem !important; }
+@media (prefers-reduced-motion: reduce) {
+  .learn-fill, .history-item { transition: none; }
+  .learn-lesson { animation: none; }
+}
