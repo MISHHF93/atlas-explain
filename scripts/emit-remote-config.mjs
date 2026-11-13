@@ -15,6 +15,9 @@ const descriptions = {
   on_device_max_chars: "Prompt length above this forces ONLY_IN_CLOUD and drops private notes.",
   long_document_chars: "Document length above this is treated as a long document and forced to the cloud.",
   max_output_tokens: "maxOutputTokens for the cloud model. Gemini 3.x ignores temperature, so it is not sent.",
+  billing_enabled:
+    "Kill switch. false keeps the app free: every Pro entitlement is on and checkout is hidden. true meters cloud calls.",
+  free_cloud_daily_limit: "Cloud explanations per day on the free plan after billing_enabled is true.",
 };
 
 const server = await createServer({

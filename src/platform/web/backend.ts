@@ -12,12 +12,25 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { fetchAndActivate, getRemoteConfig, getValue } from "firebase/remote-config";
+import {
+  PRO_PRICE_ID,
+  WatchlistAllowance,
+  allowCloudCall,
+  billingSnapshot,
+  resolveEntitlements,
+  watchlistFits,
+  type BillingSnapshot,
+  type PlanId,
+} from "../../core/billing";
 import { publicMoveCard } from "../../core/move-card";
 import { runExplanation } from "../../core/run-explanation";
 import { REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../../core/settings";
 import type { AppSettings, ExplanationRun, MoveCard } from "../../core/types";
+import { linkAnonymousWithGoogle } from "./account";
 import type { PublicEnvConfig } from "./env";
 import { createFirebaseExplainer } from "./explainer";
+import { createStripePayments } from "./stripe-payments";
+import { incrementCloudCalls, readCloudCallsToday } from "./usage";
 
 export interface HistoryEntry {
   id: string;
@@ -40,6 +53,10 @@ export interface WebBackend {
   currentUserId(): Promise<string | null>;
   save(run: ExplanationRun, card: MoveCard, question: string): Promise<void>;
   list(): Promise<HistoryEntry[]>;
+  loadBilling(): Promise<BillingSnapshot>;
+  linkGoogle(): Promise<"linked" | "already">;
+  /** Throws if billing is off. The pricing panel does not call this unless checkout is shown. */
+  startCheckout(): Promise<void>;
 }
 
 export function startWebBackend(env: PublicEnvConfig): WebBackend {
@@ -68,6 +85,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
   remoteConfig.defaultConfig = { ...remoteConfigDefaults() };
 
   const explainer = createFirebaseExplainer(app);
+  const payments = createStripePayments(db);
 
   let userPromise: Promise<string | null> | null = null;
   const currentUserId = () => {
@@ -90,17 +108,79 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
     return parseRemoteSettings(values);
   };
 
+  const loadPlan = async (settings: AppSettings, uid: string | null): Promise<PlanId> => {
+    if (!settings.billingEnabled || !uid) return "free";
+    return payments.currentPlan(uid);
+  };
+
+  const loadBilling = async (): Promise<BillingSnapshot> => {
+    const { settings } = await loadSettings();
+    const uid = await currentUserId();
+    const plan = await loadPlan(settings, uid);
+    const cloudCallsToday = uid ? await readCloudCallsToday(db, uid).catch(() => 0) : 0;
+    return billingSnapshot({
+      billingEnabled: settings.billingEnabled,
+      plan,
+      freeCloudDailyLimit: settings.freeCloudDailyLimit,
+      cloudCallsToday,
+    });
+  };
+
   return {
     loadSettings,
+    loadBilling,
     currentUserId,
+    linkGoogle() {
+      return linkAnonymousWithGoogle(auth);
+    },
+    async startCheckout() {
+      const { settings } = await loadSettings();
+      if (!settings.billingEnabled) {
+        throw new Error("Payments are switched off.");
+      }
+      const uid = await currentUserId();
+      if (!uid) throw new Error("Anonymous sign-in has not finished yet.");
+      await payments.startCheckout({
+        uid,
+        priceId: PRO_PRICE_ID,
+        successUrl: window.location.origin,
+        cancelUrl: window.location.origin,
+      });
+    },
     async explain(card, question, hooks) {
       const { settings } = await loadSettings();
+      const uid = await currentUserId();
+      const plan = await loadPlan(settings, uid);
+      const entitlements = resolveEntitlements({
+        billingEnabled: settings.billingEnabled,
+        plan,
+        freeCloudDailyLimit: settings.freeCloudDailyLimit,
+      });
+      if (!watchlistFits(card.watchlist.length, entitlements)) {
+        const limit = entitlements.watchlistSize;
+        throw new WatchlistAllowance(typeof limit === "number" ? limit : 0);
+      }
+      const cloudCallsToday = uid ? await readCloudCallsToday(db, uid).catch(() => 0) : 0;
+      const allowCloud = uid
+        ? allowCloudCall({
+            billingEnabled: settings.billingEnabled,
+            plan,
+            freeCloudDailyLimit: settings.freeCloudDailyLimit,
+            cloudCallsToday,
+          })
+        : !settings.billingEnabled;
       hooks?.onProgress?.("Sending the move card through Firebase AI Logic…");
       return runExplanation({
         card,
         question,
         settings,
         explainer,
+        meter: {
+          allowCloud,
+          onCloudInference: async () => {
+            if (uid) await incrementCloudCalls(db, uid);
+          },
+        },
         hooks: {
           onDeviceDownloadProgress(ratio) {
             const percent = Math.round(ratio * 100);

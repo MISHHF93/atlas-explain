@@ -8,7 +8,15 @@ describe("parseRemoteSettings", () => {
     expect(settings.inferenceMode).toBe("prefer_on_device");
     expect(settings.cloudModel).toBe(DEFAULT_SETTINGS.cloudModel);
     expect(settings.topics.map((topic) => topic.id)).toEqual([...TOPIC_IDS]);
+    expect(settings.billingEnabled).toBe(false);
+    expect(settings.freeCloudDailyLimit).toBe(50);
     expect(warnings).toEqual([]);
+  });
+
+  it("keeps billing off when the flag is not a boolean", () => {
+    const { settings, warnings } = parseRemoteSettings({ billing_enabled: "yes", free_cloud_daily_limit: "50" });
+    expect(settings.billingEnabled).toBe(false);
+    expect(warnings.some((warning) => warning.includes("billing_enabled"))).toBe(true);
   });
 
   it("accepts a cloud model and a known inference mode", () => {

@@ -4,6 +4,29 @@ rules_version = '2';
 // Private notes and watchlists are rejected so they are not stored in the cloud.
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /users/{userId}/usage/{dayId} {
+      allow read: if signedIn(userId);
+      allow delete: if false;
+
+      // First cloud call of the UTC day creates the counter at 1.
+      allow create: if signedIn(userId)
+        && isUsageDay(dayId)
+        && request.resource.data.keys().hasOnly(["cloudCalls", "date"])
+        && request.resource.data.date == dayId
+        && request.resource.data.cloudCalls is int
+        && request.resource.data.cloudCalls == 1;
+
+      // Later calls may add exactly one. No other field can change.
+      allow update: if signedIn(userId)
+        && isUsageDay(dayId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["cloudCalls"])
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.date == dayId
+        && request.resource.data.cloudCalls is int
+        && resource.data.cloudCalls is int
+        && request.resource.data.cloudCalls == resource.data.cloudCalls + 1;
+    }
+
     match /users/{userId}/explanations/{explanationId} {
       allow read, delete: if request.auth != null && request.auth.uid == userId;
 
@@ -32,8 +55,52 @@ service cloud.firestore {
         && !request.resource.data.keys().hasAny(["notes", "watchlist"]);
     }
 
+    // Stripe extension collections. Clients may start checkout. They cannot write a subscription.
+    match /customers/{userId} {
+      allow read: if signedIn(userId);
+      allow write: if false;
+
+      match /checkout_sessions/{sessionId} {
+        allow read: if signedIn(userId);
+        allow create: if signedIn(userId)
+          && request.resource.data.keys().hasOnly(["price", "success_url", "cancel_url", "mode"])
+          && request.resource.data.mode == "subscription"
+          && request.resource.data.price is string
+          && request.resource.data.price.size() > 0
+          && request.resource.data.price.size() < 80
+          && isHttpUrl(request.resource.data.success_url)
+          && isHttpUrl(request.resource.data.cancel_url);
+        allow update, delete: if false;
+      }
+
+      match /subscriptions/{subscriptionId} {
+        allow read: if signedIn(userId);
+        allow write: if false;
+      }
+
+      match /payments/{paymentId} {
+        allow read: if signedIn(userId);
+        allow write: if false;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
+  }
+
+  function signedIn(userId) {
+    return request.auth != null && request.auth.uid == userId;
+  }
+
+  function isUsageDay(dayId) {
+    return dayId.matches('^\\d{4}-\\d{2}-\\d{2}$');
+  }
+
+  function isHttpUrl(value) {
+    return value is string
+      && value.size() > 8
+      && value.size() < 500
+      && (value.matches('^https://.*') || value.matches('^http://.*'));
   }
 }

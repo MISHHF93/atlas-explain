@@ -55,6 +55,20 @@
       },
       "description": "maxOutputTokens for the cloud model. Gemini 3.x ignores temperature, so it is not sent.",
       "valueType": "STRING"
+    },
+    "billing_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Kill switch. false keeps the app free: every Pro entitlement is on and checkout is hidden. true meters cloud calls.",
+      "valueType": "STRING"
+    },
+    "free_cloud_daily_limit": {
+      "defaultValue": {
+        "value": "50"
+      },
+      "description": "Cloud explanations per day on the free plan after billing_enabled is true.",
+      "valueType": "STRING"
     }
   },
   "parameterGroups": {}

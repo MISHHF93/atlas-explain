@@ -8,10 +8,12 @@ import { hasPrivateContext } from "../core/move-card";
 import { SAMPLE_MOVES, type SampleMove } from "../core/samples";
 import { DEFAULT_SETTINGS } from "../core/settings";
 import type { AppSettings, ExplanationRun, MoveCard } from "../core/types";
+import { CloudAllowanceUsed, WatchlistAllowance, pricingView } from "../core/billing";
 import { OnDeviceUnavailableError } from "../core/run-explanation";
 import { ExplanationParseError } from "../core/parse-explanation";
 import type { WebBackend } from "../platform/web/backend";
 import { h } from "./dom";
+import { fillPricingDialog } from "./pricing";
 import { brand, disclaimer } from "./setup";
 
 export function mountDesk(root: HTMLElement, backend: WebBackend): void {
@@ -62,6 +64,16 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
     attrs: { type: "button", id: "preview" },
     text: "Preview prompt",
   });
+  const pricingButton = h("button", {
+    className: "badge",
+    attrs: { type: "button", id: "pricing-badge" },
+    text: "Free during beta",
+  });
+  const pricingDialog = h("dialog", { attrs: { id: "pricing", "aria-labelledby": "pricing-title" } });
+  pricingButton.addEventListener("click", () => {
+    void openPricing();
+  });
+
   const refreshButton = h("button", {
     className: "secondary",
     attrs: { type: "button", id: "refresh-history" },
@@ -112,7 +124,17 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
   });
 
   root.append(
-    h("header", { className: "top" }, brand(), disclaimer()),
+    h("header", { className: "top" },
+      h("div", { className: "top-row" },
+        brand(),
+        h("nav", { className: "top-actions", attrs: { "aria-label": "Account" } },
+          pricingButton,
+          h("a", { attrs: { href: "#/terms" }, text: "Terms" }),
+          h("a", { attrs: { href: "#/privacy" }, text: "Privacy" }),
+        ),
+      ),
+      disclaimer(),
+    ),
     h(
       "main",
       { className: "wrap", attrs: { id: "main" } },
@@ -161,6 +183,7 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
         historyList,
       ),
     ),
+    pricingDialog,
     h("footer", { className: "wrap foot" },
       h("p", { text: "ATLAS Explain is a public companion to a private research desk. This app contains none of that desk’s models or data. On-device inference needs Chrome on desktop, version 139 or newer, with the Prompt API flag enabled." }),
     ),
@@ -168,6 +191,11 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
 
   void backend.loadSettings().then(({ settings, warnings }) => {
     settingsNote.textContent = settingsLine(settings, warnings);
+    pricingButton.textContent = pricingView({
+      billingEnabled: settings.billingEnabled,
+      plan: "free",
+      freeCloudDailyLimit: settings.freeCloudDailyLimit,
+    }).badge;
   }).catch(() => {
     settingsNote.textContent = "Remote Config could not be read. Built-in defaults will be used when you explain a move.";
   });
@@ -282,7 +310,11 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
       }
     } catch (error) {
       status.textContent = "";
-      result.replaceChildren(h("p", { className: "alert", attrs: { role: "alert" }, text: friendlyError(error) }));
+      if (error instanceof CloudAllowanceUsed || error instanceof WatchlistAllowance) {
+        result.replaceChildren(h("p", { className: "limit-note", attrs: { role: "status" }, text: error.message }));
+      } else {
+        result.replaceChildren(h("p", { className: "alert", attrs: { role: "alert" }, text: friendlyError(error) }));
+      }
     } finally {
       explainButton.disabled = false;
       previewButton.disabled = false;
@@ -309,6 +341,37 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
     } catch {
       return DEFAULT_SETTINGS;
     }
+  }
+
+  async function openPricing(): Promise<void> {
+    let snapshot;
+    try {
+      snapshot = await backend.loadBilling();
+    } catch {
+      const settings = await safeSettings();
+      snapshot = {
+        billingEnabled: settings.billingEnabled,
+        plan: "free" as const,
+        cloudCallsToday: 0,
+        entitlements: {
+          cloudExplanationsPerDay: "unlimited" as const,
+          watchlistSize: "unlimited" as const,
+          dailyBrief: !settings.billingEnabled,
+          extensionHighlightToExplain: !settings.billingEnabled,
+          onDeviceExplanations: "unlimited" as const,
+        },
+        pricing: pricingView({
+          billingEnabled: settings.billingEnabled,
+          plan: "free",
+          freeCloudDailyLimit: settings.freeCloudDailyLimit,
+        }),
+      };
+    }
+    fillPricingDialog(pricingDialog, snapshot, {
+      onLink: () => backend.linkGoogle(),
+      ...(snapshot.pricing.showCheckout ? { onCheckout: () => backend.startCheckout() } : {}),
+    });
+    if (!pricingDialog.open) pricingDialog.showModal();
   }
 
   async function loadHistory(): Promise<void> {
@@ -388,6 +451,7 @@ function renderRun(result: HTMLElement, run: ExplanationRun): void {
   );
 
   result.replaceChildren(
+    h("p", { className: "card-disclaimer", text: "Educational information, not investment advice." }),
     h("p", { className: pathClass, text: pathStatus(run) }),
     h("p", { className: "summary", text: run.explanation.summary }),
     h("div", { className: "cases" },

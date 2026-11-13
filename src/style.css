@@ -247,6 +247,70 @@ ol, ul { margin: 0.4rem 0 0; padding-left: 1.15rem; }
 
 .foot { padding: 0.5rem 0 2rem; color: var(--muted); font-size: 0.875rem; }
 
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.badge {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: var(--device);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.limit-note {
+  background: var(--device);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 0.8rem;
+}
+
+.card-disclaimer {
+  margin-bottom: 0.7rem;
+  font-size: 0.875rem;
+  color: var(--warn-ink);
+}
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  max-width: 40rem;
+  width: calc(100% - 2rem);
+  padding: 1rem 1.1rem 1.2rem;
+}
+
+dialog::backdrop { background: rgba(28, 25, 21, 0.45); }
+
+.plan-table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; }
+
+.plan-table th, .plan-table td {
+  text-align: left;
+  padding: 0.4rem 0.35rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  font-size: 0.95rem;
+}
+
+.legal { padding-bottom: 2rem; }
+
+.legal h2 { margin: 1rem 0 0.4rem; }
+
+.legal p { margin: 0.45rem 0; }
+
 details summary { cursor: pointer; font-weight: 650; margin-top: 0.8rem; }
 
 :focus-visible {
