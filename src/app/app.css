@@ -106,3 +106,13 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 .text-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
 .text-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
 .move-box { margin-top: 0.5rem; }
+
+/* ---------- today: live price snapshot ---------- */
+
+.live-mover { all: unset; box-sizing: border-box; display: grid; gap: 0.2rem; width: 100%; cursor: pointer; }
+.live-mover:hover { border-color: var(--atlas-accent); }
+.live-mover:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 2px; }
+.live-mover.md-mover { padding: 0.55rem 0.7rem; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius-lg); background: var(--atlas-card); }
+@media (min-width: 900px) {
+  .live-snapshot .md-movers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
