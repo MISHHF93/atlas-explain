@@ -5,8 +5,26 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const nodeVersionOk = () => {
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  const ok = (major === 22 && minor >= 12) || major === 24;
+  console.log(`${ok ? "✓" : "✗"} Node ${process.versions.node} (needs ^22.12 || ^24)`);
+  return ok;
+};
+
+// Commands are plain words (no shell operators). On Windows a single command string goes
+// through the shell so npm.cmd resolves; elsewhere npm is spawned directly.
+function run(cmd, args) {
+  const options = { cwd: root, stdio: "inherit" };
+  const result =
+    process.platform === "win32"
+      ? spawnSync([cmd, ...args].join(" "), { ...options, shell: true })
+      : spawnSync(cmd, args, options);
+  return result.status === 0;
+}
+
 const steps = [
-  ["node version", "node", ["-e", "const [M,m]=process.versions.node.split('.').map(Number);if(!((M===22&&m>=12)||M===24)){console.error('Node '+process.versions.node+' is outside ^22.12 || ^24');process.exit(1)}"]],
+  ["node version", nodeVersionOk],
   ["typecheck", "npm", ["run", "typecheck"]],
   ["lint", "npm", ["run", "lint"]],
   ["test", "npm", ["test"]],
@@ -22,8 +40,10 @@ const results = [];
 for (const [name, cmd, args] of steps) {
   const started = Date.now();
   console.log(`\n▶ ${name}`);
-  const run = spawnSync(cmd, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
-  const ok = run.status === 0;
+  const ok =
+    typeof cmd === "function"
+      ? cmd()
+      : run(cmd, args);
   results.push([name, ok, ((Date.now() - started) / 1000).toFixed(1)]);
   if (!ok) break;
 }

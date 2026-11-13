@@ -1,7 +1,7 @@
 // Education-only guard: fail if shipped copy or built bundles contain trade instructions.
 // Neutral explanations ("why some traders buy while others sell") are fine; calls to act are not.
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const FORBIDDEN = [
@@ -38,7 +38,13 @@ const walk = (p) => {
   }
 };
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+const isMain = (() => {
+  const self = resolve(fileURLToPath(import.meta.url));
+  const entry = process.argv[1] ? resolve(process.argv[1]) : "";
+  return process.platform === "win32" ? self.toLowerCase() === entry.toLowerCase() : self === entry;
+})();
+
+if (isMain) {
   const hits = [];
   let files = 0;
   for (const target of SCAN) {

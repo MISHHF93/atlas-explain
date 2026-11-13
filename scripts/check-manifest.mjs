@@ -1,7 +1,7 @@
 // Least-privilege check for the Chrome extension manifest.
 // Run directly (`node scripts/check-manifest.mjs`) or import checkManifest() from tests.
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** Every permission must be listed here with the chrome.* API that needs it. */
@@ -51,7 +51,13 @@ export function extensionSource(root) {
   return out.join("\n");
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+const isMain = (() => {
+  const self = resolve(fileURLToPath(import.meta.url));
+  const entry = process.argv[1] ? resolve(process.argv[1]) : "";
+  return process.platform === "win32" ? self.toLowerCase() === entry.toLowerCase() : self === entry;
+})();
+
+if (isMain) {
   const root = join(dirname(fileURLToPath(import.meta.url)), "..");
   const manifest = JSON.parse(readFileSync(join(root, "extension", "manifest.json"), "utf8"));
   const problems = checkManifest(manifest, extensionSource(root));
