@@ -720,6 +720,7 @@ textarea:focus-visible, input:focus-visible { outline: none; }
 .shadow-note { display: flex; gap: 0.35rem; align-items: flex-start; }
 .shadow-note .icon { margin-top: 0.1rem; color: var(--atlas-accent); }
 .source-line { font-size: var(--atlas-text-2xs); }
+.context-line { display: flex; align-items: center; gap: 0.3rem; margin: 0; color: var(--atlas-muted); font-size: var(--atlas-text-2xs); }
 .explain-asset { width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {

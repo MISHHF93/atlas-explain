@@ -2,6 +2,7 @@ import {
   resolveEntitlements,
   type BillingInput,
 } from "./billing";
+import { detectPageKind, type PageKindView } from "./page-kind";
 import { SAMPLE_MOVES, type SampleMove } from "./samples";
 
 export const EXTENSION_DISCLAIMER = "Educational information, not investment advice.";
@@ -21,6 +22,8 @@ export interface PageContext {
   title: string;
   host: string;
   redacted: boolean;
+  /** From the site name and title only; the page body is never read. */
+  page: PageKindView;
 }
 
 const RECOMMENDATION =
@@ -59,11 +62,14 @@ export function hostOf(url: string): string {
 
 export function toPageContext(raw: { selection: string; title: string; url: string }): PageContext {
   const selection = redactSensitive(clip(raw.selection, 2_000));
+  const title = clip(raw.title, 180).trim();
+  const host = hostOf(raw.url);
   return {
     selection: selection.text.trim(),
-    title: clip(raw.title, 180).trim(),
-    host: hostOf(raw.url),
+    title,
+    host,
     redacted: selection.redacted,
+    page: detectPageKind({ host, title }),
   };
 }
 
@@ -85,6 +91,7 @@ export function buildExtensionPrompt(input: {
   const question = input.question.trim();
   const combined = `${input.context.title}\n${input.context.selection}\n${question}`;
   const refusedRecommendation = isRecommendationRequest(combined);
+  const page = input.context.page ?? detectPageKind({ host: input.context.host, title: input.context.title });
   const samples = input.samples ?? relevantSamples(combined);
   const sampleBlock = samples.length
     ? samples
@@ -118,6 +125,7 @@ Explain the highlighted text in plain language. Cover trading terms (such as sto
 
 Page context (selection, title, and site name only):
 Site: ${input.context.host || "unknown"}
+Site type: ${page.label}. ${page.hint}
 Title: ${input.context.title || "unknown"}
 Highlighted text:
 ${input.context.selection || "(nothing highlighted)"}
