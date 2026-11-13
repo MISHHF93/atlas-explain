@@ -16,8 +16,11 @@ export interface EngineStripHandle {
  * "On-device ⇄ Cloud" strip at the top of Explain. It shows which route the next answer
  * will take before anything is sent, so the hybrid design is visible, not just claimed.
  */
-export function engineStrip(): EngineStripHandle {
+export function engineStrip(options: { compact?: boolean } = {}): EngineStripHandle {
   const node = el("section", "engine");
+  // Compact: one quiet line under the composer (minimal Explain screen). The route
+  // diagram is hidden; the label and "How this works" stay.
+  node.dataset.compact = options.compact ? "true" : "false";
   node.setAttribute("aria-label", "Where answers run");
   node.dataset.state = "checking";
   node.dataset.route = "none";

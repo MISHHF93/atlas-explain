@@ -47,6 +47,9 @@ import { TWO_SIDED_SCHEMA, parseTwoSided, twoSidedCopyText } from "../../src/cor
 import { twoSidedNodes } from "../../src/wallet/two-sided";
 import { historyCard, learnCard } from "../../src/wallet/history-learn";
 import { engineStrip } from "../../src/wallet/engine";
+import { todayRow } from "../../src/wallet/today-row";
+import { icon } from "../../src/wallet/icons";
+import { COMPOSER_PLACEHOLDER, composerAction, composerHint } from "../../src/core/composer";
 import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../../src/core/follow-ups";
 import { isEngineState } from "../../src/core/hybrid-engine";
 import { explainOnDevice } from "./on-device";
@@ -96,34 +99,43 @@ const shell = createWalletShell({
 const question = document.createElement("textarea");
 question.id = "question";
 question.rows = 2;
-question.placeholder = "Or type a term: stop-limit, margin, spread, IV…";
+question.placeholder = COMPOSER_PLACEHOLDER;
 question.setAttribute("aria-label", "Term or text to explain");
-const explainSelection = labelledButton("highlight", "Explain highlight", "primary");
-const explainTyped = labelledButton("sparkle", "Explain text", "secondary");
-explainTyped.disabled = true;
-const buttons = el("div", "button-row");
-buttons.append(explainSelection, explainTyped);
+// One primary action: reads the highlight while the box is empty, explains typed text once you type.
+const explainButton = labelledButton("highlight", "Explain highlight", "primary composer-go");
+const composer = el("section", "composer");
+composer.setAttribute("aria-label", "Ask Explain");
+composer.append(question, explainButton);
+function syncComposer(): void {
+  const action = composerAction(question.value);
+  explainButton.dataset.mode = action.mode;
+  explainButton.replaceChildren(icon(action.icon, 16), el("span", undefined, action.label));
+}
 const result = el("div", "stack result");
 result.setAttribute("aria-live", "polite");
-const explainHead = el("div", "panel-title");
+// The title stays for screen readers; sighted readers already see the Explain tab and the brand.
+const explainHead = el("div", "panel-title sr-only");
 explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
-const engine = engineStrip();
+const engine = engineStrip({ compact: true });
 const brief = digestCard();
+const today = todayRow(() => shell.openSheet("Today's digest", [brief.node]));
 void (canReachLocalAtlas(location, true)
   ? loadDigest()
   : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
-).then((v) => brief.show(v));
+).then((v) => { brief.show(v); today.show(v); });
 // Recent explanations live in chrome.storage.local on this device. Never uploaded.
 const recentSlot = el("div");
 let history: HistoryEntry[] = [];
-shell.panels.explain.append(explainHead, engine.node, brief.node, question, buttons, result, recentSlot);
+shell.panels.explain.append(explainHead, composer, engine.node, today.node, result, recentSlot);
+syncComposer();
 
 function renderHistory(): void {
   recentSlot.replaceChildren(historyCard({
     entries: history,
+    limit: 3,
     onOpen: (entry) => {
       question.value = entry.selection;
-      explainTyped.disabled = !entry.selection;
+      syncComposer();
       showExplanation(entry.text, entry.source, entry.selection, false, entry.contextLine);
     },
     onClear: () => {
@@ -159,7 +171,7 @@ function startAssets(previewData?: AssetsPreview): void {
     },
     onExplain: (text) => {
       question.value = text;
-      explainTyped.disabled = false;
+      syncComposer();
       shell.select("explain");
       void run({ highlight: false, fromPage: false });
     },
@@ -174,7 +186,7 @@ const signal = signalCard({
   onRefresh: () => refreshSignal(),
   onWhy: () => {
     question.value = whyQuestion(currentSignal);
-    explainTyped.disabled = false;
+    syncComposer();
     shell.select("explain");
     void run({ highlight: false, fromPage: false });
   },
@@ -193,7 +205,7 @@ const learnSlot = el("div");
 let learned = new Set<string>();
 function askTerm(term: { title: string }): void {
   question.value = `Explain "${term.title}" in plain language with a short example. Do not recommend a trade.`;
-  explainTyped.disabled = false;
+  syncComposer();
   shell.select("explain");
   void run({ highlight: false, fromPage: false });
 }
@@ -263,7 +275,7 @@ shell.panels.settings.append(
 
 let lastRun: RunOptions | null = null;
 question.addEventListener("input", () => {
-  explainTyped.disabled = question.value.trim().length === 0;
+  syncComposer();
 });
 question.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && question.value.trim()) {
@@ -271,8 +283,9 @@ question.addEventListener("keydown", (event) => {
     void run({ highlight: false, fromPage: false });
   }
 });
-explainSelection.addEventListener("click", () => void run({ highlight: true, fromPage: true }));
-explainTyped.addEventListener("click", () => void run({ highlight: false, fromPage: false }));
+explainButton.addEventListener("click", () => {
+  void run(composerAction(question.value).mode === "typed" ? { highlight: false, fromPage: false } : { highlight: true, fromPage: true });
+});
 window.addEventListener("online", () => { updateConnection(); refreshEngine(); });
 window.addEventListener("offline", () => { updateConnection(); refreshEngine(); });
 
@@ -285,7 +298,7 @@ function refreshEngine(): void {
 void boot();
 
 async function boot(): Promise<void> {
-  showResult(emptyCard(undefined, SHORTCUT_HINT));
+  showResult(composerHintLine());
   refreshEngine();
   applySignal(previewSignal());
   const stored = await store.get();
@@ -319,7 +332,7 @@ async function boot(): Promise<void> {
   if (!pending) return;
   await chrome.storage.session.remove("pending");
   question.value = pending.selection;
-  explainTyped.disabled = !pending.selection.trim();
+  syncComposer();
   if (pending.auto) await run({ highlight: true, fromPage: false, pending });
 }
 
@@ -327,7 +340,7 @@ function showOnboarding(): void {
   shell.overlay(onboarding(() => {
     shell.overlay(null);
     void store.set({ onboarded: true });
-    explainSelection.focus();
+    explainButton.focus();
   }));
 }
 
@@ -355,7 +368,7 @@ async function run(options: RunOptions): Promise<void> {
       };
       if (raw.selection) {
         question.value = raw.selection;
-        explainTyped.disabled = false;
+        syncComposer();
       }
     } catch {
       fail("Chrome does not let extensions read this page. Paste the term in the box instead.", false);
@@ -440,8 +453,8 @@ function showExplanation(text: string, source: "on_device" | "in_cloud", selecti
     notes,
     ...keepGoingFor(selection || question.value, text),
     onClear: () => {
-      showResult(emptyCard(undefined, SHORTCUT_HINT));
-      explainSelection.focus();
+      showResult(composerHintLine());
+      explainButton.focus();
     },
   }));
   shell.announce("Explanation ready.");
@@ -482,11 +495,14 @@ function friendlyCloudError(message: string): string {
   return message;
 }
 
+function composerHintLine(): HTMLElement {
+  return el("p", "state-empty composer-hint", composerHint(SHORTCUT_HINT));
+}
+
 function setBusy(busy: boolean): void {
   result.setAttribute("aria-busy", busy ? "true" : "false");
-  explainSelection.disabled = busy;
-  explainTyped.disabled = busy || question.value.trim().length === 0;
-  explainSelection.classList.toggle("loading", busy);
+  explainButton.disabled = busy;
+  explainButton.classList.toggle("loading", busy);
 }
 
 function showResult(card: HTMLElement): void {
@@ -617,7 +633,7 @@ function applyPreviewState(): void {
   const demo = preview.get("demo");
   if (demo === "answer") {
     question.value = SAMPLE_EXPLANATION.selection;
-    explainTyped.disabled = false;
+    syncComposer();
     answer(SAMPLE_EXPLANATION.text, "on_device", SAMPLE_EXPLANATION.selection, false);
   } else if (demo === "loading") {
     showResult(loadingCard(1));
@@ -632,6 +648,7 @@ function applyPreviewState(): void {
   if (preview.get("why") === "open") signal.setWhyOpen(true);
   if (preview.get("onboarding") === "1") showOnboarding();
   if (preview.get("menu") === "open") document.querySelector<HTMLButtonElement>(".bar .icon-btn")?.click();
+  if (preview.get("sheet") === "today") today.node.click();
   if (preview.get("term") === "open") document.querySelector<HTMLDetailsElement>(".term details")?.setAttribute("open", "");
 }
 

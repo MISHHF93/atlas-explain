@@ -39,6 +39,7 @@ import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 import { twoSidedNodes } from "../wallet/two-sided";
 import { engineStrip } from "../wallet/engine";
+import { todayRow } from "../wallet/today-row";
 import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../core/follow-ups";
 import { isEngineState } from "../core/hybrid-engine";
 
@@ -138,17 +139,18 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   const explainHead = el("div", "panel-title");
   explainHead.append(el("h1", undefined, "Explain a move"), el("span", "fine", "Education only"));
-  const engine = engineStrip();
+  const engine = engineStrip({ compact: true });
   const brief = digestCard();
+  const today = todayRow(() => shell.openSheet("Today's digest", [brief.node]));
   void (canReachLocalAtlas(location, false)
     ? loadDigest()
     : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
-  ).then((v) => brief.show(v));
+  ).then((v) => { brief.show(v); today.show(v); });
 
   shell.panels.explain.append(
     explainHead,
     engine.node,
-    brief.node,
+    today.node,
     fromDesk,
     moveSlot,
     sampleRow,
@@ -748,6 +750,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (preview.get("onboarding") === "1") showOnboarding();
     if (preview.get("sheet") === "terms") openLegal("terms");
     if (preview.get("sheet") === "extension") shell.openSheet("Chrome extension", extensionNodes());
+    if (preview.get("sheet") === "today") today.node.click();
     if (preview.get("menu") === "open") document.querySelector<HTMLButtonElement>(".bar .icon-btn")?.click();
   }
 
