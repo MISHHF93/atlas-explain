@@ -45,13 +45,22 @@ import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 import { twoSidedNodes } from "../wallet/two-sided";
 import { engineStrip } from "../wallet/engine";
-import { todayRow } from "../wallet/today-row";
 import { marketDigestCard } from "../wallet/market-digest";
 import { buildMarketDigest } from "../core/market-digest";
 import type { CatalogView } from "../core/assets";
-import type { DigestView } from "../core/digest";
 import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../core/follow-ups";
 import { isEngineState } from "../core/hybrid-engine";
+import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } from "../app/routes";
+import type { TabDef } from "../wallet/shell";
+
+/** Navigation for the full-page app. Internal ids stay stable; labels read as a product. */
+export const APP_TABS: readonly TabDef[] = [
+  { id: "today", label: "Today", icon: "signal" },
+  { id: "explain", label: "Explain", icon: "sparkle" },
+  { id: "assets", label: "Assets", icon: "coins" },
+  { id: "glossary", label: "Learn", icon: "book" },
+  { id: "settings", label: "Account", icon: "user" },
+];
 
 const THEME_KEY = "atlas-explain-theme";
 const ONBOARDED_KEY = "atlas-explain-onboarded";
@@ -63,25 +72,108 @@ export interface WebWalletOptions {
   startBackend: () => Promise<WebBackend>;
 }
 
-/** The hosted ATLAS Explain app: the same wallet frame as the extension, centred on the page. */
+/**
+ * The hosted ATLAS Explain app at /app: the same wallet parts as the extension, laid out
+ * full-page (side rail on desktop, bottom tabs on phones) with one address per screen.
+ */
 export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): void {
   host.replaceChildren();
   const preview = new URLSearchParams(location.search);
   let backend: WebBackend | null = null;
   let backendError: string | null = null;
+  let route: AppRoute = parseRoute(location.pathname);
+  /** True while the app follows the address bar, so tab changes do not push history again. */
+  let following = false;
 
   const shell = createWalletShell({
     host,
-    surface: "web",
-    onAccount: () => openAccount(),
+    surface: "app",
+    tabs: APP_TABS,
+    initialTab: tabFor(route),
+    onAccount: () => navigate({ kind: "signin" }),
+    onStatus: () => shell.select("today", { focus: true }),
+    onSelect: (tab) => {
+      if (!following) navigate({ kind: "tab", tab: tab as AppTab });
+    },
+    onSheetClose: () => {
+      if (following) return;
+      if (route.kind === "asset") navigate({ kind: "tab", tab: "assets" }, { replace: true });
+      else if (route.kind === "signin") navigate({ kind: "tab", tab: "settings" }, { replace: true });
+      else if (route.kind === "not_found") navigate({ kind: "tab", tab: "today" }, { replace: true });
+    },
     menu: [
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
       { label: "Get the Chrome extension", icon: "panel", run: () => shell.openSheet("Chrome extension", extensionNodes()) },
+      { label: "ATLAS Explain home page", icon: "external", run: () => location.assign("/") },
       { label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },
       { label: "Terms", icon: "doc", run: () => openLegal("terms") },
       { label: "Privacy", icon: "shield", run: () => openLegal("privacy") },
     ],
   });
+  document.title = titleFor(route);
+
+  /** Moves to a route: updates the address, the title and the visible screen. */
+  function navigate(next: AppRoute, opts: { replace?: boolean } = {}): void {
+    route = next;
+    const path = pathFor(next);
+    if (location.pathname !== path) {
+      if (opts.replace) history.replaceState(null, "", path);
+      else history.pushState(null, "", path);
+    }
+    document.title = titleFor(next);
+    following = true;
+    try {
+      shell.select(tabFor(next));
+    } finally {
+      following = false;
+    }
+    if (next.kind === "signin") openAccount();
+  }
+
+  /** Back and forward buttons: show whatever the address now says. */
+  window.addEventListener("popstate", () => {
+    route = parseRoute(location.pathname);
+    document.title = titleFor(route);
+    following = true;
+    try {
+      shell.closeSheet();
+      shell.select(tabFor(route));
+    } finally {
+      following = false;
+    }
+    void showRouteSheet();
+  });
+
+  /** Asset detail, sign-in and not-found open as a sheet over their tab. */
+  async function showRouteSheet(): Promise<void> {
+    if (route.kind === "asset") {
+      const symbol = route.symbol;
+      const found = await assets?.open(symbol);
+      if (found === false && route.kind === "asset" && route.symbol === symbol) {
+        shell.openSheet(symbol, [
+          el("p", undefined, `${symbol} is not in the asset list right now.`),
+          el("p", "fine", "The list shows what the connected price feed or ATLAS reports. Nothing is made up to fill the gap."),
+          routeButton("Back to Assets", { kind: "tab", tab: "assets" }),
+        ]);
+      }
+    } else if (route.kind === "signin") {
+      openAccount();
+    } else if (route.kind === "not_found") {
+      shell.openSheet("Page not found", [
+        el("p", undefined, `There is no page at ${route.path}.`),
+        routeButton("Go to Today", { kind: "tab", tab: "today" }),
+      ]);
+    }
+  }
+
+  function routeButton(label: string, to: AppRoute): HTMLButtonElement {
+    const button = labelledButton("chevron", label, "secondary");
+    button.addEventListener("click", () => {
+      shell.closeSheet();
+      navigate(to, { replace: true });
+    });
+    return button;
+  }
 
   /* ---------- Explain tab ---------- */
 
@@ -149,35 +241,26 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   recent.append(recentHead, historyNote, historyList);
 
   const explainHead = el("div", "panel-title");
-  explainHead.append(el("h1", undefined, "Explain a move"), el("span", "fine", "Education only"));
+  explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
   const engine = engineStrip({ compact: true });
   const brief = digestCard();
   // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
   let marketCatalog: CatalogView | null = null;
-  let briefView: DigestView = { kind: "loading" };
-  let marketCard: HTMLElement | null = null;
-  const today = todayRow(() => {
-    marketCard = marketDigestCard(buildMarketDigest(marketCatalog));
-    shell.openSheet("Today's digest", [marketCard, brief.node]);
-  });
+  let marketCard: HTMLElement = marketDigestCard(buildMarketDigest(marketCatalog));
   const refreshToday = (): void => {
-    today.show(briefView, marketCatalog != null);
-    // If the digest sheet is open when ATLAS answers, swap in the fresh card.
-    if (marketCard?.isConnected) {
-      const next = marketDigestCard(buildMarketDigest(marketCatalog));
-      marketCard.replaceWith(next);
-      marketCard = next;
-    }
+    // The Today screen shows the market digest inline; swap in the fresh card when ATLAS answers.
+    const next = marketDigestCard(buildMarketDigest(marketCatalog));
+    marketCard.replaceWith(next);
+    marketCard = next;
   };
   void (canReachLocalAtlas(location, false)
     ? loadDigest()
     : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
-  ).then((v) => { briefView = v; brief.show(v); refreshToday(); });
+  ).then((v) => { brief.show(v); refreshToday(); });
 
   shell.panels.explain.append(
     explainHead,
     engine.node,
-    today.node,
     fromDesk,
     moveSlot,
     sampleRow,
@@ -204,10 +287,23 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     onWhy: () => openLegal("signal"),
     deskHint: "The live light is read by the Chrome extension on the ATLAS desk. Here it stays grey unless the desk sends its public signal.",
   });
-  const signalHead = el("div", "panel-title");
-  signalHead.append(el("h1", undefined, "Signal"), el("span", "fine", "Paper only"));
+  /* ---------- Today tab: digest first, then the paper light, then the next step ---------- */
+
+  const todayHead = el("div", "panel-title");
+  todayHead.append(el("h1", undefined, "Today"), el("span", "fine", todayToronto()));
   const getExtension = row("panel", "Get the Chrome extension", () => shell.openSheet("Chrome extension", extensionNodes()));
-  shell.panels.signal.append(signalHead, signal.node, getExtension);
+  const startExplain = row("sparkle", "Explain a move or a term", () => navigate({ kind: "tab", tab: "explain" }));
+  shell.panels.today.append(
+    todayHead,
+    marketCard,
+    brief.node,
+    el("h2", "section-label", "Paper signal light"),
+    signal.node,
+    el("h2", "section-label", "Next"),
+    startExplain,
+    getExtension,
+  );
+  // marketCard is replaced in place by refreshToday() whenever the catalog or brief changes.
 
   /* ---------- Assets tab ---------- */
 
@@ -243,16 +339,24 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         shell.select("explain");
         questionInput.focus();
       },
+      onOpen: (symbol) => {
+        if (!following && !(route.kind === "asset" && route.symbol === symbol)) {
+          route = { kind: "asset", symbol };
+          history.pushState(null, "", pathFor(route));
+          document.title = titleFor(route);
+        }
+      },
     });
     await assets.refresh();
     const sheet = preview.get("asset");
     if (sheet) await assets.open(sheet);
+    else if (route.kind === "asset") await showRouteSheet();
   }
 
-  /* ---------- Glossary tab ---------- */
+  /* ---------- Learn tab (glossary) ---------- */
 
   const glossaryHead = el("div", "panel-title");
-  glossaryHead.append(el("h1", undefined, "Glossary"), el("span", "fine", "Plain language"));
+  glossaryHead.append(el("h1", undefined, "Learn"), el("span", "fine", "Plain language"));
   shell.panels.glossary.append(
     glossaryHead,
     glossaryPanel({
@@ -277,7 +381,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const themeChoice = readTheme();
   applyTheme(themeChoice);
   const settingsHead = el("div", "panel-title");
-  settingsHead.append(el("h1", undefined, "Settings"), el("span", "fine", "Web"));
+  settingsHead.append(el("h1", undefined, "Account"), el("span", "fine", "Settings and privacy"));
   shell.panels.settings.append(
     settingsHead,
     planSlot,
@@ -370,7 +474,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const priceFeed: PriceFeedOptions = { ...DEFAULT_PRICE_FEED };
     void startAssets(priceFeed);
     applyPreview();
-    if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo")) showOnboarding();
+    const deepLink = route.kind !== "tab" || route.tab !== "today";
+    if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo") && !deepLink && !location.hash) showOnboarding();
+    if (route.kind === "signin" || route.kind === "not_found") void showRouteSheet();
     if (!backend) return;
     void backend.loadSettings().then(({ settings, warnings, priceFeed: next }) => {
       settingsNote.textContent = settingsLine(settings, warnings);
@@ -410,7 +516,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       if (finished) {
         shell.announce(finished);
         status.textContent = finished;
-        if (/[?&]signin=/.test(location.search)) history.replaceState(null, "", location.pathname + location.hash);
+        if (/[?&](signin|oobCode)=/.test(location.search)) history.replaceState(null, "", location.pathname + location.hash);
       }
     } catch {
       // Sign-in is optional. The app keeps working signed out.
@@ -427,7 +533,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       onGoogle: async () => {
         const result = await b.signInWithGoogle();
         if (result === "redirecting") return "Taking you to Google…";
-        window.setTimeout(() => openAccount(), 400);
+        window.setTimeout(() => (route.kind === "signin" ? afterSignIn() : openAccount()), 400);
         return "You are signed in.";
       },
       onEmail: async (email) => {
@@ -440,6 +546,14 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         return "You are signed out. ATLAS Explain still works; history now stays on this browser.";
       },
     })]);
+  }
+
+  /** Back to where sign-in was asked from (?next=/app/...), otherwise Today. */
+  function afterSignIn(): void {
+    const next = new URLSearchParams(location.search).get("next");
+    const target = next ? parseRoute(next) : null;
+    shell.closeSheet();
+    navigate(target && target.kind !== "not_found" && target.kind !== "signin" ? target : { kind: "tab", tab: "today" }, { replace: true });
   }
 
   function renderSetup(): void {
@@ -834,7 +948,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function applyPreview(): void {
     const tab = preview.get("tab");
-    if (tab === "assets" || tab === "signal" || tab === "glossary" || tab === "settings") shell.select(tab);
+    if (tab === "assets" || tab === "glossary" || tab === "settings" || tab === "explain" || tab === "today") shell.select(tab);
+    if (tab === "signal") shell.select("today");
     const demo = preview.get("demo");
     if (demo === "run") showResult(runCard(DEMO_RUN));
     if (demo === "loading") showResult(loadingCard(1, STEP_LABELS));
@@ -842,7 +957,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (preview.get("onboarding") === "1") showOnboarding();
     if (preview.get("sheet") === "terms") openLegal("terms");
     if (preview.get("sheet") === "extension") shell.openSheet("Chrome extension", extensionNodes());
-    if (preview.get("sheet") === "today") today.node.click();
+    if (preview.get("sheet") === "today") shell.select("today");
     if (preview.get("menu") === "open") document.querySelector<HTMLButtonElement>(".bar .icon-btn")?.click();
   }
 

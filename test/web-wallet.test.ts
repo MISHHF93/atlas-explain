@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 const app = readFileSync("src/web/app.ts", "utf8");
 const legal = readFileSync("src/wallet/legal.ts", "utf8");
 const main = readFileSync("src/main.ts", "utf8");
-const style = readFileSync("src/style.css", "utf8");
-const html = readFileSync("index.html", "utf8");
+const style = readFileSync("src/app/app.css", "utf8") + readFileSync("src/site/site.css", "utf8");
+const html = readFileSync("app.html", "utf8");
 
 describe("web wallet", () => {
   it("uses the shared wallet shell instead of a full-page layout", () => {
@@ -14,7 +14,8 @@ describe("web wallet", () => {
     for (const old of ["desk", "legal", "pricing", "setup", "dom"]) {
       expect(existsSync(`src/ui/${old}.ts`)).toBe(false);
     }
-    expect(html).toContain('class="stage"');
+    expect(html).toContain('<div id="app"></div>');
+    expect(main).toContain('import "./app/app.css"');
   });
 
   it("keeps the same four tabs as the extension", () => {
@@ -41,27 +42,58 @@ describe("web wallet", () => {
   });
 });
 
-describe("judge-ready landing", () => {
+describe("public site", () => {
   const page = readFileSync("index.html", "utf8");
-  const css = readFileSync("src/style.css", "utf8");
-  it("tells the hybrid story in static HTML beside the live wallet", () => {
+  const css = readFileSync("src/site/site.css", "utf8");
+  const pages = ["index.html", "how-it-works.html", "privacy.html", "terms.html", "support.html", "404.html"].map((f) => [f, readFileSync(f, "utf8")] as const);
+  it("is a landing page led by the Chrome extension, with the hybrid story in static HTML", () => {
     expect(page).toContain('class="hero"');
+    expect(page).toMatch(/Add to Chrome/);
     expect(page).toMatch(/Gemini Nano, on this device/);
     expect(page).toMatch(/Firebase AI Logic with App Check/);
-    expect(page).toContain('href="/?sheet=extension"');
+    expect(page).toContain('href="/app"');
     expect(page).toContain("https://github.com/MISHHF93/atlas-explain");
     expect(page).toMatch(/Educational information, not investment advice/);
-    expect(page).toContain('<div id="app"></div>');
+    expect(page).not.toContain('id="app"');
   });
-  it("keeps the phone layout as the full-screen wallet and respects reduced motion", () => {
-    expect(css).toMatch(/@media \(max-width: 420px\), \(max-height: 640px\) \{[^}]*\}[^@]*\.hero \{ display: none; \}/);
+  it("every page loads only the tiny site script, links home and carries the disclaimer", () => {
+    for (const [, text] of pages) {
+      expect(text).toContain('src="/src/site/site.ts"');
+      expect(text).not.toContain("/src/main.ts");
+      expect(text).toMatch(/Educational information, not investment advice/);
+      expect(text).toContain('href="/privacy"');
+    }
+  });
+  it("marks the legal pages as drafts", () => {
+    for (const f of ["privacy.html", "terms.html"]) expect(readFileSync(f, "utf8")).toMatch(/Draft · not final/);
+  });
+  it("has no trade instructions in site copy", () => {
+    for (const [, text] of pages) expect(text.replace(/<[^>]+>/g, " ")).not.toMatch(/\b(buy|sell)\b/i);
+  });
+  it("uses tokens only, no font under 11px, and respects reduced motion", () => {
+    expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    for (const m of css.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)) expect(Number(m[1])).toBeGreaterThanOrEqual(11);
     expect(css).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.hero-dot \{ animation: none; \}/);
-  });
-  it("has no trade instructions in the landing copy", () => {
-    const text = page.replace(/<[^>]+>/g, " ");
-    expect(text).not.toMatch(/\b(buy|sell)\b/i);
   });
   it("adds the hybrid step to onboarding", () => {
     expect(readFileSync("src/wallet/cards.ts", "utf8")).toContain('title: "On your device first"');
+  });
+});
+
+describe("hosting routes", () => {
+  const hosting = JSON.parse(readFileSync("firebase.json", "utf8")).hosting;
+  it("serves the app at /app/** and /signin, the site pages by clean URL, and no catch-all", () => {
+    const map = Object.fromEntries(hosting.rewrites.map((r: { source: string; destination: string }) => [r.source, r.destination]));
+    expect(map["/app"]).toBe("/app.html");
+    expect(map["/app/**"]).toBe("/app.html");
+    expect(map["/signin"]).toBe("/app.html");
+    expect(map["/privacy"]).toBe("/privacy.html");
+    expect(map["/support"]).toBe("/support.html");
+    expect(map["**"]).toBeUndefined();
+  });
+  it("never caches HTML for an hour", () => {
+    const sources = hosting.headers.filter((h: { headers: { key: string; value: string }[] }) => h.headers.some((x) => x.key === "Cache-Control" && x.value === "no-cache")).map((h: { source: string }) => h.source);
+    expect(sources).toContain("**/*.html");
+    expect(sources).toContain("/");
   });
 });

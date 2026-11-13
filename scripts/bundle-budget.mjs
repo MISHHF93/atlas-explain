@@ -8,7 +8,8 @@ export const MAX_CHUNK_KB = 500;
 export const ENTRY_BUDGETS_KB = [
   { label: "extension popup.js", match: /^extension\/dist\/popup\.js$/, max: 120 },
   { label: "extension background.js", match: /^extension\/dist\/background\.js$/, max: 20 },
-  { label: "web entry index-*.js", match: /^dist\/assets\/index-[^/]+\.js$/, max: 150 },
+  { label: "web app entry app-*.js", match: /^dist\/assets\/app-[^/]+\.js$/, max: 150 },
+  { label: "public site script site-*.js", match: /^dist\/assets\/site-[^/]+\.js$/, max: 10 },
 ];
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");

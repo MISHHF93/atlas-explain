@@ -631,7 +631,7 @@ async function openSidePanel(): Promise<void> {
 /* ---------- account (shared with the web app through the bridge) ---------- */
 
 async function openAccount(): Promise<void> {
-  const signInUrl = `${EXPLAIN_WEB_URL}/?account=open`;
+  const signInUrl = `${EXPLAIN_WEB_URL}/signin`;
   const status = el("p", "fine", "Checking your account…");
   status.setAttribute("role", "status");
   const open = labelledButton("user", "Sign in on atlas-explain.web.app", "primary");

@@ -153,9 +153,9 @@ A bare public move card (the existing JSON shape) is also accepted. Allowed card
 
 **Hash links** keep the payload out of Hosting query logs:
 
-- `https://atlas-explain.web.app/#c=<base64url(JSON)>`
-- `https://atlas-explain.web.app/#card=<uri-encoded JSON>` for a small card
-- `https://atlas-explain.web.app/#concept=shadow` to open a glossary entry without a card
+- `https://atlas-explain.web.app/app/explain#c=<base64url(JSON)>` (links made for `/` still work; they are forwarded here)
+- `https://atlas-explain.web.app/app/explain#card=<uri-encoded JSON>` for a small card
+- `https://atlas-explain.web.app/app/explain#concept=shadow` to open a glossary entry without a card
 
 `src/core/context-link.ts` builds and parses these hashes. Concept ids live in `src/core/glossary.ts`: `shadow`, `signal15`, `chart_layers`, `live_lock`, `paper_only`, `drop_study`, `hybrid_inference`, and `move_card`.
 

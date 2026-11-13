@@ -164,7 +164,7 @@ a { color: var(--atlas-accent); }
 /* ---------- bottom navigation ---------- */
 
 .tabbar { flex: none; border-top: 1px solid var(--atlas-line); background: var(--atlas-card); }
-.tabbar-list { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tabbar-list { position: relative; display: grid; grid-template-columns: repeat(var(--tab-count, 5), 1fr); }
 .tab {
   display: grid;
   justify-items: center;
@@ -186,7 +186,7 @@ a { color: var(--atlas-accent); }
   position: absolute;
   top: 0;
   left: 0;
-  width: 20%;
+  width: calc(100% / var(--tab-count, 5));
   height: 3px;
   display: grid;
   place-items: center;
