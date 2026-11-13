@@ -30,7 +30,8 @@ export function digestCard(): { node: HTMLElement; show: (view: DigestView) => v
       const d = view.digest;
       body.append(el("p", "digest-headline", d.headline));
       body.append(el("p", "fine", `Dated ${d.reportingDate} (${d.timezone}), generated ${d.generatedAtToronto}. Today is ${today}.`));
-      if (d.reason) body.append(el("p", "fine", d.reason));
+      const hasStructuredStale = Boolean(d.previousOfficialNotes[0] || (d.morningReport && !d.morningReport.isToday) || !d.officialNotes.length);
+      if (d.reason && !hasStructuredStale) body.append(el("p", "fine", d.reason));
       if (d.officialNotes.length) {
         const ul = el("ul", "digest-notes");
         for (const n of d.officialNotes) {
