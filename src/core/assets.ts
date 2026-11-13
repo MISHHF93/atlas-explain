@@ -85,14 +85,33 @@ export interface AssetDetailView extends AssetView {
   citation: string | null;
 }
 
+/** The shared evidence gate, as ATLAS reports it. Codes are kept; the digest translates them. */
+export interface GateView {
+  passed: boolean;
+  failed: string[];
+  shadowWeeks: number | null;
+  requiredWeeks: number | null;
+}
+
 export interface CatalogView {
   asOf: string | null;
   assets: AssetView[];
   missing: { klass: AssetClass; reason: string }[];
   gateReason: string;
   stockCitation: string | null;
+  /** Absent when this ATLAS build does not report the gate (for example the MCP list). */
+  gate?: GateView | null;
   /** Where the list came from. ATLAS on this computer, or Kraken's public feed when ATLAS is not reachable. */
   source?: "atlas" | "kraken";
+}
+
+const GATE_CODE = /^[a-z0-9_]{1,48}$/;
+
+export function readGate(raw: unknown): GateView | null {
+  if (!isRec(raw) || typeof raw.passed !== "boolean") return null;
+  const failed = (Array.isArray(raw.failed) ? raw.failed : []).filter((c): c is string => typeof c === "string" && GATE_CODE.test(c)).slice(0, 12);
+  const weeks = (v: unknown) => (num(v) != null && (v as number) >= 0 && (v as number) < 520 ? (v as number) : null);
+  return { passed: raw.passed && failed.length === 0, failed, shadowWeeks: weeks(raw.shadowWeeks), requiredWeeks: weeks(raw.requiredWeeks) };
 }
 
 /* ---------- small readers ---------- */
@@ -237,6 +256,7 @@ export function readCatalog(payload: unknown, now: number = Date.now()): Catalog
     missing,
     gateReason: safeText(gate.reason, ""),
     stockCitation: str(sources.citation),
+    gate: readGate(payload.gate),
   };
 }
 

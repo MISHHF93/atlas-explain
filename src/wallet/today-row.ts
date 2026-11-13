@@ -6,7 +6,7 @@ import { icon } from "./icons";
  * A single row on the Explain tab that opens today's grounded digest in a sheet,
  * instead of a full card competing with the question box.
  */
-export function todayRow(onOpen: () => void): { node: HTMLButtonElement; show: (view: DigestView) => void } {
+export function todayRow(onOpen: () => void): { node: HTMLButtonElement; show: (view: DigestView, marketReady?: boolean) => void } {
   const node = el("button", "today-row");
   node.type = "button";
   const title = el("span", "today-title");
@@ -15,8 +15,8 @@ export function todayRow(onOpen: () => void): { node: HTMLButtonElement; show: (
   const chevron = icon("chevron", 14);
   node.append(title, status, chevron);
   node.addEventListener("click", onOpen);
-  function show(view: DigestView): void {
-    const s = digestRowStatus(view);
+  function show(view: DigestView, marketReady = false): void {
+    const s = digestRowStatus(view, marketReady);
     status.textContent = s.label;
     status.dataset.status = s.tone;
     node.setAttribute("aria-label", `Open today's digest. ${s.label}.`);

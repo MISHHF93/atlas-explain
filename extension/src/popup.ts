@@ -48,6 +48,10 @@ import { twoSidedNodes } from "../../src/wallet/two-sided";
 import { historyCard, learnCard } from "../../src/wallet/history-learn";
 import { engineStrip } from "../../src/wallet/engine";
 import { todayRow } from "../../src/wallet/today-row";
+import { marketDigestCard } from "../../src/wallet/market-digest";
+import { buildMarketDigest } from "../../src/core/market-digest";
+import type { CatalogView } from "../../src/core/assets";
+import type { DigestView } from "../../src/core/digest";
 import { icon } from "../../src/wallet/icons";
 import { COMPOSER_PLACEHOLDER, composerAction, composerHint } from "../../src/core/composer";
 import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../../src/core/follow-ups";
@@ -118,11 +122,27 @@ const explainHead = el("div", "panel-title sr-only");
 explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
 const engine = engineStrip({ compact: true });
 const brief = digestCard();
-const today = todayRow(() => shell.openSheet("Today's digest", [brief.node]));
+// Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
+let marketCatalog: CatalogView | null = null;
+let briefView: DigestView = { kind: "loading" };
+let marketCard: HTMLElement | null = null;
+const today = todayRow(() => {
+  marketCard = marketDigestCard(buildMarketDigest(marketCatalog));
+  shell.openSheet("Today's digest", [marketCard, brief.node]);
+});
+function refreshToday(): void {
+  today.show(briefView, marketCatalog != null);
+  // If the digest sheet is open when ATLAS answers, swap in the fresh card.
+  if (marketCard?.isConnected) {
+    const next = marketDigestCard(buildMarketDigest(marketCatalog));
+    marketCard.replaceWith(next);
+    marketCard = next;
+  }
+}
 void (canReachLocalAtlas(location, true)
   ? loadDigest()
   : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
-).then((v) => { brief.show(v); today.show(v); });
+).then((v) => { briefView = v; brief.show(v); refreshToday(); });
 // Recent explanations live in chrome.storage.local on this device. Never uploaded.
 const recentSlot = el("div");
 let history: HistoryEntry[] = [];
@@ -170,6 +190,8 @@ function startAssets(previewData?: AssetsPreview): void {
     onState: (state) => {
       atlasLocal = state.kind === "ready" && !previewData && state.catalog.source !== "kraken";
       livePrices = state.kind === "ready" && !previewData && state.catalog.source === "kraken";
+      if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !previewData && state.catalog.source !== "kraken" ? state.catalog : null;
+      refreshToday();
       updateConnection();
     },
     onExplain: (text) => {
