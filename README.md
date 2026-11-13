@@ -130,6 +130,8 @@ npm run build
 npx firebase-tools deploy --only hosting,firestore:rules,remoteconfig
 ```
 
+Billing is shipped switched off. `billing_enabled` defaults to false, checkout is not shown, and the badge says "Free during beta". See [docs/MONETIZATION.md](docs/MONETIZATION.md) before changing that.
+
 ## On-device model in Chrome
 
 On-device inference needs Chrome on desktop, version 139 or newer ([getting started guide](https://firebase.google.com/docs/ai-logic/hybrid/web/get-started)):

@@ -13,6 +13,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maxCharsOnDevice: 6_000,
   longDocumentChars: 1_200,
   maxOutputTokens: 1_200,
+  billingEnabled: false,
+  freeCloudDailyLimit: 50,
 };
 
 export const REMOTE_CONFIG_KEYS = [
@@ -24,6 +26,8 @@ export const REMOTE_CONFIG_KEYS = [
   "on_device_max_chars",
   "long_document_chars",
   "max_output_tokens",
+  "billing_enabled",
+  "free_cloud_daily_limit",
 ] as const;
 
 export type RemoteConfigKey = (typeof REMOTE_CONFIG_KEYS)[number];
@@ -38,6 +42,8 @@ export function remoteConfigDefaults(): Record<RemoteConfigKey, string> {
     on_device_max_chars: String(DEFAULT_SETTINGS.maxCharsOnDevice),
     long_document_chars: String(DEFAULT_SETTINGS.longDocumentChars),
     max_output_tokens: String(DEFAULT_SETTINGS.maxOutputTokens),
+    billing_enabled: DEFAULT_SETTINGS.billingEnabled ? "true" : "false",
+    free_cloud_daily_limit: String(DEFAULT_SETTINGS.freeCloudDailyLimit),
   };
 }
 
@@ -120,6 +126,20 @@ export function parseRemoteSettings(values: Record<string, string>): {
     "long_document_chars",
     warnings,
   );
+  settings.billingEnabled = readBool(
+    values.billing_enabled,
+    DEFAULT_SETTINGS.billingEnabled,
+    "billing_enabled",
+    warnings,
+  );
+  settings.freeCloudDailyLimit = readBoundedInt(
+    values.free_cloud_daily_limit,
+    1,
+    10_000,
+    DEFAULT_SETTINGS.freeCloudDailyLimit,
+    "free_cloud_daily_limit",
+    warnings,
+  );
   settings.maxOutputTokens = readBoundedInt(
     values.max_output_tokens,
     256,
@@ -130,6 +150,20 @@ export function parseRemoteSettings(values: Record<string, string>): {
   );
 
   return { settings, warnings };
+}
+
+function readBool(
+  raw: string | undefined,
+  fallback: boolean,
+  key: string,
+  warnings: string[],
+): boolean {
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const value = raw.trim().toLowerCase();
+  if (value === "true") return true;
+  if (value === "false") return false;
+  warnings.push(`${key} must be true or false. Using ${fallback}.`);
+  return fallback;
 }
 
 function readBoundedInt(
