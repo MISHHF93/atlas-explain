@@ -58,7 +58,7 @@ describe("hybrid engine status", () => {
     const web = readFileSync("src/web/app.ts", "utf8");
     const css = readFileSync("src/wallet/wallet.css", "utf8");
     for (const src of [popup, web]) {
-      expect(src).toContain("engineStrip()");
+      expect(src).toContain("engineStrip({ compact: true })");
       expect(src).toContain("engine.markRun(");
     }
     expect(css).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.engine-pulse \{ animation: none !important; \}/);
