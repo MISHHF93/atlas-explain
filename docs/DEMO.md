@@ -41,13 +41,13 @@ Times are a guide. Keep the total near three minutes. If a shot fails, retake th
 | --- | --- | --- | --- | --- | --- |
 | 1 | 0:00-0:10 | `http://localhost:3000/markets` | Select one market (for example BTCUSDT). | Markets desk, paper-only chrome, no account balances. | "ATLAS is my private paper-only research desk. It never places orders." |
 | 2 | 0:10-0:22 | Same tab | Click **Explain this move** on the quote bar (or an Explain chip on a chart layer or Signal15 row). | A new tab or wallet opening `atlas-explain.web.app` with a public card. | "The desk sends a public move card only: symbol, percent move, volume. No balances, no account, no positions." |
-| 3 | 0:22-0:28 | Explain wallet | Show the card loaded, model not yet run. | Header pill, card fields, **Explain the move** still idle. | "Loading a card never runs the model by itself. I click." |
+| 3 | 0:22-0:28 | Explain wallet | Show the card loaded, model not yet run. Point at the **On-device ⇄ Cloud** strip. | Header pill, the strip reading **Gemini Nano ready**, card fields, **Explain the move** still idle. | "Before anything is sent, the strip shows Gemini Nano is ready on this device. Loading a card never runs the model by itself. I click." |
 | 4 | 0:28-0:50 | Same wallet | Click **Explain the move**. Wait for the answer. | Badge **On-device / Gemini Nano** from `inferenceSource`. If it says Cloud, stop and retake after Nano is ready. | "Firebase AI Logic tries Gemini Nano on this device first, and Gemini in the cloud only if Nano is not ready. The badge is the SDK's own inferenceSource." |
 | 5 | 0:50-1:10 | Scroll the answer | Point at three reasons on each side and "what would change." | Both-sided reasons, no trade instruction. | "Two sides on purpose: why some readers see a dip worth studying, why others see more risk. Never an instruction." |
 | 1b | (fallback) | `https://atlas-explain.web.app/#concept=shadow` or a sample card | Use this only if the desk cannot be shown. | Glossary or sample card, **Hosted app** pill on the hosted origin. | "Without the desk, a deep link or a sample card loads the same public envelope." |
 | 6 | 1:10-1:18 | Practice page | Highlight "RSI(14) crossed above 70 while price tagged the upper Bollinger Band". | Practice page only; no prices, no account. | "Now any trading or charting page. I highlight one sentence." |
 | 7 | 1:18-1:28 | Same page | Right-click -> **Explain with ATLAS Explain**, or press `Alt+Shift+X`. | Popup or wallet, source labeled from the site name. | "Only the highlighted text, the title, and the site name leave the page. The account panel next to it is never read." |
-| 8 | 1:28-1:45 | Wallet answer | Let the answer finish. | Badge, "Charting site" (or equivalent) source line. | "The card says where it came from and which model answered." |
+| 8 | 1:28-1:45 | Wallet answer | Let the answer finish, then tap **Explain simpler** under **Keep going**. | Badge, "Charting site" (or equivalent) source line, the follow-up chips and any **Related** glossary chips. | "The card says where it came from and which model answered. One tap asks for a simpler version, still on the device." |
 | 9 | 1:45-1:58 | Practice page | Highlight "Stop-limit order" in the ticket help, explain again. | Same flow on a broker-style term, still no account fields. | "Same flow on a broker-style term." |
 | 10 | 1:58-2:08 | Explain tab -> **Recent** | Open a previous item. | Recent list, no network spinner for the reopen. | "Recent explanations stay on this device. Tapping one reopens it without another model call." |
 | 11 | 2:08-2:20 | Glossary -> **Learn path** -> **Got it** | Advance one step. | Glossary copy, progress on device. | "A short path through every term, progress kept on the device." |
@@ -55,6 +55,10 @@ Times are a guide. Keep the total near three minutes. If a shot fails, retake th
 | 13 | 2:32-2:45 | Extension or local preview with ATLAS running | Show the header pill after a real probe. | Pill text **ATLAS local** (or **ATLAS desk** if this tab is Markets). | "On this computer, the connectors library talks to ATLAS over public MCP, with a REST fallback, and the header says ATLAS local only when a probe answers." |
 | 14 | 2:45-2:52 | Signal tab | Open **Why this colour?** | Grey light unless a model has cleared the evidence gate. Today that is usually grey. | "The light stays grey until a model clears the evidence gate. Grey is the honest answer." |
 | 15 | 2:52-3:00 | Settings and disclaimer | Show the plan card and the footer line. | "Free during the hackathon. Billing is built in and switched off." Educational disclaimer visible. | "Educational information, not investment advice." |
+
+## Desktop opening frame
+
+On a desktop browser, https://atlas-explain.web.app now opens with the hybrid story beside the live wallet: the three-step route (your highlight, Gemini Nano on this device, Gemini in the cloud through Firebase AI Logic) and links to the extension and source. It is a good first frame for judges. Phones still get the full-screen wallet.
 
 ## Still frames for the README
 
