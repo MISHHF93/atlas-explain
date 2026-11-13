@@ -36,6 +36,8 @@ import { mayCallLocalAtlas, probeAtlasLocal } from "../connectors";
 import { loadDigest, todayToronto } from "../core/digest";
 import { digestCard } from "../wallet/digest";
 import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../core/timeouts";
+import type { AccountView } from "../core/account";
+import { accountPanel } from "../wallet/account";
 import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 import { twoSidedNodes } from "../wallet/two-sided";
@@ -68,6 +70,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const shell = createWalletShell({
     host,
     surface: "web",
+    onAccount: () => openAccount(),
     menu: [
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
       { label: "Get the Chrome extension", icon: "panel", run: () => shell.openSheet("Chrome extension", extensionNodes()) },
@@ -281,6 +284,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       } catch {
         // Private mode: theme lasts for this visit.
       }
+      void backend?.savePrefs({ theme: choice }).catch(() => undefined);
     })]),
     group("AI", [
       el("p", "fine", "Gemini Nano runs on this device when Chrome has it. Otherwise Gemini answers in the cloud through Firebase AI Logic, with App Check in front."),
@@ -370,6 +374,62 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     });
     void refreshPlan();
     void loadHistory();
+    void startAccount(backend);
+  }
+
+  /* ---------- account ---------- */
+
+  let account: AccountView | null = null;
+  let lastAccountUid: string | null = null;
+
+  async function startAccount(b: WebBackend): Promise<void> {
+    try {
+      await b.watchAccount((view) => {
+        account = view;
+        shell.setAccount(view);
+        void refreshPlan();
+        if (view && view.uid !== lastAccountUid) {
+          lastAccountUid = view.uid;
+          void loadHistory();
+          if (view.signedIn) void b.loadPrefs().then((prefs) => {
+            if (prefs) applyTheme(prefs.theme);
+          }).catch(() => undefined);
+        }
+      });
+      const finished = await b.completeSignIn(() => window.prompt("Confirm the email address you used for the sign-in link") ?? null);
+      if (finished) {
+        shell.announce(finished);
+        status.textContent = finished;
+        if (/[?&]signin=/.test(location.search)) history.replaceState(null, "", location.pathname + location.hash);
+      }
+    } catch {
+      // Sign-in is optional. The app keeps working signed out.
+    }
+  }
+
+  function openAccount(): void {
+    if (!backend) {
+      shell.openSheet("Account", [el("p", "fine", "Sign-in needs the cloud connection, which has not started. Reload the page to try again.")]);
+      return;
+    }
+    const b = backend;
+    shell.openSheet("Account", [accountPanel(account, {
+      onGoogle: async () => {
+        const result = await b.signInWithGoogle();
+        if (result === "redirecting") return "Taking you to Google…";
+        window.setTimeout(() => openAccount(), 400);
+        return "You are signed in.";
+      },
+      onEmail: async (email) => {
+        await b.sendEmailLink(email);
+        return `Check ${email} for a sign-in link. Open it on this device to finish.`;
+      },
+      onSignOut: async () => {
+        await b.signOut();
+        window.setTimeout(() => openAccount(), 400);
+        return "You are signed out. ATLAS Explain still works; history now stays on this browser.";
+      },
+    })]);
   }
 
   function renderSetup(): void {
@@ -646,11 +706,11 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     try {
       const entries = await backend.list();
       if (entries.length === 0) {
-        historyNote.textContent = "No saved explanations yet. They appear here for this browser's anonymous user.";
+        historyNote.textContent = account?.signedIn ? "No saved explanations yet. They appear here and on every device where you sign in." : "No saved explanations yet. They appear here for this browser. Sign in to keep them across devices.";
         historyList.replaceChildren();
         return;
       }
-      historyNote.textContent = "Saved under your anonymous id. Private notes are never stored.";
+      historyNote.textContent = account?.signedIn ? `Saved to ${account.label}. Private notes are never stored.` : "Saved on this browser while signed out. Private notes are never stored.";
       historyList.replaceChildren(...entries.map(historyItem));
     } catch (error) {
       historyNote.textContent = error instanceof Error ? error.message : "History could not be loaded.";
@@ -696,18 +756,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const extras: Node[] = [];
     const acts = pricingActions(view);
     if (backend && acts.includes("link-google")) {
-      const link = labelledButton("key", "Link a Google account", "secondary small");
-      link.addEventListener("click", () => {
-        accountNote.textContent = "Opening Google…";
-        void backend?.linkGoogle().then(
-          (res) => {
-            accountNote.textContent = res === "already" ? "This browser is already linked to Google." : "Google is linked. Saved explanations stay with this account.";
-          },
-          (error: unknown) => {
-            accountNote.textContent = error instanceof Error ? error.message : "Google sign-in did not finish.";
-          },
-        );
-      });
+      const label = account?.signedIn ? `Account · ${account.label}` : "Sign in or create an account";
+      const link = labelledButton("user", label, "secondary small");
+      link.addEventListener("click", () => openAccount());
       extras.push(link);
     }
     if (backend && acts.includes("checkout") && snapshot?.pricing.showCheckout) {

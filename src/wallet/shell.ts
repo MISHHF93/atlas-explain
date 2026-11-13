@@ -1,4 +1,5 @@
 import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
+import type { AccountView } from "../core/account";
 import { connectionCopy, signalCopy, type ConnectionState } from "../core/popup-copy";
 import type { SignalView } from "../core/signal";
 import { el, iconButton, prefersReducedMotion, replay } from "./dom";
@@ -28,6 +29,8 @@ export interface WalletShell {
   select(tab: TabId, options?: { focus?: boolean }): void;
   setSignal(view: SignalView): void;
   setConnection(state: ConnectionState): void;
+  /** Header account chip. Hidden until an account handler is passed to the shell. */
+  setAccount(view: AccountView | null): void;
   openSheet(title: string, nodes: Node[]): void;
   closeSheet(): void;
   announce(text: string): void;
@@ -44,6 +47,7 @@ export function createWalletShell(options: {
   surface: "extension" | "web";
   menu: MenuItem[];
   onSelect?: (tab: TabId) => void;
+  onAccount?: () => void;
 }): WalletShell {
   const frame = el("div", "wallet");
   frame.dataset.surface = options.surface;
@@ -108,8 +112,17 @@ export function createWalletShell(options: {
     if (!menu.hidden && !menu.contains(event.target as Node) && !menuButton.contains(event.target as Node)) toggleMenu(false);
   });
 
+  const accountButton = el("button", "acct");
+  accountButton.type = "button";
+  accountButton.dataset.signedIn = "false";
+  accountButton.hidden = !options.onAccount;
+  accountButton.setAttribute("aria-label", "Account: signed out. Open account.");
+  accountButton.title = "Sign in or manage your account";
+  accountButton.append(icon("user", 16));
+  accountButton.addEventListener("click", () => options.onAccount?.());
+
   const tools = el("div", "bar-tools");
-  tools.append(status, menuButton);
+  tools.append(status, accountButton, menuButton);
   header.append(lockup, tools, menu);
 
   /* panels */
@@ -258,6 +271,19 @@ export function createWalletShell(options: {
     statusLabel.textContent = copy.label;
   }
 
+  function setAccount(view: AccountView | null): void {
+    accountButton.dataset.signedIn = view?.signedIn ? "true" : "false";
+    if (view?.signedIn) {
+      accountButton.replaceChildren(el("span", "acct-initials", view.initials));
+      accountButton.setAttribute("aria-label", `Account: signed in as ${view.label}. Open account.`);
+      accountButton.title = `Signed in as ${view.label}`;
+    } else {
+      accountButton.replaceChildren(icon("user", 16));
+      accountButton.setAttribute("aria-label", "Account: signed out. Open account.");
+      accountButton.title = "Sign in or manage your account";
+    }
+  }
+
   function openSheet(title: string, nodes: Node[]): void {
     sheetReturn = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     sheetTitle.textContent = title;
@@ -294,6 +320,7 @@ export function createWalletShell(options: {
     select,
     setSignal,
     setConnection,
+    setAccount,
     openSheet,
     closeSheet,
     announce: (text) => {

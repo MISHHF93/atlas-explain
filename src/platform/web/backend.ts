@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { getAuth, signInAnonymously } from "firebase/auth";
+import type { AccountView } from "../../core/account";
 import { fetchAndActivate, getRemoteConfig, getValue } from "firebase/remote-config";
 import {
   PRO_PRICE_ID,
@@ -32,6 +33,10 @@ export interface HistoryEntry {
   cardJson: string;
 }
 
+export interface UserPrefs {
+  theme: "system" | "light" | "dark";
+}
+
 export interface WebBackend {
   loadSettings(): Promise<{ settings: AppSettings; warnings: string[] }>;
   explain(
@@ -43,7 +48,15 @@ export interface WebBackend {
   save(run: ExplanationRun, card: MoveCard, question: string): Promise<void>;
   list(): Promise<HistoryEntry[]>;
   loadBilling(): Promise<BillingSnapshot>;
-  linkGoogle(): Promise<"linked" | "already">;
+  /** Calls back with the current account now and on every change. Returns an unsubscribe. */
+  watchAccount(onChange: (view: AccountView | null) => void): Promise<() => void>;
+  signInWithGoogle(): Promise<"signed-in" | "redirecting">;
+  sendEmailLink(email: string): Promise<void>;
+  /** Finishes a Google redirect or an email link that returned to this page. */
+  completeSignIn(askEmail: () => string | null): Promise<string | null>;
+  signOut(): Promise<void>;
+  loadPrefs(): Promise<UserPrefs | null>;
+  savePrefs(prefs: UserPrefs): Promise<void>;
   /** Throws if billing is off. The pricing panel does not call this unless checkout is shown. */
   startCheckout(): Promise<void>;
 }
@@ -79,13 +92,20 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
   const explainer = lazyExplainer(app);
   const payments = lazyPayments(async () => (await store()).db);
 
-  let userPromise: Promise<string | null> | null = null;
-  const currentUserId = () => {
-    userPromise ??= signInAnonymously(auth)
+  // Signed-out visitors get an anonymous id; a signed-in account is never replaced by one.
+  let anonymous: Promise<string | null> | null = null;
+  const currentUserId = async (): Promise<string | null> => {
+    await auth.authStateReady();
+    if (auth.currentUser) return auth.currentUser.uid;
+    anonymous ??= signInAnonymously(auth)
       .then((credential) => credential.user.uid)
-      .catch(() => null);
-    return userPromise;
+      .catch(() => null)
+      .finally(() => {
+        anonymous = null;
+      });
+    return anonymous;
   };
+  const accountFlows = () => import("./account");
 
   const loadSettings = async () => {
     try {
@@ -122,9 +142,35 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
     loadSettings,
     loadBilling,
     currentUserId,
-    async linkGoogle() {
-      const { linkAnonymousWithGoogle } = await import("./account");
-      return linkAnonymousWithGoogle(auth);
+    async watchAccount(onChange) {
+      const { watchAccount } = await accountFlows();
+      return watchAccount(auth, onChange);
+    },
+    async signInWithGoogle() {
+      await currentUserId();
+      return (await accountFlows()).signInWithGoogle(auth);
+    },
+    async sendEmailLink(email) {
+      await currentUserId();
+      const url = `${window.location.origin}/?signin=email`;
+      return (await accountFlows()).sendEmailLink(auth, email, url);
+    },
+    async completeSignIn(askEmail) {
+      await auth.authStateReady();
+      return (await accountFlows()).completePendingSignIn(auth, window.location.href, askEmail);
+    },
+    async signOut() {
+      return (await accountFlows()).signOutToAnonymous(auth);
+    },
+    async loadPrefs() {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) return null;
+      return (await store()).readPrefs(user.uid);
+    },
+    async savePrefs(prefs) {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) return;
+      await (await store()).writePrefs(user.uid, prefs);
     },
     async startCheckout() {
       const { settings } = await loadSettings();
