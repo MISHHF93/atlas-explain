@@ -1,3 +1,4 @@
+import { CloudAllowanceUsed, applyCloudGate } from "./billing";
 import { hasPrivateContext } from "./move-card";
 import { selectInferencePath } from "./inference-path";
 import { ExplanationParseError, parseExplanation } from "./parse-explanation";
@@ -27,6 +28,11 @@ export async function runExplanation(input: {
   settings: AppSettings;
   explainer: HybridExplainer;
   hooks?: ExplainHooks;
+  /** When omitted, cloud calls are not metered. The web backend supplies this. */
+  meter?: {
+    allowCloud: boolean;
+    onCloudInference: () => Promise<void>;
+  };
 }): Promise<ExplanationRun> {
   const topics = input.settings.topics;
   const topicIds: TopicId[] = topics.map((topic) => topic.id);
@@ -49,7 +55,7 @@ export async function runExplanation(input: {
       })
     : publicPrompt;
 
-  const decision = selectInferencePath({
+  const selected = selectInferencePath({
     preference: input.settings.inferenceMode,
     headlineCount: input.card.headlines.length,
     documentChars: input.card.document?.length ?? 0,
@@ -62,6 +68,12 @@ export async function runExplanation(input: {
       longDocumentChars: input.settings.longDocumentChars,
     },
   });
+  const gate = applyCloudGate(selected, input.meter?.allowCloud !== false);
+  if (gate.kind === "blocked") throw new CloudAllowanceUsed();
+  const decision = gate.decision;
+  const narrowedOffCloud =
+    input.meter?.allowCloud === false &&
+    (selected.mode !== decision.mode || selected.retryWithoutPrivate);
 
   const prompt = decision.includePrivateContext ? privatePrompt.prompt : publicPrompt.prompt;
 
@@ -88,14 +100,21 @@ export async function runExplanation(input: {
     result = await call(decision.mode, prompt);
   } catch (error) {
     if (decision.retryWithoutPrivate && error instanceof OnDeviceUnavailableError) {
+      if (input.meter && !input.meter.allowCloud) throw new CloudAllowanceUsed();
       fellBackToCloud = true;
       requestedMode = "only_in_cloud";
       promptUsed = publicPrompt.prompt;
       privateContextUsed = false;
       result = await call("only_in_cloud", publicPrompt.prompt);
+    } else if (narrowedOffCloud && error instanceof OnDeviceUnavailableError) {
+      throw new CloudAllowanceUsed();
     } else {
       throw error;
     }
+  }
+
+  if (input.meter && (result.inferenceSource === "in_cloud" || fellBackToCloud)) {
+    await input.meter.onCloudInference();
   }
 
   let explanation;

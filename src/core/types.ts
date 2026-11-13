@@ -116,6 +116,10 @@ export interface AppSettings {
   maxCharsOnDevice: number;
   longDocumentChars: number;
   maxOutputTokens: number;
+  /** Remote Config kill switch. Default false until after hackathon judging. */
+  billingEnabled: boolean;
+  /** Cloud explanations per day on the free plan, used only when billing is on. */
+  freeCloudDailyLimit: number;
 }
 
 export interface ExplanationRun {
