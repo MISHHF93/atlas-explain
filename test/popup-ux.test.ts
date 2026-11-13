@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import { connectionCopy, signalCopy, whyQuestion, shortSelection, SAMPLE_EXPLANATION } from "../src/core/popup-copy";
 import { mapSignal } from "../src/core/signal";
 
-const css = readFileSync("extension/popup.css", "utf8");
+const css = readFileSync("src/wallet/wallet.css", "utf8");
+const popupCss = readFileSync("extension/popup.css", "utf8");
+const shellSrc = readFileSync("src/wallet/shell.ts", "utf8");
+const cardsSrc = readFileSync("src/wallet/cards.ts", "utf8");
 const tokens = readFileSync("src/brand/tokens.css", "utf8");
 const popup = readFileSync("extension/src/popup.ts", "utf8");
-const icons = readFileSync("extension/src/icons.ts", "utf8");
+const icons = readFileSync("src/wallet/icons.ts", "utf8");
 
 const views = {
   connect: mapSignal({ connected: false }),
@@ -54,8 +57,10 @@ describe("wallet popup copy", () => {
 });
 
 describe("wallet popup design rules", () => {
-  it("uses tokens only: no hex colours in popup CSS", () => {
+  it("uses tokens only: no hex colours in the wallet or popup CSS", () => {
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(popupCss).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(popupCss).toContain('@import "../src/wallet/wallet.css"');
   });
 
   it("never sets a font below 11px", () => {
@@ -75,9 +80,11 @@ describe("wallet popup design rules", () => {
 
   it("announces results and state changes to screen readers", () => {
     expect(popup).toContain('result.setAttribute("aria-live", "polite")');
-    expect(popup).toContain('live.setAttribute("aria-live", "polite")');
-    expect(popup).toContain('settings.setAttribute("role", "dialog")');
-    expect(popup).toContain('themeGroup.setAttribute("role", "radiogroup")');
+    expect(shellSrc).toContain('live.setAttribute("aria-live", "polite")');
+    expect(shellSrc).toContain('sheet.setAttribute("role", "dialog")');
+    expect(shellSrc).toContain('list.setAttribute("role", "tablist")');
+    expect(shellSrc).toContain('menu.setAttribute("role", "menu")');
+    expect(cardsSrc).toContain('wrap.setAttribute("role", "radiogroup")');
   });
 
   it("keeps Firebase out of the popup entry and never says buy or sell", () => {
@@ -86,13 +93,20 @@ describe("wallet popup design rules", () => {
     expect(popup).not.toMatch(/\b(buy|sell)\b/i);
   });
 
-  it("ships every icon the popup asks for", () => {
-    for (const match of popup.matchAll(/icon(?:Button)?\(\s*"([a-z]+)"/g)) {
-      expect(icons).toContain(`  ${match[1]}: '`);
+  it("ships every icon the wallet asks for", () => {
+    for (const source of [popup, shellSrc, cardsSrc]) {
+      for (const match of source.matchAll(/(?:icon|iconButton|labelledButton|row)\(\s*"([a-z]+)"/g)) {
+        expect(icons).toContain(`  ${match[1]}: '`);
+      }
+      for (const match of source.matchAll(/icon: "([a-z]+)"/g)) {
+        expect(icons).toContain(`  ${match[1]}: '`);
+      }
     }
-    for (const match of popup.matchAll(/labelledButton\(\s*"([a-z]+)"/g)) {
-      expect(icons).toContain(`  ${match[1]}: '`);
-    }
+  });
+
+  it("keeps wallet cards free of buy or sell wording", () => {
+    expect(shellSrc).not.toMatch(/\b(buy|sell)\b/i);
+    expect(cardsSrc).not.toMatch(/\b(buy|sell)\b/i);
   });
 });
 

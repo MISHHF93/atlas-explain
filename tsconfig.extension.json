@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["chrome", "vite/client"]
   },
-  "include": ["extension/**/*.ts", "src/core/**/*.ts", "src/platform/web/firebaseConfig.ts", "src/platform/web/usage.ts"]
+  "include": ["extension/**/*.ts", "src/core/**/*.ts", "src/wallet/**/*.ts", "src/platform/web/firebaseConfig.ts", "src/platform/web/usage.ts"]
 }
