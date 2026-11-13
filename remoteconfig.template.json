@@ -1,0 +1,61 @@
+{
+  "parameters": {
+    "inference_mode": {
+      "defaultValue": {
+        "value": "prefer_on_device"
+      },
+      "description": "Firebase AI Logic mode: prefer_on_device, only_on_device, prefer_in_cloud, or only_in_cloud.",
+      "valueType": "STRING"
+    },
+    "cloud_model": {
+      "defaultValue": {
+        "value": "gemini-3.5-flash-lite"
+      },
+      "description": "Cloud Gemini model id used by inCloudParams when inference does not stay on device. The JS SDK 13 default is gemini-3.5-flash-lite.",
+      "valueType": "STRING"
+    },
+    "prompt_template": {
+      "defaultValue": {
+        "value": "You are the narrator for ATLAS Explain, a public educational companion.\nExplain the market move in the card. This is not financial advice. Do not recommend buying, selling, holding, sizing a position, or setting a target. Do not say \"you should\".\n\nUse only figures that appear in the card. If a figure is absent, say it was not provided. Do not invent prices, volumes, dates, or causes.\n\nClassify each headline into exactly one topic id from this taxonomy:\n{{TAXONOMY}}\n\nUser question:\n{{QUESTION}}\n\nMove card JSON:\n{{MOVE_CARD}}\n\n{{PRIVATE_CONTEXT}}\n\nReturn JSON with these fields:\n- summary: at most 120 words, plain language, balanced\n- headlineTopics: one object per headline, with headline, topic, and a short note\n- buyerReasons: exactly 3 reasons someone might see the decline as an opportunity\n- sellerReasons: exactly 3 reasons someone might see further downside or ongoing risk\n- whatWouldChange: one short paragraph on evidence that would change either case\n\nReasons must be grounded in the card. If the card is thin, say what is missing instead of filling the gap with a story."
+      },
+      "description": "Prompt template. Placeholders: {{TAXONOMY}} {{QUESTION}} {{MOVE_CARD}} {{PRIVATE_CONTEXT}}.",
+      "valueType": "STRING"
+    },
+    "topic_taxonomy": {
+      "defaultValue": {
+        "value": "[{\"id\":\"ai_capex\",\"label\":\"AI capex\"},{\"id\":\"china_export_rules\",\"label\":\"China / export rules\"},{\"id\":\"scandal_governance\",\"label\":\"Scandal / governance\"},{\"id\":\"earnings_guidance\",\"label\":\"Earnings / guidance\"},{\"id\":\"rates_fed\",\"label\":\"Rates / Fed\"},{\"id\":\"macro_shock\",\"label\":\"Macro shock\"},{\"id\":\"other\",\"label\":\"Other\"}]"
+      },
+      "description": "JSON array of {id, label}. Ids must be the fixed taxonomy, and other is required.",
+      "valueType": "STRING"
+    },
+    "on_device_max_headlines": {
+      "defaultValue": {
+        "value": "8"
+      },
+      "description": "Headline count above this forces ONLY_IN_CLOUD and drops private notes.",
+      "valueType": "STRING"
+    },
+    "on_device_max_chars": {
+      "defaultValue": {
+        "value": "6000"
+      },
+      "description": "Prompt length above this forces ONLY_IN_CLOUD and drops private notes.",
+      "valueType": "STRING"
+    },
+    "long_document_chars": {
+      "defaultValue": {
+        "value": "1200"
+      },
+      "description": "Document length above this is treated as a long document and forced to the cloud.",
+      "valueType": "STRING"
+    },
+    "max_output_tokens": {
+      "defaultValue": {
+        "value": "1200"
+      },
+      "description": "maxOutputTokens for the cloud model. Gemini 3.x ignores temperature, so it is not sent.",
+      "valueType": "STRING"
+    }
+  },
+  "parameterGroups": {}
+}

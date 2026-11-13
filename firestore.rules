@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// Each anonymous user can read and write only their own explanations.
+// Private notes and watchlists are rejected so they are not stored in the cloud.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/explanations/{explanationId} {
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasAll([
+          "symbol",
+          "movePct",
+          "summary",
+          "inferenceSource",
+          "buyerReasons",
+          "sellerReasons",
+          "whatWouldChange"
+        ])
+        && request.resource.data.symbol is string
+        && request.resource.data.symbol.size() > 0
+        && request.resource.data.symbol.size() < 16
+        && request.resource.data.movePct is number
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() > 0
+        && request.resource.data.summary.size() < 8000
+        && request.resource.data.inferenceSource is string
+        && request.resource.data.buyerReasons is list
+        && request.resource.data.sellerReasons is list
+        && request.resource.data.whatWouldChange is string
+        && !request.resource.data.keys().hasAny(["notes", "watchlist"]);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
