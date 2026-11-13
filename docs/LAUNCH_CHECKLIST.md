@@ -30,7 +30,7 @@ Education only: no buy/sell wording, never reads balances or account details.
 
 ### Store and consent
 9. **OAuth consent screen:** Google Cloud console → Google Auth Platform → Branding: app name, support email, logo, home page `https://atlas-explain.web.app`, privacy and terms URLs (publish the final legal pages first) → Audience: Production → submit for verification if Google asks (basic scopes only: email, profile, openid).
-10. **Chrome Web Store listing:** developer account (one-time US$5 fee, so only when you decide), upload `extension/atlas-explain-chrome.zip` (the build strips the manifest `key`), screenshots from `extension/store/`, privacy practices form (declare: personally identifiable info only when signing in; website content = highlighted text), justify host permissions (`localhost:3000`, `atlas-explain.web.app`), single purpose: explain trading terms for education.
+10. **Chrome Web Store listing:** developer account (one-time US$5 fee, so only when you decide), upload `extension/atlas-explain-chrome.zip` (the build strips the manifest `key`), listing images from `store/` and every form answer from `docs/CHROME_STORE.md`, privacy practices form (declare: personally identifiable info only when signing in; website content = highlighted text), justify host permissions (`localhost:3000`, `atlas-explain.web.app`), single purpose: explain trading terms for education.
 11. **Privacy policy and terms review:** finish every `[TODO]` in `docs/legal/`, have them reviewed, publish at stable URLs, and remove the DRAFT labels in `src/wallet/legal.ts`.
 
 ### Data licensing (required before a market launch; not required for the hackathon demo)

@@ -35,6 +35,6 @@ Keep this list in the Devpost description so the submission matches the tree:
 
 ## Nice to have
 
-- [ ] Chrome Web Store listing (images in `extension/store/`).
+- [ ] Chrome Web Store listing (images in `store/`; listing text and answers in `docs/CHROME_STORE.md`).
 - [ ] Short GIF of the highlight flow in the README.
 - [ ] A screenshot set in the README (see `docs/screenshots/` once captured).

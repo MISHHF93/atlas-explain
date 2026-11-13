@@ -74,6 +74,9 @@ type RunOptions = { highlight: boolean; fromPage: boolean; pending?: PendingExpl
 
 const hasChrome = typeof chrome !== "undefined" && Boolean(chrome.runtime?.id);
 const preview = new URLSearchParams(location.search);
+// The side panel reuses popup.html; it fills the panel instead of the fixed 360 x 600 popup frame.
+// Chrome caps popups at 600px tall, so a taller window is the side panel (or a tab).
+if (preview.get("view") === "panel" || window.innerHeight > 640) document.documentElement.dataset.view = "panel";
 const host = document.querySelector("#app");
 if (!(host instanceof HTMLElement)) throw new Error("Missing #app");
 installErrorBoundary(host);
@@ -97,7 +100,7 @@ const shell = createWalletShell({
   menu: [
     { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
     { label: "Open the ATLAS desk", icon: "external", run: () => openUrl(ATLAS_DESK_URL) },
-    { label: "Open the web app", icon: "external", run: () => openUrl(EXPLAIN_WEB_URL) },
+    { label: "Open the web app", icon: "external", run: () => openUrl(`${EXPLAIN_WEB_URL}/app`) },
     { label: "Privacy", icon: "shield", run: () => shell.openSheet("Privacy", [el("p", undefined, EXTENSION_PRIVACY_NOTE), el("p", undefined, LOCAL_ATLAS_PERMISSION_NOTE), el("p", "fine", EXTENSION_DISCLAIMER)]) },
     { label: "Settings", icon: "gear", run: () => shell.select("settings", { focus: true }) },
   ],
@@ -624,7 +627,7 @@ async function openSidePanel(): Promise<void> {
   }
   const tab = await activeTab();
   if (tab?.id == null) return;
-  await chrome.sidePanel.setOptions({ tabId: tab.id, path: "popup.html", enabled: true });
+  await chrome.sidePanel.setOptions({ tabId: tab.id, path: "popup.html?view=panel", enabled: true });
   await chrome.sidePanel.open({ tabId: tab.id });
 }
 
