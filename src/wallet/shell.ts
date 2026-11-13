@@ -68,7 +68,9 @@ export function createWalletShell(options: {
   status.dataset.light = "grey";
   const statusLight = el("span", "conn-light");
   const statusLabel = el("span", "conn-label", "Not connected");
-  status.append(statusLight, statusLabel);
+  const statusCaret = icon("chevron", 12);
+  statusCaret.classList.add("conn-caret");
+  status.append(statusLight, statusLabel, statusCaret);
   status.addEventListener("click", () => select("signal", { focus: true }));
 
   const menuButton = iconButton("more", "Menu");
@@ -113,6 +115,10 @@ export function createWalletShell(options: {
   /* panels */
   const body = el("main", "wallet-body");
   body.id = "main";
+  body.addEventListener("scroll", () => {
+    const scrolled = body.scrollTop > 4 ? "true" : "false";
+    if (frame.dataset.scrolled !== scrolled) frame.dataset.scrolled = scrolled;
+  }, { passive: true });
   const panels = {} as Record<TabId, HTMLElement>;
   for (const tab of TABS) {
     const panel = el("section", "panel");

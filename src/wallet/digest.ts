@@ -15,7 +15,9 @@ export function digestCard(): { node: HTMLElement; show: (view: DigestView) => v
   function show(view: DigestView): void {
     const today = "today" in view ? view.today : view.kind === "ready" ? view.digest.reportingDate : todayToronto();
     const head = el("div", "digest-head");
-    head.append(el("h2", undefined, "Today's brief"), el("span", "fine", `${longTorontoDate()} - America/Toronto`));
+    const status = el("span", "digest-status", view.kind === "ready" ? "Today" : view.kind === "loading" ? "Loading" : "Not ready yet");
+    status.dataset.status = view.kind === "ready" ? "ready" : view.kind === "loading" ? "loading" : "waiting";
+    head.append(el("h2", undefined, "Today's brief"), status, el("span", "fine digest-date", `${longTorontoDate()} - America/Toronto`));
     const body = el("div", "digest-body");
     if (view.kind === "loading") {
       body.append(el("p", "fine", "Loading today's digest..."));

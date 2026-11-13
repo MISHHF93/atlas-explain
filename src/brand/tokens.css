@@ -29,6 +29,14 @@
   --atlas-dur: 200ms;
   --atlas-shadow-sm: 0 1px 2px color-mix(in srgb, var(--atlas-ink) 8%, transparent);
   --atlas-shadow-lg: 0 12px 32px -12px color-mix(in srgb, var(--atlas-ink) 28%, transparent);
+  --atlas-shadow-md: 0 4px 14px -6px color-mix(in srgb, var(--atlas-ink) 22%, transparent);
+  --atlas-glow: 0 0 0 1px color-mix(in srgb, var(--atlas-accent) 30%, transparent), 0 8px 22px -10px var(--atlas-accent);
+  --atlas-surface-2: color-mix(in srgb, var(--atlas-ink) 4%, var(--atlas-card));
+  --atlas-accent-soft: color-mix(in srgb, var(--atlas-accent) 12%, transparent);
+  --atlas-radius-xl: 20px;
+  --atlas-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --atlas-dur-fast: 140ms;
+  --atlas-dur-slow: 360ms;
   --ink: var(--atlas-ink);
   --muted: var(--atlas-muted);
   --paper: var(--atlas-paper);

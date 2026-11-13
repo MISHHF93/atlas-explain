@@ -770,3 +770,176 @@ textarea:focus-visible, input:focus-visible { outline: none; }
 .digest-notes { margin: 0.3rem 0; padding-left: 1.1rem; }
 .digest-notes li { margin: 0.2rem 0; }
 .digest-body .fine { display: block; margin: 0.2rem 0; }
+
+/* ================================================================
+ * Wallet polish layer (build 6). Same tokens, no hex, no font < 11px.
+ * Depth, a dropdown-style status pill, an active tab pill, calmer
+ * surfaces, row stagger, and an area-filled sparkline.
+ * ================================================================ */
+
+/* header: soft glass bar that lifts when the body scrolls */
+.bar {
+  background: linear-gradient(180deg, var(--atlas-card), color-mix(in srgb, var(--atlas-card) 70%, var(--atlas-paper)));
+  border-bottom-color: color-mix(in srgb, var(--atlas-line) 70%, transparent);
+  transition: box-shadow var(--atlas-dur) ease;
+}
+.wallet[data-scrolled="true"] .bar { box-shadow: var(--atlas-shadow-md); }
+.logo { transition: transform var(--atlas-dur-slow) var(--atlas-ease-out); }
+.lockup:hover .logo { transform: rotate(-6deg) scale(1.04); }
+
+/* status pill reads as a dropdown, like a wallet network switcher */
+.conn {
+  gap: 0.35rem;
+  padding: 0 0.45rem 0 0.4rem;
+  background: var(--atlas-surface-2);
+  box-shadow: var(--atlas-shadow-sm);
+  transition: border-color var(--atlas-dur) ease, box-shadow var(--atlas-dur) ease, background var(--atlas-dur) ease;
+}
+.conn:hover { box-shadow: var(--atlas-glow); background: var(--atlas-card); }
+.conn-caret { color: var(--atlas-muted); transform: rotate(90deg); transition: transform var(--atlas-dur) var(--atlas-ease); }
+.conn:hover .conn-caret { transform: rotate(90deg) translateX(1px); }
+.conn[data-light="green"] { border-color: color-mix(in srgb, var(--atlas-signal-up) 35%, var(--atlas-line)); }
+.conn[data-light="red"] { border-color: color-mix(in srgb, var(--atlas-signal-down) 35%, var(--atlas-line)); }
+.conn[data-light="green"] .conn-light, .conn[data-light="red"] .conn-light { animation: atlas-breathe-dot 2.4s ease-in-out infinite; }
+
+.menu { padding: 0.35rem; border-radius: var(--atlas-radius-lg); backdrop-filter: blur(6px); }
+.menu-item { transition: background var(--atlas-dur-fast) ease, transform var(--atlas-dur-fast) ease; }
+.menu-item:hover { transform: translateX(2px); }
+
+/* panel titles */
+.panel { gap: 0.75rem; padding: 0.8rem 0.8rem 1rem; }
+.panel-title h1 { font-size: 1.25rem; letter-spacing: -0.01em; }
+.panel-title > :last-child:not(h1) {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--atlas-accent-soft);
+  color: var(--atlas-accent);
+  font-size: var(--atlas-text-2xs);
+  font-weight: 700;
+}
+
+/* cards: quiet depth and a hover lift for interactive ones */
+.card {
+  border-color: color-mix(in srgb, var(--atlas-line) 80%, transparent);
+  border-radius: var(--atlas-radius-lg);
+  box-shadow: var(--atlas-shadow-sm);
+  transition: border-color var(--atlas-dur) ease, box-shadow var(--atlas-dur) ease, transform var(--atlas-dur) var(--atlas-ease-out);
+}
+.card.state-empty, .card.connect-card { box-shadow: none; }
+.history-item:hover, .term:hover { box-shadow: var(--atlas-shadow-md); }
+
+/* connect card: honest grey light in the art, accent rail */
+.connect-card { position: relative; overflow: hidden; background: linear-gradient(160deg, var(--atlas-accent-soft), transparent 55%), var(--atlas-card); border-style: solid; }
+.connect-card .state-art { position: relative; background: var(--atlas-card); box-shadow: var(--atlas-shadow-md); }
+.connect-card .state-art::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--atlas-signal-flat);
+  box-shadow: 0 0 0 2px var(--atlas-card);
+}
+.connect-steps li::marker { color: var(--atlas-accent); font-weight: 700; }
+
+/* buttons */
+.primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--atlas-accent) 88%, var(--atlas-card)), var(--atlas-accent));
+  box-shadow: var(--atlas-glow);
+}
+.primary:hover:not(:disabled) { background: var(--atlas-accent); transform: translateY(-1px); }
+.secondary:hover:not(:disabled) { box-shadow: var(--atlas-shadow-sm); }
+.icon-btn.ghost:hover { transform: none; }
+
+/* inputs */
+textarea, input[type="password"], input[type="text"], input[type="search"] { background: var(--atlas-surface-2); border-color: transparent; box-shadow: inset 0 0 0 1px var(--atlas-line); }
+textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0 0 0 1px var(--atlas-accent), 0 0 0 3px color-mix(in srgb, var(--atlas-accent) 18%, transparent); }
+.filter { transition: background var(--atlas-dur-fast) ease, color var(--atlas-dur-fast) ease, border-color var(--atlas-dur-fast) ease; }
+.filter:hover:not(:disabled):not([aria-pressed="true"]) { border-color: var(--atlas-accent); }
+
+/* bottom nav: active pill behind the icon */
+.tabbar { background: color-mix(in srgb, var(--atlas-card) 92%, transparent); box-shadow: 0 -6px 18px -14px var(--atlas-ink); }
+.tab .icon { padding: 3px 12px; box-sizing: content-box; border-radius: 999px; transition: background var(--atlas-dur) var(--atlas-ease), color var(--atlas-dur) ease; }
+.tab[aria-selected="true"] .icon { background: var(--atlas-accent-soft); }
+.tab:hover:not([aria-selected="true"]) .icon { background: color-mix(in srgb, var(--atlas-ink) 5%, transparent); }
+.tab-indicator { opacity: 0.85; }
+
+/* education line: calmer, still always visible */
+.edu-line { background: var(--atlas-surface-2); color: var(--atlas-muted); font-weight: 650; }
+.edu-line .icon { color: var(--atlas-accent); }
+
+/* daily digest: a card with a status pill */
+.daily-digest {
+  margin: 0;
+  padding: 0.8rem 0.85rem;
+  border-color: color-mix(in srgb, var(--atlas-line) 80%, transparent);
+  border-radius: var(--atlas-radius-lg);
+  background: linear-gradient(160deg, var(--atlas-accent-soft), transparent 50%), var(--atlas-card);
+  box-shadow: var(--atlas-shadow-sm);
+  animation: atlas-fade 260ms var(--atlas-ease);
+}
+.digest-head { flex-wrap: wrap; row-gap: 0.15rem; }
+.digest-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: var(--atlas-text-2xs);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--atlas-ink) 7%, transparent);
+  color: var(--atlas-muted);
+}
+.digest-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--atlas-signal-flat); }
+.digest-status[data-status="ready"] { background: var(--atlas-device); color: var(--atlas-accent); }
+.digest-status[data-status="ready"]::before { background: var(--atlas-signal-up); }
+.digest-status[data-status="loading"]::before { animation: atlas-live 1.2s ease-in-out infinite; }
+.digest-date { flex-basis: 100%; }
+.digest-headline { font-family: var(--atlas-font-serif); font-size: 1.02rem; line-height: 1.35; }
+.digest-not-ready { font-weight: 650; }
+
+/* assets: grouped list with staggered entrance */
+.asset-list { border-radius: var(--atlas-radius-lg); box-shadow: var(--atlas-shadow-sm); }
+.asset-list[data-enter="true"] > li { animation: atlas-row-in 320ms var(--atlas-ease-out) both; animation-delay: calc(var(--i, 0) * 28ms); }
+@keyframes atlas-row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.asset-row { transition: background var(--atlas-dur-fast) ease; }
+.asset-row:hover .asset-icon { transform: scale(1.06); }
+.asset-icon {
+  background: linear-gradient(140deg, color-mix(in srgb, var(--atlas-accent) 75%, var(--atlas-card)), var(--atlas-accent));
+  transition: transform var(--atlas-dur) var(--atlas-ease-out);
+}
+.asset-icon.tone-stock { background: linear-gradient(140deg, color-mix(in srgb, var(--atlas-ink) 75%, var(--atlas-card)), var(--atlas-ink)); }
+.skeleton-row .asset-icon, .skeleton-row .asset-icon.tone-stock { background: linear-gradient(90deg, color-mix(in srgb, var(--atlas-ink) 6%, transparent) 25%, color-mix(in srgb, var(--atlas-ink) 12%, transparent) 50%, color-mix(in srgb, var(--atlas-ink) 6%, transparent) 75%); background-size: 200% 100%; }
+.asset-change { padding: 0 0.35rem; border-radius: 6px; }
+.asset-change[data-tone="up"] { background: color-mix(in srgb, var(--atlas-signal-up) 12%, transparent); }
+.asset-change[data-tone="down"] { background: color-mix(in srgb, var(--atlas-signal-down) 12%, transparent); }
+.light-dot[data-light="green"], .light-dot[data-light="red"] { animation: atlas-breathe-dot 2.4s ease-in-out infinite; }
+
+/* detail hero + sparkline with a soft area fill and an end dot */
+.asset-hero { background: radial-gradient(120% 80% at 100% 0%, var(--atlas-accent-soft), transparent 60%), var(--atlas-card); }
+.spark { position: relative; }
+.spark .spark-area { fill: currentColor; opacity: 0.12; }
+.spark .spark-end { fill: currentColor; stroke: var(--atlas-card); stroke-width: 2; }
+.spark.enter svg { animation: atlas-wipe 700ms var(--atlas-ease-out) both; }
+.spark.enter svg .spark-area { animation: atlas-draw 700ms var(--atlas-ease) both; }
+@keyframes atlas-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* signal hero */
+.signal { border-radius: var(--atlas-radius-xl); }
+.signal .orb-core { transition: background 320ms var(--atlas-ease), box-shadow 320ms var(--atlas-ease), transform var(--atlas-dur) var(--atlas-ease-out); }
+.signal:hover .orb-core { transform: scale(1.04); }
+
+/* onboarding */
+.ob-art { border-radius: var(--atlas-radius-xl); box-shadow: var(--atlas-glow); }
+.ob-dots span.on { box-shadow: 0 0 0 3px var(--atlas-accent-soft); }
+
+/* sheet: lighter divider and a lifted header */
+.sheet-head { background: var(--atlas-card); box-shadow: var(--atlas-shadow-sm); }
+
+@media (prefers-reduced-motion: reduce) {
+  .asset-list > li, .daily-digest, .conn-light, .light-dot { animation: none !important; }
+  .spark.enter svg { animation: none; }
+  .lockup:hover .logo, .asset-row:hover .asset-icon, .signal:hover .orb-core, .primary:hover:not(:disabled) { transform: none; }
+}
