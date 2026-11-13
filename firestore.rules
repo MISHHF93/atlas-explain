@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Each anonymous user can read and write only their own explanations.
+// Each user (anonymous or signed in) can read and write only their own documents.
 // Private notes and watchlists are rejected so they are not stored in the cloud.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -25,6 +25,17 @@ service cloud.firestore {
         && request.resource.data.cloudCalls is int
         && resource.data.cloudCalls is int
         && request.resource.data.cloudCalls == resource.data.cloudCalls + 1;
+    }
+
+    // Preferences for a signed-in account. Only the theme is stored; nothing private.
+    match /users/{userId}/prefs/{prefId} {
+      allow read: if signedIn(userId);
+      allow delete: if signedIn(userId);
+      allow create, update: if signedIn(userId)
+        && prefId == "app"
+        && request.resource.data.keys().hasOnly(["theme", "updatedAt"])
+        && request.resource.data.theme in ["system", "light", "dark"]
+        && request.resource.data.updatedAt == request.time;
     }
 
     match /users/{userId}/explanations/{explanationId} {
