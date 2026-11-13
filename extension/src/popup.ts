@@ -46,6 +46,8 @@ import { pageKindLine } from "../../src/core/page-kind";
 import { TWO_SIDED_SCHEMA, parseTwoSided, twoSidedCopyText } from "../../src/core/two-sided";
 import { twoSidedNodes } from "../../src/wallet/two-sided";
 import { historyCard, learnCard } from "../../src/wallet/history-learn";
+import { engineStrip } from "../../src/wallet/engine";
+import { isEngineState } from "../../src/core/hybrid-engine";
 import { explainOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
 
@@ -104,6 +106,7 @@ const result = el("div", "stack result");
 result.setAttribute("aria-live", "polite");
 const explainHead = el("div", "panel-title");
 explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
+const engine = engineStrip();
 const brief = digestCard();
 void (canReachLocalAtlas(location, true)
   ? loadDigest()
@@ -112,7 +115,7 @@ void (canReachLocalAtlas(location, true)
 // Recent explanations live in chrome.storage.local on this device. Never uploaded.
 const recentSlot = el("div");
 let history: HistoryEntry[] = [];
-shell.panels.explain.append(explainHead, brief.node, question, buttons, result, recentSlot);
+shell.panels.explain.append(explainHead, engine.node, brief.node, question, buttons, result, recentSlot);
 
 function renderHistory(): void {
   recentSlot.replaceChildren(historyCard({
@@ -269,13 +272,20 @@ question.addEventListener("keydown", (event) => {
 });
 explainSelection.addEventListener("click", () => void run({ highlight: true, fromPage: true }));
 explainTyped.addEventListener("click", () => void run({ highlight: false, fromPage: false }));
-window.addEventListener("online", updateConnection);
-window.addEventListener("offline", updateConnection);
+window.addEventListener("online", () => { updateConnection(); refreshEngine(); });
+window.addEventListener("offline", () => { updateConnection(); refreshEngine(); });
+
+function refreshEngine(): void {
+  const forced = preview.get("engine");
+  if (!hasChrome && isEngineState(forced)) engine.set(forced);
+  else void engine.refresh();
+}
 
 void boot();
 
 async function boot(): Promise<void> {
   showResult(emptyCard(undefined, SHORTCUT_HINT));
+  refreshEngine();
   applySignal(previewSignal());
   const stored = await store.get();
   const theme: ThemeChoice = isTheme(stored.theme) ? stored.theme : hasChrome ? "system" : readPreviewTheme();
@@ -408,6 +418,7 @@ async function run(options: RunOptions): Promise<void> {
 }
 
 function answer(text: string, source: "on_device" | "in_cloud", selection: string, redacted: boolean, contextLine?: string): void {
+  engine.markRun(source);
   remember(text, source, selection || question.value, contextLine);
   showExplanation(text, source, selection, redacted, contextLine);
 }
