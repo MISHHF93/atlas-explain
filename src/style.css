@@ -164,6 +164,11 @@ button:disabled { opacity: 0.6; cursor: progress; }
 
 .chip { border-radius: 999px; font-size: 0.875rem; }
 
+.chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--device);
+}
+
 .primary:hover, .secondary:hover, .chip:hover { filter: brightness(0.97); }
 
 .errors { margin: 0.4rem 0 0; padding-left: 1.1rem; color: var(--warn-ink); }
