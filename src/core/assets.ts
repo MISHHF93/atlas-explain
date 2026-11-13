@@ -1,15 +1,23 @@
 /**
  * Asset catalog, live prices and paper predictions read from ATLAS on this computer
- * (GET http://localhost:3000/api/explain/assets). Education only.
+ * (POST http://localhost:3000/api/mcp/public when that route is present, otherwise GET /api/explain/assets). Education only.
  *
  * Every field is re-checked here: a light leaves grey only with a real direction,
  * at least MIN_SAMPLE_SIZE resolved samples and a MIN_HIT_RATE hit rate. Any text
  * with trade wording is dropped. Missing numbers stay missing; nothing is filled in.
  * No balances, accounts or keys are read, even if a payload carried them.
  */
+import { ATLAS_ORIGIN } from "./atlas-origin";
 import { MIN_HIT_RATE, MIN_SAMPLE_SIZE, PAPER_PREDICTION_LABEL, type SignalColour } from "./signal";
+import {
+  MCP_ASSETS_SCHEMA,
+  adaptMcpAsset,
+  callMcp,
+  mcpToolNames,
+  structuredContent,
+} from "./atlas-mcp";
 
-export const ATLAS_ORIGIN = "http://localhost:3000";
+export { ATLAS_ORIGIN } from "./atlas-origin";
 export const ASSETS_PATH = "/api/explain/assets";
 export const ASSETS_SCHEMA = "atlas-explain-assets-v1";
 export const ASSET_SCHEMA = "atlas-explain-asset-v1";
@@ -348,7 +356,7 @@ export function canReachLocalAtlas(loc: { protocol: string; hostname: string }, 
   return loc.hostname === "localhost" || loc.hostname === "127.0.0.1";
 }
 
-export type Fetcher = (url: string, init: { signal: AbortSignal; cache: RequestCache; credentials: RequestCredentials }) => Promise<Response>;
+export type Fetcher = (url: string, init: { method?: string; signal: AbortSignal; cache: RequestCache; credentials: RequestCredentials; headers?: Record<string, string>; body?: string }) => Promise<Response>;
 
 /** Read one ATLAS URL. Never throws; never sends cookies. */
 export async function readAtlas(path: string, fetcher: Fetcher = fetch, timeoutMs = 6000): Promise<{ ok: true; body: unknown } | { ok: false; reason: string; reachable: boolean }> {
@@ -370,7 +378,38 @@ export async function readAtlas(path: string, fetcher: Fetcher = fetch, timeoutM
   }
 }
 
+export function readMcpCatalog(payload: unknown, now: number = Date.now()): CatalogView | null {
+  if (!isRec(payload) || payload.schema !== MCP_ASSETS_SCHEMA || payload.paperOnly !== true) return null;
+  if (payload.executionPermission !== "none") return null;
+  if (carriesPrivateFields(payload)) return null;
+  const rows = Array.isArray(payload.assets) ? payload.assets : [];
+  const assets = rows.slice(0, 400).map((r) => mapAsset(adaptMcpAsset(r), now)).filter((a): a is AssetView => a != null);
+  const asOf = iso(payload.asOf);
+  return { asOf, assets, missing: [], gateReason: "", stockCitation: null };
+}
+
+async function loadCatalogViaMcp(fetcher: Fetcher, now: number): Promise<AssetsState | null> {
+  const listed = await callMcp("tools/list", {}, fetcher, 6000, carriesPrivateFields);
+  if (!listed.ok) return null;
+  const names = mcpToolNames(listed.result);
+  if (!names.includes("list_assets") || names.some((n) => /order|balance|account|transfer|withdraw/.test(n))) return null;
+  const called = await callMcp("tools/call", { name: "list_assets", arguments: {} }, fetcher, 6000, carriesPrivateFields);
+  if (!called.ok) {
+    return called.reachable && called.reason.includes("never reads")
+      ? { kind: "error", reason: called.reason }
+      : null;
+  }
+  const payload = structuredContent(called.result);
+  if (carriesPrivateFields(payload)) {
+    return { kind: "error", reason: "ATLAS sent fields Explain never reads, so the answer was dropped." };
+  }
+  const catalog = readMcpCatalog(payload, now);
+  return catalog ? { kind: "ready", catalog } : null;
+}
+
 export async function loadCatalog(fetcher?: Fetcher, now: number = Date.now()): Promise<AssetsState> {
+  const viaMcp = await loadCatalogViaMcp(fetcher ?? fetch, now);
+  if (viaMcp) return viaMcp;
   const r = await readAtlas(ASSETS_PATH, fetcher);
   if (!r.ok) return r.reachable ? { kind: "error", reason: r.reason } : { kind: "not_connected", reason: r.reason };
   const catalog = readCatalog(r.body, now);
