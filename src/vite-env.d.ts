@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+interface Window {
+  FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean;
+}
+
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_API_KEY?: string;
   readonly VITE_FIREBASE_AUTH_DOMAIN?: string;

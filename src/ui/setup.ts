@@ -26,7 +26,7 @@ export function mountSetup(root: HTMLElement, env: PublicEnvConfig, startupError
           h("li", { text: "Create a Firebase project and register a Web app." }),
           h("li", { text: "Open AI Services → AI Logic and finish the Gemini Developer API setup. Leave App Check enforced." }),
           h("li", { text: "Copy the web config into .env.local using the names in .env.example." }),
-          h("li", { text: "Create a score-based reCAPTCHA Enterprise site key and register it with App Check. For localhost, set VITE_APPCHECK_DEBUG_TOKEN=true and register the token the console prints. Do not add localhost to a production key." }),
+          h("li", { text: "Create a score-based reCAPTCHA Enterprise site key and register it with App Check. On localhost, npm run dev sets self.FIREBASE_APPCHECK_DEBUG_TOKEN so you can register the token the console prints. Do not add localhost to a production key." }),
           h("li", { text: "Enable Anonymous Authentication, create a Firestore database, and publish firestore.rules." }),
           h("li", { text: "In Remote Config, publish remoteconfig.template.json (or rely on the in-app defaults)." }),
           h("li", { text: "Run npm run dev and reload this page." }),

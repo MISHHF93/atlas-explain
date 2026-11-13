@@ -84,44 +84,53 @@ Requirements: Node.js 22 or newer, a Firebase project on the Spark plan or above
 
 ```bash
 npm install
-cp .env.example .env.local
 npm run dev
 ```
 
-Open the printed local URL. If `.env.local` is empty, the setup screen lists what is missing.
+The public web config for project `atlas-explain` is committed in `src/platform/web/firebaseConfig.ts` and is used when the `VITE_` variables are unset. `.env.example` lists optional overrides for a different Firebase project. Copy it to `.env.local` only if you need those overrides. Do not commit service-account keys.
 
-### Firebase console
+### This Firebase project
+
+`atlas-explain` is on the Spark plan. AI Logic uses the Gemini Developer API with App Check enforced. Anonymous Authentication is on. Firestore is the `(default)` database in `nam5`, in production mode. App Check uses a score-based reCAPTCHA Enterprise key limited to `atlas-explain.web.app` and `atlas-explain.firebaseapp.com`. Localhost is not on that key.
+
+### App Check debug token (localhost)
+
+`npm run dev` sets `self.FIREBASE_APPCHECK_DEBUG_TOKEN = true` before `initializeAppCheck`. A production build does not set it, even if `VITE_APPCHECK_DEBUG_TOKEN` is present.
+
+1. Run `npm run dev` and open the local URL.
+2. Open the browser developer console. The App Check SDK prints a line like `AppCheck debug token: "..."`.
+3. In the Firebase console, go to **Security → App Check → Apps**, open the web app, and choose **Manage debug tokens**.
+4. Add the token from the console, then reload the app. Cloud calls stay blocked until that token is registered.
+5. To reuse a token you already registered, set `VITE_APPCHECK_DEBUG_TOKEN` in `.env.local` to that token. Set it to `false` to turn the debug provider off. Do not add `localhost` to the production reCAPTCHA key.
+
+### Firebase console (another project)
 
 1. Create a project. Analytics is optional.
 2. Register a **Web** app and copy its config into `.env.local` using the `VITE_FIREBASE_*` names in `.env.example`.
-3. Open **AI Services → AI Logic** and finish **Get started** with the **Gemini Developer API**. That workflow enforces App Check for AI Logic. Leave it enforced. In **Security → App Check → APIs**, the Firebase AI Logic row should say enforced.
-4. Create a **score-based** reCAPTCHA Enterprise key (no checkbox challenge) for the domains you will ship, and register the web app in App Check with that key. Put the key in `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`. Do not add `localhost` to a key you will use in production.
-5. For local development, set `VITE_APPCHECK_DEBUG_TOKEN=true` in `.env.local`, reload, and copy the debug token from the browser console. Register it under **App Check → your web app → Manage debug tokens**. A production build ignores this variable.
-6. Enable **Authentication → Anonymous**.
-7. Create a **Firestore** database and deploy the rules in this repo:
+3. Open **AI Services → AI Logic** and finish **Get started** with the **Gemini Developer API**. Leave App Check enforced.
+4. Create a **score-based** reCAPTCHA Enterprise key and register the web app in App Check. Put the key in `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`.
+5. Enable **Authentication → Anonymous**.
+6. Create a Firestore database. Rules allow a signed-in user to read and write only `users/{their uid}/explanations/*`, and they reject documents that contain `notes` or `watchlist`.
+7. Remote Config parameters, also compiled into `src/core/settings.ts` until a template is published: `inference_mode`, `cloud_model`, `prompt_template`, `topic_taxonomy`, `on_device_max_headlines`, `on_device_max_chars`, `long_document_chars`, `max_output_tokens`. Prompt placeholders are `{{TAXONOMY}}`, `{{QUESTION}}`, `{{MOVE_CARD}}`, and `{{PRIVATE_CONTEXT}}`. Taxonomy ids are fixed in code; Remote Config can rename labels or hide an id, and `other` is always kept.
 
-   ```bash
-   npx firebase-tools deploy --only firestore:rules
-   ```
+## Deploy
 
-   Rules allow a signed-in user to read and write only `users/{their uid}/explanations/*`, and they reject documents that contain `notes` or `watchlist`.
-8. Publish Remote Config from `remoteconfig.template.json`, or create the same parameter keys by hand. Until a template is published, the app uses the same defaults compiled into `src/core/settings.ts`.
+`.firebaserc` selects project `atlas-explain`. `firebase.json` publishes Hosting from `dist/` with a single-page rewrite, Firestore rules from `firestore.rules`, and Remote Config from `remoteconfig.template.json`.
 
-   ```bash
-   npx firebase-tools deploy --only remoteconfig
-   ```
+Sign in once:
 
-   Parameters: `inference_mode`, `cloud_model`, `prompt_template`, `topic_taxonomy`, `on_device_max_headlines`, `on_device_max_chars`, `long_document_chars`, `max_output_tokens`. Prompt placeholders are `{{TAXONOMY}}`, `{{QUESTION}}`, `{{MOVE_CARD}}`, and `{{PRIVATE_CONTEXT}}`. Taxonomy ids are fixed in code; Remote Config can rename labels or hide an id, and `other` is always kept.
+```bash
+npx firebase-tools login
+```
 
-9. Hosting, after `npm run build`:
+Build, then deploy hosting, rules, and Remote Config:
 
-   ```bash
-   npx firebase-tools deploy --only hosting
-   ```
+```bash
+npm run build
+npx firebase-tools deploy --only hosting,firestore:rules,remoteconfig
+```
 
-   `firebase.json` serves `dist/` as a single-page app.
-
-### On-device model in Chrome
+## On-device model in Chrome
 
 On-device inference needs Chrome on desktop, version 139 or newer ([getting started guide](https://firebase.google.com/docs/ai-logic/hybrid/web/get-started)):
 

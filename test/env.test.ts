@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PUBLIC_FIREBASE_CONFIG, PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY } from "../src/platform/web/firebaseConfig";
 import { readPublicEnv } from "../src/platform/web/env";
 
 const complete = {
@@ -10,14 +11,23 @@ const complete = {
 };
 
 describe("readPublicEnv", () => {
-  it("is not ready when the config is missing", () => {
-    const env = readPublicEnv({});
-    expect(env.ready).toBe(false);
-    expect(env.firebase).toBeNull();
-    expect(env.missing.length).toBeGreaterThan(0);
+  it("uses the committed public project when Vite vars are unset", () => {
+    const env = readPublicEnv({}, { allowDebugToken: true });
+    expect(env.ready).toBe(true);
+    expect(env.missing).toEqual([]);
+    expect(env.firebase).toEqual(PUBLIC_FIREBASE_CONFIG);
+    expect(env.recaptchaEnterpriseSiteKey).toBe(PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY);
+    expect(env.appCheckDebugToken).toBe(true);
   });
 
-  it("treats blank strings as missing", () => {
+  it("does not enable the App Check debug token in production", () => {
+    const env = readPublicEnv({ VITE_APPCHECK_DEBUG_TOKEN: "true" }, { allowDebugToken: false });
+    expect(env.ready).toBe(true);
+    expect(env.firebase?.projectId).toBe("atlas-explain");
+    expect(env.appCheckDebugToken).toBeNull();
+  });
+
+  it("treats a blank override of a required key as missing", () => {
     const env = readPublicEnv({ ...complete, VITE_FIREBASE_API_KEY: "  " });
     expect(env.ready).toBe(false);
     expect(env.missing).toContain("Firebase apiKey");
@@ -25,12 +35,13 @@ describe("readPublicEnv", () => {
 
   it("is ready with the required keys and keeps debug tokens out of production", () => {
     const dev = readPublicEnv(
-      { ...complete, VITE_APPCHECK_DEBUG_TOKEN: "true" },
+      { ...complete, VITE_APPCHECK_DEBUG_TOKEN: "already-registered" },
       { allowDebugToken: true },
     );
     expect(dev.ready).toBe(true);
-    expect(dev.appCheckDebugToken).toBe(true);
+    expect(dev.appCheckDebugToken).toBe("already-registered");
     expect(dev.firebase?.projectId).toBe("atlas-explain");
+    expect(dev.firebase?.apiKey).toBe("key");
 
     const prod = readPublicEnv(
       { ...complete, VITE_APPCHECK_DEBUG_TOKEN: "true" },
