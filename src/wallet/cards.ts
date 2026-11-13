@@ -127,12 +127,12 @@ export function signalCard(options: {
 
 /* ---------- result states ---------- */
 
-export function emptyCard(note?: string, hint?: string): HTMLElement {
+export function emptyCard(note?: string, hint?: string, title = EMPTY_TITLE): HTMLElement {
   const card = el("div", "card state state-empty");
   const art = el("div", "state-art");
   art.append(icon("highlight", 22));
   const body = el("div");
-  body.append(el("p", "card-title", EMPTY_TITLE), el("p", "fine", note ?? EMPTY_BODY));
+  body.append(el("p", "card-title", title), el("p", "fine", note ?? EMPTY_BODY));
   if (hint) body.append(el("p", "hint", hint));
   card.append(art, body);
   return card;

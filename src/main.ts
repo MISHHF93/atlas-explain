@@ -1,15 +1,11 @@
-import { mountDesk } from "./ui/desk";
-import { mountLegal } from "./ui/legal";
-import { mountSetup } from "./ui/setup";
 import { readPublicEnv } from "./platform/web/env";
-import type { WebBackend } from "./platform/web/backend";
+import { mountWebWallet } from "./web/app";
 import "./style.css";
 
 const queried = document.querySelector("#app");
 if (!(queried instanceof HTMLElement)) {
   throw new Error("Missing #app");
 }
-const root: HTMLElement = queried;
 
 const dev = import.meta.env.DEV;
 const env = readPublicEnv(
@@ -27,30 +23,10 @@ const env = readPublicEnv(
   { allowDebugToken: dev },
 );
 
-let backend: WebBackend | null = null;
-
-async function show(): Promise<void> {
-  if (location.hash === "#/terms" || location.hash === "#/privacy") {
-    mountLegal(root, location.hash === "#/terms" ? "terms" : "privacy");
-    return;
-  }
-  if (!env.ready) {
-    mountSetup(root, env);
-    return;
-  }
-  try {
-    if (!backend) {
-      const { startWebBackend } = await import("./platform/web/backend");
-      backend = startWebBackend(env);
-    }
-    mountDesk(root, backend);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Firebase did not start.";
-    mountSetup(root, env, message);
-  }
-}
-
-window.addEventListener("hashchange", () => {
-  void show();
+mountWebWallet(queried, {
+  env,
+  async startBackend() {
+    const { startWebBackend } = await import("./platform/web/backend");
+    return startWebBackend(env);
+  },
 });
-void show();
