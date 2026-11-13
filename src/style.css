@@ -1,21 +1,8 @@
+@import "./brand/tokens.css";
+
 :root {
-  color-scheme: light;
-  --ink: #1c1915;
-  --muted: #5c564c;
-  --paper: #f4f1ea;
-  --card: #fffdf8;
-  --line: #e3dcd0;
-  --accent: #0c6b5e;
-  --accent-ink: #ffffff;
-  --device: #e5f4ef;
-  --warn: #f8e8e4;
-  --warn-ink: #6e241c;
-  --focus: #0c6b5e;
-  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  color: var(--ink);
-  background: var(--paper);
 }
 
 * { box-sizing: border-box; }
@@ -70,8 +57,10 @@ a:hover { text-decoration-thickness: 2px; }
 .brand {
   display: flex;
   gap: 0.9rem;
-  align-items: baseline;
+  align-items: center;
 }
+
+.logo { width: 36px; height: 36px; display: block; }
 
 .mark {
   font-size: 0.8rem;
@@ -122,7 +111,7 @@ label {
 textarea, input[type="text"] {
   width: 100%;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--atlas-card);
   border-radius: 8px;
   padding: 0.55rem 0.65rem;
 }
@@ -159,7 +148,7 @@ button:disabled { opacity: 0.6; cursor: progress; }
 
 .secondary, .chip {
   border-color: var(--line);
-  background: #fff;
+  background: var(--atlas-card);
 }
 
 .chip { border-radius: 999px; font-size: 0.875rem; }
@@ -188,9 +177,9 @@ button:disabled { opacity: 0.6; cursor: progress; }
 
 .path-device { background: var(--device); border: 1px solid var(--accent); }
 
-.path-cloud { background: #f7f1e4; border: 1px dashed var(--ink); }
+.path-cloud { background: var(--atlas-cloud); border: 1px dashed var(--ink); }
 
-.summary { margin-top: 0.7rem; background: #fff; border: 1px solid var(--line); }
+.summary { margin-top: 0.7rem; background: var(--atlas-card); border: 1px solid var(--line); }
 
 .cases {
   display: grid;
@@ -200,7 +189,7 @@ button:disabled { opacity: 0.6; cursor: progress; }
 }
 
 .cases section, .topics li {
-  background: #fff;
+  background: var(--atlas-card);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0.7rem 0.8rem;
@@ -223,7 +212,7 @@ ol, ul { margin: 0.4rem 0 0; padding-left: 1.15rem; }
   white-space: pre-wrap;
   font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace;
   font-size: 0.8125rem;
-  background: #fff;
+  background: var(--atlas-card);
   border-radius: 8px;
   padding: 0.7rem;
   max-height: 20rem;

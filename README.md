@@ -212,7 +212,9 @@ Load it unpacked:
 4. For Gemini Nano, use Chrome on desktop, version 139 or newer, and set `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` to Enabled.
 5. The reCAPTCHA key does not include `chrome-extension://` origins. For a cloud fallback while unpacked, register an App Check debug token and paste it into the popup field.
 
-`npm run build:extension` writes `extension/atlas-explain-chrome.zip`. For the Chrome Web Store, upload that zip. The listing should say the extension is educational and not investment advice. Do not ship an App Check debug token in the store build.
+`npm run build:extension` writes `extension/atlas-explain-chrome.zip`. For the Chrome Web Store, upload that zip. Listing images are in `extension/store/`. The identity is documented in [docs/BRAND.md](docs/BRAND.md). The listing should say the extension is educational and not investment advice. Do not ship an App Check debug token in the store build.
+
+The popup opens like a wallet menu. A signal light at the top stays grey unless a shadow model has cleared the evidence gate. Today none have, so the honest state is grey, or "connect ATLAS" when the desk tab is not open. The light never says buy or sell.
 
 ## Tests and CI
 
