@@ -75,9 +75,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   cardInput.spellcheck = false;
   cardInput.setAttribute("aria-label", "Move card JSON");
   cardInput.value = JSON.stringify(SAMPLE_MOVES[0]?.card ?? {}, null, 2);
-  const questionInput = el("input");
-  questionInput.type = "text";
+  const questionInput = el("textarea") as HTMLTextAreaElement;
   questionInput.id = "question";
+  questionInput.rows = 2;
   questionInput.maxLength = 600;
   questionInput.autocomplete = "off";
   questionInput.placeholder = QUESTION_PLACEHOLDER;
