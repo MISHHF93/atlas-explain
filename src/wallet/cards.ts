@@ -404,6 +404,11 @@ const ONBOARDING: { icon: IconName; title: string; body: string; light?: "grey" 
     body: "ATLAS Explain turns trading jargon and market moves into plain language. It is education only, never a trade instruction.",
   },
   {
+    icon: "chip",
+    title: "On your device first",
+    body: "Gemini Nano answers on this device when Chrome has it. If it cannot, Gemini answers in the cloud through Firebase AI Logic. The Explain tab shows which route is ready.",
+  },
+  {
     icon: "signal",
     title: "An honest three-colour light",
     body: "Green: the model leans up. Red: it leans down. Grey: not enough evidence. Grey is the default until paper results clear the gate.",

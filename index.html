@@ -13,8 +13,40 @@
   <body>
     <a class="skip" href="#main">Skip to content</a>
     <div class="stage">
-      <div id="app"></div>
-      <p class="stage-caption">ATLAS Explain · the same wallet as the Chrome extension · Educational information, not investment advice.</p>
+      <aside class="hero" aria-labelledby="hero-title">
+        <p class="hero-tag"><span class="hero-dot" aria-hidden="true"></span>#BuildHybridAI · Firebase AI Logic · Gemini</p>
+        <h1 id="hero-title" class="hero-title">Market jargon in plain language. <span>On your device first.</span></h1>
+        <p class="hero-lede">Highlight a term on any page, or open a market move. ATLAS Explain answers with Gemini Nano on this device when Chrome has it, and with Gemini in the cloud when it does not. Education only, never a trade call.</p>
+        <ol class="hybrid" aria-label="How an answer is routed">
+          <li class="hy-step">
+            <span class="hy-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M14.5 4.5l5 5L10 19H5v-5z"/></svg></span>
+            <span><b>Your highlight</b><small>Selected text, page title and site name. Nothing else.</small></span>
+          </li>
+          <li class="hy-step hy-device">
+            <span class="hy-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 2.5v3M15 2.5v3M9 18.5v3M15 18.5v3M2.5 9h3M2.5 15h3M18.5 9h3M18.5 15h3"/></svg></span>
+            <span><b>Gemini Nano, on this device</b><small>Tried first. Private notes never leave the browser.</small></span>
+          </li>
+          <li class="hy-step hy-cloud">
+            <span class="hy-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5h10.5a4 4 0 0 0 .6-8 6 6 0 0 0-11.6 1.6A3.3 3.3 0 0 0 7 18.5Z"/></svg></span>
+            <span><b>Gemini in the cloud, if needed</b><small>Firebase AI Logic with App Check. Private notes are dropped.</small></span>
+          </li>
+        </ol>
+        <ul class="hero-points">
+          <li><b>Two sides, every time.</b> What some read as opportunity, what others read as risk, and what would change the picture.</li>
+          <li><b>Private by design.</b> Never balances, account numbers or form fields.</li>
+          <li><b>Honest states.</b> A grey light and "not ready yet" instead of made-up numbers.</li>
+        </ul>
+        <div class="hero-cta">
+          <a class="hero-btn hero-primary" href="#main">Try it in the wallet</a>
+          <a class="hero-btn" href="/?sheet=extension">Get the Chrome extension</a>
+          <a class="hero-btn hero-ghost" href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">Source · Apache-2.0</a>
+        </div>
+        <p class="hero-fine">Free during the beta. Educational information, not investment advice.</p>
+      </aside>
+      <div class="device">
+        <div id="app"></div>
+        <p class="stage-caption">ATLAS Explain · the same wallet as the Chrome extension · Educational information, not investment advice.</p>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -40,3 +40,28 @@ describe("web wallet", () => {
     expect(app).not.toMatch(/balance|account_id|positions/i);
   });
 });
+
+describe("judge-ready landing", () => {
+  const page = readFileSync("index.html", "utf8");
+  const css = readFileSync("src/style.css", "utf8");
+  it("tells the hybrid story in static HTML beside the live wallet", () => {
+    expect(page).toContain('class="hero"');
+    expect(page).toMatch(/Gemini Nano, on this device/);
+    expect(page).toMatch(/Firebase AI Logic with App Check/);
+    expect(page).toContain('href="/?sheet=extension"');
+    expect(page).toContain("https://github.com/MISHHF93/atlas-explain");
+    expect(page).toMatch(/Educational information, not investment advice/);
+    expect(page).toContain('<div id="app"></div>');
+  });
+  it("keeps the phone layout as the full-screen wallet and respects reduced motion", () => {
+    expect(css).toMatch(/@media \(max-width: 420px\), \(max-height: 640px\) \{[^}]*\}[^@]*\.hero \{ display: none; \}/);
+    expect(css).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.hero-dot \{ animation: none; \}/);
+  });
+  it("has no trade instructions in the landing copy", () => {
+    const text = page.replace(/<[^>]+>/g, " ");
+    expect(text).not.toMatch(/\b(buy|sell)\b/i);
+  });
+  it("adds the hybrid step to onboarding", () => {
+    expect(readFileSync("src/wallet/cards.ts", "utf8")).toContain('title: "On your device first"');
+  });
+});
