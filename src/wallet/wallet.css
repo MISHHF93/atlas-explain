@@ -991,3 +991,17 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
   .engine[data-route="device"] .engine-pulse { left: 0; }
   .engine[data-route="cloud"] .engine-pulse { left: calc(100% - 6px); }
 }
+
+/* compact brief: loading and not-ready collapse to one line; a ready brief keeps the full card */
+.daily-digest[data-compact="true"] { margin: 0; padding: 0.5rem 0.75rem; }
+.daily-digest[data-compact="true"] .digest-head { margin-bottom: 0; align-items: center; }
+.daily-digest[data-compact="true"] .digest-head h2 { font-size: var(--atlas-text-md); }
+.daily-digest[data-compact="true"] .digest-date { display: none; }
+.daily-digest[data-compact="true"] .digest-body { display: grid; gap: 0.2rem; }
+.daily-digest[data-compact="true"] .digest-body > .fine { margin: 0.15rem 0 0; }
+.digest-more summary { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.15rem; cursor: pointer; list-style: none; font-size: var(--atlas-text-2xs); font-weight: 650; color: var(--atlas-accent); }
+.digest-more summary::-webkit-details-marker { display: none; }
+.digest-more summary::after { content: "›"; transition: transform var(--atlas-dur) var(--atlas-ease); }
+.digest-more[open] summary::after { transform: rotate(90deg); }
+.digest-more .digest-not-ready { font-weight: 600; font-size: var(--atlas-text-xs); margin-top: 0.2rem; }
+.digest-more .digest-date-inline { margin-top: 0.2rem; }

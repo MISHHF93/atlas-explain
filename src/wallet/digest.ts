@@ -19,15 +19,22 @@ export function digestCard(): { node: HTMLElement; show: (view: DigestView) => v
     status.dataset.status = view.kind === "ready" ? "ready" : view.kind === "loading" ? "loading" : "waiting";
     head.append(el("h2", undefined, "Today's brief"), status, el("span", "fine digest-date", `${longTorontoDate()} - America/Toronto`));
     const body = el("div", "digest-body");
+    // Only a ready brief gets the full card. Loading and not-ready collapse to one line so the
+    // question box stays above the fold; the honest reason is one tap away.
+    node.dataset.compact = view.kind === "ready" ? "false" : "true";
     if (view.kind === "loading") {
       body.append(el("p", "fine", "Loading today's digest..."));
     } else if (view.kind === "not_connected" || view.kind === "not_ready") {
+      const more = el("details", "digest-more");
+      const summary = el("summary");
+      summary.append(el("span", undefined, "Why it is not ready"));
       const p = el("p", "digest-not-ready", view.reason);
       p.dataset.testid = "digest-not-ready";
-      body.append(p);
+      more.append(summary, el("p", "fine digest-date-inline", `${longTorontoDate()} - America/Toronto`), p);
       if (view.kind === "not_ready" && view.digest) {
-        body.append(el("p", "fine", `Previous digest dated ${view.digest.reportingDate} (${view.digest.timezone}) is not shown as today.`));
+        more.append(el("p", "fine", `Previous digest dated ${view.digest.reportingDate} (${view.digest.timezone}) is not shown as today.`));
       }
+      body.append(more);
     } else {
       const d = view.digest;
       body.append(el("p", "digest-headline", d.headline));
