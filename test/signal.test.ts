@@ -73,4 +73,21 @@ describe("signal mapping", () => {
     })).toEqual({ lean: "up", hitRate: 0.5, sampleSize: 10, reason: undefined });
     expect(readPublicSignal({ symbol: "NVDA", movePct: -6 })).toBeNull();
   });
+
+  it("keeps the desk reason from the ATLAS signal_light payload, but never a trade word", () => {
+    const payload = {
+      v: 1,
+      kind: "signal_light",
+      colour: "grey",
+      signal: { lean: "none", hitRate: null, sampleSize: 13, reason: "Not enough evidence: thin data (13 of 200 labelled outcomes). The light stays grey." },
+      gate: { passed: false },
+    };
+    const view = mapSignal({ connected: true, signal: readPublicSignal(payload) });
+    expect(view.colour).toBe("grey");
+    expect(view.hitRateLabel).toBe("Hit rate —");
+    expect(view.sampleLabel).toBe("Sample 13");
+    expect(view.deskReason).toContain("thin data");
+    const sneaky = mapSignal({ connected: true, signal: { lean: "up", hitRate: 0.6, sampleSize: 300, reason: "sell now" } });
+    expect(sneaky.deskReason).toBeUndefined();
+  });
 });
