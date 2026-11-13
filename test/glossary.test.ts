@@ -32,6 +32,10 @@ describe("glossary", () => {
       expect(entry.summary.toLowerCase()).not.toMatch(/you should buy|you should sell|buy now|sell now/);
       expect(entry.summary.toLowerCase()).not.toMatch(/account number|buying power|your balance|account balance/);
     }
-    expect(conceptQuestion("shadow")).toContain("Do not give trade advice");
+    const question = conceptQuestion("shadow");
+    expect(question).toContain("Shadow metrics");
+    expect(question).toContain("educational reading");
+    expect(question.length).toBeLessThan(90);
+    expect(question.toLowerCase()).not.toMatch(/you should buy|you should sell|buy now|sell now/);
   });
 });

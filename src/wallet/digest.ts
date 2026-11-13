@@ -1,16 +1,24 @@
 import { longTorontoDate, todayToronto, type DigestView } from "../core/digest";
 import { el } from "./dom";
 
+export function earlierOfficialNoteCopy(date: string, timezone: string): string {
+  return `An earlier official note from ${date} (${timezone}) is on file. It is not today's note.`;
+}
+
+export function staleMorningReportCopy(date: string, timezone: string): string {
+  return `The last ATLAS morning report is dated ${date} (${timezone}). It is not today's report, so it is not shown as today's brief.`;
+}
+
 export function digestCard(): { node: HTMLElement; show: (view: DigestView) => void } {
   const node = el("section", "daily-digest");
   node.setAttribute("aria-label", "Today's brief");
   function show(view: DigestView): void {
     const today = "today" in view ? view.today : view.kind === "ready" ? view.digest.reportingDate : todayToronto();
     const head = el("div", "digest-head");
-    head.append(el("h2", undefined, "Today's brief"), el("span", "fine", `${longTorontoDate()} · America/Toronto`));
+    head.append(el("h2", undefined, "Today's brief"), el("span", "fine", `${longTorontoDate()} - America/Toronto`));
     const body = el("div", "digest-body");
     if (view.kind === "loading") {
-      body.append(el("p", "fine", "Loading today's digest…"));
+      body.append(el("p", "fine", "Loading today's digest..."));
     } else if (view.kind === "not_connected" || view.kind === "not_ready") {
       const p = el("p", "digest-not-ready", view.reason);
       p.dataset.testid = "digest-not-ready";
@@ -31,7 +39,7 @@ export function digestCard(): { node: HTMLElement; show: (view: DigestView) => v
           a.href = n.url;
           a.target = "_blank";
           a.rel = "noopener noreferrer";
-          li.append(a, el("span", "fine", ` · ${n.source} · ${n.publishedAtToronto}`));
+          li.append(a, el("span", "fine", ` - ${n.source} - ${n.publishedAtToronto}`));
           ul.append(li);
         }
         body.append(ul);
@@ -40,10 +48,10 @@ export function digestCard(): { node: HTMLElement; show: (view: DigestView) => v
       }
       if (d.previousOfficialNotes[0]) {
         const prev = d.previousOfficialNotes[0];
-        body.append(el("p", "fine", `Most recent earlier official note: ${prev.publishedDate} (${d.timezone}) — not today.`));
+        body.append(el("p", "fine", earlierOfficialNoteCopy(prev.publishedDate, d.timezone)));
       }
       if (d.morningReport && !d.morningReport.isToday) {
-        body.append(el("p", "fine", `The ATLAS morning report on file is ${d.morningReport.reportDate} (${d.timezone}), not today.`));
+        body.append(el("p", "fine", staleMorningReportCopy(d.morningReport.reportDate, d.timezone)));
       }
       body.append(el("p", "fine", d.disclaimer));
     }
