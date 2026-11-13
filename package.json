@@ -18,7 +18,10 @@
     "remote-config": "node scripts/emit-remote-config.mjs",
     "check:manifest": "node scripts/check-manifest.mjs",
     "release:extension": "npm run build:extension && node scripts/release-extension.mjs",
-    "version": "node scripts/sync-manifest-version.mjs && git add extension/manifest.json"
+    "version": "node scripts/sync-manifest-version.mjs && git add extension/manifest.json",
+    "check:bundle": "node scripts/bundle-budget.mjs",
+    "check:trade-words": "node scripts/trade-word-scan.mjs",
+    "release:check": "node scripts/release-check.mjs"
   },
   "dependencies": {
     "firebase": "^13.3.0"

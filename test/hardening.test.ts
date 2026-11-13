@@ -77,3 +77,21 @@ describe("runtime", () => {
     expect(readFileSync(".nvmrc", "utf8").trim()).toBe("24");
   });
 });
+
+describe("trade-word scan", () => {
+  it("flags instructions but not neutral explanations", async () => {
+    const { scanText } = await import("../scripts/trade-word-scan.mjs");
+    expect(scanText("Strong buy on NVDA")).not.toEqual([]);
+    expect(scanText("You should sell before the close")).not.toEqual([]);
+    expect(scanText("Time to buy the dip")).not.toEqual([]);
+    expect(scanText("Why might some traders buy this dip while others sell?")).toEqual([]);
+    expect(scanText("Model leans up · not enough evidence")).toEqual([]);
+  });
+});
+
+describe("trade-word scan guard patterns", () => {
+  it("ignores the guard regexes that block trade questions", async () => {
+    const { scanText } = await import("../scripts/trade-word-scan.mjs");
+    expect(scanText("const g = /\\b(buy now|sell now|you should buy)\\b/i;")).toEqual([]);
+  });
+});
