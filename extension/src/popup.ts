@@ -141,6 +141,8 @@ const why = el("details", "why");
 const whySummary = el("summary");
 whySummary.append(el("span", undefined, "Why this colour?"), icon("chevron", 14));
 const whyBody = el("p", "why-body");
+const deskSays = el("p", "why-body desk-says");
+deskSays.hidden = true;
 const whyAsk = labelledButton("sparkle", "Explain it in depth", "link-btn");
 const deskLink = el("a", "link-btn", "Open the ATLAS desk");
 deskLink.href = ATLAS_DESK_URL;
@@ -149,7 +151,7 @@ deskLink.rel = "noreferrer";
 deskLink.prepend(icon("external", 14));
 const whyActions = el("div", "why-actions");
 whyActions.append(whyAsk, deskLink);
-why.append(whySummary, whyBody, whyActions);
+why.append(whySummary, whyBody, deskSays, whyActions);
 
 const paper = el("p", "paper");
 
@@ -571,7 +573,15 @@ function previewSignal(): SignalView {
     });
   }
   if (requested === "thin") {
-    return mapSignal({ connected: true, signal: { lean: "up", hitRate: 0.23, sampleSize: 13 } });
+    return mapSignal({
+      connected: true,
+      signal: {
+        lean: "none",
+        hitRate: 0.23,
+        sampleSize: 13,
+        reason: "Not enough evidence: below the evidence gate; thin data (13 of 200 labelled outcomes). The light stays grey.",
+      },
+    });
   }
   return mapSignal({ connected: false });
 }
@@ -612,6 +622,8 @@ function applySignal(view: SignalView): void {
   sampleChip.textContent = view.sampleLabel;
   gateChip.textContent = copy.gate;
   whyBody.textContent = copy.detail;
+  deskSays.hidden = !view.deskReason;
+  deskSays.textContent = view.deskReason ? `ATLAS desk: ${view.deskReason}` : "";
   paper.textContent = view.paperLabel;
   deskLink.hidden = view.connected;
   if (changed) {
