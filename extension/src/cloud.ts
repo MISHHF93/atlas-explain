@@ -58,6 +58,8 @@ export async function loadExtensionSettings(debugToken: string | null): Promise<
     const remoteConfig = getRemoteConfig(app);
     remoteConfig.defaultConfig = { ...remoteConfigDefaults() };
     remoteConfig.settings.minimumFetchIntervalMillis = 60_000;
+    // A slow network must not leave the popup spinning for a minute.
+    remoteConfig.settings.fetchTimeoutMillis = 6_000;
     try {
       await fetchAndActivate(remoteConfig);
     } catch {

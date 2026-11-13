@@ -1,5 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ATLAS">
-  <rect width="64" height="64" rx="14" fill="#0c6b5e"/>
-  <path d="M12 46 L32 16 L52 46" fill="none" stroke="#fffdf8" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M22 46 H42" fill="none" stroke="#fffdf8" stroke-width="5" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ATLAS Explain">
+  <defs>
+    <linearGradient id="atlas-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f7d6e"/>
+      <stop offset="1" stop-color="#0a5a4f"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#atlas-bg)"/>
+  <path d="M14 49 L32 16 L50 49" fill="none" stroke="#fffdf8" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M23.5 38.5 H40.5" fill="none" stroke="#fffdf8" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="49" cy="15" r="5.5" fill="#3dbea8" stroke="#fffdf8" stroke-width="2.5"/>
 </svg>

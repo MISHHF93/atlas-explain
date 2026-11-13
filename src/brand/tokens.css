@@ -16,6 +16,7 @@
   --atlas-signal-flat: #8a8175;
   --atlas-font-sans: "Segoe UI", "Helvetica Neue", sans-serif;
   --atlas-font-serif: Georgia, "Iowan Old Style", serif;
+  --atlas-text-2xs: 11px;
   --atlas-text-xs: 12px;
   --atlas-text-sm: 13px;
   --atlas-text-md: 14px;
@@ -23,6 +24,11 @@
   --atlas-text-xl: 2rem;
   --atlas-space: 0.75rem;
   --atlas-radius: 12px;
+  --atlas-radius-lg: 16px;
+  --atlas-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --atlas-dur: 200ms;
+  --atlas-shadow-sm: 0 1px 2px color-mix(in srgb, var(--atlas-ink) 8%, transparent);
+  --atlas-shadow-lg: 0 12px 32px -12px color-mix(in srgb, var(--atlas-ink) 28%, transparent);
   --ink: var(--atlas-ink);
   --muted: var(--atlas-muted);
   --paper: var(--atlas-paper);
