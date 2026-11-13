@@ -48,8 +48,9 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
   }
 
   if (env.appCheckDebugToken != null) {
-    (globalThis as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN =
-      env.appCheckDebugToken;
+    // Firebase reads this on `self` before App Check initializes.
+    // Dev builds set it; production builds leave it unset.
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = env.appCheckDebugToken;
   }
 
   const app = initializeApp(env.firebaseOptions);

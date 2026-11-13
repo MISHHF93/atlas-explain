@@ -415,7 +415,7 @@ function friendlyError(error: unknown): string {
     return "Firebase AI Logic rejected the API key. Check the web app config in .env.local, and confirm AI Logic is enabled for this project.";
   }
   if (/app.?check|recaptcha|unauthenticated|permission-denied/i.test(message)) {
-    return "App Check blocked the cloud model. For localhost, set VITE_APPCHECK_DEBUG_TOKEN=true, reload, and register the debug token from the browser console under App Check.";
+    return "App Check blocked the cloud model. On localhost the dev build sets self.FIREBASE_APPCHECK_DEBUG_TOKEN. Copy the debug token from the console and register it under App Check → Manage debug tokens, then reload.";
   }
   if (error instanceof OnDeviceUnavailableError) {
     return `${message} Use Chrome on desktop (version 139 or newer) and enable chrome://flags/#prompt-api-for-gemini-nano-multimodal-input. With no private notes, prefer_on_device can fall back to the cloud.`;
