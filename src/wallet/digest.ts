@@ -1,4 +1,4 @@
-import { NOT_READY, longTorontoDate, todayToronto, type DigestView } from "../core/digest";
+import { longTorontoDate, todayToronto, type DigestView } from "../core/digest";
 import { el } from "./dom";
 
 export function digestCard(): { node: HTMLElement; show: (view: DigestView) => void } {

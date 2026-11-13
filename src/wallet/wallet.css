@@ -762,7 +762,7 @@ textarea:focus-visible, input:focus-visible { outline: none; }
   .learn-lesson { animation: none; }
 }
 
-.daily-digest { margin: 0 0 0.9rem; padding: 0.7rem 0.8rem; border: 1px solid var(--atlas-line, #2a3140); border-radius: 10px; }
+.daily-digest { margin: 0 0 0.9rem; padding: 0.7rem 0.8rem; border: 1px solid var(--atlas-line); border-radius: 10px; }
 .daily-digest h2 { font-family: var(--atlas-font-serif); font-size: 1rem; font-weight: 600; margin: 0; }
 .digest-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; }
 .digest-headline { margin: 0 0 0.35rem; font-size: 0.95rem; }

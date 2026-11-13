@@ -44,9 +44,13 @@ describe("wallet popup copy", () => {
     expect(whyQuestion(views.thin)).toContain("Do not recommend a trade");
   });
 
-  it("labels the connection pill for desk, none, and offline", () => {
+  it("labels the connection pill for desk, local, hosted, none, and offline", () => {
     expect(connectionCopy("desk").label).toBe("ATLAS desk");
+    expect(connectionCopy("local").label).toBe("ATLAS local");
+    expect(connectionCopy("hosted").label).toBe("Hosted app");
+    expect(connectionCopy("hosted").title).toMatch(/never calls localhost/);
     expect(connectionCopy("none").label).toBe("Not connected");
+    expect(connectionCopy("none").title).toMatch(/localhost:3000/);
     expect(connectionCopy("offline").label).toBe("Offline");
   });
 
