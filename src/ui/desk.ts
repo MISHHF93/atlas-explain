@@ -1,4 +1,7 @@
-import { applyPrivateFields, parseMoveCardJson } from "../core/move-card";
+import { parseContextHash, type ParsedContextLink } from "../core/context-link";
+import { GLOSSARY, conceptQuestion, getConcept } from "../core/glossary";
+import { EXPLAIN_LOAD_MESSAGE, inboundReply, readInboundMessage } from "../core/inbound";
+import { applyPrivateFields, parseMoveCardJson, publicMoveCard } from "../core/move-card";
 import { buildPrompt } from "../core/prompt";
 import { describePathReason, selectInferencePath } from "../core/inference-path";
 import { hasPrivateContext } from "../core/move-card";
@@ -40,6 +43,7 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
   watchlistInput.placeholder = "AMD, AVGO";
 
   const sampleNote = h("div", { className: "sample-note", attrs: { id: "sample-note" } });
+  const conceptNote = h("div", { className: "sample-note", attrs: { id: "concept-note" } });
   const errors = h("ul", { className: "errors", attrs: { id: "errors" } });
   const status = h("p", { className: "status", attrs: { id: "status", role: "status", "aria-live": "polite" } });
   const result = h("div", { className: "result", attrs: { id: "result" } });
@@ -79,6 +83,22 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
     return button;
   });
 
+  const conceptButtons = GLOSSARY.map((entry) => {
+    const button = h("button", {
+      className: "chip",
+      attrs: { type: "button", "data-concept": entry.id, "aria-pressed": "false" },
+      text: entry.title,
+    });
+    button.addEventListener("click", () => {
+      showConcept(conceptNote, entry.id, conceptButtons);
+      if (!questionInput.value.trim()) {
+        questionInput.value = conceptQuestion(entry.id);
+      }
+      status.textContent = "Concept loaded for an educational reading. Nothing was sent.";
+    });
+    return button;
+  });
+
   showSample(sampleNote, SAMPLE_MOVES[0]);
 
   explainButton.addEventListener("click", () => {
@@ -102,6 +122,9 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
           h("h2", { attrs: { id: "card-heading" }, text: "Move card" }),
           h("p", { className: "fine", attrs: { id: "card-help" }, text: "Paste your own JSON, or load an illustrative sample. Historical samples use rounded figures from public news reports. They are not a data feed." }),
           h("div", { className: "chips", attrs: { role: "group", "aria-label": "Sample move cards" } }, ...sampleButtons),
+          h("p", { className: "fine", text: "Concepts. Educational definitions only. Choosing one does not run an explanation." }),
+          h("div", { className: "chips", attrs: { role: "group", "aria-label": "Educational concepts" } }, ...conceptButtons),
+          conceptNote,
           h("label", { attrs: { for: "move-card" }, text: "Move card JSON" }),
           cardInput,
           sampleNote,
@@ -150,6 +173,64 @@ export function mountDesk(root: HTMLElement, backend: WebBackend): void {
   });
 
   void loadHistory();
+  applyHash(window.location.hash);
+  window.addEventListener("hashchange", () => {
+    applyHash(window.location.hash);
+  });
+  window.addEventListener("message", onInboundMessage);
+
+  function onInboundMessage(event: MessageEvent): void {
+    if (!event.data || typeof event.data !== "object" || (event.data as { type?: string }).type !== EXPLAIN_LOAD_MESSAGE) {
+      return;
+    }
+    const result = readInboundMessage(event.data, event.origin);
+    const reply = inboundReply(result);
+    if (event.source && "postMessage" in event.source) {
+      event.source.postMessage(reply, { targetOrigin: event.origin });
+    }
+    if (!result.ok) {
+      renderErrors(errors, cardInput, result.errors);
+      status.textContent = "The inbound card was not loaded.";
+      return;
+    }
+    applyInbound(result.value, "message");
+  }
+
+  function applyHash(hash: string): void {
+    const parsed = parseContextHash(hash);
+    if (!parsed.ok) {
+      renderErrors(errors, cardInput, parsed.errors);
+      status.textContent = "That link could not be loaded.";
+      return;
+    }
+    if (!parsed.value.context && !parsed.value.conceptId) return;
+    applyInbound(parsed.value, "link");
+  }
+
+  function applyInbound(parsed: ParsedContextLink, via: "link" | "message"): void {
+    notesInput.value = "";
+    watchlistInput.value = "";
+    if (parsed.context) {
+      const card = publicMoveCard(parsed.context.card);
+      cardInput.value = JSON.stringify(cardForEditor(card), null, 2);
+      showSample(sampleNote, undefined);
+    }
+    if (parsed.context?.question) {
+      questionInput.value = parsed.context.question;
+    } else if (parsed.conceptId && !parsed.context?.question) {
+      questionInput.value = conceptQuestion(parsed.conceptId);
+    }
+    if (parsed.conceptId) {
+      showConcept(conceptNote, parsed.conceptId, conceptButtons);
+    }
+    const inboundErrors = parsed.warnings.map((message) => ({ path: "context", message }));
+    renderErrors(errors, cardInput, inboundErrors);
+    const how = via === "link" ? "a deep link" : "a message from an allowed page";
+    const stripped = parsed.warnings.length > 0 ? " Private or account fields were removed." : "";
+    status.textContent = parsed.context
+      ? `Loaded a public move card from ${how}.${stripped} Click Explain the move when you want a reading. Nothing was sent.`
+      : `Loaded an educational concept from ${how}. Click Explain the move only if you also have a card you want explained. Nothing was sent.`;
+  }
 
   async function onPreview(): Promise<void> {
     const prepared = await prepareCard();
@@ -395,6 +476,41 @@ function sourceLabel(source: string): string {
 function formatPct(value: number): string {
   const text = Number.isInteger(value) ? value.toString() : String(value);
   return value > 0 ? `+${text}%` : `${text}%`;
+}
+
+function showConcept(host: HTMLElement, conceptId: string, buttons: HTMLButtonElement[]): void {
+  const entry = getConcept(conceptId);
+  for (const button of buttons) {
+    button.setAttribute("aria-pressed", button.dataset.concept === conceptId ? "true" : "false");
+  }
+  if (!entry) {
+    host.replaceChildren();
+    return;
+  }
+  host.replaceChildren(
+    h("p", { text: `${entry.title}. ${entry.summary}` }),
+    h("p", { className: "fine", text: "Educational explanation only. Not a recommendation and not an offer to buy or sell." }),
+  );
+}
+
+function cardForEditor(card: ReturnType<typeof publicMoveCard>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    symbol: card.symbol,
+    movePct: card.movePct,
+  };
+  if (card.asOf) payload.asOf = card.asOf;
+  if (card.volumeVsNormal !== undefined) payload.volumeVsNormal = card.volumeVsNormal;
+  if (card.marketLabel) payload.marketLabel = card.marketLabel;
+  if (card.marketMovePct !== undefined) payload.marketMovePct = card.marketMovePct;
+  if (card.sector) payload.sector = card.sector;
+  if (card.sectorMovePct !== undefined) payload.sectorMovePct = card.sectorMovePct;
+  if (card.peerMoves.length > 0) payload.peerMoves = card.peerMoves;
+  if (card.volatilityNote) payload.volatilityNote = card.volatilityNote;
+  if (card.upcomingEvents.length > 0) payload.upcomingEvents = card.upcomingEvents;
+  if (card.headlines.length > 0) payload.headlines = card.headlines;
+  if (card.document) payload.document = card.document;
+  if (card.sourceNote) payload.sourceNote = card.sourceNote;
+  return payload;
 }
 
 function pretty(raw: string): string {

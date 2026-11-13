@@ -130,6 +130,45 @@ npm run build
 npx firebase-tools deploy --only hosting,firestore:rules,remoteconfig
 ```
 
+
+## Deep links, desk hand-off, and concepts
+
+ATLAS Explain can load a public move card from a link or from a message sent by an allowed page. It never auto-runs an explanation. The user still clicks **Explain the move**. Notes, watchlists, balances, and account fields are stripped on the way in and are not written into the editor.
+
+The context envelope is version 1:
+
+```json
+{
+  "v": 1,
+  "kind": "move_card",
+  "source": "atlas_desk",
+  "card": { "symbol": "BTCUSDT", "asOf": "2026-11-12", "movePct": -6.2 },
+  "question": "Why might some traders buy this dip while others sell?",
+  "concepts": ["shadow"]
+}
+```
+
+A bare public move card (the existing JSON shape) is also accepted. Allowed card fields are the public `MoveCard` keys in `src/core/move-card.ts`. Forbidden keys include `notes`, `watchlist`, balances, positions, account identifiers, and secrets.
+
+**Hash links** keep the payload out of Hosting query logs:
+
+- `https://atlas-explain.web.app/#c=<base64url(JSON)>`
+- `https://atlas-explain.web.app/#card=<uri-encoded JSON>` for a small card
+- `https://atlas-explain.web.app/#concept=shadow` to open a glossary entry without a card
+
+`src/core/context-link.ts` builds and parses these hashes. Concept ids live in `src/core/glossary.ts`: `shadow`, `signal15`, `chart_layers`, `live_lock`, `paper_only`, `drop_study`, `hybrid_inference`, and `move_card`.
+
+**postMessage**, for a same-machine ATLAS desk tab or a future extension page that is not implemented in this change:
+
+```js
+otherWindow.postMessage(
+  { type: "atlas-explain/v1/load", payload: envelope, concept: "chart_layers" },
+  "https://atlas-explain.web.app",
+);
+```
+
+The app accepts that type only from `https://atlas-explain.web.app`, `https://atlas-explain.firebaseapp.com`, `http://localhost:3000`, and `http://127.0.0.1:3000`. It replies with `atlas-explain/v1/loaded` or `atlas-explain/v1/error`. This repository still does not contain ATLAS models, signals, or account data.
+
 ## On-device model in Chrome
 
 On-device inference needs Chrome on desktop, version 139 or newer ([getting started guide](https://firebase.google.com/docs/ai-logic/hybrid/web/get-started)):
