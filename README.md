@@ -170,6 +170,20 @@ otherWindow.postMessage(
 
 The app accepts that type only from `https://atlas-explain.web.app`, `https://atlas-explain.firebaseapp.com`, `http://localhost:3000`, and `http://127.0.0.1:3000`. It replies with `atlas-explain/v1/loaded` or `atlas-explain/v1/error`. This repository still does not contain ATLAS models, signals, or account data.
 
+## Connecting to ATLAS
+
+ATLAS Explain never reads balances, positions, or account ids. When it talks to the private ATLAS desk, it uses this repo's connectors library (`src/connectors/`, see [docs/connectors/README.md](docs/connectors/README.md)):
+
+1. The hosted web app at https://atlas-explain.web.app **never calls localhost**. Its header pill says **Hosted app**.
+2. The Chrome extension and a local loopback build may probe ATLAS on this computer. They prefer public MCP (`POST /api/mcp/public`) and fall back to the REST catalog (`GET /api/explain/assets`).
+3. The header says **ATLAS local** only when one of those probes actually answers. It says **ATLAS desk** when this tab is the Markets desk, **Offline** when the browser is offline, and **Not connected** when nothing has answered. It does not fake a connection.
+
+The desk can also open this app with a public move card (`#c=` / `#card=`) or a glossary concept (`#concept=`). Loading a card does not run the model until you click **Explain the move**.
+
+## Screenshots
+
+Screenshot stills for the README live in [docs/screenshots/](docs/screenshots/) once captured (hosted header, ATLAS local header, the desk's Explain this move link, an on-device badge with both-sided reasons, the practice-page highlight, and the grey signal light). The recording shot list is in [docs/DEMO.md](docs/DEMO.md).
+
 ## On-device model in Chrome
 
 On-device inference needs Chrome on desktop, version 139 or newer ([getting started guide](https://firebase.google.com/docs/ai-logic/hybrid/web/get-started)):
@@ -182,7 +196,7 @@ If Nano is not available and the card has no private notes, `PREFER_ON_DEVICE` f
 
 ## Demo
 
-Try the highlight flow on a static practice page with no prices and no account: [atlas-explain.web.app/demo/trading-terms.html](https://atlas-explain.web.app/demo/trading-terms.html). Highlight a sentence, right-click, and choose **Explain with ATLAS Explain**, or press `Alt+Shift+X`.
+Try the highlight flow on a static practice page with no prices and no account: [atlas-explain.web.app/demo/trading-terms.html](https://atlas-explain.web.app/demo/trading-terms.html). Highlight a sentence, right-click, and choose **Explain with ATLAS Explain**, or press `Alt+Shift+X`. `Alt+Shift+E` opens the Explain popup.
 
 The full three-minute script (ATLAS desk → Explain → on-device badge → two-sided reasons → highlighted text on a trading page → Recent and Learn path → signal light) is in [docs/DEMO.md](docs/DEMO.md). The submission checklist is in [docs/SUBMISSION.md](docs/SUBMISSION.md).
 
@@ -198,7 +212,7 @@ The full three-minute script (ATLAS desk → Explain → on-device badge → two
 
 The Manifest V3 extension lives in `extension/` and reuses `src/core` for the prompt, the refusal rules, and the billing entitlements. It tries Chrome's Prompt API (Gemini Nano) first. If that model is unavailable, it calls Firebase AI Logic with `InferenceMode.ONLY_IN_CLOUD` on the same `atlas-explain` project. The popup says which path answered.
 
-Each explanation is a click: the toolbar icon, the selection context menu **Explain with ATLAS Explain**, the `Alt+Shift+X` shortcut, or a button you add to the current page. The extension sends the highlighted text, the page title, and the site name. The site name and title also tell it what kind of page the highlight came from (charting site, broker, crypto exchange, market news, or the ATLAS desk), so an "RSI" on a charting site is read as an indicator; the page body is never read. Recent explanations and Learn path progress are kept in `chrome.storage.local` on the device only. It does not read form fields, balances, or account numbers. On-device answers are unlimited. Cloud answers follow `billing_enabled` (off during beta, so they are free).
+Each explanation is a click: the toolbar icon, the selection context menu **Explain with ATLAS Explain**, the `Alt+Shift+X` shortcut (or `Alt+Shift+E` to open the popup), or a button you add to the current page. The extension sends the highlighted text, the page title, and the site name. The site name and title also tell it what kind of page the highlight came from (charting site, broker, crypto exchange, market news, or the ATLAS desk), so an "RSI" on a charting site is read as an indicator; the page body is never read. Recent explanations and Learn path progress are kept in `chrome.storage.local` on the device only. It does not read form fields, balances, or account numbers. On-device answers are unlimited. Cloud answers follow `billing_enabled` (off during beta, so they are free).
 
 `scripting` is included with `activeTab` so the highlight and the page button run only after that click. `sidePanel` is optional.
 
