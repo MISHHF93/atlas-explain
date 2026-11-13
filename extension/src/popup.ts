@@ -33,6 +33,7 @@ import {
   signalCard,
   themePicker,
 } from "../../src/wallet/cards";
+import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../../src/core/timeouts";
 import { mountAssets, type AssetsPreview } from "../../src/wallet/assets-controller";
 import { loadDigest, todayToronto } from "../../src/core/digest";
 import { digestCard } from "../../src/wallet/digest";
@@ -438,7 +439,7 @@ async function run(options: RunOptions): Promise<void> {
 
   showResult(loadingCard(2));
   try {
-    const cloud = await cloudModule.explainInCloud(built.prompt, token);
+    const cloud = await withDeadline(cloudModule.explainInCloud(built.prompt, token), EXPLAIN_DEADLINE_MS, "The answer took too long.");
     if (cloud.blocked) {
       setBusy(false);
       showResult(limitCard(cloud.text));
@@ -513,11 +514,7 @@ function fail(text: string, retry: boolean): void {
 }
 
 function friendlyCloudError(message: string): string {
-  if (/app.?check|recaptcha|attestation/i.test(message)) {
-    return "Cloud fallback needs an App Check debug token. Add it in Settings → AI, then try again.";
-  }
-  if (/network|fetch|offline/i.test(message)) return "The cloud model could not be reached. Check your connection and retry.";
-  return message;
+  return cloudErrorCopy(message, "extension");
 }
 
 function composerHintLine(): HTMLElement {

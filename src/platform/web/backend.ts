@@ -14,6 +14,7 @@ import {
 } from "../../core/billing";
 import { publicMoveCard } from "../../core/move-card";
 import { runExplanation } from "../../core/run-explanation";
+import { SETTINGS_FETCH_TIMEOUT_MS } from "../../core/timeouts";
 import { REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../../core/settings";
 import type { AppSettings, ExplanationRun, MoveCard } from "../../core/types";
 import type { PublicEnvConfig } from "./env";
@@ -71,6 +72,8 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
   const store = () => (storePromise ??= import("./store").then((mod) => mod.openStore(app)));
   const remoteConfig = getRemoteConfig(app);
   remoteConfig.settings.minimumFetchIntervalMillis = import.meta.env.DEV ? 0 : 60_000;
+  // A slow network must not hold the first explanation hostage; defaults stay active.
+  remoteConfig.settings.fetchTimeoutMillis = SETTINGS_FETCH_TIMEOUT_MS;
   remoteConfig.defaultConfig = { ...remoteConfigDefaults() };
 
   const explainer = lazyExplainer(app);

@@ -35,6 +35,7 @@ import { canReachLocalAtlas } from "../core/assets";
 import { mayCallLocalAtlas, probeAtlasLocal } from "../connectors";
 import { loadDigest, todayToronto } from "../core/digest";
 import { digestCard } from "../wallet/digest";
+import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../core/timeouts";
 import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 import { twoSidedNodes } from "../wallet/two-sided";
@@ -559,11 +560,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     status.textContent = "Checking the card and starting hybrid inference…";
     try {
       showResult(loadingCard(1, STEP_LABELS));
-      const run = await backend.explain(prepared.card, questionInput.value, {
-        onProgress(message) {
-          status.textContent = message;
-        },
-      });
+      const run = await withDeadline(
+        backend.explain(prepared.card, questionInput.value, {
+          onProgress(message) {
+            status.textContent = message;
+          },
+        }),
+        EXPLAIN_DEADLINE_MS,
+        "The answer took too long.",
+      );
       showResult(runCard(run));
       engine.markRun(run.inferenceSource === "on_device" ? "on_device" : run.inferenceSource === "in_cloud" ? "in_cloud" : "unknown");
       status.textContent = "";
@@ -896,10 +901,8 @@ function friendlyError(error: unknown): string {
     return `${error.message} The raw model text is in the browser console.`;
   }
   const message = error instanceof Error ? error.message : "The explanation could not be completed.";
-  if (/API key not valid|API_KEY_INVALID/i.test(message)) return "Firebase AI Logic rejected the API key. Check the web app config.";
-  if (/app.?check|recaptcha|unauthenticated|permission-denied/i.test(message)) return "App Check blocked the cloud model. Register this browser's debug token, or try again on the hosted site.";
   if (error instanceof OnDeviceUnavailableError) return `${message} Use desktop Chrome 139 or newer with the Prompt API flag on, or let the cloud answer.`;
-  return message.length > 400 ? `${message.slice(0, 400)}…` : message;
+  return cloudErrorCopy(message, "web");
 }
 
 /** Preview-only run for screenshots (?demo=run). Labelled sample text, not a market call. */

@@ -12,6 +12,7 @@ import {
 import type { FirebaseApp } from "firebase/app";
 import { OnDeviceUnavailableError } from "../../core/run-explanation";
 import { SYSTEM_INSTRUCTION } from "../../core/prompt";
+import { DEVICE_INIT_DEADLINE_MS, withDeadline } from "../../core/timeouts";
 import type {
   ExplainHooks,
   HybridExplainRequest,
@@ -127,9 +128,15 @@ export async function explainWithHybridModel(
   if (mode !== InferenceMode.ONLY_IN_CLOUD) {
     try {
       // Must run from a user gesture (the Explain click) before generateContent.
-      await model.initializeDeviceModel((progressValue) => {
-        hooks?.onDeviceDownloadProgress?.(progressValue);
-      });
+      // A first-time Gemini Nano download can take minutes. Do not hold the answer for it:
+      // after the deadline PREFER_ON_DEVICE answers from the cloud while Chrome keeps downloading.
+      await withDeadline(
+        model.initializeDeviceModel((progressValue) => {
+          hooks?.onDeviceDownloadProgress?.(progressValue);
+        }),
+        DEVICE_INIT_DEADLINE_MS,
+        "Gemini Nano is still getting ready on this device.",
+      );
     } catch (error) {
       if (mode === InferenceMode.ONLY_ON_DEVICE) {
         throw new OnDeviceUnavailableError(
