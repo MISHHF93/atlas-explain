@@ -32,6 +32,8 @@ import { el, labelledButton, prefersReducedMotion } from "../wallet/dom";
 import { icon } from "../wallet/icons";
 import { extensionNodes, privacyNodes, termsNodes } from "../wallet/legal";
 import { canReachLocalAtlas } from "../core/assets";
+import { loadDigest, todayToronto } from "../core/digest";
+import { digestCard } from "../wallet/digest";
 import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 
@@ -131,9 +133,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   const explainHead = el("div", "panel-title");
   explainHead.append(el("h1", undefined, "Explain a move"), el("span", "fine", "Education only"));
+  const brief = digestCard();
+  void (canReachLocalAtlas(location, false)
+    ? loadDigest()
+    : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
+  ).then((v) => brief.show(v));
 
   shell.panels.explain.append(
     explainHead,
+    brief.node,
     fromDesk,
     moveSlot,
     sampleRow,
