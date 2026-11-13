@@ -34,6 +34,9 @@ import {
   themePicker,
 } from "../../src/wallet/cards";
 import { mountAssets, type AssetsPreview } from "../../src/wallet/assets-controller";
+import { loadDigest, todayToronto } from "../../src/core/digest";
+import { digestCard } from "../../src/wallet/digest";
+import { canReachLocalAtlas } from "../../src/core/assets";
 import { el, labelledButton, prefersReducedMotion } from "../../src/wallet/dom";
 import { installErrorBoundary } from "../../src/wallet/error-boundary";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../src/wallet/shell";
@@ -101,10 +104,15 @@ const result = el("div", "stack result");
 result.setAttribute("aria-live", "polite");
 const explainHead = el("div", "panel-title");
 explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
+const brief = digestCard();
+void (canReachLocalAtlas(location, true)
+  ? loadDigest()
+  : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
+).then((v) => brief.show(v));
 // Recent explanations live in chrome.storage.local on this device. Never uploaded.
 const recentSlot = el("div");
 let history: HistoryEntry[] = [];
-shell.panels.explain.append(explainHead, question, buttons, result, recentSlot);
+shell.panels.explain.append(explainHead, brief.node, question, buttons, result, recentSlot);
 
 function renderHistory(): void {
   recentSlot.replaceChildren(historyCard({
