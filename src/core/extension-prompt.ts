@@ -9,6 +9,10 @@ export const EXTENSION_DISCLAIMER = "Educational information, not investment adv
 export const EXTENSION_PRIVACY_NOTE =
   "ATLAS Explain sends only the text you highlight, the page title, and the site name. It does not read form fields, balances, or account numbers. Nothing runs until you click.";
 
+/** Why the extension asks for http://localhost:3000/* (shown in Privacy and Settings). */
+export const LOCAL_ATLAS_PERMISSION_NOTE =
+  "The Assets tab reads ATLAS on this computer at http://localhost:3000 (the only site permission the extension asks for). It reads public market prices and paper model stats from /api/explain/assets, without cookies, only while the popup is open. It never reads balances, accounts or keys, and nothing leaves your computer.";
+
 export const EXTENSION_SYSTEM =
   "You explain trading language and market moves for education. You are not an advisor. You never tell anyone to buy, sell, hold, or size a trade. If asked for a trade decision, refuse it and explain the factors instead. You never invent prices or account details.";
 
