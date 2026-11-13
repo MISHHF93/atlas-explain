@@ -9,7 +9,7 @@ import {
 
 /** Words and states for the wallet popup. Education only: never trade instructions. */
 
-export type ConnectionState = "desk" | "none" | "offline";
+export type ConnectionState = "desk" | "local" | "none" | "offline";
 
 export interface SignalCopy {
   headline: string;
@@ -57,6 +57,9 @@ export function signalCopy(view: SignalView): SignalCopy {
 export function connectionCopy(state: ConnectionState): { label: string; title: string } {
   if (state === "offline") {
     return { label: "Offline", title: "You are offline. On-device explanations still work when Chrome has Gemini Nano." };
+  }
+  if (state === "local") {
+    return { label: "ATLAS local", title: "ATLAS is running on this computer. The Assets tab reads its public prices and paper stats." };
   }
   if (state === "desk") {
     return { label: "ATLAS desk", title: "This tab is the ATLAS Markets desk. Only its public paper signal is read." };
