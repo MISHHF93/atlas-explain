@@ -9,7 +9,7 @@ import {
 
 /** Words and states for the wallet popup. Education only: never trade instructions. */
 
-export type ConnectionState = "desk" | "local" | "hosted" | "none" | "offline";
+export type ConnectionState = "desk" | "local" | "live" | "hosted" | "none" | "offline";
 
 export interface SignalCopy {
   headline: string;
@@ -63,6 +63,9 @@ export function connectionCopy(state: ConnectionState): { label: string; title: 
   }
   if (state === "desk") {
     return { label: "ATLAS desk", title: "This tab is the ATLAS Markets desk. Only its public paper signal is read." };
+  }
+  if (state === "live") {
+    return { label: "Live prices", title: "Crypto prices are live from Kraken's public feed. Connect ATLAS on this computer for stock prices and paper predictions." };
   }
   if (state === "hosted") {
     return { label: "Hosted app", title: "This web app never calls localhost. Install the ATLAS Explain extension and run ATLAS on this computer to connect." };

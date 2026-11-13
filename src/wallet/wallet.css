@@ -99,7 +99,7 @@ a { color: var(--atlas-accent); }
 .conn[data-light="green"] .conn-light { --tone: var(--atlas-signal-up); }
 .conn[data-light="red"] .conn-light { --tone: var(--atlas-signal-down); }
 .conn[data-light="grey"] .conn-light { animation: atlas-breathe-dot 3.2s ease-in-out infinite; }
-.conn[data-state="desk"], .conn[data-state="local"] { color: var(--atlas-ink); }
+.conn[data-state="desk"], .conn[data-state="local"], .conn[data-state="live"] { color: var(--atlas-ink); }
 .conn[data-state="offline"] { color: var(--atlas-warn-ink); background: var(--atlas-warn); border-color: transparent; }
 @keyframes atlas-breathe-dot { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tone) 12%, transparent); } }
 

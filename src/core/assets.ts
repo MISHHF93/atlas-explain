@@ -91,6 +91,8 @@ export interface CatalogView {
   missing: { klass: AssetClass; reason: string }[];
   gateReason: string;
   stockCitation: string | null;
+  /** Where the list came from. ATLAS on this computer, or Kraken's public feed when ATLAS is not reachable. */
+  source?: "atlas" | "kraken";
 }
 
 /* ---------- small readers ---------- */
