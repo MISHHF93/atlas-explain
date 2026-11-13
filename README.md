@@ -180,27 +180,25 @@ On-device inference needs Chrome on desktop, version 139 or newer ([getting star
 
 If Nano is not available and the card has no private notes, `PREFER_ON_DEVICE` falls through to the cloud model inside the SDK. If the card has notes, the first call is device-only so the notes cannot take the cloud fallback; a failure retries in the cloud without them, and the badge says so.
 
-## Demo video script
+## Demo
 
-About two and a half minutes.
+Try the highlight flow on a static practice page with no prices and no account: [atlas-explain.web.app/demo/trading-terms.html](https://atlas-explain.web.app/demo/trading-terms.html). Highlight a sentence, right-click, and choose **Explain with ATLAS Explain**, or press `Alt+Shift+X`.
 
-| Time | What to show | What to say |
-| --- | --- | --- |
-| 0:00 | The disclaimer at the top of the page | "ATLAS Explain is an educational reading of a move. It is not advice and it does not tell you to trade." |
-| 0:12 | Click **NVDA · 27 Jan 2025 · DeepSeek** | "This sample is a public-news illustration. NVIDIA fell about 17 percent that day. The card rounds reported closes and links the articles. It is not a market-data feed." |
-| 0:32 | Open **Private notes and watchlist** and type a short note | "These stay on the device when Gemini Nano runs. They are stripped if the cloud model has to answer, and they are not saved." |
-| 0:48 | Click **Explain the move**. If Chrome is still downloading Nano, show the progress line | "The click calls Firebase AI Logic. It tries the on-device model first, then the cloud model if Nano is not ready." |
-| 1:10 | Point at the path badge, then the three buyer reasons, three seller reasons, and what would change | "The badge is the SDK's inferenceSource, on-device or cloud. The answer is a case for the dip and a case against it, plus the missing fact that would change either one." |
-| 1:35 | Point at headline topics | "Each headline is forced into a fixed taxonomy: AI capex, export rules, governance, earnings, the Fed, a macro shock, or other." |
-| 1:50 | Scroll to **Saved explanations** and refresh | "The explanation is stored in Firestore for this browser's anonymous user. The note I typed is not in that document." |
-| 2:05 | Click **Blank dip · not historical**, then **Preview prompt** | "Anyone can replace the JSON with their own figures. Preview stays on the device and shows whether private text would be included." |
-| 2:25 | Mention Chrome's flag and the cloud fallback in one sentence, then the disclaimer again | "No Nano, or a long document, and the same button uses Gemini in the cloud through AI Logic, with App Check in front of it. Still an explanation, not a trade." |
+The full three-minute script (ATLAS desk → Explain → on-device badge → two-sided reasons → highlighted text on a trading page → Recent and Learn path → signal light) is in [docs/DEMO.md](docs/DEMO.md). The submission checklist is in [docs/SUBMISSION.md](docs/SUBMISSION.md).
+
+| Step | What the judge sees |
+| --- | --- |
+| 1 | The ATLAS desk's **Explain this move** opens a public move card in the wallet. Nothing runs until the click. |
+| 2 | **Explain the move** runs Firebase AI Logic hybrid inference; the badge names the path that ran (on-device Gemini Nano or cloud Gemini). |
+| 3 | Three reasons a buyer might weigh, three a seller might weigh, and what would change the picture. |
+| 4 | On a trading or charting page, a highlighted sentence is explained in the same wallet, with the site type (charting, broker, crypto exchange, market news) read from the site name only. |
+| 5 | Recent explanations and Learn path progress stay on the device. |
 
 ## Chrome extension
 
 The Manifest V3 extension lives in `extension/` and reuses `src/core` for the prompt, the refusal rules, and the billing entitlements. It tries Chrome's Prompt API (Gemini Nano) first. If that model is unavailable, it calls Firebase AI Logic with `InferenceMode.ONLY_IN_CLOUD` on the same `atlas-explain` project. The popup says which path answered.
 
-Each explanation is a click: the toolbar icon, the selection context menu **Explain with ATLAS**, or a button you add to the current page. The extension sends the highlighted text, the page title, and the site name. It does not read form fields, balances, or account numbers. On-device answers are unlimited. Cloud answers follow `billing_enabled` (off during beta, so they are free).
+Each explanation is a click: the toolbar icon, the selection context menu **Explain with ATLAS Explain**, the `Alt+Shift+X` shortcut, or a button you add to the current page. The extension sends the highlighted text, the page title, and the site name. The site name and title also tell it what kind of page the highlight came from (charting site, broker, crypto exchange, market news, or the ATLAS desk), so an "RSI" on a charting site is read as an indicator; the page body is never read. Recent explanations and Learn path progress are kept in `chrome.storage.local` on the device only. It does not read form fields, balances, or account numbers. On-device answers are unlimited. Cloud answers follow `billing_enabled` (off during beta, so they are free).
 
 `scripting` is included with `activeTab` so the highlight and the page button run only after that click. `sidePanel` is optional.
 
@@ -245,7 +243,7 @@ ATLAS is a private, paper-only trading-research desk. ATLAS Explain is a separat
 
 ## What to build next
 
-**Chrome extension.** Keep `src/core` as the shared contract. An extension page can call the same `HybridExplainer` in `src/platform/web/explainer.ts`, or it can open the hosted app. Check the Prompt API's availability inside extension pages before promising on-device inference there; the desk page is the path that is wired up today.
+**Chrome extension.** Shipped in `extension/` (see above). Next: a Chrome Web Store listing, and structured output on the extension's on-device path so its answers use the same buyer/seller schema as the web app.
 
 **Android shell.** Port the move card, prompt, taxonomy, and path decision, then call Firebase AI Logic's Android hybrid API so Gemini Nano runs through ML Kit when the device has it and Gemini in the cloud otherwise. Use the current Android getting-started guide rather than a copied web snippet: [hybrid inference for Android](https://firebase.google.com/docs/ai-logic/hybrid/android/get-started). Reuse App Check (Play Integrity), the same Firestore rules, and the same Remote Config keys.
 
