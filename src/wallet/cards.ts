@@ -203,6 +203,10 @@ export function explanationCard(options: {
   copyText: string;
   notes?: string[];
   onClear?: () => void;
+  /** "Keep going" follow-ups, shown as chips under the answer. */
+  followUps?: { label: string; run: () => void }[];
+  /** Related glossary terms found in the answer. */
+  related?: { title: string; run: () => void }[];
 }): HTMLElement {
   const card = el("article", "card explain-card");
   const head = el("div", "card-head");
@@ -238,12 +242,39 @@ export function explanationCard(options: {
     card.append(body);
   }
   if (options.body) card.append(...options.body);
+  if (options.followUps?.length || options.related?.length) card.append(keepGoing(options.followUps ?? [], options.related ?? []));
   for (const note of options.notes ?? []) {
     const line = el("p", "note");
     line.append(icon("shield", 14), el("span", undefined, note));
     card.append(line);
   }
   return card;
+}
+
+function keepGoing(followUps: { label: string; run: () => void }[], related: { title: string; run: () => void }[]): HTMLElement {
+  const wrap = el("section", "keep-going");
+  wrap.setAttribute("aria-label", "Keep going");
+  wrap.append(el("p", "eyebrow", "Keep going"));
+  if (followUps.length) {
+    const row = el("div", "follow-row");
+    for (const item of followUps) {
+      const button = labelledButton("sparkle", item.label, "follow-chip");
+      button.addEventListener("click", item.run);
+      row.append(button);
+    }
+    wrap.append(row);
+  }
+  if (related.length) {
+    const row = el("div", "follow-row related-row");
+    row.append(el("span", "related-label", "Related"));
+    for (const item of related) {
+      const button = labelledButton("book", item.title, "follow-chip related-chip");
+      button.addEventListener("click", item.run);
+      row.append(button);
+    }
+    wrap.append(row);
+  }
+  return wrap;
 }
 
 /* ---------- glossary ---------- */
