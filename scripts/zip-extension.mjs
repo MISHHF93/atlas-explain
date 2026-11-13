@@ -17,11 +17,17 @@ cpSync(join(root, "extension", "manifest.json"), join(dist, "manifest.json"));
 rmSync(zipPath, { force: true });
 
 // Pure Node zip so the build works on Windows, macOS, and Linux without a zip binary.
-const entries = walk(dist).map((file) => ({
-  name: relative(dist, file).split(sep).join("/"),
-  data: readFileSync(file),
-  mtime: statSync(file).mtime,
-}));
+// The "key" field pins the unpacked extension id; the Chrome Web Store rejects it, so the zip drops it.
+const entries = walk(dist).map((file) => {
+  const name = relative(dist, file).split(sep).join("/");
+  let data = readFileSync(file);
+  if (name === "manifest.json") {
+    const manifest = JSON.parse(data.toString("utf8"));
+    delete manifest.key;
+    data = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+  }
+  return { name, data, mtime: statSync(file).mtime };
+});
 writeFileSync(zipPath, createZip(entries));
 console.log(`${zipPath} (${entries.length} files)`);
 

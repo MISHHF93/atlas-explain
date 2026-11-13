@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "ATLAS Explain",
   "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwKwOx0Re69Trp34oiyjYV/IMzoK55rvCP6wzZ52vlsED56AYNr/aqMvL3whM/BOcd2X55npZN72/kOBSF0aUN153b1LWHNQF3adLU5tk5LVQ0uFgaZ2nfCLpgDrmJpjO7b0ywxzpqxjbnI33Ottujl7DeQi1YuSl9pHhnqTA/lxOhdda+lJX39U1cRgGL0sJqDlZhj+pnKnOzK/Wq1uR+ii0tW4swXUzedPgGWAtoABSfH70Ia35ATobHI6Wy7ixMzxeiDg6ynjYOBYjsX5Uroy4oWv+U3cCMjq65dDZOB+jC0kROyE6PgbHtu/IRq+hRc4Fu7zGLUJjrBSaovYYbQIDAQAB",
   "description": "Educational explanations of trading terms and market moves. Not investment advice.",
   "action": {
     "default_popup": "popup.html",
@@ -30,7 +31,8 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://atlas-explain.web.app/*"
   ],
   "optional_permissions": [
     "sidePanel"
