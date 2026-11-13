@@ -58,16 +58,23 @@ Times are a guide. Keep the total near three minutes. If a shot fails, retake th
 
 ## Still frames for the README
 
-After the take, export stills (or a short GIF of shot 7) for `docs/screenshots/`:
+Captured stills already in `docs/screenshots/`:
 
 - `hosted-header.png` — hosted web app, pill **Hosted app**
-- `local-header.png` — local or extension, pill **ATLAS local**, after dismissing onboarding
-- `desk-explain-link.png` — Markets desk with **Explain this move**
-- `on-device-badge.png` — wallet with the Nano badge and both-sided reasons
-- `highlight-practice.png` — practice page highlight flowing into the wallet
+- `local-header.png` — local loopback build, pill **ATLAS local**, after dismissing onboarding
+- `desk-explain-link.png` — Markets desk with **Explain this move** and **Concepts**
+- `local-full.png` — Explain a move plus today's brief on a local build
+- `hosted-full.png` — hosted app, today's digest not ready
+- `glossary-shadow.png` — `#concept=shadow` educational question, nothing sent yet
+- `highlight-practice.png` — practice page (static, no account fields)
 - `signal-grey.png` — Signal tab, grey light, "Why this colour?"
 
+Still waiting on a real take on the presenter's laptop with Gemini Nano:
+
+- `on-device-badge.png` — wallet with the Nano badge and both-sided reasons (do not fabricate this badge)
+
 Crop tightly. No secrets, no balances, no DevTools, no debug tokens.
+
 
 ## Words to avoid on camera
 

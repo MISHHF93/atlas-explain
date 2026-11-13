@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const submission = readFileSync(new URL("../docs/SUBMISSION.md", import.meta.url), "utf8");
@@ -37,6 +39,28 @@ describe("hackathon write-up matches current features", () => {
     expect(demo).toMatch(/Alt\+Shift\+X/);
     expect(readme).toMatch(/Alt\+Shift\+E/);
     expect(readme).toMatch(/Alt\+Shift\+X/);
+  });
+
+
+  it("ships the README screenshot set and does not invent an on-device badge", () => {
+    const root = fileURLToPath(new URL("..", import.meta.url));
+    const shots = [
+      "hosted-header.png",
+      "local-header.png",
+      "desk-explain-link.png",
+      "local-full.png",
+      "hosted-full.png",
+      "glossary-shadow.png",
+      "signal-grey.png",
+      "highlight-practice.png",
+    ];
+    for (const name of shots) {
+      expect(existsSync(join(root, "docs/screenshots", name))).toBe(true);
+      expect(readme).toContain(`docs/screenshots/${name}`);
+    }
+    expect(existsSync(join(root, "docs/screenshots", "on-device-badge.png"))).toBe(false);
+    expect(readme).toMatch(/on-device badge is \*\*not\*\* included/i);
+    expect(demo).toMatch(/do not fabricate this badge/i);
   });
 
   it("stays education-only in the submission and demo scripts", () => {
