@@ -38,6 +38,8 @@ import { digestCard } from "../wallet/digest";
 import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 import { twoSidedNodes } from "../wallet/two-sided";
+import { engineStrip } from "../wallet/engine";
+import { isEngineState } from "../core/hybrid-engine";
 
 const THEME_KEY = "atlas-explain-theme";
 const ONBOARDED_KEY = "atlas-explain-onboarded";
@@ -135,6 +137,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   const explainHead = el("div", "panel-title");
   explainHead.append(el("h1", undefined, "Explain a move"), el("span", "fine", "Education only"));
+  const engine = engineStrip();
   const brief = digestCard();
   void (canReachLocalAtlas(location, false)
     ? loadDigest()
@@ -143,6 +146,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   shell.panels.explain.append(
     explainHead,
+    engine.node,
     brief.node,
     fromDesk,
     moveSlot,
@@ -270,8 +274,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   cardInput.addEventListener("input", () => renderMove());
   window.addEventListener("hashchange", () => applyHash(location.hash));
   window.addEventListener("message", onInboundMessage);
-  window.addEventListener("online", () => { void refreshLink(); });
-  window.addEventListener("offline", () => shell.setConnection("offline"));
+  window.addEventListener("online", () => { void refreshLink(); refreshEngine(); });
+  window.addEventListener("offline", () => { shell.setConnection("offline"); refreshEngine(); });
 
   let currentSignal: SignalView = mapSignal({ connected: false });
   let atlasLocal = false;
@@ -299,6 +303,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     updateConnection();
   }
 
+  function refreshEngine(): void {
+    const forced = preview.get("engine");
+    if (isEngineState(forced)) engine.set(forced);
+    else void engine.refresh();
+  }
+
+  refreshEngine();
   applySignal(currentSignal);
   updateConnection();
   void refreshLink();
@@ -527,6 +538,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         },
       });
       showResult(runCard(run));
+      engine.markRun(run.inferenceSource === "on_device" ? "on_device" : run.inferenceSource === "in_cloud" ? "in_cloud" : "unknown");
       status.textContent = "";
       shell.announce("Explanation ready.");
       try {
