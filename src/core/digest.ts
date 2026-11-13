@@ -120,8 +120,8 @@ export async function loadDigest(fetcher: typeof fetch = fetch, nowMs = Date.now
 }
 
 /** One-line status for the "Today's digest" row on the Explain tab. */
-export function digestRowStatus(view: DigestView): { label: string; tone: "ready" | "loading" | "waiting" } {
-  if (view.kind === "ready") return { label: "Today", tone: "ready" };
+export function digestRowStatus(view: DigestView, marketReady = false): { label: string; tone: "ready" | "loading" | "waiting" } {
+  if (view.kind === "ready" || marketReady) return { label: "Today", tone: "ready" };
   if (view.kind === "loading") return { label: "Loading", tone: "loading" };
   return { label: "Not ready yet", tone: "waiting" };
 }
