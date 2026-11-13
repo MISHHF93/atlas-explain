@@ -1,5 +1,7 @@
 node_modules/
 dist/
+extension/dist/
+extension/*.zip
 .env
 .env.local
 .env.*.local
