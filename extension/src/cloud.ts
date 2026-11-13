@@ -1,14 +1,6 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
-import { getAuth, signInAnonymously } from "firebase/auth";
-import {
-  GoogleAIBackend,
-  InferenceMode,
-  getAI,
-  getGenerativeModel,
-} from "firebase/ai";
 import { getRemoteConfig, fetchAndActivate, getValue } from "firebase/remote-config";
-import { getFirestore } from "firebase/firestore";
 import { allowCloudCall } from "../../src/core/billing";
 import { EXTENSION_SYSTEM } from "../../src/core/extension-prompt";
 import {
@@ -22,7 +14,6 @@ import {
   PUBLIC_FIREBASE_CONFIG,
   PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY,
 } from "../../src/platform/web/firebaseConfig";
-import { incrementCloudCalls, readCloudCallsToday } from "../../src/platform/web/usage";
 
 export interface CloudAnswer {
   text: string;
@@ -83,11 +74,13 @@ export async function explainInCloud(prompt: string, debugToken: string | null):
   const plan = "free" as const;
   let uid: string | null = null;
   let used = 0;
-  if (settings.billingEnabled) {
+  // Auth and Firestore only load when billing is switched on (it ships off).
+  const metering = settings.billingEnabled ? await loadMetering() : null;
+  if (metering) {
     try {
-      const credential = await signInAnonymously(getAuth(app));
+      const credential = await metering.signInAnonymously(metering.getAuth(app));
       uid = credential.user.uid;
-      used = await readCloudCallsToday(getFirestore(app), uid);
+      used = await metering.readCloudCallsToday(metering.getFirestore(app), uid);
     } catch {
       uid = null;
     }
@@ -107,6 +100,7 @@ export async function explainInCloud(prompt: string, debugToken: string | null):
     };
   }
 
+  const { GoogleAIBackend, InferenceMode, getAI, getGenerativeModel } = await import("firebase/ai");
   const ai = getAI(app, { backend: new GoogleAIBackend() });
   const model = getGenerativeModel(
     ai,
@@ -121,8 +115,23 @@ export async function explainInCloud(prompt: string, debugToken: string | null):
     { timeout: 45_000 },
   );
   const result = await model.generateContent(prompt);
-  if (settings.billingEnabled && uid) {
-    await incrementCloudCalls(getFirestore(app), uid);
+  if (metering && uid) {
+    await metering.incrementCloudCalls(metering.getFirestore(app), uid);
   }
   return { blocked: false, text: result.response.text() };
+}
+
+async function loadMetering() {
+  const [auth, firestore, usage] = await Promise.all([
+    import("firebase/auth"),
+    import("firebase/firestore"),
+    import("../../src/platform/web/usage"),
+  ]);
+  return {
+    getAuth: auth.getAuth,
+    signInAnonymously: auth.signInAnonymously,
+    getFirestore: firestore.getFirestore,
+    readCloudCallsToday: usage.readCloudCallsToday,
+    incrementCloudCalls: usage.incrementCloudCalls,
+  };
 }

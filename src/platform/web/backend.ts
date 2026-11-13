@@ -1,16 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { getAuth, signInAnonymously } from "firebase/auth";
-import {
-  addDoc,
-  collection,
-  getDocs,
-  getFirestore,
-  limit,
-  orderBy,
-  query,
-  serverTimestamp,
-} from "firebase/firestore";
 import { fetchAndActivate, getRemoteConfig, getValue } from "firebase/remote-config";
 import {
   PRO_PRICE_ID,
@@ -26,11 +16,9 @@ import { publicMoveCard } from "../../core/move-card";
 import { runExplanation } from "../../core/run-explanation";
 import { REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../../core/settings";
 import type { AppSettings, ExplanationRun, MoveCard } from "../../core/types";
-import { linkAnonymousWithGoogle } from "./account";
 import type { PublicEnvConfig } from "./env";
-import { createFirebaseExplainer } from "./explainer";
-import { createStripePayments } from "./stripe-payments";
-import { incrementCloudCalls, readCloudCallsToday } from "./usage";
+import { lazyExplainer, lazyPayments } from "./lazy";
+import type { WebStore } from "./store";
 
 export interface HistoryEntry {
   id: string;
@@ -79,13 +67,14 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
   });
 
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  let storePromise: Promise<WebStore> | null = null;
+  const store = () => (storePromise ??= import("./store").then((mod) => mod.openStore(app)));
   const remoteConfig = getRemoteConfig(app);
   remoteConfig.settings.minimumFetchIntervalMillis = import.meta.env.DEV ? 0 : 60_000;
   remoteConfig.defaultConfig = { ...remoteConfigDefaults() };
 
-  const explainer = createFirebaseExplainer(app);
-  const payments = createStripePayments(db);
+  const explainer = lazyExplainer(app);
+  const payments = lazyPayments(async () => (await store()).db);
 
   let userPromise: Promise<string | null> | null = null;
   const currentUserId = () => {
@@ -117,7 +106,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
     const { settings } = await loadSettings();
     const uid = await currentUserId();
     const plan = await loadPlan(settings, uid);
-    const cloudCallsToday = uid ? await readCloudCallsToday(db, uid).catch(() => 0) : 0;
+    const cloudCallsToday = uid ? await store().then((s) => s.cloudCallsToday(uid)).catch(() => 0) : 0;
     return billingSnapshot({
       billingEnabled: settings.billingEnabled,
       plan,
@@ -130,7 +119,8 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
     loadSettings,
     loadBilling,
     currentUserId,
-    linkGoogle() {
+    async linkGoogle() {
+      const { linkAnonymousWithGoogle } = await import("./account");
       return linkAnonymousWithGoogle(auth);
     },
     async startCheckout() {
@@ -160,7 +150,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
         const limit = entitlements.watchlistSize;
         throw new WatchlistAllowance(typeof limit === "number" ? limit : 0);
       }
-      const cloudCallsToday = uid ? await readCloudCallsToday(db, uid).catch(() => 0) : 0;
+      const cloudCallsToday = uid ? await store().then((s) => s.cloudCallsToday(uid)).catch(() => 0) : 0;
       const allowCloud = uid
         ? allowCloudCall({
             billingEnabled: settings.billingEnabled,
@@ -178,7 +168,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
         meter: {
           allowCloud,
           onCloudInference: async () => {
-            if (uid) await incrementCloudCalls(db, uid);
+            if (uid) await (await store()).addCloudCall(uid);
           },
         },
         hooks: {
@@ -195,8 +185,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
         throw new Error("Anonymous sign-in failed, so this explanation was not saved.");
       }
       const published = publicMoveCard(card);
-      await addDoc(collection(db, "users", uid, "explanations"), {
-        createdAt: serverTimestamp(),
+      await (await store()).addExplanation(uid, {
         symbol: published.symbol,
         asOf: published.asOf ?? null,
         movePct: published.movePct,
@@ -227,11 +216,9 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
           "Anonymous sign-in did not complete. Enable Authentication → Anonymous to save and reload explanations.",
         );
       }
-      const snapshot = await getDocs(
-        query(collection(db, "users", uid, "explanations"), orderBy("createdAt", "desc"), limit(20)),
-      );
-      return snapshot.docs.map((doc) => {
-        const data = doc.data();
+      const docs = await (await store()).recentExplanations(uid, 20);
+      return docs.map((doc) => {
+        const data = doc.data;
         return {
           id: doc.id,
           createdAtLabel: formatTimestamp(data.createdAt),
