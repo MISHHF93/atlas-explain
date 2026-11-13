@@ -16,6 +16,8 @@ import {
 import { publicMoveCard } from "../../core/move-card";
 import { runExplanation } from "../../core/run-explanation";
 import { SETTINGS_FETCH_TIMEOUT_MS } from "../../core/timeouts";
+import { CloudRateLimited, localRateStore, peekCloudSlot, recordCloudCall } from "../../core/rate-limit";
+import { CloudAllowanceUsed } from "../../core/billing";
 import { REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../../core/settings";
 import type { AppSettings, ExplanationRun, MoveCard } from "../../core/types";
 import type { PublicEnvConfig } from "./env";
@@ -200,7 +202,8 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
         throw new WatchlistAllowance(typeof limit === "number" ? limit : 0);
       }
       const cloudCallsToday = uid ? await store().then((s) => s.cloudCallsToday(uid)).catch(() => 0) : 0;
-      const allowCloud = uid
+      const rate = peekCloudSlot(localRateStore());
+      const allowByPlan = uid
         ? allowCloudCall({
             billingEnabled: settings.billingEnabled,
             plan,
@@ -208,25 +211,33 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
             cloudCallsToday,
           })
         : !settings.billingEnabled;
+      const allowCloud = allowByPlan && rate.ok;
       hooks?.onProgress?.("Sending the move card through Firebase AI Logic…");
-      return runExplanation({
-        card,
-        question,
-        settings,
-        explainer,
-        meter: {
-          allowCloud,
-          onCloudInference: async () => {
-            if (uid) await (await store()).addCloudCall(uid);
+      try {
+        return await runExplanation({
+          card,
+          question,
+          settings,
+          explainer,
+          meter: {
+            allowCloud,
+            onCloudInference: async () => {
+              recordCloudCall(localRateStore());
+              if (uid) await (await store()).addCloudCall(uid);
+            },
           },
-        },
-        hooks: {
-          onDeviceDownloadProgress(ratio) {
-            const percent = Math.round(ratio * 100);
-            hooks?.onProgress?.(`Downloading the on-device model… ${percent}%`);
+          hooks: {
+            onDeviceDownloadProgress(ratio) {
+              const percent = Math.round(ratio * 100);
+              hooks?.onProgress?.(`Downloading the on-device model… ${percent}%`);
+            },
           },
-        },
-      });
+        });
+      } catch (error) {
+        // A blocked cloud path caused by the browser safety limit gets its own message, not the plan one.
+        if (error instanceof CloudAllowanceUsed && allowByPlan && !rate.ok) throw new CloudRateLimited(rate.reason);
+        throw error;
+      }
     },
     async save(run, card, question) {
       const uid = await currentUserId();

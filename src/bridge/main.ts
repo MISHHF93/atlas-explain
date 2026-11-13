@@ -7,6 +7,8 @@ import { allowCloudCall } from "../core/billing";
 import { EXTENSION_SYSTEM } from "../core/extension-prompt";
 import { DEFAULT_CLOUD_MODEL, REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../core/settings";
 import { SETTINGS_FETCH_TIMEOUT_MS } from "../core/timeouts";
+import { localRateStore, takeCloudSlot } from "../core/rate-limit";
+import { classifyCloudError, report } from "../core/monitor";
 import { readPublicEnv } from "../platform/web/env";
 import { BRIDGE_VERSION, isAllowedExtensionOrigin, readBridgeRequest, type BridgeRequest, type BridgeResponse } from "./protocol";
 
@@ -62,6 +64,11 @@ function start(): void {
       const allowed = uid ? allowCloudCall({ billingEnabled: true, plan: "free", freeCloudDailyLimit: settings.freeCloudDailyLimit, cloudCallsToday: used }) : false;
       if (!allowed) return { blocked: true, text: "Today's free cloud explanations are used up. Explanations that run on this device are still unlimited." };
     }
+    const slot = takeCloudSlot(localRateStore());
+    if (!slot.ok) {
+      report("rate_limited", "bridge", "browser_limit");
+      return { blocked: true, text: slot.reason };
+    }
     const { GoogleAIBackend, InferenceMode, getAI, getGenerativeModel } = await import("firebase/ai");
     const ai = getAI(app, { backend: new GoogleAIBackend() });
     const model = getGenerativeModel(
@@ -94,6 +101,7 @@ function start(): void {
       (error: unknown) => {
         const code = error && typeof error === "object" && "code" in error ? String((error as { code: unknown }).code) : undefined;
         const message = error instanceof Error ? error.message : "The cloud model did not answer.";
+        report(classifyCloudError(message), "bridge", code ?? "unknown");
         reply({ v: 1, id: req.id, type: "result", ok: false, error: message.slice(0, 300), ...(code ? { code } : {}) });
       },
     );

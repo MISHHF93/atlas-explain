@@ -9,6 +9,8 @@
  *
  * Built with textContent only, never HTML strings, so it works under a strict CSP.
  */
+import { report } from "../core/monitor";
+
 export const FALLBACK_TITLE = "Something went wrong";
 export const FALLBACK_TEXT =
   "ATLAS Explain hit an unexpected error. Nothing was sent or saved. Reload to try again. Educational information, not investment advice.";
@@ -48,6 +50,7 @@ export function installErrorBoundary(root: HTMLElement, reload: () => void = () 
   let shown = false;
   const takeOver = (reason: unknown) => {
     console.error("[atlas-explain]", reason);
+    report("uncaught", location.protocol === "chrome-extension:" ? "extension" : "web", reason instanceof Error ? reason.name : "error");
     if (!shouldTakeOver(root, shown)) return;
     shown = true;
     renderFallback(root, reload);
