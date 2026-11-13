@@ -4,6 +4,9 @@
   "description": "Educational explanations of market moves using Firebase AI Logic hybrid inference. Not financial advice.",
   "license": "Apache-2.0",
   "type": "module",
+  "engines": {
+    "node": "^22.12.0 || ^24.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -25,5 +28,9 @@
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6",
+    "minimatch": "^11.0.1"
   }
 }
