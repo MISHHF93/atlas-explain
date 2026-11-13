@@ -56,7 +56,7 @@ Without a Firebase web config and a reCAPTCHA Enterprise site key, `src/main.ts`
 
 ## Architecture
 
-`src/core` has no Firebase and no DOM. A Chrome extension or an Android shell can reuse the move card, the prompt, the taxonomy parser, and the path decision. The web UI is a thin desk over a `WebBackend`.
+`src/core` has no Firebase and no DOM. A Chrome extension or an Android shell can reuse the move card, the prompt, the taxonomy parser, and the path decision. The web UI and the extension popup share one wallet shell in `src/wallet/`; the web app (`src/web/app.ts`) mounts it over a `WebBackend`.
 
 ```mermaid
 flowchart TD
@@ -215,7 +215,7 @@ Load it unpacked:
 
 `npm run build:extension` writes `extension/atlas-explain-chrome.zip`. For the Chrome Web Store, upload that zip. Listing images are in `extension/store/`. The identity is documented in [docs/BRAND.md](docs/BRAND.md). The listing should say the extension is educational and not investment advice. Do not ship an App Check debug token in the store build.
 
-The popup opens like a wallet menu that drops down from the toolbar. Explanations of highlighted text appear in the same popup, with loading, empty, error, and offline states. The layout, motion, and icon rules are in [docs/BRAND.md](docs/BRAND.md). A signal light at the top stays grey unless a shadow model has cleared the evidence gate. Today none have, so the honest state is grey, or "connect ATLAS" when the desk tab is not open. The light never says buy or sell.
+The popup opens like a wallet menu that drops down from the toolbar, with Explain, Signal, Glossary, and Settings tabs. The hosted web app shows the same wallet, centred. Explanations of highlighted text appear in the same popup, with loading, empty, error, and offline states. The layout, motion, and icon rules are in [docs/BRAND.md](docs/BRAND.md). A signal light at the top stays grey unless a shadow model has cleared the evidence gate. Today none have, so the honest state is grey, or "connect ATLAS" when the desk tab is not open. The light never says buy or sell.
 
 ## Tests and CI
 
