@@ -109,7 +109,7 @@ export async function explainInCloud(prompt: string, debugToken: string | null):
       inCloudParams: {
         model: settings.cloudModel || DEFAULT_CLOUD_MODEL,
         systemInstruction: EXTENSION_SYSTEM,
-        generationConfig: { maxOutputTokens: settings.maxOutputTokens },
+        generationConfig: { maxOutputTokens: settings.maxOutputTokens, responseMimeType: "application/json" },
       },
     },
     { timeout: 45_000 },

@@ -40,6 +40,8 @@ import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../
 import { HISTORY_KEY, addToHistory, makeEntry, parseHistory, type HistoryEntry } from "../../src/core/history";
 import { LEARN_KEY, parseLearned } from "../../src/core/learn";
 import { pageKindLine } from "../../src/core/page-kind";
+import { TWO_SIDED_SCHEMA, parseTwoSided, twoSidedCopyText } from "../../src/core/two-sided";
+import { twoSidedNodes } from "../../src/wallet/two-sided";
 import { historyCard, learnCard } from "../../src/wallet/history-learn";
 import { explainOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
@@ -366,9 +368,9 @@ async function run(options: RunOptions): Promise<void> {
   }
 
   showResult(loadingCard(1));
-  const local = await explainOnDevice(built.prompt);
+  const local = await explainOnDevice(built.prompt, TWO_SIDED_SCHEMA);
   if (local) {
-    answer(withDisclaimer(local), "on_device", context.selection, context.redacted, pageKindLine(context.page, context.host));
+    answer(local, "on_device", context.selection, context.redacted, pageKindLine(context.page, context.host));
     return;
   }
   if (!cloudModule || !navigator.onLine) {
@@ -385,7 +387,7 @@ async function run(options: RunOptions): Promise<void> {
       showResult(limitCard(cloud.text));
       return;
     }
-    answer(withDisclaimer(cloud.text), "in_cloud", context.selection, context.redacted, pageKindLine(context.page, context.host));
+    answer(cloud.text, "in_cloud", context.selection, context.redacted, pageKindLine(context.page, context.host));
   } catch (error) {
     if (error instanceof CloudAllowanceUsed) {
       setBusy(false);
@@ -404,13 +406,18 @@ function answer(text: string, source: "on_device" | "in_cloud", selection: strin
 
 function showExplanation(text: string, source: "on_device" | "in_cloud", selection: string, redacted: boolean, contextLine?: string): void {
   setBusy(false);
+  // Same two-sided layout as the web app when the model kept the shape; plain text otherwise.
+  const twoSided = parseTwoSided(text);
+  const plain = withDisclaimer(text);
+  const notes = redacted ? ["Account-like numbers were removed before anything was sent."] : [];
+  if (twoSided) notes.push(EXTENSION_DISCLAIMER);
   showResult(explanationCard({
     source,
     selection,
     contextLine,
-    text,
-    copyText: text,
-    notes: redacted ? ["Account-like numbers were removed before anything was sent."] : [],
+    ...(twoSided ? { body: twoSidedNodes(twoSided) } : { text: plain }),
+    copyText: twoSided ? twoSidedCopyText(twoSided, EXTENSION_DISCLAIMER) : plain,
+    notes,
     onClear: () => {
       showResult(emptyCard(undefined, SHORTCUT_HINT));
       explainSelection.focus();

@@ -4,6 +4,7 @@ import {
 } from "./billing";
 import { detectPageKind, type PageKindView } from "./page-kind";
 import { SAMPLE_MOVES, type SampleMove } from "./samples";
+import { TWO_SIDED_INSTRUCTION } from "./two-sided";
 
 export const EXTENSION_DISCLAIMER = "Educational information, not investment advice.";
 
@@ -135,8 +136,8 @@ ${question || "Explain what this text is saying."}
 
 ${sampleBlock}
 
-End with this exact line and nothing after it:
-${EXTENSION_DISCLAIMER}`;
+${TWO_SIDED_INSTRUCTION}
+The app adds this line under every answer: ${EXTENSION_DISCLAIMER}`;
 
   return { prompt, refusedRecommendation };
 }
