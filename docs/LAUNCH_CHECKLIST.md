@@ -4,7 +4,7 @@ Status as of 2026-11-13. Billing stays **off** until hackathon judging is over.
 Education only: no buy/sell wording, never reads balances or account details.
 
 ## Done in code (merged to main, live on atlas-explain.web.app)
-- [x] **Live data:** crypto prices load from Kraken's public REST API (keyless, CORS) on the web app and in the extension when ATLAS on the computer is not running. Lights stay grey; stocks and predictions still say Connect ATLAS. Header shows "Live prices". (#42)
+- [x] **Live data:** crypto prices load from a pluggable public feed (Kraken or CoinGecko) on the web app and in the extension when ATLAS on the computer is not running. Remote Config `price_provider` defaults to `kraken` for the hackathon demo. Attribution is shown next to the prices. Lights stay grey; stocks and predictions still say Connect ATLAS. Header shows "Live prices". (#42, live-price provider PR)
 - [x] **No endless spinners:** Nano download no longer blocks answers; 12 s device-init deadline, 6 s Remote Config timeout, 70 s explain deadline; plain-language cloud errors. (#43)
 - [x] **Auth on the web:** Google (popup, redirect fallback), passwordless email link, sign-out, header account chip, signed-out mode with anonymous id that links on sign-in, per-user theme in Firestore. (#44)
 - [x] **Extension cloud + sign-in:** cloud calls go through `bridge.html` on atlas-explain.web.app (App Check runs on the web origin), answering only the pinned extension id with the fixed prompt; extension uses the account signed in on the web app. Debug-token field removed. (#45)
@@ -33,6 +33,9 @@ Education only: no buy/sell wording, never reads balances or account details.
 10. **Chrome Web Store listing:** developer account (one-time US$5 fee, so only when you decide), upload `extension/atlas-explain-chrome.zip` (the build strips the manifest `key`), screenshots from `extension/store/`, privacy practices form (declare: personally identifiable info only when signing in; website content = highlighted text), justify host permissions (`localhost:3000`, `atlas-explain.web.app`), single purpose: explain trading terms for education.
 11. **Privacy policy and terms review:** finish every `[TODO]` in `docs/legal/`, have them reviewed, publish at stable URLs, and remove the DRAFT labels in `src/wallet/legal.ts`.
 
+### Data licensing (required before a market launch; not required for the hackathon demo)
+12. **Licensed price feed.** Remote Config `price_provider` defaults to `kraken`. Before a public market launch, set it to `coingecko` and obtain a paid CoinGecko commercial plan (attribution is already shown), or keep Kraken only after written consent. Optional: set `coingecko_demo_api_key` in Remote Config (never commit a key). See `docs/legal/DATA_SOURCES.md`. Do not train any model on these feeds.
+
 ### After judging
-12. **Billing switch-on:** set up Stripe (Run Payments with Stripe extension), set the real Pro price id in `src/core/billing.ts`, test in Stripe test mode, then flip Remote Config `billing_enabled` to `true`. Requires the Blaze plan.
-13. **Monitoring sink:** add a real sink (for example Firebase Analytics or Sentry) with `addMonitorSink` and mention it in the privacy policy.
+13. **Billing switch-on:** set up Stripe (Run Payments with Stripe extension), set the real Pro price id in `src/core/billing.ts`, test in Stripe test mode, then flip Remote Config `billing_enabled` to `true`. Requires the Blaze plan.
+14. **Monitoring sink:** add a real sink (for example Firebase Analytics or Sentry) with `addMonitorSink` and mention it in the privacy policy.

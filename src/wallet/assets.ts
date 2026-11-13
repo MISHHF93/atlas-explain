@@ -13,9 +13,11 @@ import {
   type AssetDetailView,
   type AssetView,
   type AssetsState,
+  type CatalogView,
   type ClassFilter,
   type LeanView,
 } from "../core/assets";
+import { priceAttribution } from "../core/price-feed";
 import { MIN_HIT_RATE, MIN_SAMPLE_SIZE } from "../core/signal";
 import { el, labelledButton, replay } from "./dom";
 import { icon } from "./icons";
@@ -115,7 +117,7 @@ export function assetsPanel(options: {
       meta.textContent = "";
       list.replaceChildren();
       const card = el("section", "card state state-error");
-      card.append(el("p", "card-title", "ATLAS answered, but Explain could not use it"), el("p", "fine", state.reason));
+      card.append(el("p", "card-title", state.title ?? "ATLAS answered, but Explain could not use it"), el("p", "fine", state.reason));
       const retry = labelledButton("refresh", "Try again", "secondary small");
       retry.addEventListener("click", options.onRetry);
       card.append(retry);
@@ -124,8 +126,7 @@ export function assetsPanel(options: {
     }
     const rows = filterAssets(all, input.value, klass);
     const live = all.filter((a) => a.quote.freshness === "live").length;
-    const via = state.catalog.source === "kraken" ? " · prices from Kraken public API" : "";
-    meta.textContent = `${rows.length} of ${all.length} assets · ${live} live${via}`;
+    meta.replaceChildren(`${rows.length} of ${all.length} assets · ${live} live`, ...priceSourceNodes(state.catalog.source));
     if (rows.length === 0) {
       const none = el("li", "card state state-empty");
       none.append(el("p", "fine", all.length ? "No asset matches. Try a ticker like BTC or AAPL." : "ATLAS has no assets with data on this computer yet."));
@@ -197,6 +198,26 @@ function assetRow(a: AssetView, open: () => void): HTMLElement {
   return li;
 }
 
+
+function priceSourceLink(attr: { text: string; href: string }): HTMLAnchorElement {
+  const a = el("a", "price-attr", attr.text) as HTMLAnchorElement;
+  a.href = attr.href;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  return a;
+}
+
+export function priceSourceNodes(source: CatalogView["source"] | undefined): Array<string | HTMLElement> {
+  const attr = priceAttribution(source);
+  return attr ? [" · ", priceSourceLink(attr)] : [];
+}
+
+function priceAttributionFromText(text: string): { text: string; href: string } | null {
+  if (/coingecko/i.test(text)) return priceAttribution("coingecko");
+  if (/kraken/i.test(text)) return priceAttribution("kraken");
+  return null;
+}
+
 export function connectCard(body: string, reason: string | null, onRetry: (() => void) | null): HTMLElement {
   const card = el("section", "card state connect-card");
   card.dataset.light = "grey";
@@ -244,7 +265,7 @@ export interface AssetDetailHandle {
   update(detail: AssetDetailView): void;
 }
 
-export function assetDetail(a: AssetView, options: { onExplain: (a: AssetView) => void; onWhy?: (a: AssetView) => void }): AssetDetailHandle {
+export function assetDetail(a: AssetView, options: { onExplain: (a: AssetView) => void; onWhy?: (a: AssetView) => void; priceSource?: CatalogView["source"] }): AssetDetailHandle {
   const head = el("section", "card asset-hero");
   const spark = el("div", "spark");
   const leanCard = el("section", "card lean-card");
@@ -305,7 +326,14 @@ export function assetDetail(a: AssetView, options: { onExplain: (a: AssetView) =
       ask.addEventListener("click", () => options.onWhy?.(current));
       leanCard.append(ask);
     }
-    source.textContent = `Source: ${v.sourceLabel}.${"citation" in v && v.citation ? ` ${v.citation}` : ""}`;
+    source.replaceChildren(`Source: ${v.sourceLabel}.`);
+    const cited = "citation" in v && v.citation ? String(v.citation) : "";
+    if (cited) source.append(" ", cited);
+    const attr = "priceSource" in options && options.priceSource ? priceAttribution(options.priceSource) : priceAttributionFromText(`${v.sourceLabel} ${cited}`);
+    if (attr) {
+      source.append(" ");
+      source.append(priceSourceLink(attr));
+    }
   }
 
   function paintSpark(d: AssetDetailView | null): void {

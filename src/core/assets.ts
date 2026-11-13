@@ -101,8 +101,8 @@ export interface CatalogView {
   stockCitation: string | null;
   /** Absent when this ATLAS build does not report the gate (for example the MCP list). */
   gate?: GateView | null;
-  /** Where the list came from. ATLAS on this computer, or Kraken's public feed when ATLAS is not reachable. */
-  source?: "atlas" | "kraken";
+  /** Where the list came from. ATLAS on this computer, or a public live-price provider when ATLAS is not reachable. */
+  source?: "atlas" | "kraken" | "coingecko";
 }
 
 const GATE_CODE = /^[a-z0-9_]{1,48}$/;
@@ -364,7 +364,7 @@ export type AssetsState =
   | { kind: "ready"; catalog: CatalogView }
   | { kind: "not_connected"; reason: string }
   | { kind: "hosted" }
-  | { kind: "error"; reason: string };
+  | { kind: "error"; reason: string; title?: string };
 
 export const NOT_CONNECTED_TITLE = "Connect ATLAS (run it on this computer)";
 export const NOT_CONNECTED_BODY =

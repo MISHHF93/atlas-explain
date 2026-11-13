@@ -69,6 +69,20 @@
       },
       "description": "Cloud explanations per day on the free plan after billing_enabled is true.",
       "valueType": "STRING"
+    },
+    "price_provider": {
+      "defaultValue": {
+        "value": "kraken"
+      },
+      "description": "Live crypto price feed when ATLAS on this computer is not reachable: kraken (hackathon demo default) or coingecko. Flip to coingecko before a market launch unless Kraken has given written consent.",
+      "valueType": "STRING"
+    },
+    "coingecko_demo_api_key": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Optional CoinGecko Demo API key used only when price_provider is coingecko. Leave empty for keyless public access. Never commit a key.",
+      "valueType": "STRING"
     }
   },
   "parameterGroups": {}

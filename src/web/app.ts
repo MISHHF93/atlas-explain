@@ -32,6 +32,7 @@ import { el, labelledButton, prefersReducedMotion } from "../wallet/dom";
 import { icon } from "../wallet/icons";
 import { extensionNodes, privacyNodes, termsNodes } from "../wallet/legal";
 import { canReachLocalAtlas } from "../core/assets";
+import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../core/price-feed";
 import { mayCallLocalAtlas, probeAtlasLocal } from "../connectors";
 import { loadDigest, todayToronto } from "../core/digest";
 import { digestCard } from "../wallet/digest";
@@ -211,18 +212,19 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   /* ---------- Assets tab ---------- */
 
   // The hosted app cannot read ATLAS on the visitor's computer and never calls localhost.
-  // It shows live crypto prices from Kraken's public API instead, with every light grey.
+  // It shows live crypto prices from the configured public feed instead, with every light grey.
   let assets: ReturnType<typeof mountAssets> | null = null;
-  async function startAssets(): Promise<void> {
+  async function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): Promise<void> {
     const mode = preview.get("assets");
     const data = mode ? (await import("../wallet/box-preview.json")).default : null;
     assets = mountAssets({
       shell,
       canReachAtlas: canReachLocalAtlas(location, false),
+      priceFeed,
       onState: (state) => {
-        atlasLocal = state.kind === "ready" && !data && state.catalog.source !== "kraken";
-        livePrices = state.kind === "ready" && !data && state.catalog.source === "kraken";
-        if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !data && state.catalog.source !== "kraken" ? state.catalog : null;
+        atlasLocal = state.kind === "ready" && !data && !isLivePriceSource(state.catalog.source);
+        livePrices = state.kind === "ready" && !data && isLivePriceSource(state.catalog.source);
+        if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !data && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
         refreshToday();
         updateConnection();
       },
@@ -365,12 +367,17 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       }
     }
     applyHash(location.hash);
-    void startAssets();
+    const priceFeed: PriceFeedOptions = { ...DEFAULT_PRICE_FEED };
+    void startAssets(priceFeed);
     applyPreview();
     if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo")) showOnboarding();
     if (!backend) return;
-    void backend.loadSettings().then(({ settings, warnings }) => {
+    void backend.loadSettings().then(({ settings, warnings, priceFeed: next }) => {
       settingsNote.textContent = settingsLine(settings, warnings);
+      const changed = next.provider !== priceFeed.provider || next.coinGeckoDemoKey !== priceFeed.coinGeckoDemoKey;
+      priceFeed.provider = next.provider;
+      priceFeed.coinGeckoDemoKey = next.coinGeckoDemoKey;
+      if (changed) void assets?.refresh();
     }).catch(() => {
       settingsNote.textContent = "Remote Config could not be read. Built-in defaults are used.";
     });

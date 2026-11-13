@@ -1,7 +1,9 @@
 /**
- * Live crypto prices straight from Kraken's public REST API (keyless, CORS-enabled,
- * display allowed by Kraken's public data terms). Used when ATLAS on this computer is
- * not reachable, so the hosted app and a fresh extension still show real prices.
+ * Live crypto prices from Kraken's public REST API (keyless, CORS-enabled).
+ * Used when ATLAS on this computer is not reachable, so the hosted app and a
+ * fresh extension still show real prices. This is the hackathon demo default;
+ * a market launch needs written consent or a switch to CoinGecko. See
+ * docs/legal/DATA_SOURCES.md. These figures are never used for ML or training.
  *
  * Only public market data is read. No keys, no accounts, no balances.
  * A pair Kraken does not return stays out of the list: nothing is filled in.
@@ -18,6 +20,7 @@ import {
 
 export const KRAKEN_API = "https://api.kraken.com/0/public";
 export const KRAKEN_SOURCE_LABEL = "Kraken public API";
+export const KRAKEN_CITATION = "Prices: Kraken public market data (api.kraken.com).";
 export const KRAKEN_WINDOW = "since 00:00 UTC";
 export const KRAKEN_GREY_REASON =
   "Paper predictions come from ATLAS on your computer. Prices here are live from Kraken; the light stays grey until ATLAS is connected.";
@@ -121,9 +124,9 @@ export async function loadKrakenCatalog(fetcher: Fetcher = fetch, now: number = 
     const catalog = readKrakenTicker(await getJson(url, fetcher, timeoutMs), now);
     return catalog
       ? { kind: "ready", catalog }
-      : { kind: "error", reason: "Kraken's public price feed did not return usable prices. Try again in a moment." };
+      : { kind: "error", title: "Live prices could not be loaded", reason: "Kraken's public price feed did not return usable prices. Try again in a moment." };
   } catch {
-    return { kind: "error", reason: "Kraken's public price feed is not answering. Check your connection and try again." };
+    return { kind: "error", title: "Live prices could not be loaded", reason: "Kraken's public price feed is not answering. Check your connection and try again." };
   }
 }
 
@@ -139,14 +142,14 @@ export function readKrakenOhlc(body: unknown, maxPoints = 48): SparkPoint[] {
     .slice(-maxPoints);
 }
 
-export async function loadKrakenDetail(symbol: string, fetcher: Fetcher = fetch, now: number = Date.now()): Promise<AssetDetailView | null> {
+export async function loadKrakenDetail(symbol: string, fetcher: Fetcher = fetch, now: number = Date.now(), timeoutMs = 8000): Promise<AssetDetailView | null> {
   const pair = KRAKEN_PAIRS.find((p) => p.symbol === symbol);
   if (!pair) return null;
-  const list = await loadKrakenCatalog(fetcher, now);
+  const list = await loadKrakenCatalog(fetcher, now, timeoutMs);
   if (list.kind !== "ready") return null;
   const base = list.catalog.assets.find((a) => a.symbol === symbol);
   if (!base) return null;
-  const points: SparkPoint[] = await getJson(`${KRAKEN_API}/OHLC?pair=${pair.pair}&interval=60`, fetcher, 8000)
+  const points: SparkPoint[] = await getJson(`${KRAKEN_API}/OHLC?pair=${pair.pair}&interval=60`, fetcher, timeoutMs)
     .then((body) => readKrakenOhlc(body))
     .catch(() => []);
   return {
@@ -156,6 +159,6 @@ export async function loadKrakenDetail(symbol: string, fetcher: Fetcher = fetch,
       points: points.length >= 2 ? points : [],
       reason: points.length >= 2 ? null : "Kraken did not return enough hourly bars to draw a sparkline.",
     },
-    citation: "Prices: Kraken public market data (api.kraken.com).",
+    citation: KRAKEN_CITATION,
   };
 }

@@ -10,4 +10,10 @@ describe("remoteconfig.template.json", () => {
       expect(template.parameters[key as keyof typeof template.parameters]?.defaultValue.value).toBe(value);
     }
   });
+
+  it("defaults the live-price feed to Kraken and never commits a CoinGecko key", () => {
+    expect(template.parameters.price_provider.defaultValue.value).toBe("kraken");
+    expect(template.parameters.coingecko_demo_api_key.defaultValue.value).toBe("");
+    expect(JSON.stringify(template)).not.toMatch(/CG-[A-Za-z0-9]{8,}/);
+  });
 });

@@ -65,7 +65,7 @@ export function connectionCopy(state: ConnectionState): { label: string; title: 
     return { label: "ATLAS desk", title: "This tab is the ATLAS Markets desk. Only its public paper signal is read." };
   }
   if (state === "live") {
-    return { label: "Live prices", title: "Crypto prices are live from Kraken's public feed. Connect ATLAS on this computer for stock prices and paper predictions." };
+    return { label: "Live prices", title: "Crypto prices are live from the public feed named next to the list (Kraken or CoinGecko). Connect ATLAS on this computer for stock prices and paper predictions." };
   }
   if (state === "hosted") {
     return { label: "Hosted app", title: "This web app never calls localhost. Install the ATLAS Explain extension and run ATLAS on this computer to connect." };

@@ -16,6 +16,7 @@ import {
   SHORTCUT_HINT,
   whyQuestion,
 } from "../../src/core/popup-copy";
+import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../../src/core/price-feed";
 import { DEFAULT_SETTINGS, parseRemoteSettings } from "../../src/core/settings";
 import { mapSignal, readPublicSignal, type SignalView } from "../../src/core/signal";
 import {
@@ -180,21 +181,22 @@ function remember(text: string, source: "on_device" | "in_cloud", selection: str
 /* ---------- Assets tab ---------- */
 
 // Reads ATLAS on this computer (http://localhost:3000, host permission), or live crypto
-// prices from Kraken's public API when ATLAS is not running. The no-Chrome
+// prices from the configured public feed when ATLAS is not running. The no-Chrome
 // preview page shows captured box data instead, under a banner, and never fetches.
 let assets: ReturnType<typeof mountAssets> | null = null;
 let atlasLocal = false;
 let livePrices = false;
 
-function startAssets(previewData?: AssetsPreview): void {
+function startAssets(previewData?: AssetsPreview, priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): void {
   assets = mountAssets({
     shell,
     canReachAtlas: hasChrome,
     preview: previewData,
+    priceFeed,
     onState: (state) => {
-      atlasLocal = state.kind === "ready" && !previewData && state.catalog.source !== "kraken";
-      livePrices = state.kind === "ready" && !previewData && state.catalog.source === "kraken";
-      if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !previewData && state.catalog.source !== "kraken" ? state.catalog : null;
+      atlasLocal = state.kind === "ready" && !previewData && !isLivePriceSource(state.catalog.source);
+      livePrices = state.kind === "ready" && !previewData && isLivePriceSource(state.catalog.source);
+      if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !previewData && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
       refreshToday();
       updateConnection();
     },
@@ -342,7 +344,15 @@ async function boot(): Promise<void> {
     applyPreviewState();
     return;
   }
-  startAssets();
+  const priceFeed: PriceFeedOptions = { ...DEFAULT_PRICE_FEED };
+  startAssets(undefined, priceFeed);
+  void import("./cloud").then(async (cloud) => {
+    const next = await cloud.loadExtensionPriceFeed();
+    const changed = next.provider !== priceFeed.provider || next.coinGeckoDemoKey !== priceFeed.coinGeckoDemoKey;
+    priceFeed.provider = next.provider;
+    priceFeed.coinGeckoDemoKey = next.coinGeckoDemoKey;
+    if (changed) void assets?.refresh();
+  }).catch(() => undefined);
   if (stored.onboarded !== true) showOnboarding();
   await refreshSignal();
   void chrome.action.setBadgeText({ text: "" });

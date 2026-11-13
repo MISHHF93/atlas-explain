@@ -18,6 +18,7 @@ import { runExplanation } from "../../core/run-explanation";
 import { SETTINGS_FETCH_TIMEOUT_MS } from "../../core/timeouts";
 import { CloudRateLimited, localRateStore, peekCloudSlot, recordCloudCall } from "../../core/rate-limit";
 import { CloudAllowanceUsed } from "../../core/billing";
+import { type PriceFeedOptions, priceFeedFromRemoteValues } from "../../core/price-feed";
 import { REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../../core/settings";
 import type { AppSettings, ExplanationRun, MoveCard } from "../../core/types";
 import type { PublicEnvConfig } from "./env";
@@ -40,7 +41,7 @@ export interface UserPrefs {
 }
 
 export interface WebBackend {
-  loadSettings(): Promise<{ settings: AppSettings; warnings: string[] }>;
+  loadSettings(): Promise<{ settings: AppSettings; warnings: string[]; priceFeed: PriceFeedOptions }>;
   explain(
     card: MoveCard,
     question: string,
@@ -119,7 +120,8 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
     for (const key of REMOTE_CONFIG_KEYS) {
       values[key] = getValue(remoteConfig, key).asString();
     }
-    return parseRemoteSettings(values);
+    const parsed = parseRemoteSettings(values);
+    return { ...parsed, priceFeed: priceFeedFromRemoteValues(values) };
   };
 
   const loadPlan = async (settings: AppSettings, uid: string | null): Promise<PlanId> => {

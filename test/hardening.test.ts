@@ -26,6 +26,8 @@ describe("hosting security headers", () => {
     expect(csp).not.toContain("upgrade-insecure-requests");
     expect(csp).toMatch(/connect-src[^;]*http:\/\/localhost:3000/);
     expect(csp).toMatch(/connect-src[^;]*https:\/\/\*\.googleapis\.com/);
+    expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.kraken\.com/);
+    expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.coingecko\.com/);
   });
 
   it("sets the standard hardening headers", () => {

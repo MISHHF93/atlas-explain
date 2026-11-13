@@ -12,7 +12,7 @@ import {
   type AssetsState,
   type Fetcher,
 } from "../core/assets";
-import { loadKrakenCatalog, loadKrakenDetail } from "../core/kraken";
+import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../core/price-feed";
 import { assetDetail, assetsPanel } from "./assets";
 import { el } from "./dom";
 import type { WalletShell } from "./shell";
@@ -36,6 +36,8 @@ export function mountAssets(options: {
   fetcher?: Fetcher;
   preview?: AssetsPreview;
   onState?: (state: AssetsState) => void;
+  /** Public live-price feed used when ATLAS is not reachable. Default is Kraken. */
+  priceFeed?: PriceFeedOptions;
 }): { refresh: () => Promise<void>; open: (symbol: string) => Promise<void> } {
   const { shell, preview } = options;
   const head = el("div", "panel-title");
@@ -75,12 +77,13 @@ export function mountAssets(options: {
       return catalog ? { kind: "ready", catalog } : { kind: "error", reason: "Preview data is not readable." };
     }
     // ATLAS on this computer first (prices + paper predictions). When it is not reachable,
-    // crypto prices still load live from Kraken's public feed, with every light grey.
+    // crypto prices still load live from the configured public feed, with every light grey.
     if (options.canReachAtlas) {
       const atlas = await loadCatalog(options.fetcher);
       if (atlas.kind === "ready" || atlas.kind === "error") return atlas;
     }
-    return loadKrakenCatalog(options.fetcher);
+    const { loadLiveCatalog } = await import("../core/price-provider");
+    return loadLiveCatalog(options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher);
   }
 
   function visible(): boolean {
@@ -113,16 +116,17 @@ export function mountAssets(options: {
         shell.closeSheet();
         options.onExplain(`Why would an educational paper light for ${x.name} (${x.symbol}) show "${x.light.label}"? ATLAS says: ${x.light.reason} Explain hit rate, sample size and the evidence gate. Do not recommend a trade.`);
       },
+      priceSource: last.kind === "ready" ? last.catalog.source : undefined,
     });
     const banner = preview?.label ? [el("p", "preview-banner", preview.label)] : [];
     shell.openSheet(a.name, [...banner, ...view.nodes]);
     const tick = async (): Promise<void> => {
       if (openSymbol !== a.symbol) return;
-      const fromKraken = last.kind === "ready" && last.catalog.source === "kraken";
+      const fromLive = last.kind === "ready" && isLivePriceSource(last.catalog.source);
       const d: AssetDetailView | null = preview
         ? readDetail(preview.details[a.symbol])
-        : fromKraken
-          ? await loadKrakenDetail(a.symbol, options.fetcher)
+        : fromLive
+          ? await import("../core/price-provider").then((mod) => mod.loadLiveDetail(a.symbol, options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher))
           : await loadDetail(a.symbol, options.fetcher);
       if (openSymbol !== a.symbol) return;
       if (d) view.update(d);
