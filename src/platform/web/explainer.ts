@@ -84,13 +84,26 @@ export function explanationSchema(topics: readonly string[]): ObjectSchema {
   });
 }
 
+/** Schema for a highlight or typed text: same two-sided shape as the extension (core/two-sided.ts). */
+export function twoSidedSchema(): ObjectSchema {
+  return Schema.object({
+    description: "Plain-language educational explanation of a term or text. Not a recommendation.",
+    properties: {
+      summary: Schema.string({ description: "Two or three plain sentences." }),
+      buyerReasons: Schema.array({ minItems: 3, maxItems: 3, items: Schema.string() }),
+      sellerReasons: Schema.array({ minItems: 3, maxItems: 3, items: Schema.string() }),
+      whatWouldChange: Schema.string(),
+    },
+  });
+}
+
 export async function explainWithHybridModel(
   ai: AI,
   request: HybridExplainRequest,
   hooks?: ExplainHooks,
 ): Promise<HybridExplainResult> {
   const mode = SDK_MODE[request.mode];
-  const schema = explanationSchema(request.topics);
+  const schema = request.shape === "two_sided" ? twoSidedSchema() : explanationSchema(request.topics);
   const systemInstruction = request.systemInstruction || SYSTEM_INSTRUCTION;
 
   const model = getGenerativeModel(

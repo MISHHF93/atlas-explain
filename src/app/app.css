@@ -100,3 +100,9 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 @media (prefers-reduced-motion: reduce) {
   .wallet[data-surface="app"] .sheet { transition: none; }
 }
+
+/* ---------- explain: text history ---------- */
+
+.text-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.text-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
+.move-box { margin-top: 0.5rem; }
