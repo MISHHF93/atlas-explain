@@ -182,7 +182,39 @@ The desk can also open this app with a public move card (`#c=` / `#card=`) or a 
 
 ## Screenshots
 
-Screenshot stills for the README live in [docs/screenshots/](docs/screenshots/) once captured (hosted header, ATLAS local header, the desk's Explain this move link, an on-device badge with both-sided reasons, the practice-page highlight, and the grey signal light). The recording shot list is in [docs/DEMO.md](docs/DEMO.md).
+Stills live in [docs/screenshots/](docs/screenshots/). They show honest header states, the desk hand-off, today's brief, the Signal tab's grey default, and the practice page. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
+
+![Hosted app header](docs/screenshots/hosted-header.png)
+
+The hosted web app at https://atlas-explain.web.app shows **Hosted app** and never calls localhost.
+
+![ATLAS local header](docs/screenshots/local-header.png)
+
+A local loopback build shows **ATLAS local** only when public MCP or the REST catalog on this computer answers.
+
+![Explain this move on the ATLAS desk](docs/screenshots/desk-explain-link.png)
+
+The private ATLAS desk can open this app with a public move card (`#c=` / `#card=`) or a glossary concept (`#concept=`).
+
+![Today's brief when ATLAS is local](docs/screenshots/local-full.png)
+
+Today's brief stays in view. Earlier official notes and a prior morning report are labelled as not today, and are not presented as today's brief.
+
+![Hosted app, digest not ready](docs/screenshots/hosted-full.png)
+
+On the hosted app, today's digest stays not-ready until ATLAS on this computer can load it.
+
+![Glossary concept question](docs/screenshots/glossary-shadow.png)
+
+A `#concept=shadow` link fills an educational question. Nothing is sent until you click **Explain the move**.
+
+![Signal tab, grey default](docs/screenshots/signal-grey.png)
+
+The Signal tab stays grey unless the desk sends its public signal. This is the honest default when there is not enough evidence, or when this tab is not the desk.
+
+![Practice page](docs/screenshots/highlight-practice.png)
+
+The practice page uses static, educational language. It has no live prices and no account fields.
 
 ## On-device model in Chrome
 
