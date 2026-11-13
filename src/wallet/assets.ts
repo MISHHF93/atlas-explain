@@ -101,7 +101,7 @@ export function assetsPanel(options: {
     for (const b of filterButtons) b.disabled = !searchable;
     notes.replaceChildren();
     if (state.kind === "loading") {
-      meta.textContent = "Reading ATLAS on this computer…";
+      meta.textContent = "Loading live prices…";
       list.replaceChildren(...[0, 1, 2, 3].map(() => skeletonRow()));
       return;
     }
@@ -124,7 +124,8 @@ export function assetsPanel(options: {
     }
     const rows = filterAssets(all, input.value, klass);
     const live = all.filter((a) => a.quote.freshness === "live").length;
-    meta.textContent = `${rows.length} of ${all.length} assets · ${live} live`;
+    const via = state.catalog.source === "kraken" ? " · prices from Kraken public API" : "";
+    meta.textContent = `${rows.length} of ${all.length} assets · ${live} live${via}`;
     if (rows.length === 0) {
       const none = el("li", "card state state-empty");
       none.append(el("p", "fine", all.length ? "No asset matches. Try a ticker like BTC or AAPL." : "ATLAS has no assets with data on this computer yet."));

@@ -204,8 +204,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   /* ---------- Assets tab ---------- */
 
-  // The hosted app cannot read ATLAS on the visitor's computer, so it shows the honest
-  // "Connect ATLAS" state and never calls localhost. A local dev build may read it.
+  // The hosted app cannot read ATLAS on the visitor's computer and never calls localhost.
+  // It shows live crypto prices from Kraken's public API instead, with every light grey.
   let assets: ReturnType<typeof mountAssets> | null = null;
   async function startAssets(): Promise<void> {
     const mode = preview.get("assets");
@@ -214,8 +214,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       shell,
       canReachAtlas: canReachLocalAtlas(location, false),
       onState: (state) => {
-        atlasLocal = state.kind === "ready" && !data;
-        if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !data ? state.catalog : null;
+        atlasLocal = state.kind === "ready" && !data && state.catalog.source !== "kraken";
+        livePrices = state.kind === "ready" && !data && state.catalog.source === "kraken";
+        if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !data && state.catalog.source !== "kraken" ? state.catalog : null;
         refreshToday();
         updateConnection();
       },
@@ -304,6 +305,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   let currentSignal: SignalView = mapSignal({ connected: false });
   let atlasLocal = false;
+  let livePrices = false;
   const hosted = !mayCallLocalAtlas(location, false);
 
   function updateConnection(): void {
@@ -316,10 +318,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       return;
     }
     if (hosted) {
-      shell.setConnection("hosted");
+      shell.setConnection(livePrices ? "live" : "hosted");
       return;
     }
-    shell.setConnection(atlasLocal ? "local" : "none");
+    shell.setConnection(atlasLocal ? "local" : livePrices ? "live" : "none");
   }
 
   async function refreshLink(): Promise<void> {

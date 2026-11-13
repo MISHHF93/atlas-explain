@@ -125,7 +125,7 @@ describe("digest row with markets", () => {
   it("feeds the digest only from the live catalog, never the preview file", () => {
     for (const path of ["extension/src/popup.ts", "src/web/app.ts"]) {
       const src = readFileSync(path, "utf8");
-      expect(src).toMatch(/marketCatalog = state\.kind === "ready" && !(previewData|data) \? state\.catalog : null/);
+      expect(src).toMatch(/marketCatalog = state\.kind === "ready" && !(previewData|data)( && state\.catalog\.source !== "kraken")? \? state\.catalog : null/);
       expect(src).toContain("marketDigestCard(buildMarketDigest(marketCatalog))");
       expect(src).toContain("marketCard.replaceWith(next)");
     }

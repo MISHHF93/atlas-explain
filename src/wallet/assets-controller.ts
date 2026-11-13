@@ -12,6 +12,7 @@ import {
   type AssetsState,
   type Fetcher,
 } from "../core/assets";
+import { loadKrakenCatalog, loadKrakenDetail } from "../core/kraken";
 import { assetDetail, assetsPanel } from "./assets";
 import { el } from "./dom";
 import type { WalletShell } from "./shell";
@@ -73,8 +74,13 @@ export function mountAssets(options: {
       const catalog = readCatalog(preview.list);
       return catalog ? { kind: "ready", catalog } : { kind: "error", reason: "Preview data is not readable." };
     }
-    if (!options.canReachAtlas) return { kind: "hosted" };
-    return loadCatalog(options.fetcher);
+    // ATLAS on this computer first (prices + paper predictions). When it is not reachable,
+    // crypto prices still load live from Kraken's public feed, with every light grey.
+    if (options.canReachAtlas) {
+      const atlas = await loadCatalog(options.fetcher);
+      if (atlas.kind === "ready" || atlas.kind === "error") return atlas;
+    }
+    return loadKrakenCatalog(options.fetcher);
   }
 
   function visible(): boolean {
@@ -112,7 +118,12 @@ export function mountAssets(options: {
     shell.openSheet(a.name, [...banner, ...view.nodes]);
     const tick = async (): Promise<void> => {
       if (openSymbol !== a.symbol) return;
-      const d: AssetDetailView | null = preview ? readDetail(preview.details[a.symbol]) : await loadDetail(a.symbol, options.fetcher);
+      const fromKraken = last.kind === "ready" && last.catalog.source === "kraken";
+      const d: AssetDetailView | null = preview
+        ? readDetail(preview.details[a.symbol])
+        : fromKraken
+          ? await loadKrakenDetail(a.symbol, options.fetcher)
+          : await loadDetail(a.symbol, options.fetcher);
       if (openSymbol !== a.symbol) return;
       if (d) view.update(d);
       window.clearTimeout(detailTimer);

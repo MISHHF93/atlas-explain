@@ -101,6 +101,8 @@ export interface CatalogView {
   stockCitation: string | null;
   /** Absent when this ATLAS build does not report the gate (for example the MCP list). */
   gate?: GateView | null;
+  /** Where the list came from. ATLAS on this computer, or Kraken's public feed when ATLAS is not reachable. */
+  source?: "atlas" | "kraken";
 }
 
 const GATE_CODE = /^[a-z0-9_]{1,48}$/;

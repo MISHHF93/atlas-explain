@@ -175,10 +175,12 @@ function remember(text: string, source: "on_device" | "in_cloud", selection: str
 
 /* ---------- Assets tab ---------- */
 
-// Reads ATLAS on this computer (http://localhost:3000, host permission). The no-Chrome
+// Reads ATLAS on this computer (http://localhost:3000, host permission), or live crypto
+// prices from Kraken's public API when ATLAS is not running. The no-Chrome
 // preview page shows captured box data instead, under a banner, and never fetches.
 let assets: ReturnType<typeof mountAssets> | null = null;
 let atlasLocal = false;
+let livePrices = false;
 
 function startAssets(previewData?: AssetsPreview): void {
   assets = mountAssets({
@@ -186,8 +188,9 @@ function startAssets(previewData?: AssetsPreview): void {
     canReachAtlas: hasChrome,
     preview: previewData,
     onState: (state) => {
-      atlasLocal = state.kind === "ready" && !previewData;
-      if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !previewData ? state.catalog : null;
+      atlasLocal = state.kind === "ready" && !previewData && state.catalog.source !== "kraken";
+      livePrices = state.kind === "ready" && !previewData && state.catalog.source === "kraken";
+      if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !previewData && state.catalog.source !== "kraken" ? state.catalog : null;
       refreshToday();
       updateConnection();
     },
@@ -587,7 +590,7 @@ function applySignal(view: SignalView): void {
 }
 
 function updateConnection(): void {
-  shell.setConnection(!navigator.onLine ? "offline" : currentSignal.connected ? "desk" : atlasLocal ? "local" : "none");
+  shell.setConnection(!navigator.onLine ? "offline" : currentSignal.connected ? "desk" : atlasLocal ? "local" : livePrices ? "live" : "none");
   shell.setSignal(currentSignal);
 }
 
