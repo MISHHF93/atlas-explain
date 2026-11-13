@@ -159,7 +159,8 @@ describe("connection", () => {
       return new Response(JSON.stringify(box.list), { status: 200 });
     };
     expect((await loadCatalog(spy, NOW)).kind).toBe("ready");
-    expect(seen[0]).toEqual({ url: "http://localhost:3000/api/explain/assets", credentials: "omit" });
+    expect(seen[0]).toEqual({ url: "http://localhost:3000/api/mcp/public", credentials: "omit" });
+    expect(seen.some((s) => s.url === "http://localhost:3000/api/explain/assets" && s.credentials === "omit")).toBe(true);
     expect(carriesPrivateFields({ assets: [{ quote: { balance: 1 } }] })).toBe(true);
     expect(await loadCatalog(ok({ ...(box.list as object), account: { id: 1 } }))).toMatchObject({ kind: "error" });
     expect(await loadDetail("BTC-USD", ok(box.details["BTC-USD"]), NOW)).not.toBeNull();
