@@ -37,6 +37,7 @@ import { mountAssets, type AssetsPreview } from "../../src/wallet/assets-control
 import { el, labelledButton, prefersReducedMotion } from "../../src/wallet/dom";
 import { installErrorBoundary } from "../../src/wallet/error-boundary";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../src/wallet/shell";
+import { pageKindLine } from "../../src/core/page-kind";
 import { explainOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
 
@@ -231,6 +232,8 @@ async function boot(): Promise<void> {
   startAssets();
   if (stored.onboarded !== true) showOnboarding();
   await refreshSignal();
+  void chrome.action.setBadgeText({ text: "" });
+  void chrome.action.setTitle({ title: "ATLAS Explain" });
   const session = await chrome.storage.session.get("pending");
   const pending = session.pending as PendingExplain | undefined;
   if (!pending) return;
@@ -306,7 +309,7 @@ async function run(options: RunOptions): Promise<void> {
   showResult(loadingCard(1));
   const local = await explainOnDevice(built.prompt);
   if (local) {
-    answer(withDisclaimer(local), "on_device", context.selection, context.redacted);
+    answer(withDisclaimer(local), "on_device", context.selection, context.redacted, pageKindLine(context.page, context.host));
     return;
   }
   if (!cloudModule || !navigator.onLine) {
@@ -323,7 +326,7 @@ async function run(options: RunOptions): Promise<void> {
       showResult(limitCard(cloud.text));
       return;
     }
-    answer(withDisclaimer(cloud.text), "in_cloud", context.selection, context.redacted);
+    answer(withDisclaimer(cloud.text), "in_cloud", context.selection, context.redacted, pageKindLine(context.page, context.host));
   } catch (error) {
     if (error instanceof CloudAllowanceUsed) {
       setBusy(false);
@@ -335,11 +338,12 @@ async function run(options: RunOptions): Promise<void> {
   }
 }
 
-function answer(text: string, source: "on_device" | "in_cloud", selection: string, redacted: boolean): void {
+function answer(text: string, source: "on_device" | "in_cloud", selection: string, redacted: boolean, contextLine?: string): void {
   setBusy(false);
   showResult(explanationCard({
     source,
     selection,
+    contextLine,
     text,
     copyText: text,
     notes: redacted ? ["Account-like numbers were removed before anything was sent."] : [],

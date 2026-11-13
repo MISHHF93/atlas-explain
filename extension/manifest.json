@@ -44,6 +44,12 @@
         "default": "Alt+Shift+E"
       },
       "description": "Open ATLAS Explain"
+    },
+    "explain-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+X"
+      },
+      "description": "Explain the highlighted text"
     }
   },
   "content_security_policy": {

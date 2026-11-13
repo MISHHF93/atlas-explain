@@ -196,6 +196,8 @@ export function explanationCard(options: {
   source: "on_device" | "in_cloud" | "unknown";
   sourceDetail?: string;
   selection?: string;
+  /** Where the highlight came from, for example "Charting site · tradingview.com". */
+  contextLine?: string;
   text?: string;
   body?: Node[];
   copyText: string;
@@ -224,6 +226,11 @@ export function explanationCard(options: {
   }
   head.append(sourceChip(options.source, options.sourceDetail), tools);
   card.append(head);
+  if (options.contextLine) {
+    const line = el("p", "context-line");
+    line.append(icon("external", 12), el("span", undefined, options.contextLine));
+    card.append(line);
+  }
   if (options.selection?.trim()) card.append(el("blockquote", "quote", shortSelection(options.selection)));
   if (options.text) {
     const body = el("div", "answer-body");
