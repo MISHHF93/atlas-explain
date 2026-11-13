@@ -120,6 +120,8 @@ export interface AppSettings {
   billingEnabled: boolean;
   /** Cloud explanations per day on the free plan, used only when billing is on. */
   freeCloudDailyLimit: number;
+  /** Public live-price feed when ATLAS on this computer is not reachable. */
+  priceProvider: "kraken" | "coingecko";
 }
 
 export interface ExplanationRun {

@@ -1,3 +1,4 @@
+import { parsePriceProvider } from "./price-feed";
 import { DEFAULT_PROMPT_TEMPLATE } from "./prompt";
 import { DEFAULT_TAXONOMY, parseTaxonomyConfig } from "./taxonomy";
 import type { AppSettings, InferenceModeName } from "./types";
@@ -15,6 +16,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maxOutputTokens: 1_200,
   billingEnabled: false,
   freeCloudDailyLimit: 50,
+  priceProvider: "kraken",
 };
 
 export const REMOTE_CONFIG_KEYS = [
@@ -28,6 +30,8 @@ export const REMOTE_CONFIG_KEYS = [
   "max_output_tokens",
   "billing_enabled",
   "free_cloud_daily_limit",
+  "price_provider",
+  "coingecko_demo_api_key",
 ] as const;
 
 export type RemoteConfigKey = (typeof REMOTE_CONFIG_KEYS)[number];
@@ -44,6 +48,8 @@ export function remoteConfigDefaults(): Record<RemoteConfigKey, string> {
     max_output_tokens: String(DEFAULT_SETTINGS.maxOutputTokens),
     billing_enabled: DEFAULT_SETTINGS.billingEnabled ? "true" : "false",
     free_cloud_daily_limit: String(DEFAULT_SETTINGS.freeCloudDailyLimit),
+    price_provider: DEFAULT_SETTINGS.priceProvider,
+    coingecko_demo_api_key: "",
   };
 }
 
@@ -148,6 +154,15 @@ export function parseRemoteSettings(values: Record<string, string>): {
     "max_output_tokens",
     warnings,
   );
+
+  const providerRaw = values.price_provider?.trim();
+  if (providerRaw) {
+    const provider = parsePriceProvider(providerRaw);
+    if (provider !== providerRaw.toLowerCase()) {
+      warnings.push(`price_provider "${providerRaw}" is not kraken or coingecko. Using kraken.`);
+    }
+    settings.priceProvider = provider;
+  }
 
   return { settings, warnings };
 }

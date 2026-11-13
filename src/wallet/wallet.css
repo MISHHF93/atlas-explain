@@ -270,6 +270,8 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .card-title { display: flex; align-items: center; gap: 0.4rem; font-size: var(--atlas-text-sm); font-weight: 700; }
 .eyebrow { font-size: var(--atlas-text-2xs); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--atlas-muted); }
 .fine { font-size: var(--atlas-text-xs); color: var(--atlas-muted); }
+.price-attr { color: var(--atlas-accent); text-underline-offset: 0.12em; }
+.count .price-attr { font-size: inherit; }
 .fine.strong { color: inherit; font-size: var(--atlas-text-sm); }
 .hint { margin-top: 0.3rem; font-size: var(--atlas-text-2xs); color: var(--atlas-muted); }
 @keyframes atlas-fade { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }

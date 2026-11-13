@@ -20,8 +20,10 @@ Last updated: [TODO date] · Operator: [TODO legal name], Ontario, Canada · Con
 6. **Free during beta.** The service is free during the beta. Paid plans are switched off.
    If paid plans are introduced, prices and what they include will be shown before you
    pay, and separate payment terms will apply. [TODO: refund and cancellation policy; GST/HST.]
-7. **Third-party data.** Crypto prices come from Kraken's public API and are subject to
-   Kraken's terms. AI answers are generated with Google Gemini via Firebase AI Logic.
+7. **Third-party data.** Crypto prices come from the public market-data provider named
+   next to the prices (Kraken or CoinGecko) and are subject to that provider's terms.
+   See docs/legal/DATA_SOURCES.md. AI answers are generated with Google Gemini via
+   Firebase AI Logic. These prices are never used to train a model.
 8. **Open source.** The client code is licensed under Apache-2.0. These terms cover use of
    the hosted service at atlas-explain.web.app and the published Chrome extension.
 9. **Disclaimer and limitation of liability.** The service is provided "as is" without

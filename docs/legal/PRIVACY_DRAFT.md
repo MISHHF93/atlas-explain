@@ -36,7 +36,7 @@ from any cloud request.
 
 ## Service providers
 - Google Firebase (hosting, authentication, database, App Check, Remote Config, AI Logic). Google acts as our processor. Data may be processed outside Canada.
-- Kraken public market data API: your browser requests public crypto prices directly. No account, key or personal data is sent.
+- Public crypto price feeds (Kraken or CoinGecko, selected in Remote Config and named next to the prices): your browser requests public prices directly. No account balances are sent. An optional CoinGecko Demo API key may be read from Remote Config. These prices are never used to train a model.
 - Stripe: only if paid plans are switched on later. Card numbers would go to Stripe, never to us.
 
 We do not sell personal information and do not use it for advertising.

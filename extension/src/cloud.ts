@@ -1,4 +1,5 @@
 import { accountView, type AccountView } from "../../src/core/account";
+import { DEFAULT_PRICE_FEED, priceFeedFromRemoteValues, type PriceFeedOptions } from "../../src/core/price-feed";
 import { parseRemoteSettings } from "../../src/core/settings";
 import type { AppSettings } from "../../src/core/types";
 import { askBridge } from "./bridge-client";
@@ -20,6 +21,15 @@ export async function loadExtensionSettings(): Promise<AppSettings> {
   } catch {
     // Built-in defaults keep billing off.
     return parseRemoteSettings({}).settings;
+  }
+}
+
+export async function loadExtensionPriceFeed(): Promise<PriceFeedOptions> {
+  try {
+    const values = await askBridge({ type: "settings" }, 8_000);
+    return priceFeedFromRemoteValues(values && typeof values === "object" ? (values as Record<string, string>) : {});
+  } catch {
+    return DEFAULT_PRICE_FEED;
   }
 }
 
