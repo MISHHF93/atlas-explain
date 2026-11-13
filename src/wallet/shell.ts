@@ -4,11 +4,12 @@ import type { SignalView } from "../core/signal";
 import { el, iconButton, prefersReducedMotion, replay } from "./dom";
 import { icon, type IconName } from "./icons";
 
-export type TabId = "explain" | "signal" | "glossary" | "settings";
+export type TabId = "explain" | "assets" | "signal" | "glossary" | "settings";
 export type ThemeChoice = "system" | "light" | "dark";
 
 export const TABS: readonly { id: TabId; label: string; icon: IconName }[] = [
   { id: "explain", label: "Explain", icon: "sparkle" },
+  { id: "assets", label: "Assets", icon: "coins" },
   { id: "signal", label: "Signal", icon: "signal" },
   { id: "glossary", label: "Glossary", icon: "book" },
   { id: "settings", label: "Settings", icon: "gear" },

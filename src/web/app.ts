@@ -31,6 +31,8 @@ import {
 import { el, labelledButton, prefersReducedMotion } from "../wallet/dom";
 import { icon } from "../wallet/icons";
 import { extensionNodes, privacyNodes, termsNodes } from "../wallet/legal";
+import { canReachLocalAtlas } from "../core/assets";
+import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 
 const THEME_KEY = "atlas-explain-theme";
@@ -163,6 +165,38 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const getExtension = row("panel", "Get the Chrome extension", () => shell.openSheet("Chrome extension", extensionNodes()));
   shell.panels.signal.append(signalHead, signal.node, getExtension);
 
+  /* ---------- Assets tab ---------- */
+
+  // The hosted app cannot read ATLAS on the visitor's computer, so it shows the honest
+  // "Connect ATLAS" state and never calls localhost. A local dev build may read it.
+  let assets: ReturnType<typeof mountAssets> | null = null;
+  async function startAssets(): Promise<void> {
+    const mode = preview.get("assets");
+    const data = mode ? (await import("../wallet/box-preview.json")).default : null;
+    assets = mountAssets({
+      shell,
+      canReachAtlas: canReachLocalAtlas(location, false),
+      preview: data
+        ? {
+            label: mode === "box"
+              ? `Box preview: real Kraken and IEX bars run through the ATLAS route on the build box (${data.capturedAt.slice(0, 16).replace("T", " ")} UTC), not your computer.`
+              : "Preview of the state shown when ATLAS is not reachable.",
+            list: data.list,
+            details: data.details,
+            state: mode === "box" ? "ready" : mode === "hosted" ? "hosted" : "not_connected",
+          }
+        : undefined,
+      onExplain: (text) => {
+        questionInput.value = text;
+        shell.select("explain");
+        questionInput.focus();
+      },
+    });
+    await assets.refresh();
+    const sheet = preview.get("asset");
+    if (sheet) await assets.open(sheet);
+  }
+
   /* ---------- Glossary tab ---------- */
 
   const glossaryHead = el("div", "panel-title");
@@ -246,6 +280,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       }
     }
     applyHash(location.hash);
+    void startAssets();
     applyPreview();
     if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo")) showOnboarding();
     if (!backend) return;
@@ -635,7 +670,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function applyPreview(): void {
     const tab = preview.get("tab");
-    if (tab === "signal" || tab === "glossary" || tab === "settings") shell.select(tab);
+    if (tab === "assets" || tab === "signal" || tab === "glossary" || tab === "settings") shell.select(tab);
     const demo = preview.get("demo");
     if (demo === "run") showResult(runCard(DEMO_RUN));
     if (demo === "loading") showResult(loadingCard(1, STEP_LABELS));
