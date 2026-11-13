@@ -73,7 +73,7 @@ export function getConcept(id: string): GlossaryEntry | undefined {
 export function conceptQuestion(id: string): string {
   const entry = getConcept(id);
   if (!entry) return "Why might some traders buy this dip while others sell?";
-  return `In educational terms, what does “${entry.title}” add to a reading of this move? Do not give trade advice.`;
+  return `What does "${entry.title}" add to an educational reading of this move?`;
 }
 
 const ADVICE_PATTERN =

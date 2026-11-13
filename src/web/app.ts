@@ -361,7 +361,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     shell.overlay(onboarding(() => {
       shell.overlay(null);
       writeFlag(ONBOARDED_KEY);
-      explainButton.focus();
+      // Focusing the explain button used to scroll ".wallet-body" and hide the title and today's brief.
+      const scroller = document.querySelector(".wallet-body") as HTMLElement | null;
+      if (scroller) {
+        const previous = scroller.style.scrollBehavior;
+        scroller.style.scrollBehavior = "auto";
+        scroller.scrollTop = 0;
+        scroller.style.scrollBehavior = previous;
+      }
+      explainButton.focus({ preventScroll: true });
     }));
   }
 
