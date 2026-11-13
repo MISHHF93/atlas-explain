@@ -1,3 +1,31 @@
+const LOAD = "atlas-explain/v1/load";
+const REQUEST = "atlas-explain/v1/request-context";
+
+/**
+ * Injected only after the popup opens. Recognises the ATLAS desk and asks it
+ * for the public v1 payload. Does not read form fields or balances.
+ */
+export function probeAtlasDesk(): Promise<{ connected: boolean; payload: unknown }> {
+  const product = document.documentElement.getAttribute("data-atlas-product");
+  if (product !== "atlas-desk") return Promise.resolve({ connected: false, payload: null });
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => {
+      window.removeEventListener("message", onMessage);
+      resolve({ connected: true, payload: null });
+    }, 400);
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window) return;
+      const data = event.data as { type?: string; payload?: unknown } | null;
+      if (!data || data.type !== LOAD) return;
+      window.clearTimeout(timer);
+      window.removeEventListener("message", onMessage);
+      resolve({ connected: true, payload: data.payload ?? null });
+    }
+    window.addEventListener("message", onMessage);
+    window.postMessage({ type: REQUEST }, window.location.origin);
+  });
+}
+
 /** Injected only after a click. Reads the highlight and title, never form fields. */
 export function readSelectionInPage(): { selection: string; title: string } {
   const selection = window.getSelection()?.toString() ?? "";

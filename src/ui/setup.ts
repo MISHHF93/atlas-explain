@@ -44,9 +44,16 @@ export function mountSetup(root: HTMLElement, env: PublicEnvConfig, startupError
 }
 
 function brand(): HTMLElement {
+  const mark = document.createElement("img");
+  mark.src = "/logo.svg";
+  mark.width = 36;
+  mark.height = 36;
+  mark.alt = "";
+  mark.className = "logo";
   return h("div", { className: "brand" },
-    h("p", { className: "mark", text: "ATLAS" }),
+    mark,
     h("div", {},
+      h("p", { className: "mark", text: "ATLAS" }),
       h("h1", { text: "Explain" }),
       h("p", { className: "tag", text: "Why a dip can look like an opportunity to one desk and a warning to another." }),
     ),
