@@ -20,7 +20,9 @@ import { CloudRateLimited, localRateStore, peekCloudSlot, recordCloudCall } from
 import { CloudAllowanceUsed } from "../../core/billing";
 import { type PriceFeedOptions, priceFeedFromRemoteValues } from "../../core/price-feed";
 import { REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../../core/settings";
-import type { AppSettings, ExplanationRun, MoveCard } from "../../core/types";
+import type { AppSettings, ExplanationRun, InferenceSourceName, MoveCard } from "../../core/types";
+import { EXTENSION_SYSTEM, buildExtensionPrompt, toPageContext } from "../../core/extension-prompt";
+import { parseTwoSided, type TwoSided } from "../../core/two-sided";
 import type { PublicEnvConfig } from "./env";
 import { lazyExplainer, lazyPayments } from "./lazy";
 import type { WebStore } from "./store";
@@ -40,7 +42,21 @@ export interface UserPrefs {
   theme: "system" | "light" | "dark";
 }
 
+/** An answer to pasted or typed text (the web app's Explain loop). */
+export interface TextRun {
+  /** Null when the model did not return the two-sided shape; `plain` then holds its text. */
+  answer: TwoSided | null;
+  plain: string;
+  inferenceSource: InferenceSourceName;
+  cloudModel: string;
+  /** True when the cloud was off limits (rate or plan) and only on-device was tried. */
+  cloudBlocked: boolean;
+  refusedRecommendation: boolean;
+}
+
 export interface WebBackend {
+  /** Explains a term, sentence or headline the visitor pasted or typed. Hybrid: on-device first. */
+  explainText(text: string, question: string, hooks?: { onProgress?: (message: string) => void }): Promise<TextRun>;
   loadSettings(): Promise<{ settings: AppSettings; warnings: string[]; priceFeed: PriceFeedOptions }>;
   explain(
     card: MoveCard,
@@ -189,6 +205,55 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
         successUrl: window.location.origin,
         cancelUrl: window.location.origin,
       });
+    },
+    async explainText(text, question, hooks) {
+      const { settings } = await loadSettings();
+      const context = toPageContext({ selection: text, title: "ATLAS Explain web app", url: window.location.origin });
+      if (!context.selection) throw new Error("Paste or type something to explain first.");
+      const built = buildExtensionPrompt({ context, question });
+      const uid = await currentUserId();
+      const plan = await loadPlan(settings, uid);
+      const cloudCallsToday = uid && settings.billingEnabled ? await store().then((s) => s.cloudCallsToday(uid)).catch(() => 0) : 0;
+      const allowByPlan = allowCloudCall({ billingEnabled: settings.billingEnabled, plan, freeCloudDailyLimit: settings.freeCloudDailyLimit, cloudCallsToday });
+      const rate = peekCloudSlot(localRateStore());
+      const cloudBlocked = !(allowByPlan && rate.ok);
+      const mode = cloudBlocked ? "only_on_device" : settings.inferenceMode;
+      hooks?.onProgress?.(mode === "only_in_cloud" ? "Asking Gemini in the cloud…" : "Trying Gemini Nano on this device first…");
+      let result;
+      try {
+        result = await explainer.explain(
+          {
+            mode,
+            prompt: built.prompt,
+            cloudModel: settings.cloudModel,
+            maxOutputTokens: settings.maxOutputTokens,
+            topics: settings.topics.map((topic) => topic.id),
+            systemInstruction: EXTENSION_SYSTEM,
+            shape: "two_sided",
+          },
+          {
+            onDeviceDownloadProgress(ratio) {
+              hooks?.onProgress?.(`Downloading the on-device model… ${Math.round(ratio * 100)}%`);
+            },
+          },
+        );
+      } catch (error) {
+        if (cloudBlocked && !rate.ok) throw new CloudRateLimited(rate.reason);
+        if (cloudBlocked) throw new CloudAllowanceUsed();
+        throw error;
+      }
+      if (result.inferenceSource === "in_cloud") {
+        recordCloudCall(localRateStore());
+        if (uid && settings.billingEnabled) await (await store()).addCloudCall(uid).catch(() => undefined);
+      }
+      return {
+        answer: parseTwoSided(result.rawText),
+        plain: result.rawText.trim(),
+        inferenceSource: result.inferenceSource,
+        cloudModel: settings.cloudModel,
+        cloudBlocked,
+        refusedRecommendation: built.refusedRecommendation,
+      };
     },
     async explain(card, question, hooks) {
       const { settings } = await loadSettings();

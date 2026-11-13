@@ -50,6 +50,10 @@ import { buildMarketDigest } from "../core/market-digest";
 import type { CatalogView } from "../core/assets";
 import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../core/follow-ups";
 import { isEngineState } from "../core/hybrid-engine";
+import { TEXT_HISTORY_KEY, addTextHistory, ageLabel, readTextHistory, removeTextHistory, type TextHistoryEntry } from "../core/text-history";
+import { twoSidedCopyText } from "../core/two-sided";
+import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
+import type { TextRun } from "../platform/web/backend";
 import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } from "../app/routes";
 import type { TabDef } from "../wallet/shell";
 
@@ -242,6 +246,56 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   const explainHead = el("div", "panel-title");
   explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
+
+  /* The core loop: paste or type → plain answer → keep going → related terms → history. */
+  const textInput = el("textarea") as HTMLTextAreaElement;
+  textInput.id = "explain-text";
+  textInput.rows = 3;
+  textInput.maxLength = 2000;
+  textInput.autocomplete = "off";
+  textInput.placeholder = "Paste or type a term, a sentence or a headline: stop-limit order, implied volatility…";
+  textInput.setAttribute("aria-label", "Text to explain");
+  const textGo = labelledButton("sparkle", "Explain", "primary composer-go");
+  const composerBox = el("section", "composer");
+  composerBox.setAttribute("aria-label", "Explain text");
+  composerBox.append(textInput, textGo);
+  const examples = el("div", "samples");
+  examples.setAttribute("role", "group");
+  examples.setAttribute("aria-label", "Try an example");
+  for (const term of ["Stop-limit order", "Implied volatility", "Bid-ask spread", "Short interest"]) {
+    const chip = el("button", "chip", term);
+    chip.type = "button";
+    chip.addEventListener("click", () => {
+      textInput.value = term;
+      void onExplainText();
+    });
+    examples.append(chip);
+  }
+  const textHint = el("p", "fine", "Ctrl+Enter to explain. Only the text you type here is used. Nothing is sent until you press Explain.");
+  const textStatus = el("p", "fine");
+  textStatus.setAttribute("role", "status");
+  textStatus.setAttribute("aria-live", "polite");
+  const textResult = el("div", "stack");
+  textResult.setAttribute("aria-live", "polite");
+  const textHistoryList = el("ul", "text-history");
+  const textHistoryNote = el("p", "fine");
+  const textHistory = el("section", "stack");
+  const textHistoryHead = el("div", "panel-title");
+  const clearTextHistory = el("button", "link-btn", "Clear");
+  clearTextHistory.type = "button";
+  clearTextHistory.addEventListener("click", () => {
+    writeTextHistory([]);
+    renderTextHistory();
+  });
+  textHistoryHead.append(el("h2", "section-label", "History"), clearTextHistory);
+  textHistory.append(textHistoryHead, textHistoryNote, textHistoryList);
+  textGo.addEventListener("click", () => void onExplainText());
+  textInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      void onExplainText();
+    }
+  });
   const engine = engineStrip({ compact: true });
   const brief = digestCard();
   // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
@@ -258,9 +312,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
   ).then((v) => { brief.show(v); refreshToday(); });
 
-  shell.panels.explain.append(
-    explainHead,
-    engine.node,
+  // Market moves (ATLAS desk links, samples, your own card) keep their full flow, one tap away.
+  const moveBox = disclosure("Explain a market move", [
+    el("p", "fine", "Load a move from the ATLAS desk, pick a historical sample, or paste your own card. The answer weighs both sides of the move."),
     fromDesk,
     moveSlot,
     sampleRow,
@@ -279,7 +333,21 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     result,
     promptBox,
     recent,
+  ]);
+  moveBox.classList.add("move-box");
+
+  shell.panels.explain.append(
+    explainHead,
+    composerBox,
+    engine.node,
+    examples,
+    textHint,
+    textStatus,
+    textResult,
+    textHistory,
+    moveBox,
   );
+  renderTextHistory();
 
   /* ---------- Signal tab ---------- */
 
@@ -335,9 +403,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
           }
         : undefined,
       onExplain: (text) => {
-        questionInput.value = text;
+        textInput.value = text;
         shell.select("explain");
-        questionInput.focus();
+        textInput.focus();
+        textStatus.textContent = "Added to Explain. Press Explain when ready. Nothing was sent.";
       },
       onOpen: (symbol) => {
         if (!following && !(route.kind === "asset" && route.symbol === symbol)) {
@@ -362,12 +431,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     glossaryPanel({
       askLabel: "Ask about this in my explanation",
       onAsk: (term) => {
-        questionInput.value = isGlossaryId(term.id)
-          ? conceptQuestion(term.id)
-          : `In educational terms, what does "${term.title}" add to a reading of this move? Do not give trade advice.`;
+        textInput.value = term.title;
         shell.select("explain");
-        status.textContent = `${term.title} added to your question. Press Explain the move when ready. Nothing was sent.`;
-        questionInput.focus();
+        textStatus.textContent = `${term.title} added. Press Explain when ready. Nothing was sent.`;
+        textInput.focus();
       },
     }),
   );
@@ -558,6 +625,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function renderSetup(): void {
     explainButton.disabled = true;
+    textGo.disabled = true;
     const missing = options.env.missing;
     const steps = el("ol");
     for (const text of [
@@ -606,6 +674,128 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         el("p", "fine", "Paper prediction from ATLAS shadow models - not investment advice."),
       ]);
     }
+  }
+
+  /* ---------- explain text ---------- */
+
+  let textBusy = false;
+
+  async function onExplainText(followUp?: { question: string; topic: string }): Promise<void> {
+    const text = followUp?.topic ?? textInput.value.trim();
+    if (textBusy) return;
+    if (!text) {
+      textStatus.textContent = "Paste or type a term, a sentence or a headline first.";
+      textInput.focus();
+      return;
+    }
+    if (!backend) {
+      textResult.replaceChildren(messageCard("info", "Explain is not connected yet", backendError === "missing-config" ? "This build has no Firebase project, so answers cannot run. The glossary still works." : "The cloud connection did not start. Reload the page to try again."));
+      return;
+    }
+    textBusy = true;
+    textGo.disabled = true;
+    textGo.classList.add("loading");
+    textResult.setAttribute("aria-busy", "true");
+    textResult.replaceChildren(loadingCard(1, ["Reading your text", "Running hybrid inference", "Saving to history"]));
+    textStatus.textContent = "Starting hybrid inference…";
+    try {
+      const run = await withDeadline(
+        backend.explainText(text, followUp?.question ?? "", { onProgress: (m) => (textStatus.textContent = m) }),
+        EXPLAIN_DEADLINE_MS,
+        "The answer took too long.",
+      );
+      textStatus.textContent = "";
+      const source = run.inferenceSource === "on_device" ? "on_device" : run.inferenceSource === "in_cloud" ? "in_cloud" : "unknown";
+      engine.markRun(source);
+      showTextAnswer(text, run.answer, run.plain, source, run);
+      shell.announce("Explanation ready.");
+      if (!followUp) {
+        writeTextHistory(addTextHistory(loadTextHistory(), { id: `${Date.now()}`, text, answer: run.answer, plain: run.plain, source, at: Date.now() }));
+        renderTextHistory();
+      }
+    } catch (error) {
+      textStatus.textContent = "";
+      if (error instanceof CloudRateLimited) report("rate_limited", "web", "browser_limit");
+      else if (!(error instanceof CloudAllowanceUsed)) report(classifyCloudError(error instanceof Error ? error.message : ""), "web", error instanceof Error ? error.name : "unknown");
+      if (error instanceof CloudAllowanceUsed || error instanceof CloudRateLimited) textResult.replaceChildren(limitCard(error.message));
+      else if (!navigator.onLine) textResult.replaceChildren(messageCard("offline", "You are offline", "On-device inference was not available and the cloud cannot be reached. Reconnect and try again.", () => void onExplainText(followUp)));
+      else textResult.replaceChildren(messageCard("error", "That did not work", friendlyError(error), () => void onExplainText(followUp)));
+    } finally {
+      textBusy = false;
+      textGo.disabled = false;
+      textGo.classList.remove("loading");
+      textResult.setAttribute("aria-busy", "false");
+    }
+  }
+
+  function showTextAnswer(text: string, answer: TextRun["answer"], plain: string, source: "on_device" | "in_cloud" | "unknown", run?: TextRun): void {
+    const copyText = answer ? twoSidedCopyText(answer, EXTENSION_DISCLAIMER) : `${plain}\n\n${EXTENSION_DISCLAIMER}`;
+    const notes: string[] = [];
+    if (run?.cloudBlocked && source === "on_device") notes.push("The cloud was off limits for now, so this ran on your device only.");
+    if (run?.refusedRecommendation) notes.push("Trade decisions are not given. The factors on both sides are explained instead.");
+    notes.push(source === "on_device" ? "Ran on this device with Gemini Nano." : source === "in_cloud" ? `Ran in the cloud (${run?.cloudModel ?? "Gemini"}) through Firebase AI Logic.` : "The SDK did not report where it ran.");
+    notes.push(EXTENSION_DISCLAIMER);
+    const card = explanationCard({
+      source,
+      sourceDetail: run?.cloudModel,
+      selection: text,
+      ...(answer ? { body: twoSidedNodes(answer) } : { text: plain }),
+      copyText,
+      notes,
+      onClear: () => textResult.replaceChildren(),
+      followUps: FOLLOW_UPS.map((item) => ({ label: item.label, run: () => void onExplainText({ question: followUpQuestion(item.kind, text), topic: text }) })),
+      related: relatedTerms(copyText, text).map((term) => ({
+        title: term.title,
+        run: () => {
+          textInput.value = term.title;
+          void onExplainText();
+        },
+      })),
+    });
+    card.classList.add("enter");
+    textResult.replaceChildren(card);
+    requestAnimationFrame(() => card.scrollIntoView({ block: "nearest", behavior: smooth() }));
+  }
+
+  function loadTextHistory(): TextHistoryEntry[] {
+    try {
+      return readTextHistory(localStorage.getItem(TEXT_HISTORY_KEY));
+    } catch {
+      return [];
+    }
+  }
+
+  function writeTextHistory(list: TextHistoryEntry[]): void {
+    try {
+      localStorage.setItem(TEXT_HISTORY_KEY, JSON.stringify(list));
+    } catch {
+      // Private mode: history lasts for this visit only.
+    }
+  }
+
+  function renderTextHistory(): void {
+    const list = loadTextHistory();
+    clearTextHistory.hidden = list.length === 0;
+    textHistoryNote.textContent = list.length ? "Saved in this browser only. Tap one to see its answer again." : "Your explanations appear here. They stay in this browser.";
+    textHistoryList.replaceChildren(...list.slice(0, 8).map((entry) => {
+      const item = el("li", "text-history-row");
+      const open = el("button", "history-item");
+      open.type = "button";
+      open.append(el("span", "history-text", entry.text), el("span", "history-meta fine", `${ageLabel(entry.at)} · ${sourceLabel(entry.source)}`));
+      open.addEventListener("click", () => {
+        textInput.value = entry.text;
+        showTextAnswer(entry.text, entry.answer, entry.plain, entry.source);
+      });
+      const remove = el("button", "link-btn", "Remove");
+      remove.type = "button";
+      remove.setAttribute("aria-label", `Remove ${entry.text} from history`);
+      remove.addEventListener("click", () => {
+        writeTextHistory(removeTextHistory(loadTextHistory(), entry.id));
+        renderTextHistory();
+      });
+      item.append(open, remove);
+      return item;
+    }));
   }
 
   /* ---------- move card ---------- */
@@ -685,6 +875,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     notesInput.value = "";
     watchlistInput.value = "";
     shell.select("explain");
+    moveBox.open = true;
     if (parsed.context) {
       cardInput.value = JSON.stringify(publicMoveCard(parsed.context.card), editorKeys, 2);
       for (const button of sampleButtons) button.setAttribute("aria-pressed", "false");

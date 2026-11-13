@@ -142,6 +142,8 @@ export interface HybridExplainRequest {
   maxOutputTokens: number;
   topics: readonly TopicId[];
   systemInstruction: string;
+  /** Answer shape. "move" (default) is the move-card schema; "two_sided" is the highlight/text answer. */
+  shape?: "move" | "two_sided";
 }
 
 export interface HybridExplainResult {
