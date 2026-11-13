@@ -36,6 +36,8 @@ import { mayCallLocalAtlas, probeAtlasLocal } from "../connectors";
 import { loadDigest, todayToronto } from "../core/digest";
 import { digestCard } from "../wallet/digest";
 import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../core/timeouts";
+import { CloudRateLimited } from "../core/rate-limit";
+import { classifyCloudError, report } from "../core/monitor";
 import type { AccountView } from "../core/account";
 import { accountPanel } from "../wallet/account";
 import { mountAssets } from "../wallet/assets-controller";
@@ -642,7 +644,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       }
     } catch (error) {
       status.textContent = "";
-      if (error instanceof CloudAllowanceUsed || error instanceof WatchlistAllowance) showResult(limitCard(error.message));
+      if (error instanceof CloudRateLimited) report("rate_limited", "web", "browser_limit");
+      else if (!(error instanceof CloudAllowanceUsed || error instanceof WatchlistAllowance)) report(classifyCloudError(error instanceof Error ? error.message : ""), "web", error instanceof Error ? error.name : "unknown");
+      if (error instanceof CloudAllowanceUsed || error instanceof WatchlistAllowance || error instanceof CloudRateLimited) showResult(limitCard(error.message));
       else if (!navigator.onLine) showResult(messageCard("offline", "You are offline", "On-device inference was not available and the cloud cannot be reached. Reconnect and try again.", () => void onExplain()));
       else showResult(messageCard("error", "That did not work", friendlyError(error), () => void onExplain()));
     } finally {

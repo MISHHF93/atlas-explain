@@ -34,6 +34,8 @@ import {
   themePicker,
 } from "../../src/wallet/cards";
 import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../../src/core/timeouts";
+import { addMonitorSink, classifyCloudError, consoleSink, report } from "../../src/core/monitor";
+addMonitorSink(consoleSink);
 import { mountAssets, type AssetsPreview } from "../../src/wallet/assets-controller";
 import { loadDigest, todayToronto } from "../../src/core/digest";
 import { digestCard } from "../../src/wallet/digest";
@@ -505,6 +507,7 @@ function fail(text: string, retry: boolean): void {
 }
 
 function friendlyCloudError(message: string): string {
+  report(classifyCloudError(message), "extension", message.includes("throttl") ? "app_check_throttled" : "cloud_failed");
   return cloudErrorCopy(message, "extension");
 }
 

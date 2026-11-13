@@ -25,11 +25,13 @@ import {
   validEmail,
   type AccountView,
 } from "../../core/account";
+import { report } from "../../core/monitor";
 
 export class AuthFlowError extends Error {
   constructor(readonly code: string) {
     super(authErrorCopy(code));
     this.name = "AuthFlowError";
+    report("auth_error", "web", code || "unknown");
   }
 }
 

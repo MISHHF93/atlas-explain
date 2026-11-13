@@ -1,7 +1,11 @@
 import { readPublicEnv } from "./platform/web/env";
 import { mountWebWallet } from "./web/app";
 import { installErrorBoundary } from "./wallet/error-boundary";
+import { addMonitorSink, consoleSink } from "./core/monitor";
 import "./style.css";
+
+// Monitoring hook: swap or add a real sink (Analytics, Sentry, a log endpoint) at launch.
+addMonitorSink(consoleSink);
 
 const queried = document.querySelector("#app");
 if (!(queried instanceof HTMLElement)) {
