@@ -9,7 +9,8 @@ import {
 } from "../../src/core/extension-prompt";
 import { explainInCloud, loadExtensionSettings } from "./cloud";
 import { explainOnDevice } from "./on-device";
-import { pinExplainButton, readSelectionInPage } from "./read-selection";
+import { mapSignal, readPublicSignal, type SignalView } from "../../src/core/signal";
+import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
 
 interface PendingExplain {
   selection: string;
@@ -30,6 +31,21 @@ function h<K extends keyof HTMLElementTagNameMap>(
   if (text) node.textContent = text;
   return node;
 }
+
+const signalLight = h("span", undefined, "signal-light");
+signalLight.dataset.state = "grey";
+const signalReason = h("p", "connect ATLAS", "signal-reason");
+const signalMeta = h("p", "Hit rate — · Sample —", "signal-meta");
+const signalPaper = h("p", "", "signal-paper");
+const signalSection = h("section", undefined, "signal");
+signalSection.setAttribute("role", "status");
+signalSection.append(signalLight, signalReason, signalMeta, signalPaper);
+const whyButton = h("button", "Why this colour?", "secondary");
+whyButton.type = "button";
+whyButton.id = "why-colour";
+const themeButton = h("button", "Dark", "theme");
+themeButton.type = "button";
+themeButton.setAttribute("aria-pressed", "false");
 
 const root = document.querySelector("#app");
 if (!(root instanceof HTMLElement)) throw new Error("Missing #app");
@@ -64,6 +80,8 @@ debugToken.autocomplete = "off";
 root.append(
   wrap([
     header(),
+    signalSection,
+    whyButton,
     h("p", EXTENSION_PRIVACY_NOTE, "privacy"),
     path,
     question,
@@ -75,6 +93,18 @@ root.append(
     debugToken,
   ]),
 );
+
+whyButton.addEventListener("click", () => {
+  question.value = `Why is the signal ${signalReason.textContent}? Explain the uncertainty. Do not recommend a trade.`;
+  void run({ highlight: false, fromPage: false });
+});
+themeButton.addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  themeButton.textContent = next === "dark" ? "Light" : "Dark";
+  themeButton.setAttribute("aria-pressed", next === "dark" ? "true" : "false");
+  if (hasChrome) void chrome.storage.local.set({ theme: next });
+});
 
 explainSelection.addEventListener("click", () => {
   void run({ highlight: true, fromPage: true });
@@ -96,18 +126,15 @@ debugToken.addEventListener("change", () => {
 void boot();
 
 async function boot(): Promise<void> {
-  if (!hasChrome) {
-    question.value = "What is a stop-limit order?";
-    path.hidden = false;
-    path.className = "path path-device";
-    path.textContent = "On-device. Gemini Nano via the Chrome Prompt API.";
-    answer.hidden = false;
-    answer.textContent = withDisclaimer(
-      "A stop-limit order waits until a stop price is reached, then places a limit order. It does not guarantee a fill. A buyer and a seller can read the same order ticket differently: one sees a planned exit, the other sees a price that may be skipped in a fast market.",
-    );
-    return;
+  applySignal(previewSignal());
+  if (!hasChrome) return;
+  const stored = await chrome.storage.local.get(["appCheckDebugToken", "theme"]);
+  if (stored.theme === "dark" || stored.theme === "light") {
+    document.documentElement.dataset.theme = stored.theme;
+    themeButton.textContent = stored.theme === "dark" ? "Light" : "Dark";
+    themeButton.setAttribute("aria-pressed", stored.theme === "dark" ? "true" : "false");
   }
-  const stored = await chrome.storage.local.get("appCheckDebugToken");
+  await refreshSignal();
   if (typeof stored.appCheckDebugToken === "string") debugToken.value = stored.appCheckDebugToken;
   const session = await chrome.storage.session.get("pending");
   const pending = session.pending as PendingExplain | undefined;
@@ -238,10 +265,72 @@ function activeTab(): Promise<chrome.tabs.Tab | undefined> {
 
 function header(): HTMLElement {
   const row = h("div", undefined, "top");
+  const lockup = h("div", undefined, "brand-lockup");
+  const logo = document.createElement("img");
+  logo.src = "./logo.svg";
+  logo.alt = "";
+  logo.width = 28;
+  logo.height = 28;
+  logo.className = "logo";
   const title = h("div");
   title.append(h("p", "ATLAS", "mark"), h("h1", "Explain"));
-  row.append(title, h("p", BETA_BADGE, "badge"));
+  lockup.append(logo, title);
+  const tools = h("div", undefined, "actions");
+  tools.append(h("p", BETA_BADGE, "badge"), themeButton);
+  row.append(lockup, tools);
   return row;
+}
+
+function previewSignal(): SignalView {
+  const requested = new URLSearchParams(location.search).get("signal");
+  if (requested === "green" || requested === "red") {
+    return mapSignal({
+      connected: true,
+      modelsClearGate: true,
+      signal: {
+        lean: requested === "green" ? "up" : "down",
+        hitRate: 0.62,
+        sampleSize: 240,
+      },
+    });
+  }
+  if (requested === "thin") {
+    return mapSignal({
+      connected: true,
+      signal: { lean: "up", hitRate: 0.51, sampleSize: 12 },
+    });
+  }
+  return mapSignal({ connected: false });
+}
+
+async function refreshSignal(): Promise<void> {
+  const tab = await activeTab();
+  if (!tab?.id || !tab.url) {
+    applySignal(mapSignal({ connected: false }));
+    return;
+  }
+  try {
+    const [injected] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: probeAtlasDesk,
+    });
+    const result = injected?.result;
+    if (!result?.connected) {
+      applySignal(mapSignal({ connected: false }));
+      return;
+    }
+    applySignal(mapSignal({ connected: true, signal: readPublicSignal(result.payload) }));
+  } catch {
+    applySignal(mapSignal({ connected: false }));
+  }
+}
+
+function applySignal(view: SignalView): void {
+  signalLight.dataset.state = view.colour;
+  signalReason.textContent = view.reason;
+  signalMeta.textContent = `${view.hitRateLabel} · ${view.sampleLabel}`;
+  signalPaper.textContent = view.paperLabel;
+  signalSection.setAttribute("aria-label", `${view.reason}. ${view.hitRateLabel}. ${view.sampleLabel}. ${view.paperLabel}`);
 }
 
 function actions(buttons: HTMLButtonElement[]): HTMLElement {

@@ -1,0 +1,98 @@
+:root {
+  color-scheme: light;
+  --atlas-ink: #1c1915;
+  --atlas-muted: #5c564c;
+  --atlas-paper: #f4f1ea;
+  --atlas-card: #fffdf8;
+  --atlas-line: #e3dcd0;
+  --atlas-accent: #0c6b5e;
+  --atlas-accent-ink: #ffffff;
+  --atlas-device: #e5f4ef;
+  --atlas-warn: #f8e8e4;
+  --atlas-warn-ink: #6e241c;
+  --atlas-cloud: #f7f1e4;
+  --atlas-signal-up: #1f7a4d;
+  --atlas-signal-down: #9b2c2c;
+  --atlas-signal-flat: #8a8175;
+  --atlas-font-sans: "Segoe UI", "Helvetica Neue", sans-serif;
+  --atlas-font-serif: Georgia, "Iowan Old Style", serif;
+  --atlas-text-xs: 12px;
+  --atlas-text-sm: 13px;
+  --atlas-text-md: 14px;
+  --atlas-text-lg: 1.35rem;
+  --atlas-text-xl: 2rem;
+  --atlas-space: 0.75rem;
+  --atlas-radius: 12px;
+  --ink: var(--atlas-ink);
+  --muted: var(--atlas-muted);
+  --paper: var(--atlas-paper);
+  --card: var(--atlas-card);
+  --line: var(--atlas-line);
+  --accent: var(--atlas-accent);
+  --accent-ink: var(--atlas-accent-ink);
+  --device: var(--atlas-device);
+  --warn: var(--atlas-warn);
+  --warn-ink: var(--atlas-warn-ink);
+  --focus: var(--atlas-accent);
+  font-family: var(--atlas-font-sans);
+  font-size: var(--atlas-text-md);
+  line-height: 1.45;
+  color: var(--atlas-ink);
+  background: var(--atlas-paper);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --atlas-ink: #f4f1ea;
+    --atlas-muted: #c9c0b4;
+    --atlas-paper: #1c1915;
+    --atlas-card: #2a261f;
+    --atlas-line: #3d3830;
+    --atlas-accent: #3dbea8;
+    --atlas-accent-ink: #10221e;
+    --atlas-device: #1c3330;
+    --atlas-warn: #3a2420;
+    --atlas-warn-ink: #f0c2b8;
+    --atlas-cloud: #322c24;
+    --atlas-signal-up: #3dbea8;
+    --atlas-signal-down: #e07a72;
+    --atlas-signal-flat: #a3988c;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --atlas-ink: #f4f1ea;
+  --atlas-muted: #c9c0b4;
+  --atlas-paper: #1c1915;
+  --atlas-card: #2a261f;
+  --atlas-line: #3d3830;
+  --atlas-accent: #3dbea8;
+  --atlas-accent-ink: #10221e;
+  --atlas-device: #1c3330;
+  --atlas-warn: #3a2420;
+  --atlas-warn-ink: #f0c2b8;
+  --atlas-cloud: #322c24;
+  --atlas-signal-up: #3dbea8;
+  --atlas-signal-down: #e07a72;
+  --atlas-signal-flat: #a3988c;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --atlas-ink: #1c1915;
+  --atlas-muted: #5c564c;
+  --atlas-paper: #f4f1ea;
+  --atlas-card: #fffdf8;
+  --atlas-line: #e3dcd0;
+  --atlas-accent: #0c6b5e;
+  --atlas-accent-ink: #ffffff;
+  --atlas-device: #e5f4ef;
+  --atlas-warn: #f8e8e4;
+  --atlas-warn-ink: #6e241c;
+  --atlas-cloud: #f7f1e4;
+  --atlas-signal-up: #1f7a4d;
+  --atlas-signal-down: #9b2c2c;
+  --atlas-signal-flat: #8a8175;
+}
