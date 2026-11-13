@@ -88,7 +88,9 @@ describe("page reader", () => {
   it("reads the highlight and title and does not touch form fields", () => {
     const source = readFileSync("extension/src/read-selection.ts", "utf8");
     expect(source).toContain("getSelection");
-    expect(source).not.toContain("querySelector");
+    // The only selector is the public ATLAS desk marker, never a form control.
+    expect(source).not.toMatch(/querySelector(All)?\(\s*["'`][^"'`]*\b(input|textarea|select|form)\b/i);
+    expect(source.match(/querySelector\(/g) ?? []).toHaveLength(1);
     expect(source).not.toContain("password");
     expect(source).not.toContain(".value");
   });

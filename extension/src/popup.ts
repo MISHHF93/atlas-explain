@@ -7,7 +7,6 @@ import {
   toPageContext,
   withDisclaimer,
 } from "../../src/core/extension-prompt";
-import { explainInCloud, loadExtensionSettings } from "./cloud";
 import { explainOnDevice } from "./on-device";
 import { mapSignal, readPublicSignal, type SignalView } from "../../src/core/signal";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
@@ -178,6 +177,8 @@ async function run(options: { highlight: boolean; fromPage: boolean; pending?: P
   const context = toPageContext(raw);
   const built = buildExtensionPrompt({ context, question: options.highlight ? "" : question.value });
   const token = debugToken.value.trim() || null;
+  // Firebase loads only when an explanation is requested, so the popup opens fast.
+  const { explainInCloud, loadExtensionSettings } = await import("./cloud");
   const settings = await loadExtensionSettings(token);
   if (options.highlight && !extensionHighlightAllowed({
     billingEnabled: settings.billingEnabled,
