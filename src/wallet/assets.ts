@@ -71,6 +71,13 @@ export function assetsPanel(options: {
   const notes = el("div", "stack");
 
   input.addEventListener("input", render);
+  // "/" jumps to search while the Assets tab is showing, like a wallet token list.
+  document.addEventListener("keydown", (event) => {
+    const typing = event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
+    if (event.key !== "/" || typing || input.disabled || !wrap.isConnected || wrap.closest("[hidden]")) return;
+    event.preventDefault();
+    input.focus();
+  });
   wrap.append(banner, searchWrap, filters, meta, list, notes);
 
   let state: AssetsState = { kind: "loading" };
@@ -80,6 +87,11 @@ export function assetsPanel(options: {
   function update(next: AssetsState): void {
     state = next;
     all = next.kind === "ready" ? next.catalog.assets : [];
+    // Rows rise in once when the catalog arrives, not on every search keystroke.
+    if (next.kind === "ready") {
+      list.dataset.enter = "true";
+      window.setTimeout(() => delete list.dataset.enter, 700);
+    }
     render();
   }
 
@@ -118,7 +130,11 @@ export function assetsPanel(options: {
       none.append(el("p", "fine", all.length ? "No asset matches. Try a ticker like BTC or AAPL." : "ATLAS has no assets with data on this computer yet."));
       list.replaceChildren(none);
     } else {
-      list.replaceChildren(...rows.map((a) => assetRow(a, () => options.onOpen(a))));
+      list.replaceChildren(...rows.map((a, i) => {
+        const row = assetRow(a, () => options.onOpen(a));
+        row.style.setProperty("--i", String(Math.min(i, 12)));
+        return row;
+      }));
     }
     for (const m of state.catalog.missing) notes.append(noteCard(m.reason));
   }
@@ -206,6 +222,18 @@ function noteCard(text: string): HTMLElement {
   const card = el("section", "card state state-info");
   card.append(el("p", "fine", text));
   return card;
+}
+
+/** Last point of an M/L path, for the end dot and the area fill. */
+function sparkEnd(path: string): { x: number; y: number } | null {
+  const nums = path.match(/-?\d+(?:\.\d+)?/g);
+  if (!nums || nums.length < 2) return null;
+  return { x: Number(nums[nums.length - 2]), y: Number(nums[nums.length - 1]) };
+}
+
+function sparkStartX(path: string): number {
+  const first = path.match(/-?\d+(?:\.\d+)?/);
+  return first ? Number(first[0]) : 0;
 }
 
 /* ---------- detail sheet ---------- */
@@ -296,7 +324,10 @@ export function assetDetail(a: AssetView, options: { onExplain: (a: AssetView) =
     const last = d.spark.points[d.spark.points.length - 1]?.c ?? 0;
     const tone = last > first ? "up" : last < first ? "down" : "flat";
     const holder = document.createElement("span");
-    holder.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="${sparkPath(d.spark.points, w, h)}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
+    const line = sparkPath(d.spark.points, w, h);
+    const end = sparkEnd(line);
+    const area = end ? `${line} L${end.x} ${h} L${sparkStartX(line)} ${h} Z` : "";
+    holder.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true" focusable="false">${area ? `<path class="spark-area" d="${area}"/>` : ""}<path class="spark-line" d="${line}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>${end ? `<circle class="spark-end" cx="${end.x}" cy="${end.y}" r="3" vector-effect="non-scaling-stroke"/>` : ""}</svg>`;
     spark.dataset.tone = tone;
     spark.replaceChildren(holder.firstElementChild as Element, el("p", "fine spark-cap", `Last ${d.spark.points.length} ${d.spark.interval} closes · ${d.sourceLabel}`));
     spark.setAttribute("role", "img");
