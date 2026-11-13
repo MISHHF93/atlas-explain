@@ -272,6 +272,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .why summary .icon { transition: transform var(--atlas-dur) var(--atlas-ease); color: var(--atlas-muted); }
 .why[open] summary .icon { transform: rotate(90deg); }
 .why-body { margin-top: 0.35rem; font-size: var(--atlas-text-xs); color: var(--atlas-muted); animation: atlas-fade 220ms var(--atlas-ease); }
+.desk-says { padding: 0.4rem 0.55rem; border-radius: 8px; background: color-mix(in srgb, var(--atlas-ink) 5%, transparent); color: var(--atlas-ink); }
 .why-actions { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: 0.35rem; }
 
 @keyframes atlas-fade { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
