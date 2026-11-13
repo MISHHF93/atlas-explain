@@ -35,6 +35,7 @@ import {
 } from "../../src/wallet/cards";
 import { mountAssets, type AssetsPreview } from "../../src/wallet/assets-controller";
 import { el, labelledButton, prefersReducedMotion } from "../../src/wallet/dom";
+import { installErrorBoundary } from "../../src/wallet/error-boundary";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../src/wallet/shell";
 import { explainOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
@@ -52,6 +53,7 @@ const hasChrome = typeof chrome !== "undefined" && Boolean(chrome.runtime?.id);
 const preview = new URLSearchParams(location.search);
 const host = document.querySelector("#app");
 if (!(host instanceof HTMLElement)) throw new Error("Missing #app");
+installErrorBoundary(host);
 
 const store = {
   async get(): Promise<{ theme?: unknown; appCheckDebugToken?: unknown; onboarded?: unknown }> {

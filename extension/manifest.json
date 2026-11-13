@@ -23,9 +23,18 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["activeTab", "contextMenus", "storage", "scripting"],
-  "host_permissions": ["http://localhost:3000/*"],
-  "optional_permissions": ["sidePanel"],
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*"
+  ],
+  "optional_permissions": [
+    "sidePanel"
+  ],
   "side_panel": {
     "default_path": "popup.html"
   },
@@ -36,5 +45,8 @@
       },
       "description": "Open ATLAS Explain"
     }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'"
   }
 }

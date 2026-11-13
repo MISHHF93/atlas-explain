@@ -11,3 +11,4 @@ extension/*.zip
 firestore-debug.log
 ui-debug.log
 coverage/
+release/
