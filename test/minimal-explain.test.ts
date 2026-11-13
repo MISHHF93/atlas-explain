@@ -55,12 +55,13 @@ describe("popup Explain tab layout", () => {
     expect(popup).toContain('el("div", "panel-title sr-only")');
   });
 
-  it("uses the compact engine line and the digest row on both surfaces", () => {
-    for (const src of [popup, web]) {
-      expect(src).toContain("engineStrip({ compact: true })");
-      expect(src).toContain("todayRow(");
-      expect(src).not.toMatch(/append\([^)]*brief\.node,/);
-    }
+  it("uses the compact engine line on both surfaces and the digest row in the popup", () => {
+    for (const src of [popup, web]) expect(src).toContain("engineStrip({ compact: true })");
+    expect(popup).toContain("todayRow(");
+    expect(popup).not.toMatch(/append\([^)]*brief\.node,/);
+    // The web app gives the digest its own Today screen instead of a row on Explain.
+    expect(web).toContain("shell.panels.today.append(");
+    expect(web).not.toContain("todayRow(");
   });
 
   it("limits recent explanations to three", () => {

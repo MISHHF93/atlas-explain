@@ -26,7 +26,7 @@ export function scanText(text) {
 }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SCAN = ["src", "extension/src", "extension/popup.html", "index.html", "public", "dist", "extension/dist", "README.md"];
+const SCAN = ["src", "extension/src", "extension/popup.html", "index.html", "app.html", "how-it-works.html", "privacy.html", "terms.html", "support.html", "404.html", "public", "dist", "extension/dist", "README.md"];
 const exts = /\.(ts|js|mjs|html|css|json|md|txt)$/;
 const walk = (p) => {
   try {

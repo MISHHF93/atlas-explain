@@ -38,7 +38,9 @@ export function mountAssets(options: {
   onState?: (state: AssetsState) => void;
   /** Public live-price feed used when ATLAS is not reachable. Default is Kraken. */
   priceFeed?: PriceFeedOptions;
-}): { refresh: () => Promise<void>; open: (symbol: string) => Promise<void> } {
+  /** Called when an asset's detail sheet opens (the web app gives it its own address). */
+  onOpen?: (symbol: string) => void;
+}): { refresh: () => Promise<void>; open: (symbol: string) => Promise<boolean> } {
   const { shell, preview } = options;
   const head = el("div", "panel-title");
   head.append(el("h1", undefined, "Assets"), el("span", "fine", "Paper only"));
@@ -107,6 +109,7 @@ export function mountAssets(options: {
 
   async function openAsset(a: AssetView): Promise<void> {
     openSymbol = a.symbol;
+    options.onOpen?.(a.symbol);
     const view = assetDetail(a, {
       onExplain: (x) => {
         shell.closeSheet();
@@ -136,10 +139,14 @@ export function mountAssets(options: {
     await tick();
   }
 
-  async function open(symbol: string): Promise<void> {
+  /** Opens an asset by symbol. Resolves false when the catalog has no such asset right now. */
+  async function open(symbol: string): Promise<boolean> {
     if (last.kind !== "ready") await refresh();
-    const a = last.kind === "ready" ? last.catalog.assets.find((x) => x.symbol === symbol) : undefined;
-    if (a) await openAsset(a);
+    const want = symbol.toUpperCase();
+    const a = last.kind === "ready" ? last.catalog.assets.find((x) => x.symbol.toUpperCase() === want) : undefined;
+    if (!a) return false;
+    await openAsset(a);
+    return true;
   }
 
   const sheetObserver = new MutationObserver(() => {

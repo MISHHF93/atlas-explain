@@ -26,7 +26,7 @@ describe("assets UI and extension", () => {
 
   it("adds an Assets tab with list, badges, lights, detail, sparkline and the explain hand-off", () => {
     expect(shell).toContain('{ id: "assets", label: "Assets"');
-    expect(css).toContain("repeat(5, 1fr)");
+    expect(css).toContain("repeat(var(--tab-count, 5), 1fr)");
     for (const part of ["asset-row", "fresh-badge", "light-dot", "Why this colour?", "Explain this", "connectCard", "spark"]) expect(ui).toContain(part);
     expect(ctl).toContain("visibilitychange");
     expect(popup).toContain("mountAssets");

@@ -28,8 +28,17 @@ const entries = walk(dist).map((file) => {
   }
   return { name, data, mtime: statSync(file).mtime };
 });
-writeFileSync(zipPath, createZip(entries));
+const zip = createZip(entries);
+writeFileSync(zipPath, zip);
 console.log(`${zipPath} (${entries.length} files)`);
+
+// The website offers the same zip at /download/atlas-explain-chrome.zip until the Chrome Web Store
+// listing is live. Only written when the web build exists (dist/index.html), so it ships with hosting.
+if (existsSync(join(root, "dist", "index.html"))) {
+  mkdirSync(join(root, "dist", "download"), { recursive: true });
+  writeFileSync(join(root, "dist", "download", "atlas-explain-chrome.zip"), zip);
+  console.log("dist/download/atlas-explain-chrome.zip (for the website)");
+}
 
 function walk(dir) {
   const out = [];

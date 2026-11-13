@@ -1,0 +1,102 @@
+@import "../wallet/wallet.css";
+
+/*
+ * ATLAS Explain app at /app. The wallet parts laid out full-page:
+ * phones (360px and up) get the header, one scrolling column and bottom tabs;
+ * tablets and desktops get a side rail and a calm, centred reading column.
+ * Tokens only. No font below 11px. Safe areas for installed phone apps.
+ */
+
+html, body { height: 100%; }
+body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-paper); }
+
+#app { min-height: 100vh; min-height: 100dvh; }
+
+.wallet[data-surface="app"] {
+  --wallet-w: 100%;
+  --wallet-h: 100dvh;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  animation: none;
+  transform: none;
+}
+
+.wallet[data-surface="app"] .bar { padding-top: max(0.6rem, env(safe-area-inset-top)); padding-left: max(0.75rem, env(safe-area-inset-left)); padding-right: max(0.75rem, env(safe-area-inset-right)); }
+.wallet[data-surface="app"] .tabbar { padding-bottom: env(safe-area-inset-bottom); }
+.wallet[data-surface="app"] .tab { min-height: 3.4rem; font-size: var(--atlas-text-xs); }
+.wallet[data-surface="app"] .panel { width: 100%; max-width: 46rem; margin: 0 auto; padding: 1rem max(1rem, env(safe-area-inset-left)) 2rem; gap: 0.85rem; }
+.wallet[data-surface="app"] .panel-title h1 { font-size: 1.5rem; }
+.wallet[data-surface="app"] .sheet-body { padding: 1rem; font-size: var(--atlas-text-md); }
+
+.section-label {
+  margin-top: 0.4rem;
+  font-size: var(--atlas-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--atlas-muted);
+}
+
+.skip {
+  position: absolute;
+  left: 0.75rem;
+  top: -3rem;
+  z-index: 20;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  background: var(--atlas-accent);
+  color: var(--atlas-accent-ink);
+}
+.skip:focus { top: 0.75rem; }
+
+/* Tablets and desktops: side rail navigation, reading column, sheet as a side drawer. */
+@media (min-width: 900px) {
+  .wallet[data-surface="app"] {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "bar bar" "nav main" "nav foot";
+  }
+  .wallet[data-surface="app"] .bar { grid-area: bar; padding-left: 1.25rem; padding-right: 1.25rem; }
+  .wallet[data-surface="app"] .wallet-body { grid-area: main; }
+  .wallet[data-surface="app"] .edu-line { grid-area: foot; }
+  .wallet[data-surface="app"] .tabbar {
+    grid-area: nav;
+    border-top: 0;
+    border-right: 1px solid var(--atlas-line);
+    box-shadow: none;
+    padding: 1rem 0.75rem;
+    background: var(--atlas-card);
+  }
+  .wallet[data-surface="app"] .tabbar-list { display: flex; flex-direction: column; gap: 0.25rem; }
+  .wallet[data-surface="app"] .tab {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--atlas-radius);
+    font-size: var(--atlas-text-md);
+    text-align: left;
+  }
+  .wallet[data-surface="app"] .tab:hover { background: var(--atlas-surface-2); }
+  .wallet[data-surface="app"] .tab[aria-selected="true"] { background: var(--atlas-accent-soft); }
+  .wallet[data-surface="app"] .tab-indicator { display: none; }
+  .wallet[data-surface="app"] .panel { padding: 2rem 2rem 3rem; gap: 1rem; }
+  .wallet[data-surface="app"] .panel-title h1 { font-size: 1.85rem; }
+  .wallet[data-surface="app"] .sheet {
+    left: auto;
+    width: min(34rem, 100%);
+    border-left: 1px solid var(--atlas-line);
+    box-shadow: var(--atlas-shadow-lg);
+  }
+  .wallet[data-surface="app"] .overlay-slot { display: grid; place-items: center; background: color-mix(in srgb, var(--atlas-ink) 35%, transparent); }
+  .wallet[data-surface="app"] .overlay-slot:empty { display: none; }
+  .wallet[data-surface="app"] .overlay-slot > * { position: relative; inset: auto; width: min(26rem, 92vw); height: min(36rem, 90dvh); border-radius: var(--atlas-radius-xl); box-shadow: var(--atlas-shadow-lg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet[data-surface="app"] .sheet { transition: none; }
+}

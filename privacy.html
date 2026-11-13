@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Privacy (draft) · ATLAS Explain</title>
+    <meta name="description" content="ATLAS Explain privacy policy, draft for review." />
+    <meta name="theme-color" content="#0c6b5e" />
+    <link rel="icon" href="/favicon.svg" />
+    <script type="module" src="/src/site/site.ts"></script>
+  </head>
+  <body class="site">
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-head">
+      <a class="brand" href="/" aria-label="ATLAS Explain home"><img src="/logo.svg" alt="" width="28" height="28" /><span><b>ATLAS</b> Explain</span></a>
+      <nav class="site-nav" aria-label="Site"><a href="/how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a><a href="/privacy" aria-current="page">Privacy</a></nav>
+      <a class="btn btn-primary btn-sm" href="/how-it-works#install">Add to Chrome</a>
+    </header>
+    <main id="main" tabindex="-1">
+      <article class="doc legal">
+        <p class="draft-badge">Draft · not final</p>
+        <h1>ATLAS Explain Privacy Policy (DRAFT)</h1>
+        <p class="draft-note" role="note"><b>DRAFT for review. Not final and not legal advice.</b> Written as a plain-language starting point. Have it reviewed before a public launch, fill in every <code>[TODO]</code>, and publish the final text at a stable URL (needed for the Chrome Web Store listing and the Google OAuth consent screen).</p>
+        <p>Last updated: [TODO date] · Operator: [TODO legal name], Ontario, Canada · Contact: [TODO privacy email]</p>
+        <h2>What ATLAS Explain is</h2>
+        <p>An educational tool that explains trading terms and market moves in plain language. It is not investment advice and it never gives trade instructions.</p>
+        <h2>What we collect</h2>
+        <div class="table-wrap"><table><thead><tr><th scope="col">Data</th><th scope="col">When</th><th scope="col">Where it is stored</th><th scope="col">Why</th></tr></thead><tbody><tr><td>Anonymous user id</td><td>Every visit to the web app</td><td>Firebase Authentication</td><td>Keep your saved explanations on this browser</td></tr><tr><td>Account id, email, display name</td><td>Only if you sign in with Google or an email link</td><td>Firebase Authentication</td><td>Keep saved explanations and settings across devices</td></tr><tr><td>Saved explanations (public move card, question, explanation, which engine ran)</td><td>When an explanation is saved</td><td>Cloud Firestore, under your user id</td><td>Show your history</td></tr><tr><td>Theme preference</td><td>Signed-in users who change it</td><td>Cloud Firestore</td><td>Sync your setting</td></tr><tr><td>Daily count of cloud explanations</td><td>Only if billing is switched on</td><td>Cloud Firestore</td><td>Fair-use limits for the free plan</td></tr><tr><td>Cloud call timestamps (no content)</td><td>Each cloud explanation</td><td>Your browser's local storage only</td><td>Browser-side fair-use limit</td></tr></tbody></table></div>
+        <p>We do <b>not</b> collect balances, account numbers, form fields, private notes or watchlists. Private notes and watchlists are only used on your device and are dropped from any cloud request.</p>
+        <h2>The Chrome extension</h2>
+        <ul class="points"><li>Sends only the text you highlight, the page title and the site name, and only when you click Explain.</li><li>Site permissions: <code>http://localhost:3000</code> (reads ATLAS on your own computer; nothing leaves your computer) and <code>https://atlas-explain.web.app</code> (our web app, which runs cloud explanations behind Firebase App Check and shares your sign-in).</li><li>Explanation history in the extension stays in your browser.</li></ul>
+        <h2>Where explanations run</h2>
+        <ul class="points"><li><b>On your device:</b> Gemini Nano in Chrome. The prompt does not leave your computer.</li><li><b>In the cloud:</b> Gemini through Google's Firebase AI Logic, with App Check. The public move card or highlighted text and your question are sent to Google to generate the answer. See Google's terms for the Gemini API: [TODO link to the applicable Google terms].</li></ul>
+        <h2>Service providers</h2>
+        <ul class="points"><li>Google Firebase (hosting, authentication, database, App Check, Remote Config, AI Logic). Google acts as our processor. Data may be processed outside Canada.</li><li>Public crypto price feeds (Kraken or CoinGecko, selected in Remote Config and named next to the prices): your browser requests public prices directly. No account balances are sent. An optional CoinGecko Demo API key may be read from Remote Config. These prices are never used to train a model.</li><li>Stripe: only if paid plans are switched on later. Card numbers would go to Stripe, never to us.</li></ul>
+        <p>Personal information is never sold or used for advertising.</p>
+        <h2>Your choices and rights</h2>
+        <ul class="points"><li>Use the app signed out.</li><li>Sign out at any time from the account menu.</li><li>Ask us to access, correct or delete your account and saved explanations: [TODO privacy email]. We aim to respond within 30 days.</li><li>Residents of Canada (PIPEDA), the EU/UK (GDPR) and California (CCPA/CPRA) may have additional rights. [TODO: confirm which regimes apply at launch.]</li></ul>
+        <h2>Retention</h2>
+        <p>Saved explanations and account data are kept until you delete them or ask us to delete your account. [TODO: set an inactivity retention period.]</p>
+        <h2>Children</h2>
+        <p>ATLAS Explain is not directed to children under 13 [TODO: or 16 where applicable] and we do not knowingly collect their data.</p>
+        <h2>Changes</h2>
+        <p>We will post updates here and change the "Last updated" date.</p>
+      </article>
+    </main>
+    <footer class="site-foot">
+      <p class="foot-edu">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>
+      <nav aria-label="Footer"><a href="/how-it-works#install">Add to Chrome</a><a href="/how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a><a href="/support#faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>
+      <p class="fine">Free during the beta. Built for #BuildHybridAI with Firebase AI Logic and Gemini.</p>
+    </footer>
+  </body>
+</html>

@@ -5,10 +5,15 @@ import type { SignalView } from "../core/signal";
 import { el, iconButton, prefersReducedMotion, replay } from "./dom";
 import { icon, type IconName } from "./icons";
 
-export type TabId = "explain" | "assets" | "signal" | "glossary" | "settings";
+export type TabId = "today" | "explain" | "assets" | "signal" | "glossary" | "settings";
+
+/** Every panel the shell can host. Only the tabs passed in (or TABS) appear in the navigation. */
+export const ALL_TAB_IDS: readonly TabId[] = ["today", "explain", "assets", "signal", "glossary", "settings"];
 export type ThemeChoice = "system" | "light" | "dark";
 
-export const TABS: readonly { id: TabId; label: string; icon: IconName }[] = [
+export interface TabDef { id: TabId; label: string; icon: IconName }
+
+export const TABS: readonly TabDef[] = [
   { id: "explain", label: "Explain", icon: "sparkle" },
   { id: "assets", label: "Assets", icon: "coins" },
   { id: "signal", label: "Signal", icon: "signal" },
@@ -44,14 +49,24 @@ export interface WalletShell {
  */
 export function createWalletShell(options: {
   host: HTMLElement;
-  surface: "extension" | "web";
+  surface: "extension" | "web" | "app";
   menu: MenuItem[];
   onSelect?: (tab: TabId) => void;
   onAccount?: () => void;
+  /** Tabs shown in the navigation, in order. Defaults to the extension's five. */
+  tabs?: readonly TabDef[];
+  /** First tab shown. Defaults to the first tab. */
+  initialTab?: TabId;
+  /** Header status pill. Defaults to opening the Signal tab. */
+  onStatus?: () => void;
+  /** Called after the slide-in sheet closes (Back, Escape or closeSheet()). */
+  onSheetClose?: () => void;
 }): WalletShell {
+  const tabs = options.tabs ?? TABS;
+  const firstTab: TabId = options.initialTab ?? tabs[0]?.id ?? "explain";
   const frame = el("div", "wallet");
   frame.dataset.surface = options.surface;
-  frame.dataset.tab = "explain";
+  frame.dataset.tab = firstTab;
 
   /* header */
   const header = el("header", "bar");
@@ -75,7 +90,7 @@ export function createWalletShell(options: {
   const statusCaret = icon("chevron", 12);
   statusCaret.classList.add("conn-caret");
   status.append(statusLight, statusLabel, statusCaret);
-  status.addEventListener("click", () => select("signal", { focus: true }));
+  status.addEventListener("click", () => (options.onStatus ? options.onStatus() : select("signal", { focus: true })));
 
   const menuButton = iconButton("more", "Menu");
   menuButton.setAttribute("aria-haspopup", "menu");
@@ -133,14 +148,14 @@ export function createWalletShell(options: {
     if (frame.dataset.scrolled !== scrolled) frame.dataset.scrolled = scrolled;
   }, { passive: true });
   const panels = {} as Record<TabId, HTMLElement>;
-  for (const tab of TABS) {
+  for (const id of ALL_TAB_IDS) {
     const panel = el("section", "panel");
-    panel.id = `panel-${tab.id}`;
+    panel.id = `panel-${id}`;
     panel.setAttribute("role", "tabpanel");
-    panel.setAttribute("aria-labelledby", `tab-${tab.id}`);
+    if (tabs.some((t) => t.id === id)) panel.setAttribute("aria-labelledby", `tab-${id}`);
     panel.tabIndex = -1;
-    panel.hidden = tab.id !== "explain";
-    panels[tab.id] = panel;
+    panel.hidden = id !== firstTab;
+    panels[id] = panel;
     body.append(panel);
   }
 
@@ -148,9 +163,10 @@ export function createWalletShell(options: {
   const nav = el("nav", "tabbar");
   nav.setAttribute("aria-label", "ATLAS Explain");
   const list = el("div", "tabbar-list");
+  list.style.setProperty("--tab-count", String(tabs.length));
   list.setAttribute("role", "tablist");
   const tabButtons = new Map<TabId, HTMLButtonElement>();
-  for (const tab of TABS) {
+  for (const tab of tabs) {
     const button = el("button", "tab");
     button.type = "button";
     button.id = `tab-${tab.id}`;
@@ -160,7 +176,7 @@ export function createWalletShell(options: {
     button.append(icon(tab.icon, 20), el("span", undefined, tab.label));
     button.addEventListener("click", () => select(tab.id));
     button.addEventListener("keydown", (event) => {
-      const order = TABS.map((t) => t.id);
+      const order = tabs.map((t) => t.id);
       const at = order.indexOf(tab.id);
       let next: TabId | undefined;
       if (event.key === "ArrowRight") next = order[(at + 1) % order.length];
@@ -215,7 +231,7 @@ export function createWalletShell(options: {
   frame.append(header, body, foot, nav, sheet, overlaySlot, live);
   options.host.append(frame);
 
-  let current: TabId = "explain";
+  let current: TabId = firstTab;
   let sheetReturn: HTMLElement | null = null;
   markTabs();
 
@@ -224,7 +240,7 @@ export function createWalletShell(options: {
       if (opts.focus) panels[tab].focus();
       return;
     }
-    const order = TABS.map((t) => t.id);
+    const order = ALL_TAB_IDS;
     const forward = order.indexOf(tab) > order.indexOf(current);
     panels[current].hidden = true;
     current = tab;
@@ -240,7 +256,7 @@ export function createWalletShell(options: {
   }
 
   function markTabs(): void {
-    TABS.forEach((tab, index) => {
+    tabs.forEach((tab, index) => {
       const button = tabButtons.get(tab.id);
       const on = tab.id === current;
       button?.setAttribute("aria-selected", on ? "true" : "false");
@@ -298,12 +314,14 @@ export function createWalletShell(options: {
   }
 
   function closeSheet(): void {
+    const wasOpen = frame.dataset.sheet === "open";
     delete frame.dataset.sheet;
     for (const part of [header, body, nav, foot]) part.inert = false;
     window.setTimeout(() => {
       if (frame.dataset.sheet !== "open") sheet.hidden = true;
     }, prefersReducedMotion() ? 0 : 220);
     sheetReturn?.focus();
+    if (wasOpen) options.onSheetClose?.();
   }
 
   function overlay(node: HTMLElement | null): void {
