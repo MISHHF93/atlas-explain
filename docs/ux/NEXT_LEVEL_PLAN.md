@@ -24,6 +24,16 @@ The rules do not change: education only (no buy/sell or recommendation wording),
 | Settings | Dense but clear. Billing card correctly says free during beta. | Low |
 | Accessibility | Focus rings, live regions and reduced-motion rules exist. New pieces must keep them. | Ongoing |
 
+## Status (13 Nov 2026)
+
+| Step | PR | State |
+|---|---|---|
+| Plan | #33 | Merged |
+| Hybrid engine strip | #34 | Merged |
+| Compact brief when not ready | #35 | Merged |
+| Keep-going follow-ups and related terms | #36 | Merged |
+| Judge-ready web landing and onboarding hybrid step | #37 | Merged |
+
 ## Plan (small PRs, each squash-merged when green)
 
 1. **This plan** (`docs/ux/NEXT_LEVEL_PLAN.md`).
