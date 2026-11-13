@@ -52,6 +52,7 @@ import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../core/follow-ups";
 import { isEngineState } from "../core/hybrid-engine";
 import { TEXT_HISTORY_KEY, addTextHistory, ageLabel, readTextHistory, removeTextHistory, type TextHistoryEntry } from "../core/text-history";
 import { twoSidedCopyText } from "../core/two-sided";
+import { liveSnapshot, snapshotBreadth, snapshotTime } from "../core/live-snapshot";
 import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
 import type { TextRun } from "../platform/web/backend";
 import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } from "../app/routes";
@@ -301,11 +302,17 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
   let marketCatalog: CatalogView | null = null;
   let marketCard: HTMLElement = marketDigestCard(buildMarketDigest(marketCatalog));
+  // Public live prices (Kraken or CoinGecko) when ATLAS is away: breadth and moves only, never leans.
+  let liveCatalog: CatalogView | null = null;
+  let liveCard: HTMLElement = liveSnapshotCard(liveCatalog);
   const refreshToday = (): void => {
     // The Today screen shows the market digest inline; swap in the fresh card when ATLAS answers.
     const next = marketDigestCard(buildMarketDigest(marketCatalog));
     marketCard.replaceWith(next);
     marketCard = next;
+    const nextLive = liveSnapshotCard(liveCatalog);
+    liveCard.replaceWith(nextLive);
+    liveCard = nextLive;
   };
   void (canReachLocalAtlas(location, false)
     ? loadDigest()
@@ -363,6 +370,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const startExplain = row("sparkle", "Explain a move or a term", () => navigate({ kind: "tab", tab: "explain" }));
   shell.panels.today.append(
     todayHead,
+    liveCard,
     marketCard,
     brief.node,
     el("h2", "section-label", "Paper signal light"),
@@ -389,6 +397,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         atlasLocal = state.kind === "ready" && !data && !isLivePriceSource(state.catalog.source);
         livePrices = state.kind === "ready" && !data && isLivePriceSource(state.catalog.source);
         if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !data && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
+        if (state.kind !== "loading") liveCatalog = state.kind === "ready" && !data && isLivePriceSource(state.catalog.source) ? state.catalog : null;
         refreshToday();
         updateConnection();
       },
@@ -674,6 +683,46 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         el("p", "fine", "Paper prediction from ATLAS shadow models - not investment advice."),
       ]);
     }
+  }
+
+  /* ---------- today: live prices ---------- */
+
+  function liveSnapshotCard(catalog: CatalogView | null): HTMLElement {
+    const snap = liveSnapshot(catalog);
+    const node = el("section", "market-digest live-snapshot");
+    node.setAttribute("aria-label", "Crypto right now, from public live prices");
+    if (!snap) {
+      node.hidden = true;
+      return node;
+    }
+    const list = el("ul", "md-movers");
+    for (const m of snap.movers) {
+      const li = el("li");
+      const open = el("button", "md-mover live-mover");
+      open.type = "button";
+      open.setAttribute("aria-label", `${m.name}, ${m.symbol}: ${m.price}, ${m.change} ${snap.window}. Open details.`);
+      const top = el("span", "md-mover-top");
+      const name = el("span", "md-sym");
+      name.append(el("strong", undefined, m.symbol), el("span", "md-name", ` ${m.name}`));
+      const change = el("span", "md-chg", m.change);
+      change.dataset.dir = m.tone;
+      top.append(name, change);
+      open.append(top, el("span", "md-src", m.price));
+      open.addEventListener("click", () => {
+        navigate({ kind: "asset", symbol: m.symbol });
+        void showRouteSheet();
+      });
+      li.append(open);
+      list.append(li);
+    }
+    const src = el("p", "md-src");
+    const link = el("a", "price-attr", snap.source.text) as HTMLAnchorElement;
+    link.href = snap.source.href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    src.append(link, ` · updated ${snapshotTime(snap.asOf)}. Prices only: ATLAS leans stay withheld here.`);
+    node.append(el("h2", "md-title", "Crypto right now"), el("p", "md-line", snapshotBreadth(snap)), el("h3", "md-sub", "Biggest moves, either way"), list, src);
+    return node;
   }
 
   /* ---------- explain text ---------- */
