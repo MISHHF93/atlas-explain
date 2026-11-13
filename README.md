@@ -196,6 +196,24 @@ About two and a half minutes.
 | 2:05 | Click **Blank dip · not historical**, then **Preview prompt** | "Anyone can replace the JSON with their own figures. Preview stays on the device and shows whether private text would be included." |
 | 2:25 | Mention Chrome's flag and the cloud fallback in one sentence, then the disclaimer again | "No Nano, or a long document, and the same button uses Gemini in the cloud through AI Logic, with App Check in front of it. Still an explanation, not a trade." |
 
+## Chrome extension
+
+The Manifest V3 extension lives in `extension/` and reuses `src/core` for the prompt, the refusal rules, and the billing entitlements. It tries Chrome's Prompt API (Gemini Nano) first. If that model is unavailable, it calls Firebase AI Logic with `InferenceMode.ONLY_IN_CLOUD` on the same `atlas-explain` project. The popup says which path answered.
+
+Each explanation is a click: the toolbar icon, the selection context menu **Explain with ATLAS**, or a button you add to the current page. The extension sends the highlighted text, the page title, and the site name. It does not read form fields, balances, or account numbers. On-device answers are unlimited. Cloud answers follow `billing_enabled` (off during beta, so they are free).
+
+`scripting` is included with `activeTab` so the highlight and the page button run only after that click. `sidePanel` is optional.
+
+Load it unpacked:
+
+1. `npm run build:extension`
+2. Open `chrome://extensions`, turn on Developer mode, and choose **Load unpacked**.
+3. Select `extension/dist`.
+4. For Gemini Nano, use Chrome on desktop, version 139 or newer, and set `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` to Enabled.
+5. The reCAPTCHA key does not include `chrome-extension://` origins. For a cloud fallback while unpacked, register an App Check debug token and paste it into the popup field.
+
+`npm run build:extension` writes `extension/atlas-explain-chrome.zip`. For the Chrome Web Store, upload that zip. The listing should say the extension is educational and not investment advice. Do not ship an App Check debug token in the store build.
+
 ## Tests and CI
 
 ```bash
