@@ -2,6 +2,7 @@ import { CloudAllowanceUsed, pricingView } from "../../src/core/billing";
 import {
   EXTENSION_DISCLAIMER,
   EXTENSION_PRIVACY_NOTE,
+  LOCAL_ATLAS_PERMISSION_NOTE,
   buildExtensionPrompt,
   extensionHighlightAllowed,
   toPageContext,
@@ -32,6 +33,7 @@ import {
   signalCard,
   themePicker,
 } from "../../src/wallet/cards";
+import { mountAssets, type AssetsPreview } from "../../src/wallet/assets-controller";
 import { el, labelledButton, prefersReducedMotion } from "../../src/wallet/dom";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../src/wallet/shell";
 import { explainOnDevice } from "./on-device";
@@ -70,7 +72,7 @@ const shell = createWalletShell({
     { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
     { label: "Open the ATLAS desk", icon: "external", run: () => openUrl(ATLAS_DESK_URL) },
     { label: "Open the web app", icon: "external", run: () => openUrl(EXPLAIN_WEB_URL) },
-    { label: "Privacy", icon: "shield", run: () => shell.openSheet("Privacy", [el("p", undefined, EXTENSION_PRIVACY_NOTE), el("p", "fine", EXTENSION_DISCLAIMER)]) },
+    { label: "Privacy", icon: "shield", run: () => shell.openSheet("Privacy", [el("p", undefined, EXTENSION_PRIVACY_NOTE), el("p", undefined, LOCAL_ATLAS_PERMISSION_NOTE), el("p", "fine", EXTENSION_DISCLAIMER)]) },
     { label: "Settings", icon: "gear", run: () => shell.select("settings", { focus: true }) },
   ],
 });
@@ -92,6 +94,32 @@ result.setAttribute("aria-live", "polite");
 const explainHead = el("div", "panel-title");
 explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
 shell.panels.explain.append(explainHead, question, buttons, result);
+
+/* ---------- Assets tab ---------- */
+
+// Reads ATLAS on this computer (http://localhost:3000, host permission). The no-Chrome
+// preview page shows captured box data instead, under a banner, and never fetches.
+let assets: ReturnType<typeof mountAssets> | null = null;
+let atlasLocal = false;
+
+function startAssets(previewData?: AssetsPreview): void {
+  assets = mountAssets({
+    shell,
+    canReachAtlas: hasChrome,
+    preview: previewData,
+    onState: (state) => {
+      atlasLocal = state.kind === "ready" && !previewData;
+      updateConnection();
+    },
+    onExplain: (text) => {
+      question.value = text;
+      explainTyped.disabled = false;
+      shell.select("explain");
+      void run({ highlight: false, fromPage: false });
+    },
+  });
+  void assets.refresh();
+}
 
 /* ---------- Signal tab ---------- */
 
@@ -159,7 +187,7 @@ shell.panels.settings.append(
     debugToken,
     el("p", "fine", "The reCAPTCHA key does not cover extension pages, so cloud fallback needs a registered App Check debug token once."),
   ]),
-  group("Privacy", [el("p", "fine", EXTENSION_PRIVACY_NOTE)]),
+  group("Privacy", [el("p", "fine", EXTENSION_PRIVACY_NOTE), el("p", "fine", LOCAL_ATLAS_PERMISSION_NOTE)]),
   group("About", [el("p", "fine", `ATLAS Explain ${version} · Apache-2.0 · ${SHORTCUT_HINT}`), row("external", "Open the web app", () => openUrl(EXPLAIN_WEB_URL))]),
 );
 
@@ -194,9 +222,11 @@ async function boot(): Promise<void> {
   }));
   if (typeof stored.appCheckDebugToken === "string") debugToken.value = stored.appCheckDebugToken;
   if (!hasChrome) {
+    startAssets(await previewAssets());
     applyPreviewState();
     return;
   }
+  startAssets();
   if (stored.onboarded !== true) showOnboarding();
   await refreshSignal();
   const session = await chrome.storage.session.get("pending");
@@ -400,7 +430,7 @@ function applySignal(view: SignalView): void {
 }
 
 function updateConnection(): void {
-  shell.setConnection(!navigator.onLine ? "offline" : currentSignal.connected ? "desk" : "none");
+  shell.setConnection(!navigator.onLine ? "offline" : currentSignal.connected ? "desk" : atlasLocal ? "local" : "none");
   shell.setSignal(currentSignal);
 }
 
@@ -444,6 +474,17 @@ function openUrl(url: string): void {
 
 /* ---------- preview page (no Chrome APIs) ---------- */
 
+async function previewAssets(): Promise<AssetsPreview | undefined> {
+  const mode = preview.get("assets");
+  if (!mode) return { label: "", list: null, details: {}, state: "hosted" };
+  const data = (await import("../../src/wallet/box-preview.json")).default;
+  const state = mode === "offline" ? "not_connected" : mode === "hosted" ? "hosted" : mode === "loading" ? "loading" : "ready";
+  const label = state === "ready"
+    ? `Box preview: real Kraken and IEX bars run through the ATLAS route on the build box (${data.capturedAt.slice(0, 16).replace("T", " ")} UTC), not your computer.`
+    : "Preview of the state shown when ATLAS is not running on this computer.";
+  return { label, list: data.list, details: data.details, state };
+}
+
 function readPreviewTheme(): ThemeChoice {
   const value = preview.get("theme");
   return isTheme(value) ? value : "system";
@@ -451,7 +492,9 @@ function readPreviewTheme(): ThemeChoice {
 
 function applyPreviewState(): void {
   const tab = preview.get("tab");
-  if (tab === "signal" || tab === "glossary" || tab === "settings") shell.select(tab);
+  if (tab === "assets" || tab === "signal" || tab === "glossary" || tab === "settings") shell.select(tab);
+  const sheet = preview.get("asset");
+  if (sheet) void assets?.open(sheet);
   const demo = preview.get("demo");
   if (demo === "answer") {
     question.value = SAMPLE_EXPLANATION.selection;

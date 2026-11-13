@@ -18,6 +18,7 @@ export function privacyNodes(): HTMLElement[] {
     el("p", undefined, "ATLAS Explain stores an anonymous user id, the public move card you submit, the explanation, which path ran (on-device or cloud), and a daily count of cloud explanations. Notes and watchlists are not written to the database."),
     el("p", undefined, "When Gemini Nano runs in Chrome, that prompt is processed on your computer. When the cloud model runs, the public card and your question are sent to Gemini through Firebase AI Logic. App Check is on."),
     el("p", undefined, "The Chrome extension sends only the text you highlight, the page title, and the site name. It never reads form fields, balances, or account numbers."),
+    el("p", undefined, "The extension asks for one site permission, http://localhost:3000, so its Assets tab can read public prices and paper model stats from ATLAS running on your own computer. Nothing from that read leaves your computer. This web app never calls your computer."),
     el("p", undefined, "Firebase, a Google service, hosts the site, the database, and sign-in. If you link Google, Google receives the sign-in. Personal information is never sold or shared for advertising."),
     el("p", undefined, "Payments are off. No card number is collected. If payments are turned on later, Stripe would process the payment and this app would not store the card number. A future paid plan sold from Ontario may be subject to GST/HST. That is not tax advice."),
   ];

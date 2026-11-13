@@ -24,6 +24,7 @@
     "type": "module"
   },
   "permissions": ["activeTab", "contextMenus", "storage", "scripting"],
+  "host_permissions": ["http://localhost:3000/*"],
   "optional_permissions": ["sidePanel"],
   "side_panel": {
     "default_path": "popup.html"
