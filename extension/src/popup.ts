@@ -37,7 +37,10 @@ import { mountAssets, type AssetsPreview } from "../../src/wallet/assets-control
 import { el, labelledButton, prefersReducedMotion } from "../../src/wallet/dom";
 import { installErrorBoundary } from "../../src/wallet/error-boundary";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../src/wallet/shell";
+import { HISTORY_KEY, addToHistory, makeEntry, parseHistory, type HistoryEntry } from "../../src/core/history";
+import { LEARN_KEY, parseLearned } from "../../src/core/learn";
 import { pageKindLine } from "../../src/core/page-kind";
+import { historyCard, learnCard } from "../../src/wallet/history-learn";
 import { explainOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
 
@@ -57,8 +60,8 @@ if (!(host instanceof HTMLElement)) throw new Error("Missing #app");
 installErrorBoundary(host);
 
 const store = {
-  async get(): Promise<{ theme?: unknown; appCheckDebugToken?: unknown; onboarded?: unknown }> {
-    if (hasChrome) return chrome.storage.local.get(["theme", "appCheckDebugToken", "onboarded"]);
+  async get(): Promise<{ theme?: unknown; appCheckDebugToken?: unknown; onboarded?: unknown; history?: unknown; learned?: unknown }> {
+    if (hasChrome) return chrome.storage.local.get(["theme", "appCheckDebugToken", "onboarded", HISTORY_KEY, LEARN_KEY]);
     return {};
   },
   async set(patch: Record<string, unknown>): Promise<void> {
@@ -96,7 +99,33 @@ const result = el("div", "stack result");
 result.setAttribute("aria-live", "polite");
 const explainHead = el("div", "panel-title");
 explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
-shell.panels.explain.append(explainHead, question, buttons, result);
+// Recent explanations live in chrome.storage.local on this device. Never uploaded.
+const recentSlot = el("div");
+let history: HistoryEntry[] = [];
+shell.panels.explain.append(explainHead, question, buttons, result, recentSlot);
+
+function renderHistory(): void {
+  recentSlot.replaceChildren(historyCard({
+    entries: history,
+    onOpen: (entry) => {
+      question.value = entry.selection;
+      explainTyped.disabled = !entry.selection;
+      showExplanation(entry.text, entry.source, entry.selection, false, entry.contextLine);
+    },
+    onClear: () => {
+      history = [];
+      void store.set({ [HISTORY_KEY]: [] });
+      renderHistory();
+      shell.announce("Recent explanations cleared.");
+    },
+  }));
+}
+
+function remember(text: string, source: "on_device" | "in_cloud", selection: string, contextLine?: string): void {
+  history = addToHistory(history, makeEntry({ selection, text, source, contextLine }));
+  void store.set({ [HISTORY_KEY]: history });
+  renderHistory();
+}
 
 /* ---------- Assets tab ---------- */
 
@@ -145,16 +174,38 @@ shell.panels.signal.append(signalHead, signal.node);
 
 const glossaryHead = el("div", "panel-title");
 glossaryHead.append(el("h1", undefined, "Glossary"), el("span", "fine", "Plain language"));
+// Learn path progress is a list of term ids in chrome.storage.local.
+const learnSlot = el("div");
+let learned = new Set<string>();
+function askTerm(term: { title: string }): void {
+  question.value = `Explain "${term.title}" in plain language with a short example. Do not recommend a trade.`;
+  explainTyped.disabled = false;
+  shell.select("explain");
+  void run({ highlight: false, fromPage: false });
+}
+function renderLearn(): void {
+  learnSlot.replaceChildren(learnCard({
+    learned,
+    onAsk: askTerm,
+    onMark: (term) => {
+      learned = new Set([...learned, term.id]);
+      void store.set({ [LEARN_KEY]: [...learned] });
+      renderLearn();
+      shell.announce(`${term.title} marked as learned.`);
+    },
+    onReset: () => {
+      learned = new Set();
+      void store.set({ [LEARN_KEY]: [] });
+      renderLearn();
+    },
+  }));
+}
 shell.panels.glossary.append(
   glossaryHead,
+  learnSlot,
   glossaryPanel({
     askLabel: "Explain in more depth",
-    onAsk: (term) => {
-      question.value = `Explain "${term.title}" in plain language with a short example. Do not recommend a trade.`;
-      explainTyped.disabled = false;
-      shell.select("explain");
-      void run({ highlight: false, fromPage: false });
-    },
+    onAsk: askTerm,
   }),
 );
 
@@ -224,6 +275,14 @@ async function boot(): Promise<void> {
     void store.set({ theme: choice });
   }));
   if (typeof stored.appCheckDebugToken === "string") debugToken.value = stored.appCheckDebugToken;
+  history = parseHistory(stored.history);
+  learned = parseLearned(stored.learned);
+  if (!hasChrome) {
+    const done = preview.get("learned");
+    if (done) learned = parseLearned(done.split(","));
+  }
+  renderHistory();
+  renderLearn();
   if (!hasChrome) {
     startAssets(await previewAssets());
     applyPreviewState();
@@ -339,6 +398,11 @@ async function run(options: RunOptions): Promise<void> {
 }
 
 function answer(text: string, source: "on_device" | "in_cloud", selection: string, redacted: boolean, contextLine?: string): void {
+  remember(text, source, selection || question.value, contextLine);
+  showExplanation(text, source, selection, redacted, contextLine);
+}
+
+function showExplanation(text: string, source: "on_device" | "in_cloud", selection: string, redacted: boolean, contextLine?: string): void {
   setBusy(false);
   showResult(explanationCard({
     source,
