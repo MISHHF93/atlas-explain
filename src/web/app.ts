@@ -32,6 +32,7 @@ import { el, labelledButton, prefersReducedMotion } from "../wallet/dom";
 import { icon } from "../wallet/icons";
 import { extensionNodes, privacyNodes, termsNodes } from "../wallet/legal";
 import { canReachLocalAtlas } from "../core/assets";
+import { mayCallLocalAtlas, probeAtlasLocal } from "../connectors";
 import { loadDigest, todayToronto } from "../core/digest";
 import { digestCard } from "../wallet/digest";
 import { mountAssets } from "../wallet/assets-controller";
@@ -185,6 +186,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     assets = mountAssets({
       shell,
       canReachAtlas: canReachLocalAtlas(location, false),
+      onState: (state) => {
+        atlasLocal = state.kind === "ready" && !data;
+        updateConnection();
+      },
       preview: data
         ? {
             label: mode === "box"
@@ -265,12 +270,38 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   cardInput.addEventListener("input", () => renderMove());
   window.addEventListener("hashchange", () => applyHash(location.hash));
   window.addEventListener("message", onInboundMessage);
-  window.addEventListener("online", () => shell.setConnection("none"));
+  window.addEventListener("online", () => { void refreshLink(); });
   window.addEventListener("offline", () => shell.setConnection("offline"));
 
   let currentSignal: SignalView = mapSignal({ connected: false });
+  let atlasLocal = false;
+  const hosted = !mayCallLocalAtlas(location, false);
+
+  function updateConnection(): void {
+    if (!navigator.onLine) {
+      shell.setConnection("offline");
+      return;
+    }
+    if (currentSignal.connected) {
+      shell.setConnection("desk");
+      return;
+    }
+    if (hosted) {
+      shell.setConnection("hosted");
+      return;
+    }
+    shell.setConnection(atlasLocal ? "local" : "none");
+  }
+
+  async function refreshLink(): Promise<void> {
+    const link = await probeAtlasLocal({ allowed: !hosted });
+    atlasLocal = link.state === "local";
+    updateConnection();
+  }
+
   applySignal(currentSignal);
-  shell.setConnection(navigator.onLine ? "none" : "offline");
+  updateConnection();
+  void refreshLink();
   loadSample(SAMPLE_MOVES[0]);
   showResult(emptyCard("Pick a sample, paste a card, or open a move from the ATLAS desk. Then press Explain the move.", "Nothing is sent until you press Explain.", "Ready when you are"));
 
@@ -621,7 +652,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     currentSignal = view;
     signal.update(view);
     shell.setSignal(view);
-    shell.setConnection(!navigator.onLine ? "offline" : view.connected ? "desk" : "none");
+    updateConnection();
   }
 
   function setBusy(busy: boolean): void {

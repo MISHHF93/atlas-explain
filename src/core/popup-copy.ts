@@ -9,7 +9,7 @@ import {
 
 /** Words and states for the wallet popup. Education only: never trade instructions. */
 
-export type ConnectionState = "desk" | "local" | "none" | "offline";
+export type ConnectionState = "desk" | "local" | "hosted" | "none" | "offline";
 
 export interface SignalCopy {
   headline: string;
@@ -64,7 +64,10 @@ export function connectionCopy(state: ConnectionState): { label: string; title: 
   if (state === "desk") {
     return { label: "ATLAS desk", title: "This tab is the ATLAS Markets desk. Only its public paper signal is read." };
   }
-  return { label: "Not connected", title: "Open the ATLAS Markets desk in this tab to connect." };
+  if (state === "hosted") {
+    return { label: "Hosted app", title: "This web app never calls localhost. Install the ATLAS Explain extension and run ATLAS on this computer to connect." };
+  }
+  return { label: "Not connected", title: "Start ATLAS on this computer (localhost:3000). The extension and a local build connect automatically once it answers." };
 }
 
 export function whyQuestion(view: SignalView): string {
