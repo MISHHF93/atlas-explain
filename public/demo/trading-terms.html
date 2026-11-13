@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Demo chart notes: RSI, spreads and stop-limit orders · ATLAS Explain</title>
+    <meta name="description" content="A static practice page for trying ATLAS Explain's highlight-to-explain. No live prices, no accounts." />
+    <link rel="stylesheet" href="./demo.css" />
+  </head>
+  <body>
+    <header class="top">
+      <span class="brand">Practice chart notes</span>
+      <span class="tag">Static demo page · no live prices · no account</span>
+    </header>
+    <main class="grid">
+      <section class="chart" aria-label="Chart placeholder">
+        <div class="chart-head">
+          <strong>Example symbol</strong>
+          <span class="chips"><span>Candles</span><span>Volume</span><span>RSI (14)</span><span>Bollinger Bands</span></span>
+        </div>
+        <div class="chart-body" role="img" aria-label="Empty chart area. This demo page draws no prices."><span>Chart area (intentionally empty: this page shows no prices)</span></div>
+      </section>
+      <aside class="ticket" aria-label="Order ticket help">
+        <h2>Order ticket help</h2>
+        <p><b>Stop-limit order.</b> A stop-limit order becomes a limit order once the stop price trades. In a fast market it can stay unfilled if the price gaps through the limit.</p>
+        <p><b>Bid-ask spread.</b> The spread widened after the close, so a market order may fill away from the last quote.</p>
+        <p><b>Time in force.</b> Good-til-cancelled (GTC) orders stay working across sessions until they fill or are cancelled.</p>
+        <div class="account" aria-label="Account panel">
+          <h3>Account panel</h3>
+          <p>ATLAS Explain never reads this box. It only reads text you highlight yourself.</p>
+        </div>
+      </aside>
+      <section class="notes" aria-label="Chart notes">
+        <h2>Chart notes</h2>
+        <p>RSI(14) crossed above 70 while price tagged the upper Bollinger Band, a reading some chartists call overbought and others call strong momentum.</p>
+        <p>Implied volatility rose into the earnings date, so options were pricing in a bigger move without saying which direction.</p>
+        <p>The stock gapped down on heavy volume, then filled half of the gap by the close.</p>
+        <p class="fine">Try it: highlight any sentence above, right-click, and choose <b>Explain with ATLAS Explain</b>, or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>.</p>
+      </section>
+    </main>
+    <footer class="fine">Educational practice page for ATLAS Explain. Not investment advice.</footer>
+  </body>
+</html>
