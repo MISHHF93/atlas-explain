@@ -8,6 +8,8 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    // Firebase is a lazy chunk loaded only for cloud fallback, so the popup itself stays small.
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       input: {
         popup: resolve("extension/popup.html"),

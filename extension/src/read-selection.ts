@@ -1,18 +1,22 @@
-const LOAD = "atlas-explain/v1/load";
-const REQUEST = "atlas-explain/v1/request-context";
-
 /**
  * Injected only after the popup opens. Recognises the ATLAS desk and asks it
  * for the public v1 payload. Does not read form fields or balances.
+ *
+ * chrome.scripting serialises this function on its own, so every constant it
+ * uses must live inside the function body.
  */
 export function probeAtlasDesk(): Promise<{ connected: boolean; payload: unknown }> {
-  const product = document.documentElement.getAttribute("data-atlas-product");
-  if (product !== "atlas-desk") return Promise.resolve({ connected: false, payload: null });
+  const LOAD = "atlas-explain/v1/load";
+  const REQUEST = "atlas-explain/v1/request-context";
+  const marked =
+    document.documentElement.getAttribute("data-atlas-product") === "atlas-desk" ||
+    document.querySelector('[data-atlas-product="atlas-desk"]') !== null;
+  if (!marked) return Promise.resolve({ connected: false, payload: null });
   return new Promise((resolve) => {
     const timer = window.setTimeout(() => {
       window.removeEventListener("message", onMessage);
       resolve({ connected: true, payload: null });
-    }, 400);
+    }, 1_500);
     function onMessage(event: MessageEvent) {
       if (event.source !== window) return;
       const data = event.data as { type?: string; payload?: unknown } | null;
