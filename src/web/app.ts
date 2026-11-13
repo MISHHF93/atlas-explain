@@ -40,6 +40,10 @@ import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wal
 import { twoSidedNodes } from "../wallet/two-sided";
 import { engineStrip } from "../wallet/engine";
 import { todayRow } from "../wallet/today-row";
+import { marketDigestCard } from "../wallet/market-digest";
+import { buildMarketDigest } from "../core/market-digest";
+import type { CatalogView } from "../core/assets";
+import type { DigestView } from "../core/digest";
 import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../core/follow-ups";
 import { isEngineState } from "../core/hybrid-engine";
 
@@ -141,11 +145,27 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   explainHead.append(el("h1", undefined, "Explain a move"), el("span", "fine", "Education only"));
   const engine = engineStrip({ compact: true });
   const brief = digestCard();
-  const today = todayRow(() => shell.openSheet("Today's digest", [brief.node]));
+  // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
+  let marketCatalog: CatalogView | null = null;
+  let briefView: DigestView = { kind: "loading" };
+  let marketCard: HTMLElement | null = null;
+  const today = todayRow(() => {
+    marketCard = marketDigestCard(buildMarketDigest(marketCatalog));
+    shell.openSheet("Today's digest", [marketCard, brief.node]);
+  });
+  const refreshToday = (): void => {
+    today.show(briefView, marketCatalog != null);
+    // If the digest sheet is open when ATLAS answers, swap in the fresh card.
+    if (marketCard?.isConnected) {
+      const next = marketDigestCard(buildMarketDigest(marketCatalog));
+      marketCard.replaceWith(next);
+      marketCard = next;
+    }
+  };
   void (canReachLocalAtlas(location, false)
     ? loadDigest()
     : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
-  ).then((v) => { brief.show(v); today.show(v); });
+  ).then((v) => { briefView = v; brief.show(v); refreshToday(); });
 
   shell.panels.explain.append(
     explainHead,
@@ -195,6 +215,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       canReachAtlas: canReachLocalAtlas(location, false),
       onState: (state) => {
         atlasLocal = state.kind === "ready" && !data;
+        if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !data ? state.catalog : null;
+        refreshToday();
         updateConnection();
       },
       preview: data
