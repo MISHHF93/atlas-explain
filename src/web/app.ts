@@ -36,6 +36,7 @@ import { loadDigest, todayToronto } from "../core/digest";
 import { digestCard } from "../wallet/digest";
 import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
+import { twoSidedNodes } from "../wallet/two-sided";
 
 const THEME_KEY = "atlas-explain-theme";
 const ONBOARDED_KEY = "atlas-explain-onboarded";
@@ -507,14 +508,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function runCard(run: ExplanationRun): HTMLElement {
     const ex = run.explanation;
-    const body: Node[] = [el("p", "summary-line", ex.summary)];
-    body.push(caseBlock("up", "Why a buyer might see opportunity", ex.buyerReasons));
-    body.push(caseBlock("down", "Why a seller might see risk", ex.sellerReasons));
-    const change = el("div", "case");
-    const changeHead = el("h3");
-    changeHead.append(icon("refresh", 14), el("span", undefined, "What would change the picture"));
-    change.append(changeHead, el("p", "fine strong", ex.whatWouldChange));
-    body.push(change);
+    const body: Node[] = twoSidedNodes(ex);
     if (ex.headlineTopics.length > 0) {
       const topics = el("div", "chips");
       for (const item of ex.headlineTopics) {
@@ -536,16 +530,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       notes,
       onClear: () => showResult(emptyCard("Pick another sample or edit the card, then explain again.", undefined, "Cleared")),
     });
-  }
-
-  function caseBlock(dir: "up" | "down", title: string, reasons: string[]): HTMLElement {
-    const block = el("section", "case");
-    const head = el("h3");
-    head.append(icon(dir, 14), el("span", undefined, title));
-    const list = el("ol");
-    for (const reason of reasons) list.append(el("li", undefined, reason));
-    block.append(head, list);
-    return block;
   }
 
   async function loadHistory(): Promise<void> {
