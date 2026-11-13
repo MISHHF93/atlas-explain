@@ -123,10 +123,10 @@ Sign in once:
 npx firebase-tools login
 ```
 
-Build, then deploy hosting, rules, and Remote Config:
+Run the release gate, then deploy hosting, rules, and Remote Config:
 
 ```bash
-npm run build
+npm run release:check   # typecheck, lint, test, both builds, manifest, bundle budget, audit, trade-word scan
 npx firebase-tools deploy --only hosting,firestore:rules,remoteconfig
 ```
 
@@ -213,18 +213,17 @@ Load it unpacked:
 5. The reCAPTCHA key does not include `chrome-extension://` origins. For a cloud fallback while unpacked, register an App Check debug token and paste it into **Settings → AI** in the popup.
 6. To light the signal, open the ATLAS Markets desk (`http://localhost:3000/markets`) in the active tab, then click the toolbar icon. The desk answers the popup's `atlas-explain/v1/request-context` message with its public payload. Only `lean`, `hitRate`, `sampleSize`, and `reason` are read.
 
-`npm run build:extension` writes `extension/atlas-explain-chrome.zip`. For the Chrome Web Store, upload that zip. Listing images are in `extension/store/`. The identity is documented in [docs/BRAND.md](docs/BRAND.md). The listing should say the extension is educational and not investment advice. Do not ship an App Check debug token in the store build.
+`npm run build:extension` writes `extension/atlas-explain-chrome.zip`. For a Chrome Web Store release, bump the version with `npm version <x.y.z>` (it updates `extension/manifest.json` too), then `npm run release:extension` writes `release/atlas-explain-chrome-v<x.y.z>.zip` and its `.sha256`; upload that zip. Listing images are in `extension/store/`. The identity is documented in [docs/BRAND.md](docs/BRAND.md). The listing should say the extension is educational and not investment advice. Do not ship an App Check debug token in the store build.
 
 The popup opens like a wallet menu that drops down from the toolbar, with Explain, Signal, Glossary, and Settings tabs. The hosted web app shows the same wallet, centred. Explanations of highlighted text appear in the same popup, with loading, empty, error, and offline states. The layout, motion, and icon rules are in [docs/BRAND.md](docs/BRAND.md). A signal light at the top stays grey unless a shadow model has cleared the evidence gate. Today none have, so the honest state is grey, or "connect ATLAS" when the desk tab is not open. The light never says buy or sell.
 
 ## Tests and CI
 
 ```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
+npm run release:check
 ```
+
+That one command runs the Node version check, typecheck, lint, tests, the web and extension builds, the manifest least-privilege check, the bundle budget (every chunk ≤ 500 kB, popup ≤ 120 kB), `npm audit` (must be 0) and the trade-word scan, and stops at the first failure. Hosting sends a strict CSP and security headers from `firebase.json`. Node `^22.12 || ^24` (`.nvmrc` = 24). Audit overrides are explained in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
 Unit tests cover move-card validation, prompt building, the taxonomy parser, inference-path selection, the explain retry that drops private notes, and the Firebase AI Logic calls with `firebase/ai` mocked. GitHub Actions (`.github/workflows/ci.yml`) runs the same steps on Node 22.
 
