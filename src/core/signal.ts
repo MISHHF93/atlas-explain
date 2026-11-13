@@ -28,6 +28,8 @@ export interface SignalView {
   sampleLabel: string;
   paperLabel: string;
   connected: boolean;
+  /** The desk's own plain-language reason, kept only when it has no trade wording. */
+  deskReason?: string;
 }
 
 const TRADE_WORD = /\b(buy|sell|short|hold)\b/i;
@@ -57,9 +59,24 @@ export function mapSignal(input: {
     (lean !== "up" && lean !== "down") ||
     hasTradeWord(signal.reason);
 
-  if (thin) return view("grey", NOT_ENOUGH_EVIDENCE, hit, sample, true);
+  const deskReason = cleanReason(signal?.reason);
+  if (thin) return withReason(view("grey", NOT_ENOUGH_EVIDENCE, hit, sample, true), deskReason);
 
-  return view(lean === "up" ? "green" : "red", lean === "up" ? LEANS_UP : LEANS_DOWN, hit, sample, true);
+  return withReason(
+    view(lean === "up" ? "green" : "red", lean === "up" ? LEANS_UP : LEANS_DOWN, hit, sample, true),
+    deskReason,
+  );
+}
+
+function cleanReason(reason: string | undefined): string | undefined {
+  if (typeof reason !== "string" || hasTradeWord(reason)) return undefined;
+  const flat = reason.replace(/\s+/g, " ").trim();
+  if (!flat) return undefined;
+  return flat.length > 280 ? `${flat.slice(0, 279)}…` : flat;
+}
+
+function withReason(base: SignalView, deskReason: string | undefined): SignalView {
+  return deskReason ? { ...base, deskReason } : base;
 }
 
 /** Read only the public signal fields. Ignore every other key. */

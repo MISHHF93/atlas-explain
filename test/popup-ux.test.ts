@@ -95,3 +95,9 @@ describe("wallet popup design rules", () => {
     }
   });
 });
+
+describe("hidden attribute", () => {
+  it("wins over component display rules, so hidden links and the closed sheet stay hidden", () => {
+    expect(css).toMatch(/\[hidden\]\s*\{\s*display: none !important;\s*\}/);
+  });
+});
