@@ -35,8 +35,10 @@ describe("auth wiring", () => {
   const rules = readFileSync("firestore.rules", "utf8");
 
   it("never replaces a signed-in account with a new anonymous one", () => {
-    expect(backend).toContain("await auth.authStateReady();");
-    expect(backend).toMatch(/if \(auth\.currentUser\) return auth\.currentUser\.uid;/);
+    const service = readFileSync("src/platform/web/explain-service.ts", "utf8");
+    expect(service).toContain("await auth.authStateReady();");
+    expect(service).toMatch(/if \(auth\.currentUser\) return auth\.currentUser\.uid;/);
+    expect(backend).toContain("const currentUserId = createUserId(auth);");
   });
 
   it("uses popup first, redirect as fallback, and links the anonymous uid", () => {
