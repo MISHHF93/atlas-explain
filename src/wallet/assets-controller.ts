@@ -10,8 +10,7 @@ import {
   type AssetsState,
   type Fetcher,
 } from "../core/assets";
-import { assetFromLiveRow, type Asset } from "../core/asset-schema";
-import { RECENT_KEY, addRecent, assetsFromLiveCatalog, explainAssetPrompt, findAsset, readRecent } from "../core/catalog";
+import type { Asset } from "../core/asset-schema";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../core/price-feed";
 import { assetDetail, assetsPanel, sparkSpan } from "./assets";
 import type { CatalogPanelHandle } from "./catalog-view";
@@ -62,7 +61,8 @@ export function mountAssets(options: {
   async function ui(): Promise<typeof import("./catalog-view")> {
     catalogUi ??= await import("./catalog-view");
     if (!catalog) {
-      catalog = catalogUi.catalogPanel({ onOpen: (a) => void openPublic(a), onRetry: () => void refresh(), recent: readRecentIds });
+      const v = catalogUi;
+      catalog = v.catalogPanel({ onOpen: (a) => void openPublic(a), onRetry: () => void refresh(), recent: () => readRecentIds(v) });
       publicSlot.append(catalog.node);
     }
     return catalogUi;
@@ -85,7 +85,7 @@ export function mountAssets(options: {
         panel.node.hidden = false;
         panel.update(last);
       } else if (last.kind === "ready") {
-        publicAssets = assetsFromLiveCatalog(last.catalog);
+        publicAssets = (await ui()).assetsFromLiveCatalog(last.catalog);
         await showPublic({ kind: "ready", assets: publicAssets });
       } else if (last.kind === "error" || last.kind === "not_connected" || last.kind === "hosted") {
         await showPublic({ kind: "error", title: last.kind === "error" && last.title ? last.title : "Prices couldn't be loaded", reason: last.kind === "error" || last.kind === "not_connected" ? last.reason : "Try again in a minute." });
@@ -135,13 +135,13 @@ export function mountAssets(options: {
   async function openPublic(a: Asset): Promise<void> {
     const view = await ui();
     openKey = a.id;
-    writeRecent(a.id);
+    writeRecent(view, a.id);
     catalog?.refreshRecent();
     options.onOpen?.(a.symbol);
     const page = view.assetPage(a, {
       onExplain: (x) => {
         shell.closeSheet();
-        options.onExplain(explainAssetPrompt(x));
+        options.onExplain(view.explainAssetPrompt(x));
       },
       onTerm: (title) => {
         shell.closeSheet();
@@ -157,7 +157,7 @@ export function mountAssets(options: {
       const d = await mod.loadLiveDetail(a.symbol, options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher);
       if (openKey !== a.id) return;
       if (d) {
-        const fresh = assetFromLiveRow(d, source);
+        const fresh = view.assetFromLiveRow(d, source);
         if (fresh) page.update(fresh);
         page.setSpark(d.spark.points, sparkSpan(d.spark.points.length, d.spark.interval));
       }
@@ -205,7 +205,7 @@ export function mountAssets(options: {
       await openAtlasAsset(a);
       return true;
     }
-    const a = findAsset(publicAssets, key);
+    const a = (await ui()).findAsset(publicAssets, key);
     if (!a) return false;
     await openPublic(a);
     return true;
@@ -222,17 +222,19 @@ export function mountAssets(options: {
   return { refresh, open };
 }
 
-function readRecentIds(): string[] {
+type CatalogUi = typeof import("./catalog-view");
+
+function readRecentIds(v: CatalogUi): string[] {
   try {
-    return readRecent(localStorage.getItem(RECENT_KEY));
+    return v.readRecent(localStorage.getItem(v.RECENT_KEY));
   } catch {
     return [];
   }
 }
 
-function writeRecent(id: string): void {
+function writeRecent(v: CatalogUi, id: string): void {
   try {
-    localStorage.setItem(RECENT_KEY, JSON.stringify(addRecent(readRecentIds(), id)));
+    localStorage.setItem(v.RECENT_KEY, JSON.stringify(v.addRecent(readRecentIds(v), id)));
   } catch {
     // Private mode: recently viewed lasts for this visit only.
   }

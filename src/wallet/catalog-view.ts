@@ -18,6 +18,10 @@ import {
   type ClassFilter,
 } from "../core/catalog";
 import { ALL_TERMS } from "../core/terms";
+
+/** Everything the public catalog needs, in this one lazily loaded chunk (keeps popup.js small). */
+export { assetFromLiveRow } from "../core/asset-schema";
+export { RECENT_KEY, addRecent, assetsFromLiveCatalog, explainAssetPrompt, findAsset, readRecent } from "../core/catalog";
 import { el, labelledButton } from "./dom";
 import { icon } from "./icons";
 
