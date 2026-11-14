@@ -19,3 +19,19 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run build:extension
+
+  # Firestore security rules against the real rules engine (Firestore emulator, Java 21).
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run test:rules

@@ -21,13 +21,15 @@
     "version": "node scripts/sync-manifest-version.mjs && git add extension/manifest.json",
     "check:bundle": "node scripts/bundle-budget.mjs",
     "check:trade-words": "node scripts/trade-word-scan.mjs",
-    "release:check": "node scripts/release-check.mjs"
+    "release:check": "node scripts/release-check.mjs",
+    "test:rules": "npx --yes firebase-tools@15.36.0 emulators:exec --only firestore --project demo-atlas-explain \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
     "firebase": "^13.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@types/chrome": "^0.3.7",
     "eslint": "^10.14.0",
     "typescript": "^6.0.3",
