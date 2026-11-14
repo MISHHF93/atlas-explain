@@ -40,7 +40,7 @@ export interface WalletShell {
   setConnection(state: ConnectionState): void;
   /** Header account chip. Hidden until an account handler is passed to the shell. */
   setAccount(view: AccountView | null): void;
-  /** Shows or hides a tab in the navigation. A hidden current tab falls back to the first visible one. */
+  /** Shows or hides a tab in the navigation. A hidden current tab falls back to the first visible one. Tabbed layout only. */
   setTabHidden(tab: TabId, hidden: boolean): void;
   setMenuItemHidden(id: string, hidden: boolean): void;
   openSheet(title: string, nodes: Node[]): void;
@@ -68,12 +68,21 @@ export function createWalletShell(options: {
   onStatus?: () => void;
   /** Called after the slide-in sheet closes (Back, Escape or closeSheet()). */
   onSheetClose?: () => void;
+  /**
+   * "tabs" (default) shows one panel at a time. "page" stacks every panel in `tabs` on one
+   * scrolling page; the navigation then jumps between sections and follows the scroll position.
+   */
+  layout?: "tabs" | "page";
+  /** Page layout only: the section in view changed because the visitor scrolled. */
+  onSection?: (tab: TabId) => void;
 }): WalletShell {
+  const paged = options.layout === "page";
   const tabs = options.tabs ?? TABS;
   const firstTab: TabId = options.initialTab ?? tabs[0]?.id ?? "explain";
   const frame = el("div", "wallet");
   frame.dataset.surface = options.surface;
   frame.dataset.tab = firstTab;
+  if (paged) frame.dataset.layout = "page";
 
   /* header */
   const header = el("header", "bar");
@@ -157,15 +166,23 @@ export function createWalletShell(options: {
   body.addEventListener("scroll", () => {
     const scrolled = body.scrollTop > 4 ? "true" : "false";
     if (frame.dataset.scrolled !== scrolled) frame.dataset.scrolled = scrolled;
+    if (paged) followScroll();
   }, { passive: true });
   const panels = {} as Record<TabId, HTMLElement>;
-  for (const id of ALL_TAB_IDS) {
+  const isSection = (id: TabId): boolean => tabs.some((t) => t.id === id);
+  // Page layout: sections sit in navigation order; panels that are not sections stay hidden.
+  const panelOrder = paged ? [...tabs.map((t) => t.id), ...ALL_TAB_IDS.filter((id) => !isSection(id))] : ALL_TAB_IDS;
+  for (const id of panelOrder) {
     const panel = el("section", "panel");
     panel.id = `panel-${id}`;
-    panel.setAttribute("role", "tabpanel");
-    if (tabs.some((t) => t.id === id)) panel.setAttribute("aria-labelledby", `tab-${id}`);
+    if (!paged) {
+      panel.setAttribute("role", "tabpanel");
+      if (isSection(id)) panel.setAttribute("aria-labelledby", `tab-${id}`);
+    }
     panel.tabIndex = -1;
-    panel.hidden = id !== firstTab;
+    panel.hidden = paged ? !isSection(id) : id !== firstTab;
+    // The last section is given room so a jump to it can bring its title to the top.
+    if (paged && id === tabs[tabs.length - 1]?.id) panel.classList.add("panel-last");
     panels[id] = panel;
     body.append(panel);
   }
@@ -175,14 +192,14 @@ export function createWalletShell(options: {
   nav.setAttribute("aria-label", "ATLAS Explain");
   const list = el("div", "tabbar-list");
   list.style.setProperty("--tab-count", String(tabs.length));
-  list.setAttribute("role", "tablist");
+  if (!paged) list.setAttribute("role", "tablist");
   const tabButtons = new Map<TabId, HTMLButtonElement>();
   const hiddenTabs = new Set<TabId>();
   for (const tab of tabs) {
     const button = el("button", "tab");
     button.type = "button";
     button.id = `tab-${tab.id}`;
-    button.setAttribute("role", "tab");
+    if (!paged) button.setAttribute("role", "tab");
     button.setAttribute("aria-controls", `panel-${tab.id}`);
     button.dataset.tab = tab.id;
     button.append(icon(tab.icon, 20), el("span", undefined, tab.label));
@@ -243,11 +260,48 @@ export function createWalletShell(options: {
   frame.append(header, body, foot, nav, sheet, overlaySlot, live);
   options.host.append(frame);
 
-  let current: TabId = firstTab;
+  let current: TabId = paged && !isSection(firstTab) ? tabs[0]?.id ?? firstTab : firstTab;
   let sheetReturn: HTMLElement | null = null;
+  /** While a jump is scrolling, the scroll position must not move the highlight back. */
+  let jumpUntil = 0;
   markTabs();
 
+  /** Page layout: the section whose top has passed the top of the scroll area (the last one at the very bottom). */
+  function sectionInView(): TabId {
+    const shown = tabs.map((t) => t.id);
+    if (body.scrollTop + body.clientHeight >= body.scrollHeight - 4 && body.scrollTop > 0) return shown[shown.length - 1] ?? current;
+    const line = body.getBoundingClientRect().top + 96;
+    let found = shown[0] ?? current;
+    for (const id of shown) if (panels[id].getBoundingClientRect().top <= line) found = id;
+    return found;
+  }
+
+  function followScroll(): void {
+    if (Date.now() < jumpUntil) return;
+    const tab = sectionInView();
+    if (tab === current) return;
+    current = tab;
+    frame.dataset.tab = tab;
+    markTabs();
+    options.onSection?.(tab);
+  }
+
   function select(tab: TabId, opts: { focus?: boolean } = {}): void {
+    if (paged) {
+      // Not a section (for example Account, which opens as a sheet): nothing to scroll to.
+      if (!isSection(tab)) return;
+      const changed = tab !== current;
+      current = tab;
+      frame.dataset.tab = tab;
+      markTabs();
+      jumpUntil = Date.now() + 900;
+      // Instant, not smooth: a smooth scroll is cancelled when late content changes the page height.
+      if (tab === tabs[0]?.id) body.scrollTo({ top: 0, behavior: "instant" });
+      else panels[tab].scrollIntoView({ block: "start", behavior: "instant" });
+      if (opts.focus) panels[tab].focus({ preventScroll: true });
+      if (changed) options.onSelect?.(tab);
+      return;
+    }
     if (tab === current) {
       if (opts.focus) panels[tab].focus();
       return;
@@ -273,8 +327,14 @@ export function createWalletShell(options: {
     shown.forEach((tab, index) => {
       const button = tabButtons.get(tab.id);
       const on = tab.id === current;
-      button?.setAttribute("aria-selected", on ? "true" : "false");
-      if (button) button.tabIndex = on ? 0 : -1;
+      if (paged) {
+        // Section links, not tabs: every one stays reachable with Tab.
+        if (on) button?.setAttribute("aria-current", "true");
+        else button?.removeAttribute("aria-current");
+      } else {
+        button?.setAttribute("aria-selected", on ? "true" : "false");
+        if (button) button.tabIndex = on ? 0 : -1;
+      }
       if (on) indicator.style.setProperty("--tab-index", String(index));
     });
   }

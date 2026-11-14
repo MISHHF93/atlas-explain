@@ -59,6 +59,11 @@ export function catalogPanel(options: {
   onRetry: () => void;
   recent: () => string[];
   watchlist?: WatchView;
+  /**
+   * With "All" and no search, show only the watchlist and the assets that have a live price,
+   * then say how to see the rest. Keeps a long page short; nothing is removed from the catalog.
+   */
+  compact?: boolean;
 }): CatalogPanelHandle {
   const wrap = el("div", "stack catalog");
   const searchWrap = el("label", "search");
@@ -165,7 +170,15 @@ export function catalogPanel(options: {
       return;
     }
     // All, no search: one calm section per class. Otherwise one list, with the class intro when filtered.
-    if (klass === "all" && !query.trim()) {
+    if (klass === "all" && !query.trim() && options.compact) {
+      const mine = watched(assets);
+      const priced = rows.filter((a) => a.class === "crypto");
+      const rest = assets.length - priced.length;
+      const hint = el("p", "fine catalog-more", rest > 0
+        ? `${rest} more: stocks, funds, currencies, rates and explainers. Search above or pick a category to see them.`
+        : "");
+      body.replaceChildren(...noticeNode, ...(mine.length ? [watchSection(mine)] : []), ...groupByClass(priced).map((g) => section(g.klass, g.assets)), ...(rest > 0 ? [hint] : []));
+    } else if (klass === "all" && !query.trim()) {
       const mine = watched(assets);
       body.replaceChildren(...noticeNode, ...(mine.length ? [watchSection(mine)] : []), ...groupByClass(rows).map((g) => section(g.klass, g.assets)));
     } else if (klass === "watch") {

@@ -27,22 +27,21 @@ The rules do not change: education only (no buy/sell wording), selected text onl
 | `/support` | `support.html` | Support channels (GitHub issues, privacy requests), full FAQ (`#faq`), troubleshooting |
 | `/privacy`, `/terms` | static | Full legal drafts, marked **Draft · not final** |
 | `/download/atlas-explain-chrome.zip` | build output | The same zip as the store upload, until the listing is live |
-| `/app` | `app.html` (one lazy app bundle) | **Today**: market digest, today's brief, paper signal light, next steps |
-| `/app/explain` | app | Explain (rebuilt in phase 3) |
-| `/app/assets`, `/app/assets/:symbol` | app | Catalog; each asset has its own address (detail opens over the list) |
-| `/app/learn` | app | Glossary and learn path |
-| `/app/account` | app | Plan, sign-in state, appearance, AI, legal, about |
-| `/signin` | app | Sign-in (Google, email link); `?next=/app/...` returns there |
+| `/app` | `app.html` (one lazy app bundle) | **The one-page app (since 14 Nov 2026).** Sections in order: Explain, Today, Learn, Assets. `/app` is the top (Explain); `/app/explain` still works |
+| `/app/today` | app | Scrolls to Today: live crypto movers (and the ATLAS blocks for the owner) |
+| `/app/learn` | app | Scrolls to Learn: six terms, then "Show all" |
+| `/app/assets`, `/app/assets/:symbol` | app | Scrolls to Assets: watchlist and live-priced assets; the rest appears on search or a category. Each asset opens as a sheet with its own address |
+| `/app/account`, `/signin` | app | The account sheet: sign-in, plan, appearance, your data, legal, about. `?next=/app/...` returns there after sign-in |
 | anything else | `404.html` / in-app not-found | Real 404 status on the site; "Page not found" sheet inside `/app` |
 
-Old links keep working: `/#c=…` (ATLAS desk move links) → `/app/explain#c=…`; `/?account=open` (old extension builds) → `/signin`; `/?signin=email&oobCode=…` (email links already sent) → `/signin?…`; preview flags (`?tab=`, `?demo=`, …) → the matching `/app` route; `#/privacy`, `#/terms` → the pages. Logic in `src/app/routes.ts`, tested in `test/routes.test.ts`.
+Old links keep working: `/#c=…` (ATLAS desk move links) → `/app#c=…`; `/?account=open` (old extension builds) → `/signin`; `/?signin=email&oobCode=…` (email links already sent) → `/signin?…`; preview flags (`?tab=`, `?demo=`, …) → the matching `/app` route; `#/privacy`, `#/terms` → the pages. Logic in `src/app/routes.ts`, tested in `test/routes.test.ts`.
 
 Hosting: explicit rewrites only (`/app`, `/app/**`, `/signin` → `app.html`; clean URLs for site pages). No catch-all, so unknown paths get `404.html` with a 404 status. All HTML and route paths are `no-cache`; hashed assets stay immutable. `bridge.html` is unchanged for the extension.
 
 ## 3. Screens (wireframe notes)
 
 - **Landing (`/`).** Sticky header: logo · How it works · Web app · Support · Privacy · [Add to Chrome]. Hero left: tag, serif headline "Select any market term. Get it in plain language.", one-line lede, [Add to Chrome] (primary, large) + [Try it in your browser], fine print "store listing coming soon". Hero right: real popup screenshot. Then: 3-step flow cards; hybrid diagram; three popup screenshots with captions; privacy bullets; 4 FAQ items; closing CTA band; footer with disclaimer and links. Phone: single column, nav collapses to the header CTA + footer links.
-- **App shell (`/app/**`).** Phone (360px+): header (logo, connection pill, account, menu), one scrolling column, bottom tabs Today · Explain · Assets · Learn · Account, safe-area padding. Desktop (900px+): header across, left rail with the same five items, centred 46rem reading column, sheets become a 34rem right drawer, onboarding becomes a centred dialog.
+- **App shell (`/app/**`).** One scrolling page (`layout: "page"` in `src/wallet/shell.ts`; the extension popup keeps tabs). Phone (360px+): header (logo, connection pill, account, menu), the page, and a bottom bar of section links Explain · Today · Learn · Assets, safe-area padding. The link for the section in view is marked as you scroll, and the address follows without adding history. Account is the header button, not a section. Desktop (900px+): header across, left rail with the same four links, centred 46rem reading column, sheets become a 34rem right drawer, onboarding becomes a centred dialog.
 - **Today.** Title + date; market digest card (grounded only in live ATLAS; otherwise "Connect ATLAS… nothing is estimated"); today's brief (ready / not ready with reason); paper signal light (grey, withheld); "Explain a move or a term", "Get the Chrome extension".
 - **Explain (phase 3 target).** One input "Paste or type a term, sentence or move" with Explain; engine line (On-device / Cloud, why); answer card (plain answer, two sides, what would change, source of engine); follow-ups (Simpler · Example · Why it matters); related terms; Save → History panel (right column on desktop, below on phone). Move cards from the desk still load through `#c=`.
 - **Assets / asset detail.** Rows: symbol badge, name, sparkline, price, change with window, source + time, status light with one-line reason. Detail: price, chart, what moved, filings and news (when ATLAS provides per-symbol data; otherwise "not connected"), "Why is the light grey?" in plain words, Explain this.

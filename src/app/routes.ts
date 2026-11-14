@@ -2,8 +2,9 @@
  * Route map for atlas-explain.web.app. Pure functions, no DOM, so they are unit tested.
  *
  * Public site (static HTML, no app JavaScript):  /  /how-it-works  /privacy  /terms  (404.html for the rest)
- * App (one lazy-loaded bundle, app.html):        /app  /app/explain  /app/assets  /app/assets/:symbol
- *                                                /app/learn  /app/account  /signin
+ * App (one lazy-loaded bundle, app.html), one scrolling page with a section per address:
+ *   /app (Explain)  /app/today  /app/learn  /app/assets  /app/assets/:symbol (sheet)
+ *   /app/account and /signin (the account sheet)
  */
 
 export type AppTab = "today" | "explain" | "assets" | "glossary" | "settings";
@@ -14,10 +15,10 @@ export type AppRoute =
   | { kind: "signin" }
   | { kind: "not_found"; path: string };
 
-/** Path segment for each tab. "glossary" and "settings" keep their internal ids but read as Learn and Account. */
+/** Address of each section. "glossary" and "settings" keep their internal ids but read as Learn and Account. */
 export const TAB_PATHS: Record<AppTab, string> = {
-  today: "/app",
-  explain: "/app/explain",
+  explain: "/app",
+  today: "/app/today",
   assets: "/app/assets",
   glossary: "/app/learn",
   settings: "/app/account",
@@ -25,9 +26,9 @@ export const TAB_PATHS: Record<AppTab, string> = {
 
 /** Old or alternative paths that land on a tab. */
 const ALIASES: Record<string, AppTab> = {
-  "/app/today": "today",
+  "/app/explain": "explain",
   "/app/digest": "today",
-  "/app/home": "today",
+  "/app/home": "explain",
   "/app/glossary": "glossary",
   "/app/settings": "settings",
   "/app/signal": "today",
@@ -79,7 +80,7 @@ export function tabFor(route: AppRoute): AppTab {
   if (route.kind === "tab") return route.tab;
   if (route.kind === "asset") return "assets";
   if (route.kind === "signin") return "settings";
-  return "today";
+  return "explain";
 }
 
 export function titleFor(route: AppRoute): string {
@@ -129,7 +130,7 @@ export function legacyRedirect(loc: { pathname: string; search: string; hash: st
     return `/signin${q ? `?${q}` : ""}${hash}`;
   }
   const tab = params.get("tab");
-  const base = tab && LEGACY_TABS[tab] ? LEGACY_TABS[tab] : hasContext ? TAB_PATHS.explain : TAB_PATHS.today;
+  const base = tab && LEGACY_TABS[tab] ? LEGACY_TABS[tab] : TAB_PATHS.explain;
   const q = params.toString();
   return `${base}${q ? `?${q}` : ""}${hash}`;
 }

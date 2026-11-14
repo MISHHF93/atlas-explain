@@ -63,12 +63,12 @@ import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
 import { RECENT_KEY, readRecent } from "../core/recent";
 
 /** Navigation for the full-page app. Internal ids stay stable; labels read as a product. */
+/** The sections of the one-page app, in reading order. Account and settings open from the header as a sheet. */
 export const APP_TABS: readonly TabDef[] = [
-  { id: "today", label: "Today", icon: "signal" },
   { id: "explain", label: "Explain", icon: "sparkle" },
-  { id: "assets", label: "Assets", icon: "coins" },
+  { id: "today", label: "Today", icon: "signal" },
   { id: "glossary", label: "Learn", icon: "book" },
-  { id: "settings", label: "Account", icon: "user" },
+  { id: "assets", label: "Assets", icon: "coins" },
 ];
 
 const THEME_KEY = "atlas-explain-theme";
@@ -82,8 +82,9 @@ export interface WebWalletOptions {
 }
 
 /**
- * The hosted ATLAS Explain app at /app: the same wallet parts as the extension, laid out
- * full-page (side rail on desktop, bottom tabs on phones) with one address per screen.
+ * The hosted ATLAS Explain app at /app: the same wallet parts as the extension, laid out as
+ * one scrolling page (Explain first, then Today, Learn and Assets). The side rail on desktop
+ * and the bottom bar on phones jump between sections; each section keeps its own address.
  */
 export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): void {
   host.replaceChildren();
@@ -91,24 +92,36 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   let backend: WebBackend | null = null;
   let backendError: string | null = null;
   let route: AppRoute = parseRoute(location.pathname);
-  /** True while the app follows the address bar, so tab changes do not push history again. */
+  /** True while the app follows the address bar, so section changes do not push history again. */
   let following = false;
+  /** Set once the visitor scrolls or jumps, so late-loading content never moves them again. */
+  let moved = false;
 
   const shell = createWalletShell({
     host,
     surface: "app",
     tabs: APP_TABS,
+    layout: "page",
     initialTab: tabFor(route),
-    onAccount: () => navigate({ kind: "signin" }),
+    onAccount: () => navigate({ kind: "tab", tab: "settings" }),
     onStatus: () => shell.select("today", { focus: true }),
     onSelect: (tab) => {
-      if (!following) navigate({ kind: "tab", tab: tab as AppTab });
+      moved = true;
+      if (!following) navigate({ kind: "tab", tab: tab as AppTab }, { scroll: false });
     },
+    // Scrolling into a section updates the address quietly, without adding history entries.
+    onSection: (tab) => {
+      moved = true;
+      if (route.kind !== "tab" || route.tab === "settings") return;
+      route = { kind: "tab", tab: tab as AppTab };
+      history.replaceState(null, "", pathFor(route));
+      document.title = titleFor(route);
+    },
+    // Closing a sheet returns the address to the section underneath, without scrolling the page.
     onSheetClose: () => {
       if (following) return;
-      if (route.kind === "asset") navigate({ kind: "tab", tab: "assets" }, { replace: true });
-      else if (route.kind === "signin") navigate({ kind: "tab", tab: "settings" }, { replace: true });
-      else if (route.kind === "not_found") navigate({ kind: "tab", tab: "today" }, { replace: true });
+      if (route.kind === "asset") navigate({ kind: "tab", tab: "assets" }, { replace: true, scroll: false });
+      else if (route.kind !== "tab" || route.tab === "settings") navigate({ kind: "tab", tab: shell.current() as AppTab }, { replace: true, scroll: false });
     },
     menu: [
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
@@ -121,8 +134,23 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   });
   document.title = titleFor(route);
 
-  /** Moves to a route: updates the address, the title and the visible screen. */
-  function navigate(next: AppRoute, opts: { replace?: boolean } = {}): void {
+  /** A link to a lower section (/app/learn, /app/assets, an asset page) lands on that section. */
+  function jumpToRouteSection(): void {
+    const tab = tabFor(route);
+    if (isAccountRoute(route) || route.kind === "not_found" || tab === "explain") return;
+    following = true;
+    try {
+      shell.select(tab);
+    } finally {
+      following = false;
+    }
+  }
+
+  /** Account and settings live in one sheet, reached by /app/account and /signin. */
+  const isAccountRoute = (r: AppRoute): boolean => r.kind === "signin" || (r.kind === "tab" && r.tab === "settings");
+
+  /** Moves to a route: updates the address and the title, scrolls to its section, and opens its sheet. */
+  function navigate(next: AppRoute, opts: { replace?: boolean; scroll?: boolean } = {}): void {
     route = next;
     const path = pathFor(next);
     if (location.pathname !== path) {
@@ -130,13 +158,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       else history.pushState(null, "", path);
     }
     document.title = titleFor(next);
-    following = true;
-    try {
-      shell.select(tabFor(next));
-    } finally {
-      following = false;
+    if (opts.scroll !== false && !isAccountRoute(next)) {
+      following = true;
+      try {
+        shell.select(tabFor(next));
+      } finally {
+        following = false;
+      }
     }
-    if (next.kind === "signin") openAccount();
+    if (isAccountRoute(next)) openAccount();
   }
 
   /** Back and forward buttons: show whatever the address now says. */
@@ -146,14 +176,17 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     following = true;
     try {
       shell.closeSheet();
-      shell.select(tabFor(route));
+      if (!isAccountRoute(route)) shell.select(tabFor(route));
     } finally {
       following = false;
     }
     void showRouteSheet();
   });
+  for (const type of ["wheel", "touchmove", "keydown"] as const) {
+    window.addEventListener(type, () => { moved = true; }, { passive: true, once: true });
+  }
 
-  /** Asset detail, sign-in and not-found open as a sheet over their tab. */
+  /** Asset detail, the account sheet and not-found open as a sheet over the page. */
   async function showRouteSheet(): Promise<void> {
     if (route.kind === "asset") {
       const symbol = route.symbol;
@@ -165,12 +198,12 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
           routeButton("Back to Assets", { kind: "tab", tab: "assets" }),
         ]);
       }
-    } else if (route.kind === "signin") {
+    } else if (isAccountRoute(route)) {
       openAccount();
     } else if (route.kind === "not_found") {
       shell.openSheet("Page not found", [
         el("p", undefined, `There is no page at ${route.path}.`),
-        routeButton("Go to Today", { kind: "tab", tab: "today" }),
+        routeButton("Go to ATLAS Explain", { kind: "tab", tab: "explain" }),
       ]);
     }
   }
@@ -371,8 +404,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   const todayHead = el("div", "panel-title");
   todayHead.append(el("h1", undefined, "Today"), el("span", "fine", new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date())));
-  const getExtension = row("panel", "Get the Chrome extension", () => shell.openSheet("Chrome extension", extensionNodes()));
-  const startExplain = row("sparkle", "Explain a term or a headline", () => navigate({ kind: "tab", tab: "explain" }));
   // Shown only to someone running ATLAS research software; the public never sees these blocks.
   const atlasBlock = el("div", "stack atlas-only");
   atlasBlock.hidden = true;
@@ -381,9 +412,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     todayHead,
     liveCard,
     atlasBlock,
-    el("h2", "section-label", "Next"),
-    startExplain,
-    getExtension,
   );
   // marketCard is replaced in place by refreshToday() whenever the catalog or brief changes.
 
@@ -406,6 +434,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       canReachAtlas: canReachLocalAtlas(location, false),
       priceFeed,
       watchlist,
+      compact: true,
       onState: (state) => {
         atlasLocal = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
         livePrices = state.kind === "ready" && isLivePriceSource(state.catalog.source);
@@ -443,6 +472,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     glossaryHead,
     glossaryPanel({
       askLabel: "Ask about this in my explanation",
+      initialCount: 6,
       onAsk: (term) => {
         textInput.value = term.title;
         shell.select("explain");
@@ -459,9 +489,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   accountNote.setAttribute("role", "status");
   const themeChoice = readTheme();
   applyTheme(themeChoice);
-  const settingsHead = el("div", "panel-title");
-  settingsHead.append(el("h1", undefined, "Account"), el("span", "fine", "Settings and privacy"));
-  const accountLine = el("p", "fine", "You're using ATLAS Explain without an account. Sign in to keep your explanations across devices.");
   const statsLine = el("p", "fine");
   const statsToggle = row("shield", "", () => {
     const next = storedConsent() === "granted" ? "denied" : "granted";
@@ -525,8 +552,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     openSheet: (title, nodes) => shell.openSheet(title, nodes),
     closeSheet: () => shell.closeSheet(),
   });
-  shell.panels.settings.append(
-    settingsHead,
+  // Shown under the sign-in panel in the account sheet (header account button, /app/account, /signin).
+  const settingsNodes: Node[] = [
     planSlot,
     group("Appearance", [themePicker(themeChoice, (choice) => {
       applyTheme(choice);
@@ -537,7 +564,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       }
       void backend?.savePrefs({ theme: choice }).catch(() => undefined);
     })]),
-    group("Account", [accountLine, row("user", "Sign in or manage your account", () => openAccount())]),
     yourData.node,
     statsGroup,
     group("How answers are made", [
@@ -548,7 +574,11 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       el("p", "fine", "ATLAS Explain is open source under the Apache-2.0 licence. Education only, never investment advice."),
       row("panel", "Get the Chrome extension", () => shell.openSheet("Chrome extension", extensionNodes())),
     ]),
-  );
+  ];
+  // One page has one top-level heading (Explain); the other section titles sit a level below it.
+  for (const id of ["today", "glossary", "assets"] as const) {
+    shell.panels[id].querySelector(".panel-title h1")?.setAttribute("aria-level", "2");
+  }
   renderPlan(pricingView({ billingEnabled: false, plan: "free", freeCloudDailyLimit: DEFAULT_SETTINGS.freeCloudDailyLimit }), null);
 
   /* ---------- wiring ---------- */
@@ -618,11 +648,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     }
     applyHash(location.hash);
     const priceFeed: PriceFeedOptions = { ...DEFAULT_PRICE_FEED };
-    void startAssets(priceFeed);
+    // Prices arrive later and push lower sections down; put a deep-linked visitor back on their section.
+    void startAssets(priceFeed).then(() => {
+      if (!moved) jumpToRouteSection();
+    });
     if (import.meta.env.DEV) applyPreview();
-    const deepLink = route.kind !== "tab" || route.tab !== "today";
+    const deepLink = route.kind !== "tab" || route.tab !== "explain";
     if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo") && !deepLink && !location.hash) showOnboarding();
-    if (route.kind === "signin" || route.kind === "not_found") void showRouteSheet();
+    if (isAccountRoute(route) || route.kind === "not_found") void showRouteSheet();
+    requestAnimationFrame(() => jumpToRouteSection());
     if (!backend) return;
     void backend.loadSettings().then(({ settings, priceFeed: next }) => {
       setupAnalytics(settings.analyticsEnabled);
@@ -654,9 +688,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         account = view;
         shell.setAccount(view);
         yourData.setSignedIn(Boolean(view?.signedIn));
-        accountLine.textContent = view?.signedIn
-          ? `Signed in as ${view.label}. Your saved explanations follow you on every device.`
-          : "You're using ATLAS Explain without an account. Sign in to keep your explanations across devices.";
         void refreshPlan();
         if (view && view.uid !== lastAccountUid) {
           lastAccountUid = view.uid;
@@ -700,7 +731,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function openAccount(): void {
     if (!backend) {
-      shell.openSheet("Account", [el("p", "fine", "Sign-in isn't available right now. Reload the page to try again.")]);
+      shell.openSheet("Account", [el("p", "fine", "Sign-in isn't available right now. Reload the page to try again."), ...settingsNodes]);
       return;
     }
     const b = backend;
@@ -721,15 +752,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         window.setTimeout(() => openAccount(), 400);
         return "You are signed out. ATLAS Explain still works; history now stays on this browser.";
       },
-    })]);
+    }), ...settingsNodes]);
   }
 
-  /** Back to where sign-in was asked from (?next=/app/...), otherwise Today. */
+  /** Back to where sign-in was asked from (?next=/app/...), otherwise the top of the page. */
   function afterSignIn(): void {
     const next = new URLSearchParams(location.search).get("next");
     const target = next ? parseRoute(next) : null;
     shell.closeSheet();
-    navigate(target && target.kind !== "not_found" && target.kind !== "signin" ? target : { kind: "tab", tab: "today" }, { replace: true });
+    navigate(target && target.kind !== "not_found" && !isAccountRoute(target) ? target : { kind: "tab", tab: "explain" }, { replace: true });
   }
 
   function renderSetup(): void {
@@ -1318,7 +1349,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   /** Screenshot states for development (?tab=, ?demo=, ?sheet=). Compiled out of production builds. */
   function applyPreview(): void {
     const tab = preview.get("tab");
-    if (tab === "assets" || tab === "glossary" || tab === "settings" || tab === "explain" || tab === "today") shell.select(tab);
+    if (tab === "assets" || tab === "glossary" || tab === "explain" || tab === "today") window.setTimeout(() => shell.select(tab), 300);
+    if (tab === "settings") openAccount();
     if (tab === "signal") shell.select("today");
     const demo = preview.get("demo");
     if (demo === "run") showResult(runCard(devSampleRun()));
@@ -1348,7 +1380,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       };
       // After the real account and plan have loaded, so they don't replace the preview.
       window.setTimeout(show, 2500);
-      shell.select("settings");
+      openAccount();
     }
     if (preview.get("sheet") === "today") shell.select("today");
     if (preview.get("menu") === "open") document.querySelector<HTMLButtonElement>(".bar .icon-btn")?.click();

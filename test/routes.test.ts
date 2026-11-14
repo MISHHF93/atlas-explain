@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { legacyRedirect, parseRoute, pathFor, tabFor, titleFor } from "../src/app/routes";
 
 describe("app routes", () => {
-  it("maps each screen to one address and back", () => {
-    expect(parseRoute("/app")).toEqual({ kind: "tab", tab: "today" });
-    expect(parseRoute("/app/")).toEqual({ kind: "tab", tab: "today" });
+  it("maps each section to one address and back, with Explain as the home", () => {
+    expect(parseRoute("/app")).toEqual({ kind: "tab", tab: "explain" });
+    expect(parseRoute("/app/")).toEqual({ kind: "tab", tab: "explain" });
     expect(parseRoute("/app/explain")).toEqual({ kind: "tab", tab: "explain" });
+    expect(parseRoute("/app/today")).toEqual({ kind: "tab", tab: "today" });
+    expect(pathFor({ kind: "tab", tab: "explain" })).toBe("/app");
+    expect(tabFor({ kind: "not_found", path: "/app/nope" })).toBe("explain");
     expect(parseRoute("/app/learn")).toEqual({ kind: "tab", tab: "glossary" });
     expect(parseRoute("/app/account")).toEqual({ kind: "tab", tab: "settings" });
     expect(parseRoute("/app/digest")).toEqual({ kind: "tab", tab: "today" });
@@ -35,9 +38,9 @@ describe("links made for the old single-page app", () => {
     expect(legacyRedirect({ pathname: "/privacy", search: "?tab=x", hash: "" })).toBeNull();
   });
   it("forwards ATLAS desk move links to Explain with the hash intact", () => {
-    expect(at("", "#c=abc")).toBe("/app/explain#c=abc");
-    expect(at("", "#concept=shadow")).toBe("/app/explain#concept=shadow");
-    expect(at("", "#card=%7B%7D")).toBe("/app/explain#card=%7B%7D");
+    expect(at("", "#c=abc")).toBe("/app#c=abc");
+    expect(at("", "#concept=shadow")).toBe("/app#concept=shadow");
+    expect(at("", "#card=%7B%7D")).toBe("/app#card=%7B%7D");
   });
   it("forwards extension and email sign-in links to /signin with their codes", () => {
     expect(at("?account=open")).toBe("/signin");

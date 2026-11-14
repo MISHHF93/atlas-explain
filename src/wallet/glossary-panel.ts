@@ -4,7 +4,12 @@ import { icon } from "./icons";
 
 /* ---------- glossary ---------- */
 
-export function glossaryPanel(options: { onAsk: (term: TermEntry) => void; askLabel: string }): HTMLElement {
+export function glossaryPanel(options: {
+  onAsk: (term: TermEntry) => void;
+  askLabel: string;
+  /** Show only this many terms until the visitor searches, filters or asks for all of them. */
+  initialCount?: number;
+}): HTMLElement {
   const wrap = el("div", "stack");
   const searchWrap = el("label", "search");
   searchWrap.append(icon("search", 16));
@@ -31,16 +36,31 @@ export function glossaryPanel(options: { onAsk: (term: TermEntry) => void; askLa
     filters.append(button);
   }
   const list = el("ul", "term-list");
+  let showAll = options.initialCount === undefined;
+  const more = labelledButton("chevron", "", "secondary small");
+  more.hidden = true;
+  more.addEventListener("click", () => {
+    showAll = true;
+    render();
+  });
   const count = el("p", "fine count");
   count.setAttribute("aria-live", "polite");
   input.addEventListener("input", render);
-  wrap.append(searchWrap, filters, count, list);
+  wrap.append(searchWrap, filters, count, list, more);
   render();
   return wrap;
 
   function render(): void {
     const items = searchTerms(input.value, ALL_TERMS).filter((t) => group === "all" || t.group === group);
     count.textContent = items.length === 1 ? "1 term" : `${items.length} terms`;
+    const short = !showAll && group === "all" && input.value.trim() === "" && items.length > (options.initialCount ?? 0);
+    more.hidden = !short;
+    if (short) {
+      const label = more.querySelector("span");
+      if (label) label.textContent = `Show all ${items.length} terms`;
+      list.replaceChildren(...items.slice(0, options.initialCount).map(termCard));
+      return;
+    }
     if (items.length === 0) {
       const none = el("li", "card state state-empty");
       none.append(el("p", "fine", "No term matches. Try a shorter word, or ask Explain directly."));
