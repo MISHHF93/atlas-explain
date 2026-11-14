@@ -42,6 +42,8 @@ export interface Quote {
 }
 
 export interface Fact {
+  /** "figure": an official number; "filing": a recent filing. The page groups them. */
+  kind?: "figure" | "filing";
   label: string;
   value: string;
   period: string | null;

@@ -214,6 +214,7 @@ function assetRow(a: Asset, showClass: boolean, open: () => void): HTMLElement {
   if (showClass) sub.append(el("span", "class-tag", CLASS_INFO[a.class].label));
   const mb = modeBadge(a);
   if (mb) sub.append(mb, el("span", "row-source", a.quote!.source.label));
+  else if (a.facts.length) sub.append(el("span", "row-source", a.facts.some((f) => f.kind === "figure") ? "SEC figures" : "SEC filings"));
   who.append(el("span", "asset-name", a.name), sub);
   const nums = el("span", "asset-nums");
   if (value) {
@@ -244,6 +245,7 @@ export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void
   spark.hidden = true;
   const about = el("section", "card group");
   const facts = el("section", "card group");
+  const filings = el("section", "card group");
   const status = el("p", "fine withheld-line");
   const explain = labelledButton("sparkle", "Explain this asset", "primary explain-asset");
   const terms = el("div", "follow-row related-row");
@@ -283,10 +285,18 @@ export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void
     hero.append(spark);
 
     about.replaceChildren(el("h3", undefined, `About ${CLASS_INFO[a.class].label.toLowerCase()}`), el("p", "fine", CLASS_INFO[a.class].intro), ...classLines(a));
-    facts.hidden = a.facts.length === 0;
-    facts.replaceChildren(el("h3", undefined, "Official figures"), ...a.facts.map((f) => {
+    const figures = a.facts.filter((f) => f.kind !== "filing");
+    const recent = a.facts.filter((f) => f.kind === "filing");
+    facts.hidden = figures.length === 0;
+    facts.replaceChildren(el("h3", undefined, "Official figures"), ...figures.map((f) => {
       const p = el("p", "fact-line");
       p.append(el("span", "fact-label", `${f.label}${f.period ? ` (${f.period})` : ""}`), el("span", "fact-value", f.value), " ", link(f.source.label, f.source.attribution.href));
+      return p;
+    }), el("p", "fine", "As reported by the company to the US Securities and Exchange Commission."));
+    filings.hidden = recent.length === 0;
+    filings.replaceChildren(el("h3", undefined, "Recent filings"), ...recent.map((f) => {
+      const p = el("p", "fact-line");
+      p.append(el("span", "fact-value", f.label), el("span", "fact-label", `${f.value}${f.period ? `, ${f.period}` : ""}`), " ", link(f.source.label, f.source.attribution.href));
       return p;
     }));
     status.hidden = a.status.state !== "withheld";
@@ -321,7 +331,7 @@ export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void
   }
 
   return {
-    nodes: [hero, status, explain, terms, about, facts],
+    nodes: [hero, status, explain, terms, facts, filings, about],
     update: (a) => paint(a),
     setSpark,
   };

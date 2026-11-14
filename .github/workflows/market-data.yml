@@ -1,6 +1,6 @@
 name: Market data
 
-# Fetches free official market data (US Treasury, ECB, Bank of Canada, EIA), validates every
+# Fetches free official market data (US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR), validates every
 # record against the Asset schema, and publishes data-out/ to the separate free hosting site
 # atlas-explain-data.web.app. It never deploys the app itself. See docs/ux/MULTI_ASSET_CATALOG.md §3.
 on:
@@ -32,6 +32,7 @@ jobs:
         run: node scripts/data/build-data.ts
         env:
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
           PREVIOUS_URL: https://atlas-explain-data.web.app/data/v1/market.json
       - name: Publish to the data site
         if: env.HAS_DEPLOY_KEY == 'true'

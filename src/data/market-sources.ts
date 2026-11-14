@@ -319,6 +319,6 @@ export const MARKET_SCHEMA = "atlas-explain-market-v1";
 export interface MarketFile {
   schema: typeof MARKET_SCHEMA;
   generatedAt: string;
-  sources: Record<string, { ok: boolean; count: number; note: string }>;
+  sources: Record<string, { ok: boolean; count: number; note: string; updatedAt?: string }>;
   assets: Asset[];
 }
