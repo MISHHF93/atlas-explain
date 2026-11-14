@@ -38,6 +38,15 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    // The watchlist: one document so the list size can be capped here. Ids are checked again on read.
+    match /users/{userId}/prefs/watchlist {
+      allow create, update: if signedIn(userId)
+        && request.resource.data.keys().hasOnly(["ids", "updatedAt"])
+        && request.resource.data.ids is list
+        && request.resource.data.ids.size() <= 50
+        && request.resource.data.updatedAt == request.time;
+    }
+
     match /users/{userId}/explanations/{explanationId} {
       allow read, delete: if request.auth != null && request.auth.uid == userId;
 

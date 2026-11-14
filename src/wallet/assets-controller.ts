@@ -14,6 +14,7 @@ import type { Asset } from "../core/asset-schema";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../core/price-feed";
 import { assetDetail, assetsPanel, sparkSpan } from "./assets";
 import type { CatalogPanelHandle } from "./catalog-view";
+import type { Watchlist } from "../core/watchlist";
 import { el } from "./dom";
 import type { WalletShell } from "./shell";
 
@@ -32,6 +33,8 @@ export function mountAssets(options: {
   priceFeed?: PriceFeedOptions;
   /** Called when an asset's page opens (the web app gives it its own address). */
   onOpen?: (symbol: string) => void;
+  /** Device-only or account-synced watchlist. */
+  watchlist?: Watchlist;
 }): { refresh: () => Promise<void>; open: (symbol: string) => Promise<boolean> } {
   const { shell } = options;
   const head = el("div", "panel-title");
@@ -62,7 +65,8 @@ export function mountAssets(options: {
     catalogUi ??= await import("./catalog-view");
     if (!catalog) {
       const v = catalogUi;
-      catalog = v.catalogPanel({ onOpen: (a) => void openPublic(a), onRetry: () => void refresh(), recent: () => readRecentIds(v) });
+      catalog = v.catalogPanel({ onOpen: (a) => void openPublic(a), onRetry: () => void refresh(), recent: () => readRecentIds(v), watchlist: options.watchlist });
+      options.watchlist?.onChange(() => catalog?.refreshRecent());
       publicSlot.append(catalog.node);
     }
     return catalogUi;
@@ -155,6 +159,7 @@ export function mountAssets(options: {
         shell.closeSheet();
         options.onExplain(`Explain "${title}" in plain language with a short example. Do not recommend a trade.`);
       },
+      watchlist: options.watchlist,
     });
     shell.openSheet(a.name, page.nodes);
     if (a.class !== "crypto" || last.kind !== "ready" || !isLivePriceSource(last.catalog.source)) return;

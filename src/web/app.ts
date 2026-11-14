@@ -55,6 +55,7 @@ import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
 import type { TextRun } from "../platform/web/backend";
 import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } from "../app/routes";
 import type { TabDef } from "../wallet/shell";
+import { createWatchlist, localKeyValue } from "../core/watchlist";
 
 /** Navigation for the full-page app. Internal ids stay stable; labels read as a product. */
 export const APP_TABS: readonly TabDef[] = [
@@ -383,6 +384,14 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   /* ---------- Assets tab ---------- */
 
+  // Watchlist: on this device while signed out; in the account (Firestore) once signed in.
+  const watchlist = createWatchlist(localKeyValue(), {
+    load: async () => (backend ? backend.loadWatchlist() : null),
+    save: async (ids) => {
+      await backend?.saveWatchlist(ids);
+    },
+  });
+
   // The hosted app cannot read ATLAS on the visitor's computer and never calls localhost.
   // It shows live crypto prices from the configured public feed instead, with every light grey.
   let assets: ReturnType<typeof mountAssets> | null = null;
@@ -391,6 +400,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       shell,
       canReachAtlas: canReachLocalAtlas(location, false),
       priceFeed,
+      watchlist,
       onState: (state) => {
         atlasLocal = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
         livePrices = state.kind === "ready" && isLivePriceSource(state.catalog.source);
@@ -572,6 +582,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         if (view && view.uid !== lastAccountUid) {
           lastAccountUid = view.uid;
           void loadHistory();
+          void watchlist.sync();
           if (view.signedIn) void b.loadPrefs().then((prefs) => {
             if (prefs) applyTheme(prefs.theme);
           }).catch(() => undefined);

@@ -38,10 +38,21 @@ export interface CatalogPanelHandle {
   refreshRecent(): void;
 }
 
+/** What the views need from the watchlist store (src/core/watchlist.ts). */
+export interface WatchView {
+  ids(): string[];
+  has(id: string): boolean;
+  synced(): boolean;
+  toggle(id: string): Promise<"added" | "removed" | "full">;
+}
+
+type Filter = ClassFilter | "watch";
+
 export function catalogPanel(options: {
   onOpen: (asset: Asset) => void;
   onRetry: () => void;
   recent: () => string[];
+  watchlist?: WatchView;
 }): CatalogPanelHandle {
   const wrap = el("div", "stack catalog");
   const searchWrap = el("label", "search");
@@ -62,7 +73,7 @@ export function catalogPanel(options: {
   wrap.append(searchWrap, filters, recentRow, meta, body);
 
   let state: CatalogPanelState = { kind: "loading" };
-  let klass: ClassFilter = "all";
+  let klass: Filter = "all";
   input.addEventListener("input", render);
   document.addEventListener("keydown", (event) => {
     const typing = event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
@@ -79,10 +90,12 @@ export function catalogPanel(options: {
 
   function renderFilters(assets: Asset[]): void {
     const classes = presentClasses(assets);
-    if (klass !== "all" && !classes.includes(klass)) klass = "all";
-    filters.hidden = classes.length < 2;
-    filters.replaceChildren(...(["all", ...classes] as ClassFilter[]).map((id) => {
-      const b = el("button", "filter", id === "all" ? "All" : CLASS_INFO[id].label);
+    const watching = watched(assets).length > 0;
+    if (klass === "watch" ? !watching : klass !== "all" && !classes.includes(klass)) klass = "all";
+    filters.hidden = classes.length < 2 && !watching;
+    const ids: Filter[] = ["all", ...(watching ? (["watch"] as Filter[]) : []), ...classes];
+    filters.replaceChildren(...ids.map((id) => {
+      const b = el("button", "filter", id === "all" ? "All" : id === "watch" ? "Watchlist" : CLASS_INFO[id].label);
       b.type = "button";
       b.setAttribute("aria-pressed", id === klass ? "true" : "false");
       b.addEventListener("click", () => {
@@ -134,7 +147,8 @@ export function catalogPanel(options: {
     renderFilters(assets);
     renderRecent(assets);
     const query = input.value;
-    const rows = searchAssets(assets, query, { klass });
+    const watchIds = new Set(options.watchlist?.ids() ?? []);
+    const rows = searchAssets(assets, query, klass === "watch" ? { klass: "all", onlyIds: watchIds } : { klass });
     meta.replaceChildren(rows.length === assets.length ? `${assets.length} assets` : `${rows.length} of ${assets.length} assets`);
     const noticeNode = notice ? [el("p", "fine notice-line", notice)] : [];
     if (rows.length === 0) {
@@ -145,12 +159,33 @@ export function catalogPanel(options: {
     }
     // All, no search: one calm section per class. Otherwise one list, with the class intro when filtered.
     if (klass === "all" && !query.trim()) {
-      body.replaceChildren(...noticeNode, ...groupByClass(rows).map((g) => section(g.klass, g.assets)));
+      const mine = watched(assets);
+      body.replaceChildren(...noticeNode, ...(mine.length ? [watchSection(mine)] : []), ...groupByClass(rows).map((g) => section(g.klass, g.assets)));
+    } else if (klass === "watch") {
+      body.replaceChildren(...noticeNode, watchSection(rows));
     } else if (klass !== "all") {
       body.replaceChildren(...noticeNode, section(klass, rows));
     } else {
       body.replaceChildren(...noticeNode, list(rows, true));
     }
+  }
+
+  /** Watchlist items in the order they were added (newest first). */
+  function watched(assets: Asset[]): Asset[] {
+    const ids = options.watchlist?.ids() ?? [];
+    return ids.map((id) => assets.find((a) => a.id === id)).filter((a): a is Asset => Boolean(a));
+  }
+
+  function watchSection(assets: Asset[]): HTMLElement {
+    const s = el("section", "cat-section");
+    s.setAttribute("aria-labelledby", "cat-watch");
+    const h = el("h2", "section-label", "Your watchlist");
+    h.id = "cat-watch";
+    const note = options.watchlist?.synced()
+      ? "Kept in your account, on every device where you sign in."
+      : "Saved on this device. Sign in to keep it on all your devices.";
+    s.append(h, el("p", "fine cat-intro", note), list(assets, true));
+    return s;
   }
 
   function section(k: AssetClass, assets: Asset[]): HTMLElement {
@@ -242,7 +277,7 @@ export interface AssetPageHandle {
   setSpark(points: readonly SparkPoint[] | null, caption: string): void;
 }
 
-export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void; onTerm: (title: string) => void }): AssetPageHandle {
+export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void; onTerm: (title: string) => void; watchlist?: WatchView }): AssetPageHandle {
   const hero = el("section", "card asset-hero");
   const spark = el("div", "spark");
   spark.hidden = true;
@@ -252,8 +287,34 @@ export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void
   const status = el("p", "fine withheld-line");
   const explain = labelledButton("sparkle", "Explain this asset", "primary explain-asset");
   const terms = el("div", "follow-row related-row");
+  const watchRow = el("div", "watch-row");
+  const watchNote = el("p", "fine");
+  watchNote.setAttribute("role", "status");
   let current = start;
   explain.addEventListener("click", () => options.onExplain(current));
+  const watchButton = el("button", "secondary watch-btn");
+  watchButton.type = "button";
+  const paintWatch = () => {
+    const on = options.watchlist?.has(current.id) ?? false;
+    watchButton.setAttribute("aria-pressed", on ? "true" : "false");
+    watchButton.replaceChildren(icon(on ? "check" : "pin", 16), el("span", undefined, on ? "In your watchlist" : "Add to watchlist"));
+  };
+  watchButton.addEventListener("click", () => {
+    void options.watchlist?.toggle(current.id).then((r) => {
+      paintWatch();
+      watchNote.textContent = r === "full"
+        ? "Your watchlist is full (50). Remove one to add another."
+        : r === "added"
+          ? options.watchlist?.synced() ? "Added to your watchlist." : "Added. It's saved on this device; sign in to keep it everywhere."
+          : "Removed from your watchlist.";
+    });
+  });
+  if (options.watchlist) {
+    paintWatch();
+    watchRow.append(watchButton, watchNote);
+  } else {
+    watchRow.hidden = true;
+  }
   paint(start);
 
   function paint(a: Asset): void {
@@ -335,7 +396,7 @@ export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void
   }
 
   return {
-    nodes: [hero, status, explain, terms, facts, filings, about],
+    nodes: [hero, status, explain, watchRow, terms, facts, filings, about],
     update: (a) => paint(a),
     setSpark,
   };

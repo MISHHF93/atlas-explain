@@ -36,6 +36,7 @@ import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../../src/cor
 import { addMonitorSink, classifyCloudError, consoleSink, report } from "../../src/core/monitor";
 addMonitorSink(consoleSink);
 import { mountAssets } from "../../src/wallet/assets-controller";
+import { createWatchlist, localKeyValue } from "../../src/core/watchlist";
 import { loadDigest, todayToronto } from "../../src/core/digest";
 import { digestCard } from "../../src/wallet/digest";
 import { canReachLocalAtlas } from "../../src/core/assets";
@@ -196,6 +197,8 @@ function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): void {
     shell,
     canReachAtlas: hasChrome,
     priceFeed,
+    // Kept on this device in the extension; account sync for the extension comes through the website later.
+    watchlist: createWatchlist(localKeyValue(), null),
     onState: (state) => {
       atlasLocal = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
       livePrices = state.kind === "ready" && isLivePriceSource(state.catalog.source);

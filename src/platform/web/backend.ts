@@ -76,6 +76,9 @@ export interface WebBackend {
   signOut(): Promise<void>;
   loadPrefs(): Promise<UserPrefs | null>;
   savePrefs(prefs: UserPrefs): Promise<void>;
+  /** The signed-in account's watchlist, or null when signed out (anonymous counts as signed out). */
+  loadWatchlist(): Promise<string[] | null>;
+  saveWatchlist(ids: string[]): Promise<void>;
   /** Throws if billing is off. The pricing panel does not call this unless checkout is shown. */
   startCheckout(): Promise<void>;
 }
@@ -191,6 +194,16 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const user = auth.currentUser;
       if (!user || user.isAnonymous) return;
       await (await store()).writePrefs(user.uid, prefs);
+    },
+    async loadWatchlist() {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) return null;
+      return (await store()).readWatchlist(user.uid);
+    },
+    async saveWatchlist(ids) {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) return;
+      await (await store()).writeWatchlist(user.uid, ids);
     },
     async startCheckout() {
       const { settings } = await loadSettings();

@@ -15,6 +15,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { incrementCloudCalls, readCloudCallsToday } from "./usage";
+import { cleanIds } from "../../core/watchlist";
 
 /**
  * Firestore is loaded on demand: the wallet shell, Remote Config and
@@ -28,6 +29,8 @@ export interface WebStore {
   recentExplanations(uid: string, max: number): Promise<Array<{ id: string; data: DocumentData }>>;
   readPrefs(uid: string): Promise<{ theme: "system" | "light" | "dark" } | null>;
   writePrefs(uid: string, prefs: { theme: "system" | "light" | "dark" }): Promise<void>;
+  readWatchlist(uid: string): Promise<string[]>;
+  writeWatchlist(uid: string, ids: string[]): Promise<void>;
 }
 
 const THEMES = ["system", "light", "dark"] as const;
@@ -54,6 +57,13 @@ export function openStore(app: FirebaseApp): WebStore {
     },
     async writePrefs(uid, prefs) {
       await setDoc(doc(db, "users", uid, "prefs", "app"), { theme: prefs.theme, updatedAt: serverTimestamp() });
+    },
+    async readWatchlist(uid) {
+      const snap = await getDoc(doc(db, "users", uid, "prefs", "watchlist"));
+      return snap.exists() ? cleanIds(snap.data().ids) : [];
+    },
+    async writeWatchlist(uid, ids) {
+      await setDoc(doc(db, "users", uid, "prefs", "watchlist"), { ids: cleanIds(ids), updatedAt: serverTimestamp() });
     },
   };
 }
