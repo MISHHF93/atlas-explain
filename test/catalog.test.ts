@@ -115,3 +115,29 @@ describe("asset addresses", () => {
     }
   });
 });
+
+describe("logos", () => {
+  it("accepts coin images from CoinGecko's API and no other hosts", async () => {
+    const { isAllowedLogo } = await import("../src/core/asset-schema");
+    expect(isAllowedLogo("https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png")).toBe(true);
+    expect(isAllowedLogo("https://img.logo.dev/apple.com?token=pk_x")).toBe(true);
+    expect(isAllowedLogo("http://coin-images.coingecko.com/x.png")).toBe(false);
+    expect(isAllowedLogo("https://evil.example/logo.png")).toBe(false);
+    const withImage = readCoinGeckoMarkets([{ id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 1, price_change_percentage_24h: 0, last_updated: "2026-11-13T20:59:00.000Z", image: "https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png" }], NOW)!;
+    const asset = assetsFromLiveCatalog(withImage)[0]!;
+    expect(asset.logo).toMatch(/^https:\/\/coin-images\.coingecko\.com\//);
+    expect(validateAsset(asset, NOW).errors).toEqual([]);
+    const spoofed = readCoinGeckoMarkets([{ id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 1, price_change_percentage_24h: 0, last_updated: "2026-11-13T20:59:00.000Z", image: "https://evil.example/b.png" }], NOW)!;
+    expect(assetsFromLiveCatalog(spoofed)[0]!.logo).toBeNull();
+  });
+
+  it("adds company logos only when a Logo.dev key is configured", async () => {
+    const { withCompanyLogos } = await import("../src/core/catalog");
+    const apple = { ...eurusd, id: "stock:US:AAPL", symbol: "AAPL", name: "Apple", class: "stock" as const, quote: null, noQuoteReason: "x", classData: { class: "stock" as const, cik: null, exchange: null } };
+    expect(withCompanyLogos([apple], undefined)[0]!.logo).toBeUndefined();
+    const logo = withCompanyLogos([apple], "pk_test1234")[0]!.logo!;
+    expect(logo).toBe("https://img.logo.dev/apple.com?token=pk_test1234&size=64&format=png");
+    expect(validateAsset({ ...apple, logo }, NOW).errors).toEqual([]);
+    expect(withCompanyLogos([eurusd], "pk_test1234")[0]!.logo).toBeUndefined();
+  });
+});

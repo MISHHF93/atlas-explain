@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maxOutputTokens: 1_200,
   billingEnabled: false,
   freeCloudDailyLimit: 50,
-  priceProvider: "kraken",
+  priceProvider: "coingecko",
 };
 
 export const REMOTE_CONFIG_KEYS = [
@@ -32,6 +32,7 @@ export const REMOTE_CONFIG_KEYS = [
   "free_cloud_daily_limit",
   "price_provider",
   "coingecko_demo_api_key",
+  "logo_dev_token",
 ] as const;
 
 export type RemoteConfigKey = (typeof REMOTE_CONFIG_KEYS)[number];
@@ -50,6 +51,7 @@ export function remoteConfigDefaults(): Record<RemoteConfigKey, string> {
     free_cloud_daily_limit: String(DEFAULT_SETTINGS.freeCloudDailyLimit),
     price_provider: DEFAULT_SETTINGS.priceProvider,
     coingecko_demo_api_key: "",
+    logo_dev_token: "",
   };
 }
 
@@ -159,7 +161,7 @@ export function parseRemoteSettings(values: Record<string, string>): {
   if (providerRaw) {
     const provider = parsePriceProvider(providerRaw);
     if (provider !== providerRaw.toLowerCase()) {
-      warnings.push(`price_provider "${providerRaw}" is not kraken or coingecko. Using kraken.`);
+      warnings.push(`price_provider "${providerRaw}" is not kraken or coingecko. Using ${DEFAULT_SETTINGS.priceProvider}.`);
     }
     settings.priceProvider = provider;
   }

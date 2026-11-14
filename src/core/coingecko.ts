@@ -118,6 +118,7 @@ export function readCoinGeckoMarkets(body: unknown, now: number = Date.now()): C
       },
       now,
     );
+    if (asset && typeof row.image === "string" && /^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(row.image)) asset.image = row.image;
     return asset ? [asset] : [];
   });
   if (assets.length === 0) return null;

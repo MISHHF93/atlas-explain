@@ -23,11 +23,13 @@ const markets = [
 const json = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), { status });
 
 describe("price provider selection", () => {
-  it("defaults to Kraken and only accepts known ids", () => {
+  it("defaults to CoinGecko and only accepts known ids", () => {
     expect(parsePriceProvider(undefined)).toBe(DEFAULT_PRICE_PROVIDER);
-    expect(parsePriceProvider("")).toBe("kraken");
+    expect(DEFAULT_PRICE_PROVIDER).toBe("coingecko");
+    expect(parsePriceProvider("")).toBe("coingecko");
+    expect(parsePriceProvider("kraken")).toBe("kraken");
     expect(parsePriceProvider("CoinGecko")).toBe("coingecko");
-    expect(parsePriceProvider("not-a-feed")).toBe("kraken");
+    expect(parsePriceProvider("not-a-feed")).toBe("coingecko");
     expect(isLivePriceSource("kraken")).toBe(true);
     expect(isLivePriceSource("coingecko")).toBe(true);
     expect(isLivePriceSource("atlas")).toBe(false);
@@ -35,11 +37,14 @@ describe("price provider selection", () => {
   });
 
   it("reads Remote Config values and drops a junk demo key", () => {
-    expect(priceFeedFromRemoteValues({})).toEqual({ provider: "kraken", coinGeckoDemoKey: undefined });
-    expect(priceFeedFromRemoteValues({ price_provider: "coingecko", coingecko_demo_api_key: "CG-ABCDEFGH" })).toEqual({
-      provider: "coingecko",
+    expect(priceFeedFromRemoteValues({})).toEqual({ provider: "coingecko", coinGeckoDemoKey: undefined, logoDevToken: undefined });
+    expect(priceFeedFromRemoteValues({ price_provider: "kraken", coingecko_demo_api_key: "CG-ABCDEFGH", logo_dev_token: "pk_abcdefgh123" })).toEqual({
+      provider: "kraken",
       coinGeckoDemoKey: "CG-ABCDEFGH",
+      logoDevToken: "pk_abcdefgh123",
     });
+    // Only publishable keys: a secret key (sk_) must never be accepted for use in the browser.
+    expect(priceFeedFromRemoteValues({ logo_dev_token: "sk_secretsecret" }).logoDevToken).toBeUndefined();
     expect(readCoinGeckoDemoKey("")).toBeUndefined();
     expect(readCoinGeckoDemoKey("short")).toBeUndefined();
     expect(readCoinGeckoDemoKey("spaces are wrong")).toBeUndefined();

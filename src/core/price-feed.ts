@@ -7,12 +7,15 @@ import type { CatalogView } from "./assets";
 
 export const PRICE_PROVIDER_IDS = ["kraken", "coingecko"] as const;
 export type PriceProviderId = (typeof PRICE_PROVIDER_IDS)[number];
-export const DEFAULT_PRICE_PROVIDER: PriceProviderId = "kraken";
+/** CoinGecko by default: free with attribution, and it supplies coin images. Kraken's terms restrict third-party apps. */
+export const DEFAULT_PRICE_PROVIDER: PriceProviderId = "coingecko";
 
 export interface PriceFeedOptions {
   provider: PriceProviderId;
   /** Optional CoinGecko Demo API key from Remote Config. Never committed. */
   coinGeckoDemoKey?: string;
+  /** Optional Logo.dev publishable key (pk_…) from Remote Config: turns on company logos, with credit. */
+  logoDevToken?: string;
 }
 
 export const DEFAULT_PRICE_FEED: PriceFeedOptions = { provider: DEFAULT_PRICE_PROVIDER };
@@ -44,5 +47,12 @@ export function priceFeedFromRemoteValues(values: Record<string, string>): Price
   return {
     provider: parsePriceProvider(values.price_provider),
     coinGeckoDemoKey: readCoinGeckoDemoKey(values.coingecko_demo_api_key),
+    logoDevToken: readLogoDevToken(values.logo_dev_token),
   };
+}
+
+/** Logo.dev publishable keys start with pk_ and are meant to be used in the browser. */
+export function readLogoDevToken(raw: string | undefined): string | undefined {
+  const value = raw?.trim() ?? "";
+  return /^pk_[A-Za-z0-9_-]{8,120}$/.test(value) ? value : undefined;
 }

@@ -1184,3 +1184,6 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .news-box { gap: 0.5rem; }
 .news-list { display: grid; gap: 0.45rem; padding-left: 1.2rem; list-style: decimal; font-size: var(--atlas-text-sm); }
 .news-meta { white-space: nowrap; }
+.asset-icon { position: relative; overflow: hidden; }
+.asset-icon.has-logo { color: transparent; background: var(--atlas-paper); }
+.asset-icon > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 3px; border-radius: 50%; }

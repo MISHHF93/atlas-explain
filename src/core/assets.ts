@@ -65,6 +65,8 @@ export interface QuoteView {
 }
 
 export interface AssetView {
+  /** Coin image URL from CoinGecko's API data, when the feed provides one. */
+  image?: string;
   symbol: string;
   name: string;
   klass: AssetClass;

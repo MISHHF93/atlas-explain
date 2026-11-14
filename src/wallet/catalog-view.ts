@@ -22,7 +22,8 @@ import { ALL_TERMS } from "../core/terms";
 /** Everything the public catalog needs, in this one lazily loaded chunk (keeps popup.js small). */
 export { assetFromLiveRow } from "../core/asset-schema";
 export { EDUCATION_ASSETS } from "../core/education-assets";
-export { loadNews } from "../core/catalog";
+export { loadNews, withCompanyLogos } from "../core/catalog";
+import { LOGO_CREDIT } from "../core/catalog";
 import { recentFilingLines } from "../core/catalog";
 import { NEWS_TARGET_IDS, newsQuestion, type NewsItem } from "../core/news";
 import { SOURCES } from "../core/asset-schema";
@@ -154,6 +155,7 @@ export function catalogPanel(options: {
     const watchIds = new Set(options.watchlist?.ids() ?? []);
     const rows = searchAssets(assets, query, klass === "watch" ? { klass: "all", onlyIds: watchIds } : { klass });
     meta.replaceChildren(rows.length === assets.length ? `${assets.length} assets` : `${rows.length} of ${assets.length} assets`);
+    if (assets.some((a) => a.logo?.startsWith("https://img.logo.dev/"))) meta.append(" · ", link(LOGO_CREDIT.text, LOGO_CREDIT.href));
     const noticeNode = notice ? [el("p", "fine notice-line", notice)] : [];
     if (rows.length === 0) {
       const none = el("section", "card state state-empty");
@@ -229,6 +231,23 @@ function badge(a: Asset): HTMLElement {
   const b = el("span", `asset-icon tone-${a.class}`, short.length > 4 ? short.slice(0, 3) : short);
   b.dataset.len = String(Math.min(4, short.length));
   b.setAttribute("aria-hidden", "true");
+  if (a.logo) {
+    // Decorative: the name is always written next to it. No referrer is sent to the image host.
+    const img = document.createElement("img");
+    img.src = a.logo;
+    img.alt = "";
+    img.width = 34;
+    img.height = 34;
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.referrerPolicy = "no-referrer";
+    img.addEventListener("error", () => {
+      img.remove();
+      b.classList.remove("has-logo");
+    });
+    b.classList.add("has-logo");
+    b.append(img);
+  }
   return b;
 }
 

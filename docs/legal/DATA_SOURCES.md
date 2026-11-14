@@ -13,8 +13,8 @@ that parameter is published as `coingecko`.
 
 | Source | What the app shows | How it is fetched | Licence status (research, 13 Nov 2026) | In the app now |
 | --- | --- | --- | --- | --- |
-| Kraken public REST API (`api.kraken.com`) | Live USD prices and hourly bars for 10 cryptocurrencies | Browser, keyless, 8 s timeout, 60 s cache | Terms restrict automation and third-party apps without written consent. Fine for the hackathon demo; not a safe basis for a market launch without written consent. | Default (`price_provider=kraken`) |
-| CoinGecko public API (`api.coingecko.com`) | Live USD prices and recent prices for the same 10 cryptocurrencies | Browser, keyless or optional Demo API key from Remote Config `coingecko_demo_api_key` (never committed). 8 s timeout, 60 s cache | Clearest commercial display licence found. Attribution is required (shown as "Prices by CoinGecko" with a link). No API resale. No ML training on the data. A paid commercial plan is needed before a market launch. The user cannot pay for a plan today, so the keyless public API is used until then. | Ready, off until `price_provider` is set to `coingecko` |
+| Kraken public REST API (`api.kraken.com`) | Live USD prices and hourly bars for 10 cryptocurrencies | Browser, keyless, 8 s timeout, 60 s cache | Terms restrict automation and third-party apps without written consent. Fine for the hackathon demo; not a safe basis for a market launch without written consent. | Demo only; off by default since 2026-11-13 |
+| CoinGecko public API (`api.coingecko.com`) | Live USD prices and recent prices for the same 10 cryptocurrencies | Browser, keyless or optional Demo API key from Remote Config `coingecko_demo_api_key` (never committed). 8 s timeout, 60 s cache | Clearest commercial display licence found. Attribution is required (shown as "Prices by CoinGecko" with a link). No API resale. No ML training on the data. A paid commercial plan is needed before a market launch. The user cannot pay for a plan today, so the keyless public API is used until then. | **Default** (`price_provider=coingecko`); also supplies coin images |
 | ATLAS on this computer (`localhost:3000`) | Prices plus paper predictions when the owner is running ATLAS | Local only, never from the hosted site | The owner's own ATLAS instance. Crypto and stock figures there follow ATLAS's own feed licences. | Used when ATLAS is reachable; lights can leave grey only from this path |
 | IEX / stock prices | Stock rows and paper stats | Only through ATLAS on this computer | Not fetched directly by Explain. The hosted app tells the visitor to connect ATLAS. | Shown as a gap with an honest "Connect ATLAS" note when only a public crypto feed is used |
 | Firebase / Gemini | Educational explanations | Firebase AI Logic, App Check | Google's terms for Firebase and Gemini. Explanations are generated, not a market-data feed. | Cloud fallback and the hosted app |
@@ -32,6 +32,16 @@ Added 2026-11-13. Fetched by `.github/workflows/market-data.yml` (`scripts/data/
 | SEC EDGAR (company tickers, submissions, XBRL company facts) | For ~30 large US companies and 3 trust ETFs: revenue, net income, diluted EPS, shares outstanding (same fiscal year, ≤ 18 months old) and recent 10-K/10-Q/8-K filings, each linked to sec.gov. No prices. Refreshed daily at ≤ 4 requests a second with a declared User-Agent (`SEC_USER_AGENT` secret). | US government data, public domain; fair access ≤ 10 requests a second | "Source: SEC EDGAR", linked to the filing |
 
 None of these feeds is used to train a model. Stock, ETF, index, gold and silver prices are **not** shown: no free source is licensed for public display.
+
+## Logos
+
+| Logos | Source | Terms | Shown |
+| --- | --- | --- | --- |
+| Crypto coin images | The `image` field of CoinGecko's `/coins/markets` API data | Part of the API data shown with the "Prices by CoinGecko" credit | Yes, when `price_provider=coingecko` |
+| Company logos (stock pages) | Logo.dev image API, publishable key `logo_dev_token` in Remote Config | Free plan: commercial use needs the visible credit "Logos provided by Logo.dev" (shown next to the list) | Only when the key is set; otherwise a lettered badge |
+| Government, central bank, index and exchange logos (SEC, Treasury, ECB, Bank of Canada, EIA, S&P, Nasdaq, Cboe, CME) | — | Seals and emblems are legally restricted or licensed trademarks; their terms ask for a text citation | **Never shown**; text credits only |
+
+Logo images load from `coin-images.coingecko.com` and `img.logo.dev` with no referrer. Those hosts see the visitor's IP address, which the privacy policy must mention (legal review).
 
 ## Switching to CoinGecko
 

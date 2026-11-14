@@ -95,6 +95,21 @@ export interface Asset {
   status: AtlasStatus;
   relatedTerms: string[];
   classData: ClassData;
+  /** Optional logo image (https, from LOGO_HOSTS only). Decorative: the name is always shown as text. */
+  logo?: string | null;
+}
+
+/** Image hosts allowed for logos: CoinGecko (coin images in its API data) and Logo.dev (company logos, credited). */
+export const LOGO_HOSTS = ["coin-images.coingecko.com", "assets.coingecko.com", "img.logo.dev"] as const;
+
+export function isAllowedLogo(url: unknown): url is string {
+  if (typeof url !== "string" || url.length > 400) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && (LOGO_HOSTS as readonly string[]).includes(u.hostname);
+  } catch {
+    return false;
+  }
 }
 
 /* ---------- free sources and their licences (docs/ux/MULTI_ASSET_CATALOG.md §4) ---------- */
@@ -153,6 +168,7 @@ export function validateAsset(asset: Asset, now: number = Date.now()): Validatio
   const cd = asset.classData?.class;
   if (cd !== asset.class && !(listed(cd) && listed(asset.class))) errors.push("classData does not match class");
   if (!CURRENCY.test(asset.currency)) errors.push(`currency "${asset.currency}" is not ISO 4217 or %`);
+  if (asset.logo != null && !isAllowedLogo(asset.logo)) errors.push("logo must be an https image from an allowed host");
 
   if (asset.quote === null) {
     if (!asset.noQuoteReason?.trim()) errors.push("a missing quote needs a plain noQuoteReason");
@@ -281,6 +297,7 @@ export function assetFromLiveRow(view: AssetView, source: CatalogView["source"])
     status: statusFromLean(view.light),
     relatedTerms: ["spread", "volume", "implied_volatility"],
     classData: { class: "crypto", base, quote: "USD" },
+    logo: isAllowedLogo(view.image) ? view.image : null,
   };
 }
 

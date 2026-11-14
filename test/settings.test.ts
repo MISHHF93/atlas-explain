@@ -10,7 +10,7 @@ describe("parseRemoteSettings", () => {
     expect(settings.topics.map((topic) => topic.id)).toEqual([...TOPIC_IDS]);
     expect(settings.billingEnabled).toBe(false);
     expect(settings.freeCloudDailyLimit).toBe(50);
-    expect(settings.priceProvider).toBe("kraken");
+    expect(settings.priceProvider).toBe("coingecko");
     expect(warnings).toEqual([]);
   });
 
@@ -42,10 +42,10 @@ describe("parseRemoteSettings", () => {
     expect(warnings.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("accepts coingecko and falls back to kraken for an unknown price provider", () => {
-    expect(parseRemoteSettings({ price_provider: "coingecko" }).settings.priceProvider).toBe("coingecko");
+  it("accepts kraken and falls back to coingecko for an unknown price provider", () => {
+    expect(parseRemoteSettings({ price_provider: "kraken" }).settings.priceProvider).toBe("kraken");
     const { settings, warnings } = parseRemoteSettings({ price_provider: "polygon" });
-    expect(settings.priceProvider).toBe("kraken");
+    expect(settings.priceProvider).toBe("coingecko");
     expect(warnings.some((warning) => warning.includes("price_provider"))).toBe(true);
   });
 });

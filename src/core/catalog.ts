@@ -150,6 +150,31 @@ export function recentFilingLines(a: Asset, now: number = Date.now()): string[] 
     .map((f) => `${f.label}, ${f.value.toLowerCase()}`);
 }
 
+/* ---------- company logos (Logo.dev, only when a publishable key is configured) ---------- */
+
+/** Company websites for logo lookup, by ticker. */
+export const COMPANY_DOMAINS: Readonly<Record<string, string>> = {
+  AAPL: "apple.com", MSFT: "microsoft.com", NVDA: "nvidia.com", AMZN: "amazon.com", GOOGL: "abc.xyz",
+  META: "meta.com", TSLA: "tesla.com", "BRK-B": "berkshirehathaway.com", JPM: "jpmorganchase.com", V: "visa.com",
+  MA: "mastercard.com", UNH: "unitedhealthgroup.com", XOM: "exxonmobil.com", JNJ: "jnj.com", PG: "pg.com",
+  HD: "homedepot.com", COST: "costco.com", WMT: "walmart.com", KO: "coca-cola.com", PEP: "pepsico.com",
+  NFLX: "netflix.com", AMD: "amd.com", INTC: "intel.com", ORCL: "oracle.com", CRM: "salesforce.com",
+  ADBE: "adobe.com", DIS: "thewaltdisneycompany.com", BA: "boeing.com", CAT: "caterpillar.com", GS: "goldmansachs.com",
+};
+
+export const LOGO_CREDIT = { text: "Logos provided by Logo.dev", href: "https://logo.dev" } as const;
+
+/** Adds company logos to stock rows when a Logo.dev key is set. Without a key, assets are returned unchanged. */
+export function withCompanyLogos(assets: readonly Asset[], token: string | undefined): Asset[] {
+  if (!token) return [...assets];
+  return assets.map((a) => {
+    if (a.class !== "stock" || a.logo) return a;
+    const ticker = a.id.split(":")[2] ?? "";
+    const domain = COMPANY_DOMAINS[ticker];
+    return domain ? { ...a, logo: `https://img.logo.dev/${domain}?token=${encodeURIComponent(token)}&size=64&format=png` } : a;
+  });
+}
+
 /* ---------- recently viewed (this device only) ---------- */
 
 export const RECENT_KEY = "atlas-explain-recent-assets";

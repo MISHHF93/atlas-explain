@@ -72,9 +72,9 @@
     },
     "price_provider": {
       "defaultValue": {
-        "value": "kraken"
+        "value": "coingecko"
       },
-      "description": "Live crypto price feed when ATLAS on this computer is not reachable: kraken (hackathon demo default) or coingecko. Flip to coingecko before a market launch unless Kraken has given written consent.",
+      "description": "Live crypto prices: coingecko (default: free with attribution, includes coin images) or kraken (demo only: its terms restrict third-party apps).",
       "valueType": "STRING"
     },
     "coingecko_demo_api_key": {
@@ -82,6 +82,13 @@
         "value": ""
       },
       "description": "Optional CoinGecko Demo API key used only when price_provider is coingecko. Leave empty for keyless public access. Never commit a key.",
+      "valueType": "STRING"
+    },
+    "logo_dev_token": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Optional Logo.dev publishable key (pk_...). Turns on company logos on stock pages, with the required 'Logos provided by Logo.dev' credit. Empty: no company logos.",
       "valueType": "STRING"
     }
   },

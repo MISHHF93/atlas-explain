@@ -94,10 +94,10 @@ export function mountAssets(options: {
         const official = await v.loadMarketData();
         // Explainer pages (indices, futures, options) ship with the app, so the catalog is never empty.
         if (last.kind === "ready") {
-          publicAssets = [...v.assetsFromLiveCatalog(last.catalog), ...official, ...v.EDUCATION_ASSETS];
+          publicAssets = v.withCompanyLogos([...v.assetsFromLiveCatalog(last.catalog), ...official, ...v.EDUCATION_ASSETS], options.priceFeed?.logoDevToken);
           await showPublic({ kind: "ready", assets: publicAssets });
         } else {
-          publicAssets = [...official, ...v.EDUCATION_ASSETS];
+          publicAssets = v.withCompanyLogos([...official, ...v.EDUCATION_ASSETS], options.priceFeed?.logoDevToken);
           await showPublic({ kind: "ready", assets: publicAssets, notice: "Crypto prices couldn't be loaded right now. We'll try again shortly." });
         }
       }

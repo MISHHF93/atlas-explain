@@ -19,9 +19,11 @@ const descriptions = {
     "Kill switch. false keeps the app free: every Pro entitlement is on and checkout is hidden. true meters cloud calls.",
   free_cloud_daily_limit: "Cloud explanations per day on the free plan after billing_enabled is true.",
   price_provider:
-    "Live crypto price feed when ATLAS on this computer is not reachable: kraken (hackathon demo default) or coingecko. Flip to coingecko before a market launch unless Kraken has given written consent.",
+    "Live crypto prices: coingecko (default: free with attribution, includes coin images) or kraken (demo only: its terms restrict third-party apps).",
   coingecko_demo_api_key:
     "Optional CoinGecko Demo API key used only when price_provider is coingecko. Leave empty for keyless public access. Never commit a key.",
+  logo_dev_token:
+    "Optional Logo.dev publishable key (pk_...). Turns on company logos on stock pages, with the required 'Logos provided by Logo.dev' credit. Empty: no company logos.",
 };
 
 const server = await createServer({
