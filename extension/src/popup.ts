@@ -296,6 +296,10 @@ shell.panels.settings.append(
     row("user", "Account and sign-in", () => void openAccount()),
   ]),
   group("Privacy", [el("p", "fine", EXTENSION_PRIVACY_NOTE), privacyLink()]),
+  group("Your data", [
+    el("p", "fine", "Download your data or delete your account on the ATLAS Explain website. Recent explanations in the extension stay in this browser; clear them from Recent."),
+    row("external", "Download or delete your data", () => openUrl(`${EXPLAIN_WEB_URL}/app/account`)),
+  ]),
   group("About", [el("p", "fine", `ATLAS Explain ${version} · Apache-2.0 · ${SHORTCUT_HINT}`), row("external", "Open the web app", () => openUrl(EXPLAIN_WEB_URL))]),
 );
 

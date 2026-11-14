@@ -79,6 +79,10 @@ export interface WebBackend {
   /** The signed-in account's watchlist, or null when signed out (anonymous counts as signed out). */
   loadWatchlist(): Promise<string[] | null>;
   saveWatchlist(ids: string[]): Promise<void>;
+  /** The account's own data for "Download my data"; null when signed out. */
+  exportAccountData(): Promise<{ account: { uid: string; email: string | null; displayName: string | null; provider: string }; settings: { theme: string } | null; watchlist: string[]; savedExplanations: Array<Record<string, unknown>> } | null>;
+  /** Deletes the account's data, then the sign-in account itself, then continues signed out. */
+  deleteAccount(): Promise<{ status: "deleted" | "reauth-needed"; deleted: number; keptToday: boolean }>;
   /** Throws if billing is off. The pricing panel does not call this unless checkout is shown. */
   startCheckout(): Promise<void>;
 }
@@ -204,6 +208,24 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const user = auth.currentUser;
       if (!user || user.isAnonymous) return;
       await (await store()).writeWatchlist(user.uid, ids);
+    },
+    async exportAccountData() {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) return null;
+      const s = await store();
+      const [settings, watchlist, savedExplanations] = await Promise.all([s.readPrefs(user.uid), s.readWatchlist(user.uid), s.allExplanations(user.uid)]);
+      const provider = user.providerData[0]?.providerId === "google.com" ? "google" : "email link";
+      return { account: { uid: user.uid, email: user.email, displayName: user.displayName, provider }, settings, watchlist, savedExplanations };
+    },
+    async deleteAccount() {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) return { status: "deleted", deleted: 0, keptToday: false };
+      const flows = await accountFlows();
+      // Data first, while the user can still prove ownership to the rules; then the sign-in account.
+      const result = await (await store()).deleteUserData(user.uid, Date.now());
+      const status = await flows.deleteSignedInUser(auth);
+      if (status === "deleted") await flows.signOutToAnonymous(auth);
+      return { status, ...result };
     },
     async startCheckout() {
       const { settings } = await loadSettings();

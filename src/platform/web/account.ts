@@ -7,6 +7,8 @@ import {
   linkWithPopup,
   linkWithRedirect,
   onAuthStateChanged,
+  reauthenticateWithPopup,
+  deleteUser,
   sendSignInLinkToEmail,
   signInAnonymously,
   signInWithCredential,
@@ -119,6 +121,29 @@ export async function completePendingSignIn(auth: Auth, href: string, askEmail: 
     return "You are signed in with your email.";
   } catch (error) {
     return authErrorCopy(errorCode(error));
+  }
+}
+
+/**
+ * Deletes the signed-in user from Firebase Authentication. Firebase asks for a recent sign-in
+ * first: Google accounts confirm in a popup; email-link accounts are asked to sign in again.
+ */
+export async function deleteSignedInUser(auth: Auth): Promise<"deleted" | "reauth-needed"> {
+  const user = auth.currentUser;
+  if (!user || user.isAnonymous) return "deleted";
+  try {
+    await deleteUser(user);
+    return "deleted";
+  } catch (error) {
+    if (errorCode(error) !== "auth/requires-recent-login") throw new AuthFlowError(errorCode(error));
+    if (!user.providerData.some((p) => p.providerId === "google.com")) return "reauth-needed";
+    try {
+      await reauthenticateWithPopup(user, googleProvider());
+      await deleteUser(user);
+      return "deleted";
+    } catch (again) {
+      throw new AuthFlowError(errorCode(again));
+    }
   }
 }
 

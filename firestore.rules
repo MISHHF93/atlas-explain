@@ -6,7 +6,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId}/usage/{dayId} {
       allow read: if signedIn(userId);
-      allow delete: if false;
+      // Owners may delete past days' counters (account deletion), never today's, so the
+      // free daily allowance cannot be reset. Mirrored by usageDeleteAllowed() in src/core/account-data.ts.
+      allow delete: if signedIn(userId)
+        && isUsageDay(dayId)
+        && timestamp.date(int(dayId[0:4]), int(dayId[5:7]), int(dayId[8:10])) < request.time - duration.value(1, 'd');
 
       // First cloud call of the UTC day creates the counter at 1.
       allow create: if signedIn(userId)

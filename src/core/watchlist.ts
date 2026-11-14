@@ -74,6 +74,8 @@ export interface Watchlist {
   synced(): boolean;
   /** Re-reads the account (call after sign-in or sign-out). Merges this device's list in once. */
   sync(): Promise<void>;
+  /** Re-reads this device's list (after it was cleared) and stops using the account until the next sync. */
+  reloadLocal(): void;
   onChange(listener: () => void): () => void;
 }
 
@@ -123,6 +125,11 @@ export function createWatchlist(local: KeyValue, remote: WatchlistRemote | null)
     has: (id) => ids.includes(id),
     synced: () => inAccount,
     sync,
+    reloadLocal() {
+      inAccount = false;
+      ids = readLocal(local.get());
+      emit();
+    },
     async toggle(id) {
       const r = toggleId(ids, id);
       if (r.full) return "full";

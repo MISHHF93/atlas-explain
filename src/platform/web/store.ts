@@ -2,6 +2,8 @@ import type { FirebaseApp } from "firebase/app";
 import {
   addDoc,
   collection,
+  deleteDoc,
+  writeBatch,
   getDoc,
   getDocs,
   doc,
@@ -16,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { incrementCloudCalls, readCloudCallsToday } from "./usage";
 import { cleanIds } from "../../core/watchlist";
+import { usageDeleteAllowed } from "../../core/account-data";
 
 /**
  * Firestore is loaded on demand: the wallet shell, Remote Config and
@@ -31,6 +34,10 @@ export interface WebStore {
   writePrefs(uid: string, prefs: { theme: "system" | "light" | "dark" }): Promise<void>;
   readWatchlist(uid: string): Promise<string[]>;
   writeWatchlist(uid: string, ids: string[]): Promise<void>;
+  /** Every saved explanation, for "Download my data". */
+  allExplanations(uid: string): Promise<Array<Record<string, unknown>>>;
+  /** Deletes everything the rules let an owner delete. Returns what was removed and what was left. */
+  deleteUserData(uid: string, nowMs: number): Promise<{ deleted: number; keptToday: boolean }>;
 }
 
 const THEMES = ["system", "light", "dark"] as const;
@@ -64,6 +71,41 @@ export function openStore(app: FirebaseApp): WebStore {
     },
     async writeWatchlist(uid, ids) {
       await setDoc(doc(db, "users", uid, "prefs", "watchlist"), { ids: cleanIds(ids), updatedAt: serverTimestamp() });
+    },
+    async allExplanations(uid) {
+      const snapshot = await getDocs(query(collection(db, "users", uid, "explanations"), orderBy("createdAt", "desc")));
+      return snapshot.docs.map((d) => {
+        const data = d.data();
+        const created = data.createdAt as { toDate?: () => Date } | undefined;
+        return { id: d.id, ...data, createdAt: created?.toDate ? created.toDate().toISOString() : null };
+      });
+    },
+    async deleteUserData(uid, nowMs) {
+      let deleted = 0;
+      // Saved explanations, in batches (Firestore allows up to 500 writes per batch).
+      const explanations = await getDocs(collection(db, "users", uid, "explanations"));
+      for (let i = 0; i < explanations.docs.length; i += 400) {
+        const batch = writeBatch(db);
+        for (const d of explanations.docs.slice(i, i + 400)) batch.delete(d.ref);
+        await batch.commit();
+      }
+      deleted += explanations.size;
+      for (const pref of ["app", "watchlist"]) {
+        await deleteDoc(doc(db, "users", uid, "prefs", pref));
+        deleted += 1;
+      }
+      // Usage counters: every past day. Today's stays (the rules refuse it on purpose).
+      const usage = await getDocs(collection(db, "users", uid, "usage"));
+      let keptToday = false;
+      for (const d of usage.docs) {
+        if (usageDeleteAllowed(d.id, nowMs)) {
+          await deleteDoc(d.ref);
+          deleted += 1;
+        } else {
+          keptToday = true;
+        }
+      }
+      return { deleted, keptToday };
     },
   };
 }

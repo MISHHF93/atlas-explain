@@ -57,6 +57,8 @@ import type { TextRun } from "../platform/web/backend";
 import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } from "../app/routes";
 import type { TabDef } from "../wallet/shell";
 import { createWatchlist, localKeyValue } from "../core/watchlist";
+import { yourDataGroup } from "../wallet/your-data";
+import { RECENT_KEY, readRecent } from "../core/catalog";
 
 /** Navigation for the full-page app. Internal ids stay stable; labels read as a product. */
 export const APP_TABS: readonly TabDef[] = [
@@ -458,6 +460,35 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const settingsHead = el("div", "panel-title");
   settingsHead.append(el("h1", undefined, "Account"), el("span", "fine", "Settings and privacy"));
   const accountLine = el("p", "fine", "You're using ATLAS Explain without an account. Sign in to keep your explanations across devices.");
+  const yourData = yourDataGroup({
+    collect: async () => {
+      const remote = backend ? await backend.exportAccountData().catch(() => null) : null;
+      let recent: string[];
+      try {
+        recent = readRecent(localStorage.getItem(RECENT_KEY));
+      } catch {
+        recent = [];
+      }
+      return {
+        account: remote?.account ?? null,
+        settings: remote?.settings ?? { theme: readTheme() },
+        watchlist: remote?.watchlist ?? watchlist.ids(),
+        savedExplanations: remote?.savedExplanations ?? [],
+        browserHistory: loadTextHistory(),
+        recentlyViewed: recent,
+      };
+    },
+    deleteAccount: async () => {
+      if (!backend) throw new Error("Account deletion isn't available right now. Reload the page and try again.");
+      return backend.deleteAccount();
+    },
+    afterClear: () => {
+      renderTextHistory();
+      watchlist.reloadLocal();
+    },
+    openSheet: (title, nodes) => shell.openSheet(title, nodes),
+    closeSheet: () => shell.closeSheet(),
+  });
   shell.panels.settings.append(
     settingsHead,
     planSlot,
@@ -471,6 +502,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       void backend?.savePrefs({ theme: choice }).catch(() => undefined);
     })]),
     group("Account", [accountLine, row("user", "Sign in or manage your account", () => openAccount())]),
+    yourData.node,
     group("How answers are made", [
       el("p", "fine", "When your browser supports it, Gemini Nano answers on your device and nothing is sent. Otherwise Gemini answers in the cloud. Every answer is labelled."),
     ]),
@@ -576,6 +608,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       await b.watchAccount((view) => {
         account = view;
         shell.setAccount(view);
+        yourData.setSignedIn(Boolean(view?.signedIn));
         accountLine.textContent = view?.signedIn
           ? `Signed in as ${view.label}. Your saved explanations follow you on every device.`
           : "You're using ATLAS Explain without an account. Sign in to keep your explanations across devices.";

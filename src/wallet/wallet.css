@@ -1181,3 +1181,5 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
   color: var(--atlas-muted);
 }
 .ob-try { margin-top: var(--atlas-space-4); }
+.danger { border-color: var(--atlas-signal-down); color: var(--atlas-signal-down); }
+.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--atlas-signal-down) 10%, transparent); }
