@@ -75,8 +75,16 @@ describe("public site", () => {
       expect(text).toContain('href="/privacy"');
     }
   });
-  it("marks the legal pages as drafts", () => {
-    for (const f of ["privacy.html", "terms.html"]) expect(readFileSync(f, "utf8")).toMatch(/Draft · not final/);
+  it("publishes production legal pages: dated, no draft markers or placeholders, with the key commitments", () => {
+    for (const f of ["privacy.html", "terms.html"]) {
+      const text = readFileSync(f, "utf8");
+      expect(text, f).toMatch(/Last updated \d{1,2} [A-Z][a-z]+ 20\d\d/);
+      expect(text, f).not.toMatch(/draft|\[TODO|TODO\]|not final/i);
+    }
+    const privacy = readFileSync("privacy.html", "utf8");
+    for (const part of ['id="analytics"', "off unless you allow them", "Download your data", "delete your account", "never collect", "outside Canada"]) expect(privacy).toContain(part);
+    const terms = readFileSync("terms.html", "utf8");
+    for (const part of ["not investment, financial, tax or legal advice", "refundable on request within 14 days", "Apache License 2.0"]) expect(terms).toContain(part);
   });
   it("has no trade instructions in site copy", () => {
     for (const [, text] of pages) expect(text.replace(/<[^>]+>/g, " ")).not.toMatch(/\b(buy|sell)\b/i);
