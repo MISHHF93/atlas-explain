@@ -87,3 +87,11 @@ export function shouldFallBackToRedirect(code: string): boolean {
 }
 
 export const EMAIL_FOR_LINK_KEY = "atlas-explain-email-for-link";
+
+/** What came of finishing a sign-in that returned to the page (Google redirect or email link). */
+export type SignInOutcome =
+  | { state: "none" }
+  | { state: "signed-in"; method: "google" | "email_link"; message: string }
+  /** An email link opened on a device that doesn't remember the address: ask for it in the page. */
+  | { state: "need-email" }
+  | { state: "error"; message: string };

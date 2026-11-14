@@ -130,7 +130,7 @@ Every public visitor sees these. ATLAS on localhost is the owner's private desk,
 6. **The Account tab has no sign-in, export or delete (P0).** Signed out, Account shows the plan, theme, an AI line about Remote Config, legal links and About (`src/web/app.ts:461-482`). Sign-in lives only in the header icon. There is no data export, no account deletion and no billing section. **PR 5.**
 7. **The plan card repeats itself (P2).** "Free during beta" appears up to three times in the popup's Settings, and a five-row entitlement table is shown while everything is free. **PR 2/6.**
 8. **The email input is styled differently (P2).** It uses a light grey field, not the dark input token (`src/wallet/account.ts:65`). **PR 3.**
-9. **Prompt for email (P2).** Finishing an email link on another device uses `window.prompt` (`src/web/app.ts:591`). **PR 5:** use an in-page field.
+9. **Prompt for email (P2).** Finishing an email link on another device uses `window.prompt` (`src/web/app.ts:591`). **PR 5:** use an in-page field. **Fixed** in `feat/email-link-confirm-field` (in-app "Finish signing in" sheet).
 10. **The "Checking this browser" engine label can stick (P1).** `readEngineState` awaits `LanguageModel.availability()` with no deadline (`src/core/hybrid-engine.ts:46-55`). It stayed on "Checking" after 9 s in headless Chrome. **PR 7:** add a 3 s deadline that falls back to "cloud".
 11. **The 404 sheet over Today (P2)** for unknown `/app/*` paths is fine, but its copy should match the site's 404 page. **PR 2.**
 
