@@ -71,7 +71,7 @@ Educational information, not investment advice.
 | `storage` | Saves recent explanations, theme and learn-path progress in local storage on the device, and hands the selected text from the context menu to the popup through session storage. Nothing is uploaded. |
 | `sidePanel` (optional) | Requested only when the user clicks "Open side panel", to show the same explanations beside the page. |
 | Host `https://atlas-explain.web.app/*` | Our own website. A hidden page there runs cloud explanations behind Firebase App Check (which needs a web origin) and shares the user's optional sign-in. It only accepts this extension's id and a fixed prompt. |
-| Optional host `http://localhost:3000/*` | Not granted at install. Requested only when the user clicks Settings → For ATLAS users → "Connect ATLAS on this computer". It then reads public prices and paper research statistics from the ATLAS desk app on the user's own computer while the popup is open. Nothing from that read leaves the computer. The same button removes the permission. |
+| Optional host `http://localhost:3000/*` | Not granted at install. Requested only when the user opens the menu, then Settings → For ATLAS users → "Connect ATLAS on this computer". It then reads public prices and paper research statistics from the ATLAS desk app on the user's own computer while the popup is open. Nothing from that read leaves the computer. The same button removes the permission. |
 
 **Remote code:** No, I am not using remote code. All JavaScript is bundled in the package (no CDN scripts, no `eval`, CSP `script-src 'self'; object-src 'self'; base-uri 'none'`). The extension embeds a page from its own website in a hidden frame for cloud answers; that page is web content, not extension code.
 
@@ -117,7 +117,7 @@ No account is needed. The extension opens https://atlas-explain.web.app/welcome 
 ## 6. Manifest audit (14 Nov 2026)
 
 - Manifest V3, `service_worker` background, no `content_scripts`, no `web_accessible_resources`, no `externally_connectable`, no `<all_urls>`.
-- Permissions are the four above plus optional `sidePanel`. One install-time host (our own website); the localhost ATLAS host is optional and requested from a click in Settings. `scripts/check-manifest.mjs` fails the release if any other permission or host appears, if a declared API is never used, or if the optional host is never requested.
+- Permissions are the four above plus optional `sidePanel`. One install-time host (our own website); the localhost ATLAS host is optional and requested from a click in Settings (opened from the popup's menu). `scripts/check-manifest.mjs` fails the release if any other permission or host appears, if a declared API is never used, or if the optional host is never requested.
 - CSP `extension_pages`: `script-src 'self'; object-src 'self'; base-uri 'none'` (MV3-compliant; no remote, inline or eval script).
 - Icons 16/32/48/128 PNG, declared for both `icons` and `action.default_icon`.
 - No remote code: the build bundles everything; Firebase is not shipped in the extension (cloud calls go through the website's bridge page).

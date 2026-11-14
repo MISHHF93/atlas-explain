@@ -105,7 +105,7 @@ const shell = createWalletShell({
     { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => openUrl(ATLAS_DESK_URL) },
     { label: "Open the web app", icon: "external", run: () => openUrl(`${EXPLAIN_WEB_URL}/app`) },
     { label: "Privacy", icon: "shield", run: () => shell.openSheet("Privacy", [el("p", undefined, EXTENSION_PRIVACY_NOTE), el("p", undefined, LOCAL_ATLAS_PERMISSION_NOTE), privacyLink(), el("p", "fine", EXTENSION_DISCLAIMER)]) },
-    { label: "Settings", icon: "gear", run: () => shell.select("settings", { focus: true }) },
+    { label: "Settings", icon: "gear", run: () => openSettings() },
   ],
 });
 
@@ -276,7 +276,7 @@ function askTerm(term: { title: string }): void {
 }
 shell.panels.glossary.append(glossaryHead, learnSlot);
 
-/* ---------- Settings tab ---------- */
+/* ---------- Settings (a sheet from the menu, not a tab) ---------- */
 
 const toolsStatus = el("p", "fine");
 // Asks for the optional localhost permission in the click itself (Chrome requires a user gesture).
@@ -290,10 +290,7 @@ const atlasRow = row("plug", "Connect ATLAS on this computer", () => {
 toolsStatus.setAttribute("role", "status");
 const themeSlot = el("div");
 const version = hasChrome ? chrome.runtime.getManifest().version : "preview";
-const settingsHead = el("div", "panel-title");
-settingsHead.append(el("h1", undefined, "Settings"), el("span", "fine", `v${version}`));
-shell.panels.settings.append(
-  settingsHead,
+const settingsNodes: Node[] = [
   planCard(pricingView({ billingEnabled: false, plan: "free", freeCloudDailyLimit: DEFAULT_SETTINGS.freeCloudDailyLimit })),
   group("Appearance", [themeSlot]),
   group("On this page", [
@@ -318,7 +315,10 @@ shell.panels.settings.append(
     atlasRow,
   ]),
   group("About", [el("p", "fine", `ATLAS Explain ${version} · Apache-2.0 · ${SHORTCUT_HINT}`), row("external", "Open the web app", () => openUrl(EXPLAIN_WEB_URL))]),
-);
+];
+function openSettings(): void {
+  shell.openSheet("Settings", settingsNodes);
+}
 
 /* ---------- events ---------- */
 
@@ -718,7 +718,8 @@ function readPreviewTheme(): ThemeChoice {
 
 function applyPreviewState(): void {
   const tab = preview.get("tab");
-  if (tab === "assets" || tab === "signal" || tab === "glossary" || tab === "settings") shell.select(tab);
+  if (tab === "assets" || tab === "signal" || tab === "glossary") shell.select(tab);
+  if (tab === "settings") openSettings();
   const sheet = preview.get("asset");
   if (sheet) void assets?.open(sheet);
   const demo = preview.get("demo");
