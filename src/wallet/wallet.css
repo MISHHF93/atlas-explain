@@ -1150,3 +1150,31 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .account-avatar { display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 999px; background: var(--atlas-accent); color: var(--atlas-accent-ink); font-weight: 700; }
 .account-form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .account-form input { flex: 1 1 12rem; min-width: 0; }
+
+/* ---------- public multi-asset catalog (catalog-view.ts) ---------- */
+.catalog .filters { padding-bottom: 0.1rem; }
+.recent-row { display: flex; align-items: center; gap: 0.35rem; overflow-x: auto; scrollbar-width: none; }
+.recent-label { flex: none; }
+.recent-chip { flex: none; min-height: 2rem; }
+.cat-section { display: grid; gap: 0.45rem; }
+.cat-section + .cat-section { margin-top: 0.6rem; }
+.cat-intro { max-width: 60ch; }
+.catalog .asset-row { grid-template-columns: auto 1fr auto; }
+.class-tag {
+  padding: 0 0.35rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--atlas-ink) 6%, transparent);
+  color: var(--atlas-ink);
+  font-weight: 650;
+}
+.row-source { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.no-price { font-size: var(--atlas-text-2xs); font-weight: 650; color: var(--atlas-muted); white-space: nowrap; }
+.fresh-badge[data-fresh="reference"], .fresh-badge[data-fresh="delayed"] { background: var(--atlas-cloud); color: var(--atlas-ink); }
+.asset-icon.tone-forex, .asset-icon.tone-rate { background: var(--atlas-cloud); color: var(--atlas-ink); }
+.asset-icon.tone-commodity, .asset-icon.tone-future, .asset-icon.tone-option { background: var(--atlas-warn); color: var(--atlas-warn-ink); }
+.asset-icon.tone-etf, .asset-icon.tone-index { background: var(--atlas-ink); color: var(--atlas-paper); }
+.no-price-reason { padding: 0.6rem 0.7rem; border-radius: 10px; background: color-mix(in srgb, var(--atlas-ink) 5%, transparent); font-size: var(--atlas-text-sm); }
+.withheld-line { padding: 0 0.2rem; }
+.fact-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; font-size: var(--atlas-text-xs); }
+.fact-label { color: var(--atlas-muted); }
+.fact-value { font-weight: 700; font-variant-numeric: tabular-nums; }

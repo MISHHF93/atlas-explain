@@ -10,14 +10,18 @@ import {
   type AssetsState,
   type Fetcher,
 } from "../core/assets";
+import { assetFromLiveRow, type Asset } from "../core/asset-schema";
+import { RECENT_KEY, addRecent, assetsFromLiveCatalog, explainAssetPrompt, findAsset, readRecent } from "../core/catalog";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../core/price-feed";
-import { assetDetail, assetsPanel } from "./assets";
+import { assetDetail, assetsPanel, sparkSpan } from "./assets";
+import type { CatalogPanelHandle } from "./catalog-view";
 import { el } from "./dom";
 import type { WalletShell } from "./shell";
 
 /**
- * Mounts the Assets tab: list, detail sheet, live refresh and the connection state.
- * Polls only while the popup is visible: crypto about every 15 s, stocks every 15 min.
+ * Mounts the Assets tab. The public catalog (every class, on the Asset schema) is the default;
+ * the ATLAS view with paper lights appears only when ATLAS on this computer answers.
+ * Polls only while visible: crypto about every 15 s, stocks every 15 min.
  */
 export function mountAssets(options: {
   shell: WalletShell;
@@ -25,32 +29,67 @@ export function mountAssets(options: {
   onExplain: (question: string) => void;
   fetcher?: Fetcher;
   onState?: (state: AssetsState) => void;
-  /** Public live-price feed used when ATLAS is not reachable. Default is Kraken. */
+  /** Public live-price feed used when ATLAS is not reachable. */
   priceFeed?: PriceFeedOptions;
-  /** Called when an asset's detail sheet opens (the web app gives it its own address). */
+  /** Called when an asset's page opens (the web app gives it its own address). */
   onOpen?: (symbol: string) => void;
 }): { refresh: () => Promise<void>; open: (symbol: string) => Promise<boolean> } {
   const { shell } = options;
   const head = el("div", "panel-title");
-  head.append(el("h1", undefined, "Assets"), el("span", "fine", "Live prices"));
+  head.append(el("h1", undefined, "Assets"), el("span", "fine", "Education only"));
+  // ATLAS view (owner only): the original list with paper lights.
   const panel = assetsPanel({
-    onOpen: (a) => void openAsset(a),
+    onOpen: (a) => void openAtlasAsset(a),
     onRetry: () => void refresh(),
   });
-  shell.panels.assets.append(head, panel.node);
+  panel.node.hidden = true;
+  // Public catalog: loaded on demand.
+  const publicSlot = el("div");
+  shell.panels.assets.append(head, panel.node, publicSlot);
 
+  let catalog: CatalogPanelHandle | null = null;
+  let catalogUi: typeof import("./catalog-view") | null = null;
+  let publicAssets: Asset[] = [];
   let listTimer: number | undefined;
   let detailTimer: number | undefined;
-  let openSymbol: string | null = null;
+  let openKey: string | null = null;
   let last: AssetsState = { kind: "loading" };
+  let fromAtlas = false;
   let busy = false;
+
+  void showPublic({ kind: "loading" });
+
+  async function ui(): Promise<typeof import("./catalog-view")> {
+    catalogUi ??= await import("./catalog-view");
+    if (!catalog) {
+      catalog = catalogUi.catalogPanel({ onOpen: (a) => void openPublic(a), onRetry: () => void refresh(), recent: readRecentIds });
+      publicSlot.append(catalog.node);
+    }
+    return catalogUi;
+  }
+
+  async function showPublic(state: Parameters<CatalogPanelHandle["update"]>[0]): Promise<void> {
+    await ui();
+    panel.node.hidden = true;
+    publicSlot.hidden = false;
+    catalog?.update(state);
+  }
 
   async function refresh(): Promise<void> {
     if (busy) return;
     busy = true;
     try {
       last = await readState();
-      panel.update(last);
+      if (fromAtlas) {
+        publicSlot.hidden = true;
+        panel.node.hidden = false;
+        panel.update(last);
+      } else if (last.kind === "ready") {
+        publicAssets = assetsFromLiveCatalog(last.catalog);
+        await showPublic({ kind: "ready", assets: publicAssets });
+      } else if (last.kind === "error" || last.kind === "not_connected" || last.kind === "hosted") {
+        await showPublic({ kind: "error", title: last.kind === "error" && last.title ? last.title : "Prices couldn't be loaded", reason: last.kind === "error" || last.kind === "not_connected" ? last.reason : "Try again in a minute." });
+      }
       options.onState?.(last);
     } finally {
       busy = false;
@@ -59,12 +98,15 @@ export function mountAssets(options: {
   }
 
   async function readState(): Promise<AssetsState> {
-    // ATLAS on this computer first (prices + paper predictions). When it is not reachable,
-    // crypto prices still load live from the configured public feed, with every light grey.
+    // ATLAS on this computer first (owner only). Otherwise the public catalog.
     if (options.canReachAtlas) {
       const atlas = await loadCatalog(options.fetcher);
-      if (atlas.kind === "ready" || atlas.kind === "error") return atlas;
+      if (atlas.kind === "ready" || atlas.kind === "error") {
+        fromAtlas = true;
+        return atlas;
+      }
     }
+    fromAtlas = false;
     const { loadLiveCatalog } = await import("../core/price-provider");
     return loadLiveCatalog(options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher);
   }
@@ -88,8 +130,47 @@ export function mountAssets(options: {
     }
   });
 
-  async function openAsset(a: AssetView): Promise<void> {
-    openSymbol = a.symbol;
+  /* ---------- public asset page ---------- */
+
+  async function openPublic(a: Asset): Promise<void> {
+    const view = await ui();
+    openKey = a.id;
+    writeRecent(a.id);
+    catalog?.refreshRecent();
+    options.onOpen?.(a.symbol);
+    const page = view.assetPage(a, {
+      onExplain: (x) => {
+        shell.closeSheet();
+        options.onExplain(explainAssetPrompt(x));
+      },
+      onTerm: (title) => {
+        shell.closeSheet();
+        options.onExplain(`Explain "${title}" in plain language with a short example. Do not recommend a trade.`);
+      },
+    });
+    shell.openSheet(a.name, page.nodes);
+    if (a.class !== "crypto" || last.kind !== "ready" || !isLivePriceSource(last.catalog.source)) return;
+    const source = last.catalog.source;
+    const tick = async (): Promise<void> => {
+      if (openKey !== a.id) return;
+      const mod = await import("../core/price-provider");
+      const d = await mod.loadLiveDetail(a.symbol, options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher);
+      if (openKey !== a.id) return;
+      if (d) {
+        const fresh = assetFromLiveRow(d, source);
+        if (fresh) page.update(fresh);
+        page.setSpark(d.spark.points, sparkSpan(d.spark.points.length, d.spark.interval));
+      }
+      window.clearTimeout(detailTimer);
+      if (visible()) detailTimer = window.setTimeout(() => void tick(), POLL_CRYPTO_MS);
+    };
+    await tick();
+  }
+
+  /* ---------- ATLAS asset page (owner only) ---------- */
+
+  async function openAtlasAsset(a: AssetView): Promise<void> {
+    openKey = a.symbol;
     options.onOpen?.(a.symbol);
     const view = assetDetail(a, {
       onExplain: (x) => {
@@ -104,12 +185,9 @@ export function mountAssets(options: {
     });
     shell.openSheet(a.name, view.nodes);
     const tick = async (): Promise<void> => {
-      if (openSymbol !== a.symbol) return;
-      const fromLive = last.kind === "ready" && isLivePriceSource(last.catalog.source);
-      const d: AssetDetailView | null = fromLive
-        ? await import("../core/price-provider").then((mod) => mod.loadLiveDetail(a.symbol, options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher))
-        : await loadDetail(a.symbol, options.fetcher);
-      if (openSymbol !== a.symbol) return;
+      if (openKey !== a.symbol) return;
+      const d: AssetDetailView | null = await loadDetail(a.symbol, options.fetcher);
+      if (openKey !== a.symbol) return;
       if (d) view.update(d);
       window.clearTimeout(detailTimer);
       if (visible()) detailTimer = window.setTimeout(() => void tick(), a.klass === "crypto" ? POLL_CRYPTO_MS : POLL_STOCK_MS);
@@ -117,23 +195,45 @@ export function mountAssets(options: {
     await tick();
   }
 
-  /** Opens an asset by symbol. Resolves false when the catalog has no such asset right now. */
-  async function open(symbol: string): Promise<boolean> {
+  /** Opens an asset by symbol or id. Resolves false when the catalog has no such asset right now. */
+  async function open(key: string): Promise<boolean> {
     if (last.kind !== "ready") await refresh();
-    const want = symbol.toUpperCase();
-    const a = last.kind === "ready" ? last.catalog.assets.find((x) => x.symbol.toUpperCase() === want) : undefined;
+    if (fromAtlas) {
+      const want = key.toUpperCase();
+      const a = last.kind === "ready" ? last.catalog.assets.find((x) => x.symbol.toUpperCase() === want) : undefined;
+      if (!a) return false;
+      await openAtlasAsset(a);
+      return true;
+    }
+    const a = findAsset(publicAssets, key);
     if (!a) return false;
-    await openAsset(a);
+    await openPublic(a);
     return true;
   }
 
   const sheetObserver = new MutationObserver(() => {
     if (shell.frame.dataset.sheet !== "open") {
-      openSymbol = null;
+      openKey = null;
       window.clearTimeout(detailTimer);
     }
   });
   sheetObserver.observe(shell.frame, { attributes: true, attributeFilter: ["data-sheet"] });
 
   return { refresh, open };
+}
+
+function readRecentIds(): string[] {
+  try {
+    return readRecent(localStorage.getItem(RECENT_KEY));
+  } catch {
+    return [];
+  }
+}
+
+function writeRecent(id: string): void {
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(addRecent(readRecentIds(), id)));
+  } catch {
+    // Private mode: recently viewed lasts for this visit only.
+  }
 }
