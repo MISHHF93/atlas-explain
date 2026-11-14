@@ -24,8 +24,8 @@
     <a class="skip" href="#main">Skip to content</a>
     <header class="site-head">
       <a class="brand" href="/" aria-label="ATLAS Explain home"><img src="/logo.svg" alt="" width="28" height="28" /><span><b>ATLAS</b> Explain</span></a>
-      <nav class="site-nav" aria-label="Site"><a href="/how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a></nav>
-      <a class="btn btn-primary btn-sm" href="/how-it-works#install">Add to Chrome</a>
+      <nav class="site-nav" aria-label="Site"><a href="/#how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a></nav>
+      <a class="btn btn-primary btn-sm" href="/#install">Add to Chrome</a>
     </header>
     <main id="main" tabindex="-1">
       <section class="hero" aria-labelledby="hero-title">
@@ -34,7 +34,7 @@
           <h1 id="hero-title" class="hero-title">Select any market term. <span>Get it in plain language.</span></h1>
           <p class="hero-lede">ATLAS Explain lives in your Chrome toolbar. Highlight jargon on any page, a news story, a chart, a filing, and get a calm, two-sided explanation. It runs on your device first, and it never reads your balances or accounts.</p>
           <div class="hero-cta">
-            <a class="btn btn-primary btn-lg" href="/how-it-works#install">Add to Chrome</a>
+            <a class="btn btn-primary btn-lg" href="/#install">Add to Chrome</a>
             <a class="btn" href="/app">Try it in your browser</a>
           </div>
           <p class="fine">Free. Installs in about two minutes. Educational information, not investment advice.</p>
@@ -44,7 +44,7 @@
         </figure>
       </section>
 
-      <section class="band" aria-labelledby="how-title">
+      <section class="band" id="how-it-works" aria-labelledby="how-title">
         <h2 id="how-title" class="band-title">How it works</h2>
         <ol class="flow">
           <li class="card"><span class="flow-n">1</span><h3>Select text on any page</h3><p>Highlight a term or a sentence, then click the toolbar icon, press Alt+Shift+X, or right-click and choose Explain.</p></li>
@@ -57,6 +57,7 @@
         <div>
           <h2 id="hybrid-title" class="band-title">Hybrid AI you can see</h2>
           <p class="band-lede">Only the text you select is used, and it's answered on your device whenever your browser can. Private notes never leave the browser.</p>
+          <p class="band-lede">Gemini Nano works in recent desktop Chrome on computers that meet Chrome's requirements. Phones, tablets and other browsers use Gemini in the cloud, and those answers are labelled "Cloud". Cloud answers have a fair daily limit; answers on your device do not.</p>
         </div>
         <ol class="hybrid" aria-label="How an answer is routed">
           <li class="hy-step"><span class="hy-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16M14.5 4.5l5 5L10 19H5v-5z"/></svg></span><span><b>Your highlight</b><small>Selected text, page title and site name. Nothing else.</small></span></li>
@@ -79,10 +80,25 @@
         <ul class="points">
           <li><b>Reads only what you select.</b> The highlighted text, the page title and the site name, and only when you ask.</li>
           <li><b>Never balances or accounts.</b> It does not read form fields, account numbers, positions or balances, on any site.</li>
-          <li><b>No made-up numbers.</b> Missing data stays missing, with the reason. Every price names its source.</li>
+          <li><b>No made-up numbers.</b> Missing data stays missing, with the reason. Every price names its source and links to it.</li>
+          <li><b>No predictions.</b> It shows prices and explains them. It never says where a price is going.</li>
           <li><b>Education only.</b> Two sides, every time. It never tells anyone to trade.</li>
         </ul>
         <p><a href="/privacy">Read the privacy policy</a></p>
+      </section>
+
+      <section class="band" id="install" aria-labelledby="install-title">
+        <h2 id="install-title" class="band-title">Add to Chrome</h2>
+        <p class="band-lede">Install it in four steps. It takes about two minutes.</p>
+        <p><a class="btn btn-primary" href="/download/atlas-explain-chrome.zip" download>Download the extension (.zip)</a></p>
+        <ol class="steps">
+          <li>Unzip the file into a folder you will keep, for example <code>Documents/atlas-explain</code>.</li>
+          <li>Open <code>chrome://extensions</code> and turn on Developer mode (top right).</li>
+          <li>Choose Load unpacked and select the unzipped folder.</li>
+          <li>Pin ATLAS Explain from the puzzle icon. Highlight a term on any page and click the icon, or press Alt+Shift+X.</li>
+        </ol>
+        <p class="fine">Signing in is optional. If you sign in on this site in the same Chrome profile, the extension uses the same account.</p>
+        <p id="extension" class="fine">On a phone or a browser without extensions, use the <a href="/app">web app</a>. It is the same Explain, Learn and Assets, with answers from the cloud model, clearly labelled.</p>
       </section>
 
       <section class="band" aria-labelledby="faq-title">
@@ -98,12 +114,12 @@
 
       <section class="band cta-band" aria-labelledby="cta-title">
         <h2 id="cta-title" class="band-title">Make market jargon readable</h2>
-        <div class="hero-cta"><a class="btn btn-primary btn-lg" href="/how-it-works#install">Add to Chrome</a><a class="btn" href="/app">Open the web app</a></div>
+        <div class="hero-cta"><a class="btn btn-primary btn-lg" href="/#install">Add to Chrome</a><a class="btn" href="/app">Open the web app</a></div>
       </section>
     </main>
     <footer class="site-foot">
       <p class="foot-edu">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>
-      <nav aria-label="Footer"><a href="/how-it-works#install">Add to Chrome</a><a href="/how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a><a href="/support#faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>
+      <nav aria-label="Footer"><a href="/#install">Add to Chrome</a><a href="/#how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a><a href="/support#faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>
       <p class="fine">© 2026 ATLAS Explain · <a href="/how-its-built">How it's built</a></p>
     </footer>
   </body>
