@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { connectionCopy, signalCopy, whyQuestion, shortSelection, SAMPLE_EXPLANATION } from "../src/core/popup-copy";
+import { connectionCopy, showsConnectionChip, signalCopy, whyQuestion, shortSelection, SAMPLE_EXPLANATION } from "../src/core/popup-copy";
 import { mapSignal } from "../src/core/signal";
 
 const css = readFileSync("src/wallet/wallet.css", "utf8");
@@ -20,7 +20,7 @@ const views = {
 
 describe("wallet popup copy", () => {
   it("names each light state without trade instructions", () => {
-    expect(signalCopy(views.connect).headline).toBe("Connect ATLAS");
+    expect(signalCopy(views.connect).headline).toBe("No desk in this tab");
     expect(signalCopy(views.thin).headline).toBe("Not enough evidence");
     expect(signalCopy(views.up).headline).toBe("Model leans up");
     expect(signalCopy(views.down).headline).toBe("Model leans down");
@@ -44,14 +44,17 @@ describe("wallet popup copy", () => {
     expect(whyQuestion(views.thin)).toContain("Do not recommend a trade");
   });
 
-  it("labels the connection pill for desk, local, hosted, none, and offline", () => {
+  it("labels the connection pill, and shows no pill when there is nothing to say", () => {
     expect(connectionCopy("desk").label).toBe("ATLAS desk");
-    expect(connectionCopy("local").label).toBe("ATLAS local");
-    expect(connectionCopy("hosted").label).toBe("Hosted app");
-    expect(connectionCopy("hosted").title).toMatch(/never calls localhost/);
-    expect(connectionCopy("none").label).toBe("Not connected");
-    expect(connectionCopy("none").title).toMatch(/localhost:3000/);
+    expect(connectionCopy("local").label).toBe("ATLAS connected");
+    expect(connectionCopy("live").label).toBe("Live prices");
     expect(connectionCopy("offline").label).toBe("Offline");
+    // The public default states have no chip: never "Not connected" or "Hosted app".
+    expect(showsConnectionChip("hosted")).toBe(false);
+    expect(showsConnectionChip("none")).toBe(false);
+    for (const state of ["desk", "local", "live", "hosted", "none", "offline"] as const) {
+      expect(connectionCopy(state).title).not.toMatch(/localhost/);
+    }
   });
 
   it("shortens long highlights for the quote line", () => {

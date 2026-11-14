@@ -13,14 +13,15 @@ describe("sample move cards", () => {
     }
   });
 
-  it("marks the historical sessions and the blank dip differently", () => {
+  it("ships only sourced historical sessions", () => {
     const historical = SAMPLE_MOVES.filter((sample) => sample.kind === "historical");
     expect(historical.map((sample) => sample.card.asOf)).toEqual([
       "2025-01-27",
       "2025-04-03",
       "2025-04-04",
     ]);
-    expect(SAMPLE_MOVES.find((sample) => sample.id === "hypothetical-dip")?.summary).toMatch(/placeholder/i);
+    // No placeholder or fixture cards ship to users: every sample is a sourced historical move.
+    expect(SAMPLE_MOVES.every((sample) => sample.kind === "historical" && sample.sources.length > 0)).toBe(true);
     for (const sample of historical) {
       expect(sample.sources.length).toBeGreaterThan(0);
       expect(sample.card.sourceNote).toMatch(/not a market-data feed/i);

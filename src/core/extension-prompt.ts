@@ -11,9 +11,9 @@ export const EXTENSION_DISCLAIMER = "Educational information, not investment adv
 export const EXTENSION_PRIVACY_NOTE =
   "ATLAS Explain sends only the text you highlight, the page title, and the site name. It does not read form fields, balances, or account numbers. Nothing runs until you click.";
 
-/** Why the extension asks for its two site permissions (shown in Privacy and Settings). */
+/** Why the extension asks for its two site permissions (shown in the Privacy sheet). */
 export const LOCAL_ATLAS_PERMISSION_NOTE =
-  "The extension asks for two sites. http://localhost:3000: the Assets tab reads ATLAS on this computer (public prices and paper model stats, without cookies, only while the popup is open). https://atlas-explain.web.app: our own web app, which runs cloud explanations behind App Check and shares your sign-in. It never reads balances, accounts or keys.";
+  "The extension talks to our own site, atlas-explain.web.app, to write cloud answers and to share your sign-in. It can also read ATLAS research software if that runs on your own computer; most people never have it, and nothing is sent anywhere from that read. It never reads balances, accounts or keys.";
 
 export const EXTENSION_SYSTEM =
   "You explain trading language and market moves for education. You are not an advisor. You never tell anyone to buy, sell, hold, or size a trade. If asked for a trade decision, refuse it and explain the factors instead. You never invent prices or account details.";

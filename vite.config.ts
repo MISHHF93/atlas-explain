@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         site: "index.html",
         howItWorks: "how-it-works.html",
+        howItsBuilt: "how-its-built.html",
         privacy: "privacy.html",
         terms: "terms.html",
         support: "support.html",

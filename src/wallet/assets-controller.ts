@@ -3,8 +3,6 @@ import {
   loadCatalog,
   loadDetail,
   nextPollMs,
-  readCatalog,
-  readDetail,
   POLL_CRYPTO_MS,
   POLL_STOCK_MS,
   type AssetDetailView,
@@ -17,14 +15,6 @@ import { assetDetail, assetsPanel } from "./assets";
 import { el } from "./dom";
 import type { WalletShell } from "./shell";
 
-/** Box preview only: payloads captured from the real ATLAS route, shown with a banner. */
-export interface AssetsPreview {
-  label: string;
-  list: unknown;
-  details: Record<string, unknown>;
-  state?: "ready" | "not_connected" | "hosted" | "loading";
-}
-
 /**
  * Mounts the Assets tab: list, detail sheet, live refresh and the connection state.
  * Polls only while the popup is visible: crypto about every 15 s, stocks every 15 min.
@@ -34,20 +24,18 @@ export function mountAssets(options: {
   canReachAtlas: boolean;
   onExplain: (question: string) => void;
   fetcher?: Fetcher;
-  preview?: AssetsPreview;
   onState?: (state: AssetsState) => void;
   /** Public live-price feed used when ATLAS is not reachable. Default is Kraken. */
   priceFeed?: PriceFeedOptions;
   /** Called when an asset's detail sheet opens (the web app gives it its own address). */
   onOpen?: (symbol: string) => void;
 }): { refresh: () => Promise<void>; open: (symbol: string) => Promise<boolean> } {
-  const { shell, preview } = options;
+  const { shell } = options;
   const head = el("div", "panel-title");
-  head.append(el("h1", undefined, "Assets"), el("span", "fine", "Paper only"));
+  head.append(el("h1", undefined, "Assets"), el("span", "fine", "Live prices"));
   const panel = assetsPanel({
     onOpen: (a) => void openAsset(a),
     onRetry: () => void refresh(),
-    preview: preview?.label,
   });
   shell.panels.assets.append(head, panel.node);
 
@@ -71,13 +59,6 @@ export function mountAssets(options: {
   }
 
   async function readState(): Promise<AssetsState> {
-    if (preview) {
-      if (preview.state && preview.state !== "ready") {
-        return preview.state === "loading" ? { kind: "loading" } : preview.state === "hosted" ? { kind: "hosted" } : { kind: "not_connected", reason: "ATLAS is not answering at localhost:3000." };
-      }
-      const catalog = readCatalog(preview.list);
-      return catalog ? { kind: "ready", catalog } : { kind: "error", reason: "Preview data is not readable." };
-    }
     // ATLAS on this computer first (prices + paper predictions). When it is not reachable,
     // crypto prices still load live from the configured public feed, with every light grey.
     if (options.canReachAtlas) {
@@ -94,7 +75,7 @@ export function mountAssets(options: {
 
   function schedule(): void {
     window.clearTimeout(listTimer);
-    if (preview || last.kind === "hosted") return;
+    if (last.kind === "hosted") return;
     const delay = last.kind === "ready" ? nextPollMs(last.catalog.assets, visible()) : visible() ? POLL_CRYPTO_MS : null;
     if (delay != null) listTimer = window.setTimeout(() => void refresh(), delay);
   }
@@ -121,20 +102,17 @@ export function mountAssets(options: {
       },
       priceSource: last.kind === "ready" ? last.catalog.source : undefined,
     });
-    const banner = preview?.label ? [el("p", "preview-banner", preview.label)] : [];
-    shell.openSheet(a.name, [...banner, ...view.nodes]);
+    shell.openSheet(a.name, view.nodes);
     const tick = async (): Promise<void> => {
       if (openSymbol !== a.symbol) return;
       const fromLive = last.kind === "ready" && isLivePriceSource(last.catalog.source);
-      const d: AssetDetailView | null = preview
-        ? readDetail(preview.details[a.symbol])
-        : fromLive
-          ? await import("../core/price-provider").then((mod) => mod.loadLiveDetail(a.symbol, options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher))
-          : await loadDetail(a.symbol, options.fetcher);
+      const d: AssetDetailView | null = fromLive
+        ? await import("../core/price-provider").then((mod) => mod.loadLiveDetail(a.symbol, options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher))
+        : await loadDetail(a.symbol, options.fetcher);
       if (openSymbol !== a.symbol) return;
       if (d) view.update(d);
       window.clearTimeout(detailTimer);
-      if (!preview && visible()) detailTimer = window.setTimeout(() => void tick(), a.klass === "crypto" ? POLL_CRYPTO_MS : POLL_STOCK_MS);
+      if (visible()) detailTimer = window.setTimeout(() => void tick(), a.klass === "crypto" ? POLL_CRYPTO_MS : POLL_STOCK_MS);
     };
     await tick();
   }

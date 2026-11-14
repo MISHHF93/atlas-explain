@@ -1,49 +1,51 @@
+import { INSTALL_URL } from "../core/popup-copy";
 import { el } from "./dom";
 
-/** Plain-language Terms and Privacy, shown in the wallet sheet. Not legal advice. */
+/** Short, plain summaries shown in the app sheet. The full text lives at /terms and /privacy. */
 export function termsNodes(): HTMLElement[] {
   return [
-    el("p", "fine", "DRAFT for review, not final. Plain-language summary. This is not legal advice. Full draft: docs/legal/TERMS_DRAFT.md."),
-    el("p", undefined, "ATLAS Explain gives educational information about a market move you describe. It is not investment advice, not a recommendation, and not an offer to trade any security."),
-    el("p", undefined, "The app is free during beta. Paid plans are switched off and no checkout is available. If a paid plan is offered later, the price and what it includes will be shown before you pay."),
-    el("p", undefined, "You can use the app signed out. The browser then gets an anonymous id so saved explanations stay on that browser. You can sign in with Google or an email link at any time; your saved explanations move to that account. Sign out from the account menu."),
-    el("p", undefined, "Cloud explanations have fair-use limits per browser to keep the free service available. Explanations that run on your device are not limited."),
-    el("p", undefined, "Do not paste confidential trading records. Notes and watchlists are left out of cloud requests and are not stored. Sample cards are illustrations from public news reports, not a live data feed."),
-    el("p", undefined, "Explanations can be wrong or incomplete. You are responsible for what you do with them."),
+    el("p", undefined, "ATLAS Explain gives general educational information about financial terms and market news. It is not investment, financial, tax or legal advice, and it never recommends a trade."),
+    el("p", undefined, "Answers are written by AI and can be wrong, incomplete or out of date. Prices can be delayed. You are responsible for your own decisions."),
+    el("p", undefined, "You can use ATLAS Explain without an account. Cloud answers have a daily limit so the service stays available for everyone. Answers on your device are not limited."),
+    el("p", undefined, "Please don't paste account numbers, balances or anything confidential."),
+    fullText("Read the full terms", "/terms"),
   ];
 }
 
 export function privacyNodes(): HTMLElement[] {
   return [
-    el("p", "fine", "DRAFT for review, not final. Plain-language summary. This is not legal advice. Full draft: docs/legal/PRIVACY_DRAFT.md."),
-    el("p", undefined, "If you sign in, ATLAS Explain stores your account id, email address and display name from Google or your email link, and your theme setting. You can ask for your account and saved explanations to be deleted."),
-    el("p", undefined, "ATLAS Explain stores an anonymous user id, the public move card you submit, the explanation, which path ran (on-device or cloud), and a daily count of cloud explanations. Notes and watchlists are not written to the database."),
-    el("p", undefined, "When Gemini Nano runs in Chrome, that prompt is processed on your computer. When the cloud model runs, the public card and your question are sent to Gemini through Firebase AI Logic. App Check is on."),
-    el("p", undefined, "The Chrome extension sends only the text you highlight, the page title, and the site name. It never reads form fields, balances, or account numbers."),
-    el("p", undefined, "The extension asks for two site permissions. http://localhost:3000 lets its Assets tab read public prices and paper model stats from ATLAS running on your own computer; nothing from that read leaves your computer. https://atlas-explain.web.app is our own web app, which runs cloud explanations behind App Check and shares your sign-in. This web app never calls your computer."),
-    el("p", undefined, "Live crypto prices come from a public market-data provider (Kraken or CoinGecko, named next to the prices and chosen in Remote Config). Your browser requests public prices directly. These prices are never used to train a model, and no account or key is involved."),
-    el("p", undefined, "Firebase, a Google service, hosts the site, the database, and sign-in. If you link Google, Google receives the sign-in. Personal information is never sold or shared for advertising."),
-    el("p", undefined, "Payments are off. No card number is collected. If payments are turned on later, Stripe would process the payment and this app would not store the card number. A future paid plan sold from Ontario may be subject to GST/HST. That is not tax advice."),
+    el("p", undefined, "ATLAS Explain uses only the text you highlight or type, plus the page title and site name. It never reads balances, account numbers or form fields."),
+    el("p", undefined, "When your browser supports it, the answer is written on your device and nothing is sent. Otherwise your text is sent to Google's Gemini in the cloud to write the answer. Every answer says which one ran."),
+    el("p", undefined, "If you sign in, we store your account id, email address and name, your settings and the explanations you save. You can ask for your account and data to be deleted. Your information is never sold or used for advertising."),
+    el("p", undefined, "Live prices are requested directly from the market-data provider named next to them."),
+    fullText("Read the full privacy policy", "/privacy"),
   ];
 }
 
 export function extensionNodes(): HTMLElement[] {
+  const add = el("a", "primary", "Add ATLAS Explain to Chrome") as HTMLAnchorElement;
+  add.href = INSTALL_URL;
+  add.target = "_blank";
+  add.rel = "noopener";
   const steps = el("ol");
   for (const text of [
-    "Download or clone the public repository, then run npm ci and npm run build:extension.",
-    "Open chrome://extensions and turn on Developer mode.",
-    "Choose Load unpacked and select the extension/dist folder.",
-    "Pin ATLAS Explain, then open the ATLAS Markets desk and click the icon to read the signal light.",
+    "Add ATLAS Explain to Chrome and pin it from the puzzle-piece menu.",
+    "Highlight a word or sentence on any page.",
+    "Click the ATLAS Explain icon, or right-click and choose Explain with ATLAS.",
   ]) steps.append(el("li", undefined, text));
-  const repo = el("a", undefined, "github.com/MISHHF93/atlas-explain");
-  repo.href = "https://github.com/MISHHF93/atlas-explain";
-  repo.target = "_blank";
-  repo.rel = "noreferrer";
-  const line = el("p", "fine");
-  line.append("Source, Apache-2.0: ", repo);
   return [
-    el("p", undefined, "The extension is the same wallet you see here, opened from the Chrome toolbar. It adds highlight-to-explain on any page and reads the ATLAS desk's public paper signal."),
+    el("p", undefined, "The extension explains anything you highlight, on any page, without leaving it. It works on desktop Chrome."),
     steps,
-    line,
+    add,
   ];
+}
+
+function fullText(label: string, href: string): HTMLElement {
+  const p = el("p");
+  const a = el("a", undefined, label) as HTMLAnchorElement;
+  a.href = href;
+  a.target = "_blank";
+  a.rel = "noopener";
+  p.append(a);
+  return p;
 }

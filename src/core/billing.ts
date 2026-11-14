@@ -14,8 +14,7 @@ export interface Entitlements {
   onDeviceExplanations: "unlimited";
 }
 
-export const PRO_PRICE_LABEL = "Pro — coming after beta";
-export const BETA_BADGE = "Free during beta";
+export const FREE_BADGE = "Free";
 export const FREE_WATCHLIST_SIZE = 10;
 /** Hard cap already enforced by move-card validation. */
 export const WATCHLIST_HARD_CAP = 50;
@@ -35,7 +34,8 @@ export function freeEntitlements(freeCloudDailyLimit: number): Entitlements {
     cloudExplanationsPerDay: freeCloudDailyLimit,
     watchlistSize: FREE_WATCHLIST_SIZE,
     dailyBrief: false,
-    extensionHighlightToExplain: false,
+    // Highlight-to-explain is the core product and is free on every plan (docs/PRICING.md).
+    extensionHighlightToExplain: true,
     onDeviceExplanations: "unlimited",
   };
 }
@@ -98,26 +98,24 @@ export interface PricingView {
   badge: string;
   /** False while billing is off, and for a customer who is already Pro. */
   showCheckout: boolean;
-  priceLabel: string;
-  betaNote: string | null;
+  /** One plain line under the plan name. */
+  note: string;
   rows: { label: string; free: string; pro: string }[];
 }
 
 export function pricingView(input: BillingInput): PricingView {
   const limit = input.freeCloudDailyLimit;
   return {
-    badge: input.billingEnabled ? (input.plan === "pro" ? "Pro" : "Free") : BETA_BADGE,
+    badge: input.billingEnabled && input.plan === "pro" ? "Pro" : FREE_BADGE,
     showCheckout: input.billingEnabled && input.plan !== "pro",
-    priceLabel: PRO_PRICE_LABEL,
-    betaNote: input.billingEnabled
-      ? null
-      : "Billing is off. During beta every Pro entitlement is free, including cloud explanations. On-device explanations stay unlimited on every plan.",
-    rows: [
+    note: input.billingEnabled
+      ? "Answers on your device are unlimited on every plan."
+      : "Everything is included. Answers on your device are always unlimited.",
+    // While billing is off there is nothing to compare, so the table is not shown.
+    rows: !input.billingEnabled ? [] : [
       { label: "On-device explanations", free: "Unlimited", pro: "Unlimited" },
       { label: "Cloud explanations", free: `${limit} a day`, pro: "Unlimited" },
       { label: "Watchlist", free: `${FREE_WATCHLIST_SIZE} symbols`, pro: `Up to ${WATCHLIST_HARD_CAP}` },
-      { label: "Daily brief", free: "Not included", pro: "Included" },
-      { label: "Extension highlight-to-explain", free: "Not included", pro: "Included" },
     ],
   };
 }
@@ -158,7 +156,7 @@ export class CloudAllowanceUsed extends Error {
 
   constructor() {
     super(
-      "Today's free cloud explanations are used up. Explanations that run on this device are still unlimited. Pro is coming after beta.",
+      "You've used today's free cloud explanations. Answers on this device still work, and the limit resets at 00:00 UTC.",
     );
     this.name = "CloudAllowanceUsed";
   }
@@ -169,7 +167,7 @@ export class WatchlistAllowance extends Error {
 
   constructor(limit: number) {
     super(
-      `This watchlist has more than ${limit} symbols. Shorten it to continue on the free plan. Pro is coming after beta.`,
+      `This watchlist has more than ${limit} symbols. Shorten it to continue.`,
     );
     this.name = "WatchlistAllowance";
   }

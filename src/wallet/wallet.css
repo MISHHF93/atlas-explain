@@ -217,6 +217,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .icon-btn.ghost:hover { background: color-mix(in srgb, var(--atlas-ink) 7%, transparent); color: var(--atlas-ink); }
 .icon-btn:active, .primary:active, .secondary:active, .seg:active, .tab:active { transform: scale(0.96); }
 
+a.primary, a.secondary { text-decoration: none; }
 .primary, .secondary {
   display: inline-flex;
   align-items: center;

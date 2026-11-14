@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   CloudAllowanceUsed,
   PRO_ENTITLEMENTS,
-  PRO_PRICE_LABEL,
   allowCloudCall,
   applyCloudGate,
   checkoutSessionAllowed,
@@ -61,10 +60,11 @@ describe("entitlements", () => {
 });
 
 describe("billing flag off", () => {
-  it("does not make checkout reachable and shows the beta price", () => {
+  it("does not make checkout reachable and shows a plain Free plan with nothing to compare", () => {
     const view = pricingView({ billingEnabled: false, plan: "free", freeCloudDailyLimit: 50 });
-    expect(view.badge).toBe("Free during beta");
-    expect(view.priceLabel).toBe(PRO_PRICE_LABEL);
+    expect(view.badge).toBe("Free");
+    expect(view.rows).toEqual([]);
+    expect(`${view.badge} ${view.note}`).not.toMatch(/beta|coming|Pro/i);
     expect(view.showCheckout).toBe(false);
     expect(pricingActions(view)).not.toContain("checkout");
     expect(DEFAULT_SETTINGS.billingEnabled).toBe(false);
@@ -96,7 +96,9 @@ describe("cloud gate", () => {
     const error = new CloudAllowanceUsed();
     expect(error.friendly).toBe(true);
     expect(error.message.toLowerCase()).not.toContain("error");
-    expect(error.message).toContain("unlimited");
+    expect(error.message).toContain("Answers on this device still work");
+    expect(error.message).toContain("resets");
+    expect(error.message).not.toMatch(/beta|coming/i);
   });
 });
 

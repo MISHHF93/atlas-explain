@@ -44,7 +44,10 @@ describe("hybrid engine status", () => {
       expect(isEngineState(state)).toBe(true);
     }
     expect(isEngineState("fast")).toBe(false);
-    expect(engineCopy("cloud").detail).toMatch(/Firebase AI Logic/);
+    expect(engineCopy("cloud").detail).toMatch(/Gemini answers in the cloud/);
+    for (const state of ["checking", "ready", "downloadable", "downloading", "cloud", "offline"] as const) {
+      expect(`${engineCopy(state).label} ${engineCopy(state).detail}`).not.toMatch(/Firebase AI Logic|App Check|Remote Config/);
+    }
   });
 
   it("describes the route the last answer actually took", () => {

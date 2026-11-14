@@ -72,9 +72,9 @@ describe("extension prompt", () => {
 });
 
 describe("extension entitlements during beta", () => {
-  it("allows highlight-to-explain while billing is off and blocks it on the free plan", () => {
+  it("keeps highlight-to-explain free on every plan, with billing on or off", () => {
     expect(extensionHighlightAllowed({ billingEnabled: false, plan: "free", freeCloudDailyLimit: 50 })).toBe(true);
-    expect(extensionHighlightAllowed({ billingEnabled: true, plan: "free", freeCloudDailyLimit: 50 })).toBe(false);
+    expect(extensionHighlightAllowed({ billingEnabled: true, plan: "free", freeCloudDailyLimit: 50 })).toBe(true);
     expect(extensionHighlightAllowed({ billingEnabled: true, plan: "pro", freeCloudDailyLimit: 50 })).toBe(true);
   });
 

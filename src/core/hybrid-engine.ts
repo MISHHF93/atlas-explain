@@ -61,23 +61,23 @@ export async function readEngineState(
 export function engineCopy(state: EngineState): EngineCopy {
   switch (state) {
     case "checking":
-      return { label: "Checking this browser", detail: "Looking for Gemini Nano on this device. Nothing is sent.", route: "none" };
+      return { label: "Checking your browser", detail: "Checking whether this browser can answer on your device. Nothing is sent.", route: "none" };
     case "ready":
       return {
-        label: "Gemini Nano ready",
+        label: "On-device ready",
         detail: "Answers run on this device first. The cloud stays on standby and is used only if the on-device model cannot answer.",
         route: "device",
       };
     case "downloadable":
       return {
-        label: "Cloud now · Nano can download",
-        detail: "Chrome can download Gemini Nano for this device. Until it does, Gemini answers in the cloud through Firebase AI Logic.",
+        label: "Cloud for now",
+        detail: "Chrome can download Gemini Nano to answer on your device. Until it does, Gemini answers in the cloud.",
         route: "cloud",
       };
     case "downloading":
       return {
-        label: "Cloud now · Nano downloading",
-        detail: "Chrome is downloading Gemini Nano. Until it finishes, Gemini answers in the cloud through Firebase AI Logic.",
+        label: "Cloud for now",
+        detail: "Chrome is downloading Gemini Nano. Until it finishes, Gemini answers in the cloud.",
         route: "cloud",
       };
     case "offline":
@@ -88,8 +88,8 @@ export function engineCopy(state: EngineState): EngineCopy {
       };
     default:
       return {
-        label: "Cloud mode",
-        detail: "This browser has no on-device model, so Gemini answers in the cloud through Firebase AI Logic with App Check in front.",
+        label: "Cloud answers",
+        detail: "This browser can't answer on your device, so Gemini answers in the cloud. Each answer is labelled.",
         route: "cloud",
       };
   }

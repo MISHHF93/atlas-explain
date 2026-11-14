@@ -1,5 +1,4 @@
 import type { PricingView } from "../core/billing";
-import { BETA_BADGE } from "../core/billing";
 import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
 import {
   ATLAS_DESK_URL,
@@ -178,23 +177,27 @@ export function offlineCard(): HTMLElement {
 }
 
 export function limitCard(text: string): HTMLElement {
-  return messageCard("limit", BETA_BADGE, text);
+  return messageCard("limit", "Daily cloud limit reached", text);
 }
 
 /* ---------- explanation card ---------- */
 
-export function sourceChip(source: "on_device" | "in_cloud" | "unknown", detail?: string): HTMLElement {
+export function sourceChip(source: "on_device" | "in_cloud" | "unknown"): HTMLElement {
   const chip = el("span", source === "on_device" ? "source source-device" : "source source-cloud");
   chip.append(
     icon(source === "on_device" ? "chip" : "cloud", 14),
-    el("span", undefined, source === "on_device" ? "On-device · Gemini Nano" : source === "in_cloud" ? `Cloud · ${detail ?? "Firebase AI Logic"}` : "Path not reported"),
+    el("span", undefined, source === "on_device" ? "On this device" : source === "in_cloud" ? "Cloud" : "Source not reported"),
   );
+  chip.title = source === "on_device"
+    ? "Answered by Gemini Nano on your device. Nothing was sent to the cloud."
+    : source === "in_cloud"
+      ? "Answered by Gemini in the cloud, because this browser could not answer on the device."
+      : "";
   return chip;
 }
 
 export function explanationCard(options: {
   source: "on_device" | "in_cloud" | "unknown";
-  sourceDetail?: string;
   selection?: string;
   /** Where the highlight came from, for example "Charting site · tradingview.com". */
   contextLine?: string;
@@ -228,7 +231,7 @@ export function explanationCard(options: {
     clear.addEventListener("click", () => options.onClear?.());
     tools.append(clear);
   }
-  head.append(sourceChip(options.source, options.sourceDetail), tools);
+  head.append(sourceChip(options.source), tools);
   card.append(head);
   if (options.contextLine) {
     const line = el("p", "context-line");
@@ -293,7 +296,7 @@ export function glossaryPanel(options: { onAsk: (term: TermEntry) => void; askLa
   filters.setAttribute("aria-label", "Term groups");
   let group: TermEntry["group"] | "all" = "all";
   const groupButtons: HTMLButtonElement[] = [];
-  for (const id of ["all", "atlas", "orders", "market", "risk"] as const) {
+  for (const id of ["all", "orders", "market", "risk"] as const) {
     const button = el("button", "filter", id === "all" ? "All" : TERM_GROUP_LABEL[id]);
     button.type = "button";
     button.setAttribute("aria-pressed", id === "all" ? "true" : "false");
@@ -378,14 +381,15 @@ export function planCard(view: PricingView, extras: Node[] = []): HTMLElement {
   art.append(icon("card", 20));
   head.append(title, art);
   card.append(head);
-  if (view.betaNote) card.append(el("p", "fine", view.betaNote));
+  card.append(el("p", "fine", view.note));
   const rows = el("ul", "plan-rows");
   for (const row of view.rows) {
     const item = el("li");
     item.append(el("span", undefined, row.label), el("span", "plan-free", view.showCheckout ? row.free : row.pro));
     rows.append(item);
   }
-  card.append(rows, el("p", "fine", `${view.priceLabel}. On-device explanations are unlimited on every plan.`), ...extras);
+  if (view.rows.length) card.append(rows);
+  card.append(...extras);
   return card;
 }
 
@@ -406,18 +410,12 @@ const ONBOARDING: { icon: IconName; title: string; body: string; light?: "grey" 
   {
     icon: "chip",
     title: "On your device first",
-    body: "Gemini Nano answers on this device when Chrome has it. If it cannot, Gemini answers in the cloud through Firebase AI Logic. The Explain tab shows which route is ready.",
-  },
-  {
-    icon: "signal",
-    title: "An honest three-colour light",
-    body: "Green: the model leans up. Red: it leans down. Grey: not enough evidence. Grey is the default until paper results clear the gate.",
-    light: "grey",
+    body: "When your browser supports it, Gemini Nano answers right on your device. Otherwise Gemini answers in the cloud. Every answer says which one ran.",
   },
   {
     icon: "shield",
     title: "Private by design",
-    body: "Only the text you highlight, the page title, and the site name are used. Never balances, account numbers, or form fields. On-device AI runs first.",
+    body: "Only the text you highlight, the page title and the site name are used. Never balances, account numbers or form fields.",
   },
 ];
 

@@ -14,8 +14,7 @@ export const LEARN_PATH: readonly LearnStep[] = [
   { id: "orders", title: "How orders fill", terms: ["market_order", "stop_limit", "spread"] },
   { id: "moves", title: "Reading a move", terms: ["volume", "gap", "implied_volatility"] },
   { id: "risk", title: "Measuring risk", terms: ["margin", "drawdown", "hit_rate"] },
-  { id: "atlas", title: "How ATLAS researches", terms: ["paper_only", "shadow", "signal15", "chart_layers", "live_lock", "drop_study"] },
-  { id: "explain", title: "How Explain answers", terms: ["move_card", "hybrid_inference"] },
+  { id: "explain", title: "How answers are made", terms: ["hybrid_inference"] },
 ];
 
 export const LEARN_KEY = "learned";

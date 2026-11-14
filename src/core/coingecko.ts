@@ -21,9 +21,9 @@ export const COINGECKO_SOURCE_LABEL = "CoinGecko";
 export const COINGECKO_WINDOW = "in the last 24 hours";
 export const COINGECKO_CITATION = "Prices by CoinGecko (www.coingecko.com).";
 export const COINGECKO_GREY_REASON =
-  "Paper predictions come from ATLAS on your computer. Prices here are live from CoinGecko; the light stays grey until ATLAS is connected.";
+  "Price predictions are not shown. These are live prices only.";
 export const COINGECKO_STOCK_NOTE =
-  "Stock prices and every paper prediction come from ATLAS on your computer. Connect ATLAS to see them.";
+  "Stock prices aren't available yet. Crypto prices are live.";
 
 export interface CoinGeckoCoin {
   symbol: string;

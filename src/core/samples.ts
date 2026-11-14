@@ -98,23 +98,6 @@ const spxSecondDay: MoveCard = {
   watchlist: [],
 };
 
-const hypotheticalDip: MoveCard = {
-  symbol: "NVDA",
-  movePct: -6,
-  marketLabel: "Replace with the index you watched",
-  volatilityNote: "PLACEHOLDER. The -6% figure is an example for the core use case, not a historical session. Replace every field before you treat the card as real.",
-  sourceNote: "Not a market record. Enter your own numbers. Do not cite this card as fact.",
-  upcomingEvents: ["Replace with events you are allowed to mention, or delete this line."],
-  headlines: [
-    {
-      text: "Replace this with a headline you are allowed to use.",
-      source: "your note",
-    },
-  ],
-  peerMoves: [],
-  watchlist: [],
-};
-
 export const SAMPLE_MOVES: readonly SampleMove[] = [
   {
     id: "nvda-2025-01-27-deepseek",
@@ -173,15 +156,6 @@ export const SAMPLE_MOVES: readonly SampleMove[] = [
       },
     ],
     card: spxSecondDay,
-  },
-  {
-    id: "hypothetical-dip",
-    title: "Blank dip · not historical",
-    kind: "hypothetical",
-    summary:
-      "A blank NVDA −6% card for the core use case. Every figure is a placeholder. Replace it with numbers you entered yourself.",
-    sources: [],
-    card: hypotheticalDip,
   },
 ];
 

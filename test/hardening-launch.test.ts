@@ -49,6 +49,10 @@ describe("launch docs", () => {
     expect(readFileSync("docs/legal/DATA_SOURCES.md", "utf8")).toMatch(/price_provider/);
     expect(readFileSync("docs/legal/DATA_SOURCES.md", "utf8")).toContain("https://cursor.com/canvas/store-037fc2ab-67d6-498a-87de-39585a369582/8f245460-8162-4baa-807b-8253f452a4ab");
     for (const f of ["docs/legal/PRIVACY_DRAFT.md", "docs/legal/TERMS_DRAFT.md"]) expect(readFileSync(f, "utf8")).toMatch(/DRAFT for review/);
-    expect(readFileSync("src/wallet/legal.ts", "utf8")).toMatch(/DRAFT for review/);
+    // The in-app summaries are production copy that links to the full pages; no draft or repo paths.
+    const inApp = readFileSync("src/wallet/legal.ts", "utf8");
+    expect(inApp).toContain('"/terms"');
+    expect(inApp).toContain('"/privacy"');
+    expect(inApp).not.toMatch(/DRAFT|docs\/legal|Remote Config|App Check|localhost/);
   });
 });

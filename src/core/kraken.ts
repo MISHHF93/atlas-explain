@@ -23,9 +23,9 @@ export const KRAKEN_SOURCE_LABEL = "Kraken public API";
 export const KRAKEN_CITATION = "Prices: Kraken public market data (api.kraken.com).";
 export const KRAKEN_WINDOW = "since 00:00 UTC";
 export const KRAKEN_GREY_REASON =
-  "Paper predictions come from ATLAS on your computer. Prices here are live from Kraken; the light stays grey until ATLAS is connected.";
+  "Price predictions are not shown. These are live prices only.";
 export const KRAKEN_STOCK_NOTE =
-  "Stock prices and every paper prediction come from ATLAS on your computer. Connect ATLAS to see them.";
+  "Stock prices aren't available yet. Crypto prices are live.";
 
 export interface KrakenPair {
   symbol: string;

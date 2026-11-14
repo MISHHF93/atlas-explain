@@ -45,12 +45,23 @@ describe("web wallet", () => {
 describe("public site", () => {
   const page = readFileSync("index.html", "utf8");
   const css = readFileSync("src/site/site.css", "utf8");
-  const pages = ["index.html", "how-it-works.html", "privacy.html", "terms.html", "support.html", "404.html"].map((f) => [f, readFileSync(f, "utf8")] as const);
+  const pages = ["index.html", "how-it-works.html", "how-its-built.html", "privacy.html", "terms.html", "support.html", "404.html"].map((f) => [f, readFileSync(f, "utf8")] as const);
   it("is a landing page led by the Chrome extension, with the hybrid story in static HTML", () => {
     expect(page).toContain('class="hero"');
     expect(page).toMatch(/Add to Chrome/);
     expect(page).toMatch(/Gemini Nano, on this device/);
-    expect(page).toMatch(/Firebase AI Logic with App Check/);
+    expect(page).toMatch(/Gemini in the cloud, if needed/);
+  });
+  it("keeps build and hackathon detail on How it's built, out of the customer pages", () => {
+    const built = readFileSync("how-its-built.html", "utf8");
+    for (const part of ["Firebase AI Logic", "App Check", "Remote Config", "#BuildHybridAI", "Gemini Nano"]) expect(built).toContain(part);
+    for (const [file, text] of pages) {
+      // Privacy and terms name their processors on purpose; their production text lands with the legal review.
+      if (file === "how-its-built.html" || file === "privacy.html" || file === "terms.html") continue;
+      const visible = text.replace(/<[^>]+>/g, " ");
+      expect(visible, file).not.toMatch(/Firebase AI Logic|App Check|Remote Config|#BuildHybridAI|coming soon|during the beta/i);
+      expect(text, file).toContain('href="/how-its-built"');
+    }
     expect(page).toContain('href="/app"');
     expect(page).toContain("https://github.com/MISHHF93/atlas-explain");
     expect(page).toMatch(/Educational information, not investment advice/);

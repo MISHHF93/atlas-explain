@@ -4,20 +4,18 @@ import {
   EXTENSION_PRIVACY_NOTE,
   LOCAL_ATLAS_PERMISSION_NOTE,
   buildExtensionPrompt,
-  extensionHighlightAllowed,
   toPageContext,
   withDisclaimer,
 } from "../../src/core/extension-prompt";
 import {
   ATLAS_DESK_URL,
-  BILLING_NOTE,
   EXPLAIN_WEB_URL,
   SAMPLE_EXPLANATION,
   SHORTCUT_HINT,
   whyQuestion,
 } from "../../src/core/popup-copy";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../../src/core/price-feed";
-import { DEFAULT_SETTINGS, parseRemoteSettings } from "../../src/core/settings";
+import { DEFAULT_SETTINGS } from "../../src/core/settings";
 import { mapSignal, readPublicSignal, type SignalView } from "../../src/core/signal";
 import {
   emptyCard,
@@ -37,7 +35,7 @@ import {
 import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../../src/core/timeouts";
 import { addMonitorSink, classifyCloudError, consoleSink, report } from "../../src/core/monitor";
 addMonitorSink(consoleSink);
-import { mountAssets, type AssetsPreview } from "../../src/wallet/assets-controller";
+import { mountAssets } from "../../src/wallet/assets-controller";
 import { loadDigest, todayToronto } from "../../src/core/digest";
 import { digestCard } from "../../src/wallet/digest";
 import { canReachLocalAtlas } from "../../src/core/assets";
@@ -99,9 +97,9 @@ const shell = createWalletShell({
   onAccount: () => void openAccount(),
   menu: [
     { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
-    { label: "Open the ATLAS desk", icon: "external", run: () => openUrl(ATLAS_DESK_URL) },
+    { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => openUrl(ATLAS_DESK_URL) },
     { label: "Open the web app", icon: "external", run: () => openUrl(`${EXPLAIN_WEB_URL}/app`) },
-    { label: "Privacy", icon: "shield", run: () => shell.openSheet("Privacy", [el("p", undefined, EXTENSION_PRIVACY_NOTE), el("p", undefined, LOCAL_ATLAS_PERMISSION_NOTE), el("p", "fine", EXTENSION_DISCLAIMER)]) },
+    { label: "Privacy", icon: "shield", run: () => shell.openSheet("Privacy", [el("p", undefined, EXTENSION_PRIVACY_NOTE), el("p", undefined, LOCAL_ATLAS_PERMISSION_NOTE), privacyLink(), el("p", "fine", EXTENSION_DISCLAIMER)]) },
     { label: "Settings", icon: "gear", run: () => shell.select("settings", { focus: true }) },
   ],
 });
@@ -149,11 +147,14 @@ function refreshToday(): void {
 }
 void (canReachLocalAtlas(location, true)
   ? loadDigest()
-  : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
+  : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's ATLAS digest isn't ready yet." })
 ).then((v) => { briefView = v; brief.show(v); refreshToday(); });
 // Recent explanations live in chrome.storage.local on this device. Never uploaded.
 const recentSlot = el("div");
 let history: HistoryEntry[] = [];
+// The ATLAS digest row and the Signal tab exist only for people running ATLAS research software.
+today.node.hidden = true;
+shell.setTabHidden("signal", true);
 shell.panels.explain.append(explainHead, composer, engine.node, today.node, result, recentSlot);
 syncComposer();
 
@@ -190,16 +191,15 @@ let assets: ReturnType<typeof mountAssets> | null = null;
 let atlasLocal = false;
 let livePrices = false;
 
-function startAssets(previewData?: AssetsPreview, priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): void {
+function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): void {
   assets = mountAssets({
     shell,
     canReachAtlas: hasChrome,
-    preview: previewData,
     priceFeed,
     onState: (state) => {
-      atlasLocal = state.kind === "ready" && !previewData && !isLivePriceSource(state.catalog.source);
-      livePrices = state.kind === "ready" && !previewData && isLivePriceSource(state.catalog.source);
-      if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !previewData && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
+      atlasLocal = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
+      livePrices = state.kind === "ready" && isLivePriceSource(state.catalog.source);
+      if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
       refreshToday();
       updateConnection();
     },
@@ -224,7 +224,7 @@ const signal = signalCard({
     shell.select("explain");
     void run({ highlight: false, fromPage: false });
   },
-  deskHint: "Tip: open http://localhost:3000/markets in this tab, then reopen the popup.",
+  deskHint: "Open the ATLAS Markets desk in this tab, then reopen ATLAS Explain.",
 });
 const signalHead = el("div", "panel-title");
 signalHead.append(el("h1", undefined, "Signal"), el("span", "fine", "Paper only"));
@@ -233,7 +233,7 @@ shell.panels.signal.append(signalHead, signal.node);
 /* ---------- Glossary tab ---------- */
 
 const glossaryHead = el("div", "panel-title");
-glossaryHead.append(el("h1", undefined, "Glossary"), el("span", "fine", "Plain language"));
+glossaryHead.append(el("h1", undefined, "Learn"), el("span", "fine", "Plain language"));
 // Learn path progress is a list of term ids in chrome.storage.local.
 const learnSlot = el("div");
 let learned = new Set<string>();
@@ -276,24 +276,24 @@ toolsStatus.setAttribute("role", "status");
 const themeSlot = el("div");
 const version = hasChrome ? chrome.runtime.getManifest().version : "preview";
 const settingsHead = el("div", "panel-title");
-settingsHead.append(el("h1", undefined, "Settings"), el("span", "fine", hasChrome ? `v${version}` : "Preview"));
+settingsHead.append(el("h1", undefined, "Settings"), el("span", "fine", `v${version}`));
 shell.panels.settings.append(
   settingsHead,
-  planCard(pricingView({ billingEnabled: false, plan: "free", freeCloudDailyLimit: DEFAULT_SETTINGS.freeCloudDailyLimit }), [el("p", "fine", BILLING_NOTE)]),
+  planCard(pricingView({ billingEnabled: false, plan: "free", freeCloudDailyLimit: DEFAULT_SETTINGS.freeCloudDailyLimit })),
   group("Appearance", [themeSlot]),
   group("On this page", [
     row("pin", "Show Explain button on this page", () => void pin()),
     row("panel", "Open in side panel", () => void openSidePanel()),
     toolsStatus,
   ]),
-  group("AI", [
-    el("p", "fine", "Explanations run on this device first with Gemini Nano. If Chrome does not have it, Gemini answers in the cloud through Firebase AI Logic, via the ATLAS Explain web app with App Check in front. No setup needed."),
+  group("How answers are made", [
+    el("p", "fine", "When Chrome supports it, Gemini Nano answers on your device and nothing is sent. Otherwise Gemini answers in the cloud. Every answer is labelled. No setup needed."),
   ]),
   group("Account", [
-    el("p", "fine", "Sign in on atlas-explain.web.app in this Chrome profile and the extension uses the same account."),
+    el("p", "fine", "Sign in on the ATLAS Explain website in this Chrome profile, and the extension uses the same account. Signing in is optional."),
     row("user", "Account and sign-in", () => void openAccount()),
   ]),
-  group("Privacy", [el("p", "fine", EXTENSION_PRIVACY_NOTE), el("p", "fine", LOCAL_ATLAS_PERMISSION_NOTE)]),
+  group("Privacy", [el("p", "fine", EXTENSION_PRIVACY_NOTE), privacyLink()]),
   group("About", [el("p", "fine", `ATLAS Explain ${version} · Apache-2.0 · ${SHORTCUT_HINT}`), row("external", "Open the web app", () => openUrl(EXPLAIN_WEB_URL))]),
 );
 
@@ -336,19 +336,20 @@ async function boot(): Promise<void> {
   }));
   history = parseHistory(stored.history);
   learned = parseLearned(stored.learned);
-  if (!hasChrome) {
+  if (import.meta.env.DEV && !hasChrome) {
     const done = preview.get("learned");
     if (done) learned = parseLearned(done.split(","));
   }
   renderHistory();
   renderLearn();
   if (!hasChrome) {
-    startAssets(await previewAssets());
-    applyPreviewState();
+    // Opened as a plain page (development screenshots): live prices only, no Chrome APIs.
+    startAssets();
+    if (import.meta.env.DEV) applyPreviewState();
     return;
   }
   const priceFeed: PriceFeedOptions = { ...DEFAULT_PRICE_FEED };
-  startAssets(undefined, priceFeed);
+  startAssets(priceFeed);
   void import("./cloud").then(async (cloud) => {
     const next = await cloud.loadExtensionPriceFeed();
     const changed = next.provider !== priceFeed.provider || next.coinGeckoDemoKey !== priceFeed.coinGeckoDemoKey;
@@ -418,18 +419,8 @@ async function run(options: RunOptions): Promise<void> {
   const context = toPageContext(raw);
   const built = buildExtensionPrompt({ context, question: options.followUp ?? (options.highlight ? "" : question.value) });
 
-  // Entitlements come from Remote Config. Firebase loads only now, never when the popup opens.
+  // Firebase loads only now, never when the popup opens. Highlight-to-explain is free on every plan.
   const cloudModule = navigator.onLine ? await import("./cloud").catch(() => null) : null;
-  const settingsNow = cloudModule ? await cloudModule.loadExtensionSettings() : parseRemoteSettings({}).settings;
-  if (options.highlight && !extensionHighlightAllowed({
-    billingEnabled: settingsNow.billingEnabled,
-    plan: "free",
-    freeCloudDailyLimit: settingsNow.freeCloudDailyLimit,
-  })) {
-    setBusy(false);
-    showResult(limitCard("Highlight-to-explain is a Pro entitlement. Pro is coming after beta."));
-    return;
-  }
 
   showResult(loadingCard(1));
   const local = await explainOnDevice(built.prompt, TWO_SIDED_SCHEMA);
@@ -458,7 +449,7 @@ async function run(options: RunOptions): Promise<void> {
       showResult(limitCard(error.message));
       return;
     }
-    const message = error instanceof Error && error.message ? error.message : "The cloud model did not answer.";
+    const message = error instanceof Error && error.message ? error.message : "";
     fail(friendlyCloudError(message), true);
   }
 }
@@ -545,7 +536,7 @@ function showResult(card: HTMLElement): void {
 /* ---------- signal ---------- */
 
 function previewSignal(): SignalView {
-  const requested = preview.get("signal");
+  const requested = import.meta.env.DEV ? preview.get("signal") : null;
   if (requested === "green" || requested === "red") {
     return mapSignal({
       connected: true,
@@ -594,6 +585,10 @@ function applySignal(view: SignalView): void {
 }
 
 function updateConnection(): void {
+  const atlasPresent = atlasLocal || currentSignal.connected;
+  today.node.hidden = !atlasPresent;
+  shell.setTabHidden("signal", !atlasPresent);
+  shell.setMenuItemHidden("desk", !atlasPresent);
   shell.setConnection(!navigator.onLine ? "offline" : currentSignal.connected ? "desk" : atlasLocal ? "local" : livePrices ? "live" : "none");
   shell.setSignal(currentSignal);
 }
@@ -637,11 +632,11 @@ async function openAccount(): Promise<void> {
   const signInUrl = `${EXPLAIN_WEB_URL}/signin`;
   const status = el("p", "fine", "Checking your account…");
   status.setAttribute("role", "status");
-  const open = labelledButton("user", "Sign in on atlas-explain.web.app", "primary");
+  const open = labelledButton("user", "Sign in on the website", "primary");
   open.addEventListener("click", () => openUrl(signInUrl));
-  shell.openSheet("Account", [status, open, el("p", "fine", "The extension uses the account signed in on the ATLAS Explain web app in this Chrome profile. You can keep using it signed out.")]);
+  shell.openSheet("Account", [status, open, el("p", "fine", "The extension uses the account you sign in with on the ATLAS Explain website in this Chrome profile. You can keep using it without an account.")]);
   if (!hasChrome || !navigator.onLine) {
-    status.textContent = navigator.onLine ? "Account is available in Chrome." : "You are offline. Account status will show when you reconnect.";
+    status.textContent = navigator.onLine ? "Account details show in Chrome." : "You're offline. Your account status will show when you reconnect.";
     return;
   }
   try {
@@ -655,7 +650,7 @@ async function openAccount(): Promise<void> {
       status.textContent = "Signed out. Explanations still work; history stays in this browser.";
     }
   } catch {
-    status.textContent = "Account status could not be read right now. Explanations still work.";
+    status.textContent = "We couldn't check your account just now. Explanations still work.";
   }
 }
 
@@ -664,18 +659,17 @@ function openUrl(url: string): void {
   else window.open(url, "_blank", "noreferrer");
 }
 
-/* ---------- preview page (no Chrome APIs) ---------- */
-
-async function previewAssets(): Promise<AssetsPreview | undefined> {
-  const mode = preview.get("assets");
-  if (!mode) return { label: "", list: null, details: {}, state: "hosted" };
-  const data = (await import("../../src/wallet/box-preview.json")).default;
-  const state = mode === "offline" ? "not_connected" : mode === "hosted" ? "hosted" : mode === "loading" ? "loading" : "ready";
-  const label = state === "ready"
-    ? `Box preview: real Kraken and IEX bars run through the ATLAS route on the build box (${data.capturedAt.slice(0, 16).replace("T", " ")} UTC), not your computer.`
-    : "Preview of the state shown when ATLAS is not running on this computer.";
-  return { label, list: data.list, details: data.details, state };
+function privacyLink(): HTMLElement {
+  const p = el("p", "fine");
+  const a = el("a", undefined, "Read the full privacy policy") as HTMLAnchorElement;
+  a.href = `${EXPLAIN_WEB_URL}/privacy`;
+  a.target = "_blank";
+  a.rel = "noopener";
+  p.append(a);
+  return p;
 }
+
+/* ---------- development screenshots (no Chrome APIs; compiled out of production) ---------- */
 
 function readPreviewTheme(): ThemeChoice {
   const value = preview.get("theme");
@@ -696,11 +690,11 @@ function applyPreviewState(): void {
     showResult(loadingCard(1));
   } else if (demo === "error") {
     lastRun = { highlight: false, fromPage: false };
-    fail("The cloud model could not be reached. Check your connection and retry.", true);
+    fail("We couldn't reach the cloud. Check your connection and try again.", true);
   } else if (demo === "offline") {
     showResult(offlineCard());
   } else if (demo === "limit") {
-    showResult(limitCard("Today's free cloud explanations are used up. Explanations that run on this device are still unlimited. Pro is coming after beta."));
+    showResult(limitCard(new CloudAllowanceUsed().message));
   }
   if (preview.get("why") === "open") signal.setWhyOpen(true);
   if (preview.get("onboarding") === "1") showOnboarding();

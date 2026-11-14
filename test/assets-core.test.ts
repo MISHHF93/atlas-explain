@@ -24,7 +24,7 @@ import {
 import { connectionCopy } from "../src/core/popup-copy";
 
 
-const box = JSON.parse(readFileSync("src/wallet/box-preview.json", "utf8")) as { capturedAt: string; list: unknown; details: Record<string, unknown> };
+const box = JSON.parse(readFileSync("test/fixtures/atlas-catalog.json", "utf8")) as { capturedAt: string; list: unknown; details: Record<string, unknown> };
 const NOW = Date.parse(box.capturedAt) + 60_000;
 const TRADE = /\b(buy|sell)\b/i;
 
@@ -127,7 +127,9 @@ describe("catalog from the real ATLAS route (box capture)", () => {
   it("builds an education-only question for the Explain tab", () => {
     const q = explainAssetQuestion(cat!.assets[0]!);
     expect(q).toMatch(/Do not recommend a trade/);
-    expect(q).toMatch(/grey/);
+    // A withheld (grey) lean is not mentioned at all; there is nothing to explain about it.
+    expect(q).not.toMatch(/grey|paper light/i);
+    expect(q).toContain(cat!.assets[0]!.symbol);
     expect(q.replace("Do not recommend a trade", "")).not.toMatch(TRADE);
   });
 });
@@ -136,7 +138,7 @@ describe("connection", () => {
   const ok = (body: unknown): Fetcher => async () => new Response(JSON.stringify(body), { status: 200 });
 
   it("names the local ATLAS connection in the header", () => {
-    expect(connectionCopy("local").label).toBe("ATLAS local");
+    expect(connectionCopy("local").label).toBe("ATLAS connected");
   });
 
   it("never lets the hosted web app call localhost", () => {

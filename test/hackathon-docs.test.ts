@@ -13,12 +13,12 @@ describe("hackathon write-up matches current features", () => {
     for (const text of [submission, readme]) {
       expect(text).toMatch(/src\/connectors/);
       expect(text).toMatch(/\/api\/mcp\/public/);
-      expect(text).toMatch(/Hosted app/);
-      expect(text).toMatch(/ATLAS local/);
+      expect(text).toMatch(/Live prices/);
+      expect(text).toMatch(/ATLAS connected/);
       expect(text).toMatch(/never calls localhost/i);
     }
     expect(connectors).toMatch(/src\/connectors\//);
-    expect(connectors).toMatch(/Hosted app|never calls localhost/);
+    expect(connectors).toMatch(/never calls localhost/);
   });
 
   it("keeps the demo video unchecked and tells the presenter to record on a laptop with Gemini Nano", () => {
@@ -33,8 +33,8 @@ describe("hackathon write-up matches current features", () => {
   it("lists the recording shots and both extension shortcuts", () => {
     expect(demo).toMatch(/Shot list/);
     expect(demo).toMatch(/Explain this move/);
-    expect(demo).toMatch(/Hosted app/);
-    expect(demo).toMatch(/ATLAS local/);
+    expect(demo).toMatch(/Live prices/);
+    expect(demo).toMatch(/ATLAS connected/);
     expect(demo).toMatch(/Alt\+Shift\+E/);
     expect(demo).toMatch(/Alt\+Shift\+X/);
     expect(readme).toMatch(/Alt\+Shift\+E/);

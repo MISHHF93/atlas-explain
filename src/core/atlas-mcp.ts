@@ -69,7 +69,7 @@ export async function callMcp(
     }
     return { ok: true, result: body.result };
   } catch {
-    return { ok: false, reason: "ATLAS is not answering at localhost:3000.", reachable: false };
+    return { ok: false, reason: "ATLAS isn't running on this computer.", reachable: false };
   } finally {
     clearTimeout(timer);
   }

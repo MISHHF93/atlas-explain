@@ -5,7 +5,7 @@ import { GLOSSARY, type GlossaryEntry } from "./glossary";
  * no trade instructions, no balances, no accounts.
  */
 export interface TermEntry extends GlossaryEntry {
-  group: "atlas" | "orders" | "market" | "risk";
+  group: "atlas" | "orders" | "market" | "risk" | "ai";
 }
 
 export const TRADING_TERMS: readonly TermEntry[] = [
@@ -74,9 +74,15 @@ export const TRADING_TERMS: readonly TermEntry[] = [
   },
 ];
 
+/** ATLAS research vocabulary. Kept for desk deep links; never listed in the public glossary. */
+export const ATLAS_TERMS: readonly TermEntry[] = GLOSSARY
+  .filter((entry) => entry.id !== "hybrid_inference")
+  .map((entry) => ({ ...entry, group: "atlas" as const }));
+
+/** The public glossary: trading terms plus how answers are made. */
 export const ALL_TERMS: readonly TermEntry[] = [
-  ...GLOSSARY.map((entry) => ({ ...entry, group: "atlas" as const })),
   ...TRADING_TERMS,
+  ...GLOSSARY.filter((entry) => entry.id === "hybrid_inference").map((entry) => ({ ...entry, group: "ai" as const })),
 ];
 
 export const TERM_GROUP_LABEL: Record<TermEntry["group"], string> = {
@@ -84,6 +90,7 @@ export const TERM_GROUP_LABEL: Record<TermEntry["group"], string> = {
   orders: "Orders",
   market: "Market",
   risk: "Risk",
+  ai: "How it works",
 };
 
 export function searchTerms(query: string, entries: readonly TermEntry[] = ALL_TERMS): TermEntry[] {

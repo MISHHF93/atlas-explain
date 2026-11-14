@@ -218,7 +218,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const rate = peekCloudSlot(localRateStore());
       const cloudBlocked = !(allowByPlan && rate.ok);
       const mode = cloudBlocked ? "only_on_device" : settings.inferenceMode;
-      hooks?.onProgress?.(mode === "only_in_cloud" ? "Asking Gemini in the cloud…" : "Trying Gemini Nano on this device first…");
+      hooks?.onProgress?.(mode === "only_in_cloud" ? "Asking the cloud…" : "Trying your device first…");
       let result;
       try {
         result = await explainer.explain(
@@ -279,7 +279,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
           })
         : !settings.billingEnabled;
       const allowCloud = allowByPlan && rate.ok;
-      hooks?.onProgress?.("Sending the move card through Firebase AI Logic…");
+      hooks?.onProgress?.("Working on it…");
       try {
         return await runExplanation({
           card,

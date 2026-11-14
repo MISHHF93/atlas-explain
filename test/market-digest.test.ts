@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ASSETS_SCHEMA, readCatalog, readGate } from "../src/core/assets";
 import {
@@ -122,10 +122,12 @@ describe("digest row with markets", () => {
     expect(digestRowStatus({ kind: "not_connected", reason: "x", today: "2026-11-13" }, true)).toEqual({ label: "Today", tone: "ready" });
   });
 
-  it("feeds the digest only from the live catalog, never the preview file", () => {
+  it("feeds the digest only from the live ATLAS catalog, and no preview file ships", () => {
+    expect(existsSync("src/wallet/box-preview.json")).toBe(false);
     for (const path of ["extension/src/popup.ts", "src/web/app.ts"]) {
       const src = readFileSync(path, "utf8");
-      expect(src).toMatch(/marketCatalog = state\.kind === "ready" && !(previewData|data) && !isLivePriceSource\(state\.catalog\.source\) \? state\.catalog : null/);
+      expect(src).not.toContain("box-preview");
+      expect(src).toMatch(/marketCatalog = state\.kind === "ready" && !isLivePriceSource\(state\.catalog\.source\) \? state\.catalog : null/);
       expect(src).toContain("marketDigestCard(buildMarketDigest(marketCatalog))");
       expect(src).toContain("marketCard.replaceWith(next)");
     }

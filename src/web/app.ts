@@ -2,16 +2,14 @@ import { CloudAllowanceUsed, WatchlistAllowance, pricingActions, pricingView, ty
 import { parseContextHash, type ParsedContextLink } from "../core/context-link";
 import { conceptQuestion, getConcept, isGlossaryId } from "../core/glossary";
 import { EXPLAIN_LOAD_MESSAGE, inboundReply, readInboundMessage } from "../core/inbound";
-import { describePathReason, selectInferencePath } from "../core/inference-path";
-import { applyPrivateFields, hasPrivateContext, parseMoveCardJson, publicMoveCard } from "../core/move-card";
+import { applyPrivateFields, parseMoveCardJson, publicMoveCard } from "../core/move-card";
 import { ExplanationParseError } from "../core/parse-explanation";
 import { ATLAS_DESK_URL } from "../core/popup-copy";
-import { buildPrompt } from "../core/prompt";
 import { OnDeviceUnavailableError } from "../core/run-explanation";
 import { SAMPLE_MOVES, type SampleMove } from "../core/samples";
 import { DEFAULT_SETTINGS } from "../core/settings";
 import { mapSignal, readPublicSignal, type SignalView } from "../core/signal";
-import type { AppSettings, ExplanationRun, MoveCard } from "../core/types";
+import type { ExplanationRun, MoveCard } from "../core/types";
 import type { HistoryEntry, WebBackend } from "../platform/web/backend";
 import type { PublicEnvConfig } from "../platform/web/env";
 import {
@@ -110,7 +108,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
       { label: "Get the Chrome extension", icon: "panel", run: () => shell.openSheet("Chrome extension", extensionNodes()) },
       { label: "ATLAS Explain home page", icon: "external", run: () => location.assign("/") },
-      { label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },
+      { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },
       { label: "Terms", icon: "doc", run: () => openLegal("terms") },
       { label: "Privacy", icon: "shield", run: () => openLegal("privacy") },
     ],
@@ -214,9 +212,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   status.setAttribute("aria-live", "polite");
   const result = el("div", "stack");
   result.setAttribute("aria-live", "polite");
-  const promptPreview = el("pre", "prompt-preview");
-  const promptBox = disclosure("Prompt that will be sent", [promptPreview]);
-  promptBox.hidden = true;
 
   const sampleRow = el("div", "samples");
   sampleRow.setAttribute("role", "group");
@@ -231,9 +226,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   });
 
   const explainButton = labelledButton("sparkle", "Explain the move", "primary");
-  const previewButton = labelledButton("doc", "Preview prompt", "secondary");
   const actions = el("div", "button-row");
-  actions.append(explainButton, previewButton);
+  actions.append(explainButton);
 
   const historyList = el("ul", "history");
   const historyNote = el("p", "fine");
@@ -302,6 +296,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
   let marketCatalog: CatalogView | null = null;
   let marketCard: HTMLElement = marketDigestCard(buildMarketDigest(marketCatalog));
+  // Connection facts. Declared before the first Today render, which reads them.
+  let atlasLocal = false;
+  let livePrices = false;
+  let liveStatus: "loading" | "ready" | "error" = "loading";
   // Public live prices (Kraken or CoinGecko) when ATLAS is away: breadth and moves only, never leans.
   let liveCatalog: CatalogView | null = null;
   let liveCard: HTMLElement = liveSnapshotCard(liveCatalog);
@@ -316,18 +314,19 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   };
   void (canReachLocalAtlas(location, false)
     ? loadDigest()
-    : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's digest is not ready yet. Open ATLAS on this computer to load today's digest." })
+    : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's ATLAS digest isn't ready yet." })
   ).then((v) => { brief.show(v); refreshToday(); });
 
   // Market moves (ATLAS desk links, samples, your own card) keep their full flow, one tap away.
+  // A market move opens here only from a link (the ATLAS desk or a shared explanation). It stays hidden otherwise.
   const moveBox = disclosure("Explain a market move", [
-    el("p", "fine", "Load a move from the ATLAS desk, pick a historical sample, or paste your own card. The answer weighs both sides of the move."),
+    el("p", "fine", "The answer weighs both sides of the move. Samples use rounded figures from public news reports."),
     fromDesk,
     moveSlot,
     sampleRow,
     sampleNote,
+    errors,
     questionInput,
-    disclosure("Edit the move card (JSON)", [el("p", "fine", "Paste your own figures, or start from a sample. Samples use rounded figures from public news reports. They are not a data feed."), cardInput, errors]),
     disclosure("Private notes and watchlist", [
       el("p", "fine", "Included only when the on-device model runs. A cloud fallback or a saved explanation drops them."),
       fieldLabel("notes", "Notes"),
@@ -338,10 +337,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     actions,
     status,
     result,
-    promptBox,
     recent,
   ]);
   moveBox.classList.add("move-box");
+  moveBox.hidden = true;
 
   shell.panels.explain.append(
     explainHead,
@@ -365,16 +364,17 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   /* ---------- Today tab: digest first, then the paper light, then the next step ---------- */
 
   const todayHead = el("div", "panel-title");
-  todayHead.append(el("h1", undefined, "Today"), el("span", "fine", todayToronto()));
+  todayHead.append(el("h1", undefined, "Today"), el("span", "fine", new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date())));
   const getExtension = row("panel", "Get the Chrome extension", () => shell.openSheet("Chrome extension", extensionNodes()));
-  const startExplain = row("sparkle", "Explain a move or a term", () => navigate({ kind: "tab", tab: "explain" }));
+  const startExplain = row("sparkle", "Explain a term or a headline", () => navigate({ kind: "tab", tab: "explain" }));
+  // Shown only to someone running ATLAS research software; the public never sees these blocks.
+  const atlasBlock = el("div", "stack atlas-only");
+  atlasBlock.hidden = true;
+  atlasBlock.append(marketCard, brief.node, el("h2", "section-label", "Paper signal light"), signal.node);
   shell.panels.today.append(
     todayHead,
     liveCard,
-    marketCard,
-    brief.node,
-    el("h2", "section-label", "Paper signal light"),
-    signal.node,
+    atlasBlock,
     el("h2", "section-label", "Next"),
     startExplain,
     getExtension,
@@ -387,30 +387,19 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   // It shows live crypto prices from the configured public feed instead, with every light grey.
   let assets: ReturnType<typeof mountAssets> | null = null;
   async function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): Promise<void> {
-    const mode = preview.get("assets");
-    const data = mode ? (await import("../wallet/box-preview.json")).default : null;
     assets = mountAssets({
       shell,
       canReachAtlas: canReachLocalAtlas(location, false),
       priceFeed,
       onState: (state) => {
-        atlasLocal = state.kind === "ready" && !data && !isLivePriceSource(state.catalog.source);
-        livePrices = state.kind === "ready" && !data && isLivePriceSource(state.catalog.source);
-        if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !data && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
-        if (state.kind !== "loading") liveCatalog = state.kind === "ready" && !data && isLivePriceSource(state.catalog.source) ? state.catalog : null;
+        atlasLocal = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
+        livePrices = state.kind === "ready" && isLivePriceSource(state.catalog.source);
+        liveStatus = state.kind === "loading" ? (liveCatalog ? "ready" : "loading") : state.kind === "ready" ? "ready" : "error";
+        if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
+        if (state.kind !== "loading") liveCatalog = state.kind === "ready" && isLivePriceSource(state.catalog.source) ? state.catalog : null;
         refreshToday();
         updateConnection();
       },
-      preview: data
-        ? {
-            label: mode === "box"
-              ? `Box preview: real Kraken and IEX bars run through the ATLAS route on the build box (${data.capturedAt.slice(0, 16).replace("T", " ")} UTC), not your computer.`
-              : "Preview of the state shown when ATLAS is not reachable.",
-            list: data.list,
-            details: data.details,
-            state: mode === "box" ? "ready" : mode === "hosted" ? "hosted" : "not_connected",
-          }
-        : undefined,
       onExplain: (text) => {
         textInput.value = text;
         shell.select("explain");
@@ -453,11 +442,11 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const planSlot = el("div");
   const accountNote = el("p", "fine");
   accountNote.setAttribute("role", "status");
-  const settingsNote = el("p", "fine", "Loading Remote Config…");
   const themeChoice = readTheme();
   applyTheme(themeChoice);
   const settingsHead = el("div", "panel-title");
   settingsHead.append(el("h1", undefined, "Account"), el("span", "fine", "Settings and privacy"));
+  const accountLine = el("p", "fine", "You're using ATLAS Explain without an account. Sign in to keep your explanations across devices.");
   shell.panels.settings.append(
     settingsHead,
     planSlot,
@@ -470,13 +459,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       }
       void backend?.savePrefs({ theme: choice }).catch(() => undefined);
     })]),
-    group("AI", [
-      el("p", "fine", "Gemini Nano runs on this device when Chrome has it. Otherwise Gemini answers in the cloud through Firebase AI Logic, with App Check in front."),
-      settingsNote,
+    group("Account", [accountLine, row("user", "Sign in or manage your account", () => openAccount())]),
+    group("How answers are made", [
+      el("p", "fine", "When your browser supports it, Gemini Nano answers on your device and nothing is sent. Otherwise Gemini answers in the cloud. Every answer is labelled."),
     ]),
     group("Legal", [row("doc", "Terms", () => openLegal("terms")), row("shield", "Privacy", () => openLegal("privacy"))]),
     group("About", [
-      el("p", "fine", "ATLAS Explain is a public, Apache-2.0 companion to a private research desk. It contains none of that desk's models or data."),
+      el("p", "fine", "ATLAS Explain is open source under the Apache-2.0 licence. Education only, never investment advice."),
       row("panel", "Get the Chrome extension", () => shell.openSheet("Chrome extension", extensionNodes())),
     ]),
   );
@@ -485,7 +474,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   /* ---------- wiring ---------- */
 
   explainButton.addEventListener("click", () => void onExplain());
-  previewButton.addEventListener("click", () => void onPreview());
   cardInput.addEventListener("input", () => renderMove());
   window.addEventListener("hashchange", () => applyHash(location.hash));
   window.addEventListener("message", onInboundMessage);
@@ -493,11 +481,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   window.addEventListener("offline", () => { shell.setConnection("offline"); refreshEngine(); });
 
   let currentSignal: SignalView = mapSignal({ connected: false });
-  let atlasLocal = false;
-  let livePrices = false;
   const hosted = !mayCallLocalAtlas(location, false);
 
   function updateConnection(): void {
+    // ATLAS-only parts appear only when ATLAS itself is here: running locally, or the desk sent its signal.
+    const atlasPresent = atlasLocal || currentSignal.connected;
+    atlasBlock.hidden = !atlasPresent;
+    shell.setMenuItemHidden("desk", !atlasPresent);
     if (!navigator.onLine) {
       shell.setConnection("offline");
       return;
@@ -520,7 +510,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   }
 
   function refreshEngine(): void {
-    const forced = preview.get("engine");
+    const forced = import.meta.env.DEV ? preview.get("engine") : null;
     if (isEngineState(forced)) engine.set(forced);
     else void engine.refresh();
   }
@@ -530,7 +520,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   updateConnection();
   void refreshLink();
   loadSample(SAMPLE_MOVES[0]);
-  showResult(emptyCard("Pick a sample, paste a card, or open a move from the ATLAS desk. Then press Explain the move.", "Nothing is sent until you press Explain.", "Ready when you are"));
+  showResult(emptyCard("Press Explain the move when you're ready. Nothing is sent until then.", undefined, "Ready when you are"));
 
   void start();
 
@@ -549,20 +539,17 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     applyHash(location.hash);
     const priceFeed: PriceFeedOptions = { ...DEFAULT_PRICE_FEED };
     void startAssets(priceFeed);
-    applyPreview();
+    if (import.meta.env.DEV) applyPreview();
     const deepLink = route.kind !== "tab" || route.tab !== "today";
     if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo") && !deepLink && !location.hash) showOnboarding();
     if (route.kind === "signin" || route.kind === "not_found") void showRouteSheet();
     if (!backend) return;
-    void backend.loadSettings().then(({ settings, warnings, priceFeed: next }) => {
-      settingsNote.textContent = settingsLine(settings, warnings);
+    void backend.loadSettings().then(({ priceFeed: next }) => {
       const changed = next.provider !== priceFeed.provider || next.coinGeckoDemoKey !== priceFeed.coinGeckoDemoKey;
       priceFeed.provider = next.provider;
       priceFeed.coinGeckoDemoKey = next.coinGeckoDemoKey;
       if (changed) void assets?.refresh();
-    }).catch(() => {
-      settingsNote.textContent = "Remote Config could not be read. Built-in defaults are used.";
-    });
+    }).catch(() => undefined);
     void refreshPlan();
     void loadHistory();
     void startAccount(backend);
@@ -578,6 +565,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       await b.watchAccount((view) => {
         account = view;
         shell.setAccount(view);
+        accountLine.textContent = view?.signedIn
+          ? `Signed in as ${view.label}. Your saved explanations follow you on every device.`
+          : "You're using ATLAS Explain without an account. Sign in to keep your explanations across devices.";
         void refreshPlan();
         if (view && view.uid !== lastAccountUid) {
           lastAccountUid = view.uid;
@@ -601,7 +591,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function openAccount(): void {
     if (!backend) {
-      shell.openSheet("Account", [el("p", "fine", "Sign-in needs the cloud connection, which has not started. Reload the page to try again.")]);
+      shell.openSheet("Account", [el("p", "fine", "Sign-in isn't available right now. Reload the page to try again.")]);
       return;
     }
     const b = backend;
@@ -635,6 +625,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   function renderSetup(): void {
     explainButton.disabled = true;
     textGo.disabled = true;
+    if (!import.meta.env.DEV) {
+      const card = messageCard("error", "Explanations are unavailable right now", "Something on our side isn't working. Reload the page, or try again in a few minutes. The Learn library still works.", () => location.reload());
+      textResult.replaceChildren(card);
+      showResult(card.cloneNode(true) as HTMLElement);
+      historyNote.textContent = "";
+      return;
+    }
     const missing = options.env.missing;
     const steps = el("ol");
     for (const text of [
@@ -689,12 +686,22 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function liveSnapshotCard(catalog: CatalogView | null): HTMLElement {
     const snap = liveSnapshot(catalog);
-    const node = el("section", "market-digest live-snapshot");
-    node.setAttribute("aria-label", "Crypto right now, from public live prices");
     if (!snap) {
-      node.hidden = true;
-      return node;
+      if (atlasLocal) {
+        const none = el("section");
+        none.hidden = true;
+        return none;
+      }
+      if (liveStatus === "error") {
+        return messageCard("error", "Live prices couldn't be loaded", "The price feed isn't answering right now. Check your connection and try again.", () => void assets?.refresh());
+      }
+      const loading = el("section", "card state state-loading live-loading");
+      loading.setAttribute("aria-busy", "true");
+      loading.append(el("p", "card-title", "Loading live prices…"), el("div", "skeleton"));
+      return loading;
     }
+    const node = el("section", "market-digest live-snapshot");
+    node.setAttribute("aria-label", "Crypto right now, from live prices");
     const list = el("ul", "md-movers");
     for (const m of snap.movers) {
       const li = el("li");
@@ -720,7 +727,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     link.href = snap.source.href;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    src.append(link, ` · updated ${snapshotTime(snap.asOf)}. Prices only: ATLAS leans stay withheld here.`);
+    src.append(link, ` · updated ${snapshotTime(snap.asOf)}`);
     node.append(el("h2", "md-title", "Crypto right now"), el("p", "md-line", snapshotBreadth(snap)), el("h3", "md-sub", "Biggest moves, either way"), list, src);
     return node;
   }
@@ -738,15 +745,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       return;
     }
     if (!backend) {
-      textResult.replaceChildren(messageCard("info", "Explain is not connected yet", backendError === "missing-config" ? "This build has no Firebase project, so answers cannot run. The glossary still works." : "The cloud connection did not start. Reload the page to try again."));
+      textResult.replaceChildren(messageCard("error", "Explanations are unavailable right now", "Something on our side isn't working. Reload the page, or try again in a few minutes. The Learn library still works.", () => location.reload()));
       return;
     }
     textBusy = true;
     textGo.disabled = true;
     textGo.classList.add("loading");
     textResult.setAttribute("aria-busy", "true");
-    textResult.replaceChildren(loadingCard(1, ["Reading your text", "Running hybrid inference", "Saving to history"]));
-    textStatus.textContent = "Starting hybrid inference…";
+    textResult.replaceChildren(loadingCard(1, ["Reading your text", "Writing the answer", "Saving to history"]));
+    textStatus.textContent = "Working on it…";
     try {
       const run = await withDeadline(
         backend.explainText(text, followUp?.question ?? "", { onProgress: (m) => (textStatus.textContent = m) }),
@@ -782,11 +789,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const notes: string[] = [];
     if (run?.cloudBlocked && source === "on_device") notes.push("The cloud was off limits for now, so this ran on your device only.");
     if (run?.refusedRecommendation) notes.push("Trade decisions are not given. The factors on both sides are explained instead.");
-    notes.push(source === "on_device" ? "Ran on this device with Gemini Nano." : source === "in_cloud" ? `Ran in the cloud (${run?.cloudModel ?? "Gemini"}) through Firebase AI Logic.` : "The SDK did not report where it ran.");
+    notes.push(source === "on_device" ? "Answered on your device with Gemini Nano. Nothing was sent." : source === "in_cloud" ? "Answered in the cloud with Gemini." : "Where this answer ran was not reported.");
     notes.push(EXTENSION_DISCLAIMER);
     const card = explanationCard({
       source,
-      sourceDetail: run?.cloudModel,
       selection: text,
       ...(answer ? { body: twoSidedNodes(answer) } : { text: plain }),
       copyText,
@@ -924,6 +930,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     notesInput.value = "";
     watchlistInput.value = "";
     shell.select("explain");
+    moveBox.hidden = false;
     moveBox.open = true;
     if (parsed.context) {
       cardInput.value = JSON.stringify(publicMoveCard(parsed.context.card), editorKeys, 2);
@@ -954,26 +961,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     return { ok: true, card: withPrivate.card };
   }
 
-  async function onPreview(): Promise<void> {
-    const prepared = await prepareCard();
-    if (!prepared.ok) return renderErrors(prepared.errors);
-    renderErrors([]);
-    const settings = await safeSettings();
-    const decision = decide(prepared.card, questionInput.value, settings);
-    const built = buildPrompt({
-      card: prepared.card,
-      question: questionInput.value,
-      template: settings.promptTemplate,
-      topics: settings.topics,
-      includePrivateContext: decision.includePrivateContext,
-    });
-    promptPreview.textContent = `${decision.mode}\n${describePathReason(decision.reason)}\n\n${built.prompt}`;
-    promptBox.hidden = false;
-    promptBox.open = true;
-    status.textContent = "Prompt built on this device. Nothing was sent.";
-    requestAnimationFrame(() => promptBox.scrollIntoView({ block: "nearest", behavior: smooth() }));
-  }
-
   async function onExplain(): Promise<void> {
     if (!backend) return renderSetup();
     const prepared = await prepareCard();
@@ -981,7 +968,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     renderErrors([]);
     setBusy(true);
     showResult(loadingCard(0, STEP_LABELS));
-    status.textContent = "Checking the card and starting hybrid inference…";
+    status.textContent = "Working on it…";
     try {
       showResult(loadingCard(1, STEP_LABELS));
       const run = await withDeadline(
@@ -1033,11 +1020,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const copyText = [ex.summary, "", "Opportunity case:", ...ex.buyerReasons.map((r) => `- ${r}`), "", "Risk case:", ...ex.sellerReasons.map((r) => `- ${r}`), "", `What would change: ${ex.whatWouldChange}`, "", "Educational information, not investment advice."].join("\n");
     return explanationCard({
       source: run.inferenceSource === "on_device" ? "on_device" : run.inferenceSource === "in_cloud" ? "in_cloud" : "unknown",
-      sourceDetail: run.cloudModel,
       body,
       copyText,
       notes,
-      onClear: () => showResult(emptyCard("Pick another sample or edit the card, then explain again.", undefined, "Cleared")),
+      onClear: () => showResult(emptyCard("Pick another sample, then explain again.", undefined, "Cleared")),
       ...keepGoing(copyText),
     });
   }
@@ -1089,6 +1075,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     load.type = "button";
     load.addEventListener("click", () => {
       if (!entry.cardJson) return;
+      moveBox.hidden = false;
+      moveBox.open = true;
       cardInput.value = pretty(entry.cardJson);
       sampleNote.textContent = "Loaded from your saved history. Notes were not stored.";
       renderMove();
@@ -1121,12 +1109,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   function renderPlan(view: ReturnType<typeof pricingView>, snapshot: BillingSnapshot | null): void {
     const extras: Node[] = [];
     const acts = pricingActions(view);
-    if (backend && acts.includes("link-google")) {
-      const label = account?.signedIn ? `Account · ${account.label}` : "Sign in or create an account";
-      const link = labelledButton("user", label, "secondary small");
-      link.addEventListener("click", () => openAccount());
-      extras.push(link);
-    }
+    // Sign-in lives in the Account group below; the plan card only carries checkout.
     if (backend && acts.includes("checkout") && snapshot?.pricing.showCheckout) {
       const checkout = labelledButton("card", "Continue to checkout", "primary");
       checkout.addEventListener("click", () => {
@@ -1152,7 +1135,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function setBusy(busy: boolean): void {
     explainButton.disabled = busy;
-    previewButton.disabled = busy;
     explainButton.classList.toggle("loading", busy);
     result.setAttribute("aria-busy", busy ? "true" : "false");
   }
@@ -1178,7 +1160,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     }
   }
 
-  async function safeSettings(): Promise<AppSettings> {
+  async function safeSettings(): Promise<{ billingEnabled: boolean; freeCloudDailyLimit: number }> {
     try {
       return backend ? (await backend.loadSettings()).settings : DEFAULT_SETTINGS;
     } catch {
@@ -1186,12 +1168,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     }
   }
 
+  /** Screenshot states for development (?tab=, ?demo=, ?sheet=). Compiled out of production builds. */
   function applyPreview(): void {
     const tab = preview.get("tab");
     if (tab === "assets" || tab === "glossary" || tab === "settings" || tab === "explain" || tab === "today") shell.select(tab);
     if (tab === "signal") shell.select("today");
     const demo = preview.get("demo");
-    if (demo === "run") showResult(runCard(DEMO_RUN));
+    if (demo === "run") showResult(runCard(devSampleRun()));
     if (demo === "loading") showResult(loadingCard(1, STEP_LABELS));
     if (demo === "error") showResult(messageCard("error", "That did not work", "The cloud model could not be reached. Check your connection and retry.", () => undefined));
     if (preview.get("onboarding") === "1") showOnboarding();
@@ -1230,47 +1213,21 @@ function editorKeys(key: string, value: unknown): unknown {
   return value;
 }
 
-function decide(card: MoveCard, question: string, settings: AppSettings) {
-  const hasPrivate = hasPrivateContext(card);
-  const publicPrompt = buildPrompt({ card, question, template: settings.promptTemplate, topics: settings.topics, includePrivateContext: false });
-  const privatePrompt = hasPrivate
-    ? buildPrompt({ card, question, template: settings.promptTemplate, topics: settings.topics, includePrivateContext: true })
-    : publicPrompt;
-  return selectInferencePath({
-    preference: settings.inferenceMode,
-    headlineCount: card.headlines.length,
-    documentChars: card.document?.length ?? 0,
-    publicPromptChars: publicPrompt.charLength,
-    privatePromptChars: privatePrompt.charLength,
-    hasPrivateContext: hasPrivate,
-    limits: {
-      maxHeadlinesOnDevice: settings.maxHeadlinesOnDevice,
-      maxCharsOnDevice: settings.maxCharsOnDevice,
-      longDocumentChars: settings.longDocumentChars,
-    },
-  });
-}
-
 function pathNote(run: ExplanationRun): string {
   const where = run.inferenceSource === "on_device"
-    ? "Ran on this device."
+    ? "Answered on your device."
     : run.inferenceSource === "in_cloud"
-      ? `Ran in the cloud (${run.cloudModel}).`
-      : "The SDK did not report where it ran.";
+      ? "Answered in the cloud."
+      : "Where this answer ran was not reported.";
   const fallback = run.fellBackToCloud ? " On-device was unavailable, so the cloud ran without private notes." : "";
   const privacy = run.privateContextUsed ? " Notes stayed on this device and were not saved." : " Private notes were not sent.";
   return `${where}${fallback}${privacy}`;
 }
 
-function settingsLine(settings: AppSettings, warnings: string[]): string {
-  const base = `Inference preference: ${settings.inferenceMode}. Cloud model: ${settings.cloudModel}.`;
-  return warnings.length ? `${base} ${warnings.join(" ")}` : base;
-}
-
 function sourceLabel(source: string): string {
   if (source === "on_device") return "on-device";
   if (source === "in_cloud") return "cloud";
-  return "path unknown";
+  return "source not reported";
 }
 
 export function formatPct(value: number): string {
@@ -1315,16 +1272,15 @@ function writeFlag(key: string): void {
 
 function friendlyError(error: unknown): string {
   if (error instanceof ExplanationParseError) {
-    console.error(error.rawText);
-    return `${error.message} The raw model text is in the browser console.`;
+    if (import.meta.env.DEV) console.error(error.rawText);
+    return "The answer came back in a shape we couldn't read. Try again; it usually works the second time.";
   }
-  const message = error instanceof Error ? error.message : "The explanation could not be completed.";
-  if (error instanceof OnDeviceUnavailableError) return `${message} Use desktop Chrome 139 or newer with the Prompt API flag on, or let the cloud answer.`;
-  return cloudErrorCopy(message, "web");
+  if (error instanceof OnDeviceUnavailableError) return "This browser can't answer on the device right now. Try again to get an answer from the cloud.";
+  return cloudErrorCopy(error instanceof Error ? error.message : "", "web");
 }
 
-/** Preview-only run for screenshots (?demo=run). Labelled sample text, not a market call. */
-const DEMO_RUN: ExplanationRun = {
+/** Development-only run for screenshots (?demo=run). Labelled sample text, not a market call. */
+const devSampleRun = (): ExplanationRun => ({
   explanation: {
     summary: "Sample explanation. A sharp one-day drop in a large chip maker after news that cheaper AI models might need fewer chips.",
     buyerReasons: [
@@ -1346,6 +1302,5 @@ const DEMO_RUN: ExplanationRun = {
   pathReason: "short_public_prompt",
   privateContextUsed: false,
   fellBackToCloud: false,
-  cloudModel: "gemini-2.5-flash-lite",
   prompt: "",
-} as unknown as ExplanationRun;
+} as unknown as ExplanationRun);

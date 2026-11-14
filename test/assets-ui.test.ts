@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { LOCAL_ATLAS_PERMISSION_NOTE } from "../src/core/extension-prompt";
 
-const box = JSON.parse(readFileSync("src/wallet/box-preview.json", "utf8")) as unknown;
+const box = JSON.parse(readFileSync("test/fixtures/atlas-catalog.json", "utf8")) as unknown;
 const TRADE = /\b(buy|sell)\b/i;
 
 describe("assets UI and extension", () => {
@@ -15,19 +15,20 @@ describe("assets UI and extension", () => {
   const web = readFileSync("src/web/app.ts", "utf8");
   const legal = readFileSync("src/wallet/legal.ts", "utf8");
 
-  it("asks only for the local ATLAS host and our own web app, and explains why", () => {
+  it("asks only for the local ATLAS host and our own web app, and explains why in plain words", () => {
     expect(manifest.host_permissions).toEqual(["http://localhost:3000/*", "https://atlas-explain.web.app/*"]);
-    expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/localhost:3000/);
     expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/atlas-explain\.web\.app/);
+    expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/ATLAS research software/);
     expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/never reads balances, accounts or keys/);
     expect(popup).toContain("LOCAL_ATLAS_PERMISSION_NOTE");
-    expect(legal).toMatch(/localhost:3000/);
+    // Public copy never asks people to run anything on localhost.
+    for (const text of [LOCAL_ATLAS_PERMISSION_NOTE, legal]) expect(text).not.toMatch(/localhost/);
   });
 
   it("adds an Assets tab with list, badges, lights, detail, sparkline and the explain hand-off", () => {
     expect(shell).toContain('{ id: "assets", label: "Assets"');
     expect(css).toContain("repeat(var(--tab-count, 5), 1fr)");
-    for (const part of ["asset-row", "fresh-badge", "light-dot", "Why this colour?", "Explain this", "connectCard", "spark"]) expect(ui).toContain(part);
+    for (const part of ["asset-row", "fresh-badge", "light-dot", "Why this colour?", "Explain this", "connectCard", "spark", "Price predictions are not shown"]) expect(ui).toContain(part);
     expect(ctl).toContain("visibilitychange");
     expect(popup).toContain("mountAssets");
     expect(web).toContain("canReachLocalAtlas(location, false)");

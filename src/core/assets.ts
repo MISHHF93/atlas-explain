@@ -199,7 +199,7 @@ export function mapQuote(raw: unknown, klass: AssetClass, now: number = Date.now
     live: "Live from Kraken (24/7)",
     daily: "Daily close, updated next morning",
     stale: klass === "crypto" ? "Stale: no recent Kraken bar" : "Stale: no recent IEX session",
-    missing: "No data on this computer",
+    missing: "No data yet",
   }[freshness];
   const label = safeText(r.freshnessLabel, defaultLabel, 90);
   return {
@@ -247,7 +247,7 @@ export function readCatalog(payload: unknown, now: number = Date.now()): Catalog
   const assets = rows.slice(0, 400).map((r) => mapAsset(r, now)).filter((a): a is AssetView => a != null);
   const missing = (Array.isArray(payload.missing) ? payload.missing : [])
     .filter(isRec)
-    .map((m) => ({ klass: (m.class === "stock" ? "stock" : "crypto") as AssetClass, reason: safeText(m.reason, "No data on this computer yet.") }));
+    .map((m) => ({ klass: (m.class === "stock" ? "stock" : "crypto") as AssetClass, reason: safeText(m.reason, "No data yet.") }));
   const gate = isRec(payload.gate) ? payload.gate : {};
   const sources = isRec(payload.sources) && isRec(payload.sources.stock) ? payload.sources.stock : {};
   return {
@@ -351,10 +351,11 @@ export function sparkPath(points: readonly SparkPoint[], w: number, h: number, p
 /** The question sent to the Explain tab. Context only: price, freshness, lean and why. */
 export function explainAssetQuestion(a: AssetView): string {
   const ch = formatChange(a.quote.changePct).text;
-  const price = a.quote.price == null ? "no recent price on this computer" : `${formatPrice(a.quote.price)} (${ch} ${changeWindowText(a.quote)}, ${a.quote.freshnessLabel})`;
-  const lean = a.light.colour === "grey" ? `the ATLAS paper light is grey (${NO_EVIDENCE_LABEL.toLowerCase()})` : `the ATLAS paper model ${a.light.label.toLowerCase()} over the ${a.light.horizonLabel.toLowerCase()}`;
-  return `Explain, for a beginner, what is going on with ${a.name} (${a.symbol}): ${price}; ${lean}. ` +
-    `Explain what the price change, the data freshness, hit rate and sample size mean here. Do not recommend a trade.`;
+  const price = a.quote.price == null ? "no recent price" : `${formatPrice(a.quote.price)} (${ch} ${changeWindowText(a.quote)}, ${a.quote.freshnessLabel})`;
+  // Withheld (grey) leans are not mentioned at all: there is nothing to explain about them.
+  const lean = a.light.colour === "grey" ? "" : `; the ATLAS paper model ${a.light.label.toLowerCase()} over the ${a.light.horizonLabel.toLowerCase()}`;
+  return `Explain, for a beginner, what is going on with ${a.name} (${a.symbol}): ${price}${lean}. ` +
+    `Explain what the price change and the time window mean here. Do not recommend a trade.`;
 }
 
 /* ---------- connection ---------- */
@@ -366,11 +367,10 @@ export type AssetsState =
   | { kind: "hosted" }
   | { kind: "error"; reason: string; title?: string };
 
-export const NOT_CONNECTED_TITLE = "Connect ATLAS (run it on this computer)";
+export const NOT_CONNECTED_TITLE = "Prices are unavailable right now";
 export const NOT_CONNECTED_BODY =
-  "Assets, prices and paper predictions come from ATLAS on this computer at localhost:3000. Start ATLAS, then this list fills in. Until then every light stays grey.";
-export const HOSTED_BODY =
-  "The web app cannot read ATLAS on your computer. Install the ATLAS Explain extension and run ATLAS locally to see live assets. Every light stays grey here.";
+  "We couldn't load prices just now. Check your connection, then try again.";
+export const HOSTED_BODY = NOT_CONNECTED_BODY;
 
 /** Whether this page may try localhost at all. The hosted web app never does. */
 export function canReachLocalAtlas(loc: { protocol: string; hostname: string }, isExtension: boolean): boolean {
@@ -387,14 +387,14 @@ export async function readAtlas(path: string, fetcher: Fetcher = fetch, timeoutM
   try {
     const res = await fetcher(`${ATLAS_ORIGIN}${path}`, { signal: ctl.signal, cache: "no-store", credentials: "omit" });
     if (!res.ok) {
-      const reason = res.status === 404 ? "This ATLAS build has no Explain asset route yet. Update ATLAS." : res.status === 403 || res.status === 401 ? "ATLAS only answers Explain on this computer." : `ATLAS answered ${res.status}.`;
+      const reason = res.status === 404 ? "This version of ATLAS can't share prices. Update ATLAS." : res.status === 403 || res.status === 401 ? "ATLAS only answers Explain on this computer." : `ATLAS answered ${res.status}.`;
       return { ok: false, reason, reachable: true };
     }
     const body: unknown = await res.json();
     if (carriesPrivateFields(body)) return { ok: false, reason: "ATLAS sent fields Explain never reads, so the answer was dropped.", reachable: true };
     return { ok: true, body };
   } catch {
-    return { ok: false, reason: "ATLAS is not answering at localhost:3000.", reachable: false };
+    return { ok: false, reason: "ATLAS isn't running on this computer.", reachable: false };
   } finally {
     clearTimeout(timer);
   }

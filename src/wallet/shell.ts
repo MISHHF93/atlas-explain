@@ -1,6 +1,6 @@
 import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
 import type { AccountView } from "../core/account";
-import { connectionCopy, signalCopy, type ConnectionState } from "../core/popup-copy";
+import { connectionCopy, showsConnectionChip, signalCopy, type ConnectionState } from "../core/popup-copy";
 import type { SignalView } from "../core/signal";
 import { el, iconButton, prefersReducedMotion, replay } from "./dom";
 import { icon, type IconName } from "./icons";
@@ -17,11 +17,15 @@ export const TABS: readonly TabDef[] = [
   { id: "explain", label: "Explain", icon: "sparkle" },
   { id: "assets", label: "Assets", icon: "coins" },
   { id: "signal", label: "Signal", icon: "signal" },
-  { id: "glossary", label: "Glossary", icon: "book" },
+  { id: "glossary", label: "Learn", icon: "book" },
   { id: "settings", label: "Settings", icon: "gear" },
 ];
 
 export interface MenuItem {
+  /** Lets setMenuItemHidden() find the item later. */
+  id?: string;
+  /** Starts hidden (for example, ATLAS-only items). */
+  hidden?: boolean;
   label: string;
   icon: IconName;
   run: () => void;
@@ -36,6 +40,9 @@ export interface WalletShell {
   setConnection(state: ConnectionState): void;
   /** Header account chip. Hidden until an account handler is passed to the shell. */
   setAccount(view: AccountView | null): void;
+  /** Shows or hides a tab in the navigation. A hidden current tab falls back to the first visible one. */
+  setTabHidden(tab: TabId, hidden: boolean): void;
+  setMenuItemHidden(id: string, hidden: boolean): void;
   openSheet(title: string, nodes: Node[]): void;
   closeSheet(): void;
   announce(text: string): void;
@@ -86,11 +93,12 @@ export function createWalletShell(options: {
   status.dataset.state = "none";
   status.dataset.light = "grey";
   const statusLight = el("span", "conn-light");
-  const statusLabel = el("span", "conn-label", "Not connected");
+  const statusLabel = el("span", "conn-label", "");
+  status.hidden = true;
   const statusCaret = icon("chevron", 12);
   statusCaret.classList.add("conn-caret");
   status.append(statusLight, statusLabel, statusCaret);
-  status.addEventListener("click", () => (options.onStatus ? options.onStatus() : select("signal", { focus: true })));
+  status.addEventListener("click", () => (options.onStatus ? options.onStatus() : select(hiddenTabs.has("signal") ? "assets" : "signal", { focus: true })));
 
   const menuButton = iconButton("more", "Menu");
   menuButton.setAttribute("aria-haspopup", "menu");
@@ -98,8 +106,11 @@ export function createWalletShell(options: {
   const menu = el("div", "menu");
   menu.setAttribute("role", "menu");
   menu.hidden = true;
+  const menuEntries = new Map<string, HTMLButtonElement>();
   for (const item of options.menu) {
     const entry = el("button", "menu-item");
+    entry.hidden = item.hidden === true;
+    if (item.id) menuEntries.set(item.id, entry);
     entry.type = "button";
     entry.setAttribute("role", "menuitem");
     entry.append(icon(item.icon, 16), el("span", undefined, item.label));
@@ -111,7 +122,7 @@ export function createWalletShell(options: {
   }
   menuButton.addEventListener("click", () => toggleMenu(menu.hidden === true));
   menu.addEventListener("keydown", (event) => {
-    const items = [...menu.querySelectorAll<HTMLButtonElement>(".menu-item")];
+    const items = [...menu.querySelectorAll<HTMLButtonElement>(".menu-item:not([hidden])")];
     const index = items.indexOf(document.activeElement as HTMLButtonElement);
     if (event.key === "Escape") {
       event.preventDefault();
@@ -166,6 +177,7 @@ export function createWalletShell(options: {
   list.style.setProperty("--tab-count", String(tabs.length));
   list.setAttribute("role", "tablist");
   const tabButtons = new Map<TabId, HTMLButtonElement>();
+  const hiddenTabs = new Set<TabId>();
   for (const tab of tabs) {
     const button = el("button", "tab");
     button.type = "button";
@@ -176,7 +188,7 @@ export function createWalletShell(options: {
     button.append(icon(tab.icon, 20), el("span", undefined, tab.label));
     button.addEventListener("click", () => select(tab.id));
     button.addEventListener("keydown", (event) => {
-      const order = tabs.map((t) => t.id);
+      const order = tabs.map((t) => t.id).filter((id) => !hiddenTabs.has(id));
       const at = order.indexOf(tab.id);
       let next: TabId | undefined;
       if (event.key === "ArrowRight") next = order[(at + 1) % order.length];
@@ -256,7 +268,9 @@ export function createWalletShell(options: {
   }
 
   function markTabs(): void {
-    tabs.forEach((tab, index) => {
+    const shown = tabs.filter((tab) => !hiddenTabs.has(tab.id));
+    list.style.setProperty("--tab-count", String(shown.length));
+    shown.forEach((tab, index) => {
       const button = tabButtons.get(tab.id);
       const on = tab.id === current;
       button?.setAttribute("aria-selected", on ? "true" : "false");
@@ -265,26 +279,43 @@ export function createWalletShell(options: {
     });
   }
 
+  function setTabHidden(tab: TabId, hidden: boolean): void {
+    const button = tabButtons.get(tab);
+    if (!button || button.hidden === hidden) return;
+    button.hidden = hidden;
+    if (hidden) hiddenTabs.add(tab);
+    else hiddenTabs.delete(tab);
+    const fallback = tabs.find((t) => !hiddenTabs.has(t.id))?.id;
+    if (hidden && current === tab && fallback) select(fallback);
+    else markTabs();
+  }
+
   function toggleMenu(open: boolean): void {
     menu.hidden = !open;
     menuButton.setAttribute("aria-expanded", open ? "true" : "false");
     if (open) {
       replay(menu, "enter");
-      menu.querySelector<HTMLButtonElement>(".menu-item")?.focus();
+      menu.querySelector<HTMLButtonElement>(".menu-item:not([hidden])")?.focus();
     }
   }
 
   function setSignal(view: SignalView): void {
     const copy = signalCopy(view);
     status.dataset.light = view.colour;
-    status.setAttribute("aria-label", `Signal light: ${copy.headline}. ${statusLabel.textContent}. Open the Signal tab.`);
-    status.title = `${copy.headline}. Open the Signal tab.`;
+    if (hiddenTabs.has("signal")) {
+      status.setAttribute("aria-label", `${statusLabel.textContent}. Open Assets.`);
+      status.title = connectionCopy((status.dataset.state ?? "none") as ConnectionState).title;
+    } else {
+      status.setAttribute("aria-label", `Signal light: ${copy.headline}. ${statusLabel.textContent}. Open the Signal tab.`);
+      status.title = `${copy.headline}. Open the Signal tab.`;
+    }
   }
 
   function setConnection(state: ConnectionState): void {
     const copy = connectionCopy(state);
     status.dataset.state = state;
     statusLabel.textContent = copy.label;
+    status.hidden = !showsConnectionChip(state);
   }
 
   function setAccount(view: AccountView | null): void {
@@ -339,6 +370,11 @@ export function createWalletShell(options: {
     setSignal,
     setConnection,
     setAccount,
+    setTabHidden,
+    setMenuItemHidden: (id, hidden) => {
+      const entry = menuEntries.get(id);
+      if (entry) entry.hidden = hidden;
+    },
     openSheet,
     closeSheet,
     announce: (text) => {

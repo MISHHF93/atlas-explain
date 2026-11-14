@@ -20,13 +20,17 @@ export interface SignalCopy {
 
 export const ATLAS_DESK_URL = "http://localhost:3000/markets";
 export const EXPLAIN_WEB_URL = "https://atlas-explain.web.app";
+/** Chrome Web Store listing. Null until the listing is published (owner step); then every install link uses it. */
+export const CHROME_STORE_URL: string | null = null;
+/** Where every "Add to Chrome" link points. */
+export const INSTALL_URL = CHROME_STORE_URL ?? `${EXPLAIN_WEB_URL}/how-it-works#install`;
 
 export function signalCopy(view: SignalView): SignalCopy {
   if (!view.connected || view.reason === CONNECT_ATLAS) {
     return {
-      headline: "Connect ATLAS",
-      detail: "Open the ATLAS Markets desk in this tab to read its public paper signal. Until then the light stays grey.",
-      gate: "No desk in this tab",
+      headline: "No desk in this tab",
+      detail: "The light reads the ATLAS Markets desk when it is open in this tab. Until then it stays grey.",
+      gate: "Desk not open",
       icon: "plug",
     };
   }
@@ -54,23 +58,29 @@ export function signalCopy(view: SignalView): SignalCopy {
   };
 }
 
+/**
+ * Header chip. Public visitors only ever see "Live prices" or "Offline"; the ATLAS states
+ * appear only for someone running ATLAS. "hosted" and "none" have no chip at all.
+ */
 export function connectionCopy(state: ConnectionState): { label: string; title: string } {
   if (state === "offline") {
-    return { label: "Offline", title: "You are offline. On-device explanations still work when Chrome has Gemini Nano." };
+    return { label: "Offline", title: "You're offline. Answers on this device still work if your browser supports them." };
   }
   if (state === "local") {
-    return { label: "ATLAS local", title: "ATLAS is running on this computer. The Assets tab reads its public prices and paper stats." };
+    return { label: "ATLAS connected", title: "ATLAS research software is running on this computer." };
   }
   if (state === "desk") {
     return { label: "ATLAS desk", title: "This tab is the ATLAS Markets desk. Only its public paper signal is read." };
   }
   if (state === "live") {
-    return { label: "Live prices", title: "Crypto prices are live from the public feed named next to the list (Kraken or CoinGecko). Connect ATLAS on this computer for stock prices and paper predictions." };
+    return { label: "Live prices", title: "Crypto prices are live. The source is named next to the prices." };
   }
-  if (state === "hosted") {
-    return { label: "Hosted app", title: "This web app never calls localhost. Install the ATLAS Explain extension and run ATLAS on this computer to connect." };
-  }
-  return { label: "Not connected", title: "Start ATLAS on this computer (localhost:3000). The extension and a local build connect automatically once it answers." };
+  return { label: "", title: "" };
+}
+
+/** True when the header chip has something worth saying. */
+export function showsConnectionChip(state: ConnectionState): boolean {
+  return connectionCopy(state).label !== "";
 }
 
 export function whyQuestion(view: SignalView): string {
@@ -83,14 +93,12 @@ export const EMPTY_BODY =
   "Select a term on any page, then press Explain. You can also right-click and choose Explain with ATLAS.";
 export const SHORTCUT_HINT = "Alt+Shift+E opens this popup.";
 
-export const STEP_READ = "Reading the highlight, title, and site name";
-export const STEP_DEVICE = "Trying Gemini Nano on this device";
-export const STEP_CLOUD = "Asking Firebase AI Logic in the cloud";
+export const STEP_READ = "Reading your highlight";
+export const STEP_DEVICE = "Trying your device first";
+export const STEP_CLOUD = "Asking the cloud model";
 
 export const OFFLINE_ANSWER =
-  "You are offline and Chrome's on-device model is not available here. Reconnect to use the cloud fallback.";
-
-export const BILLING_NOTE = "Free during beta. Billing is built in and switched off.";
+  "You're offline, and this browser can't answer on the device. Reconnect and try again.";
 
 /** Preview explanation for store screenshots and the no-Chrome preview page. Not a market call. */
 export const SAMPLE_EXPLANATION = {

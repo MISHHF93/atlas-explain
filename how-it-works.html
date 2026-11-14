@@ -13,13 +13,13 @@
     <a class="skip" href="#main">Skip to content</a>
     <header class="site-head">
       <a class="brand" href="/" aria-label="ATLAS Explain home"><img src="/logo.svg" alt="" width="28" height="28" /><span><b>ATLAS</b> Explain</span></a>
-      <nav class="site-nav" aria-label="Site"><a href="/how-it-works" aria-current="page">How it works</a><a href="/app">Web app</a><a href="/support">Support</a><a href="/privacy">Privacy</a></nav>
+      <nav class="site-nav" aria-label="Site"><a href="/how-it-works" aria-current="page">How it works</a><a href="/app">Web app</a><a href="/support">Support</a></nav>
       <a class="btn btn-primary btn-sm" href="/how-it-works#install">Add to Chrome</a>
     </header>
     <main id="main" tabindex="-1">
       <article class="doc">
         <h1>How ATLAS Explain works</h1>
-        <p class="lede">ATLAS Explain is an educational companion to the ATLAS research desk. It explains trading terms and market moves in plain language and never tells anyone to trade.</p>
+        <p class="lede">ATLAS Explain explains finance terms and market news in plain language. It is education only and never tells anyone to trade.</p>
 
         <h2 id="select">Select text, get a plain explanation</h2>
         <ol class="steps">
@@ -32,20 +32,19 @@
         <ol class="hybrid" aria-label="How an answer is routed">
           <li class="hy-step"><span class="hy-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16M14.5 4.5l5 5L10 19H5v-5z"/></svg></span><span><b>Your highlight</b><small>Selected text, page title and site name. Nothing else.</small></span></li>
           <li class="hy-step hy-device"><span class="hy-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 2.5v3M15 2.5v3M9 18.5v3M15 18.5v3M2.5 9h3M2.5 15h3M18.5 9h3M18.5 15h3"/></svg></span><span><b>Gemini Nano, on this device</b><small>Tried first in desktop Chrome. Private notes never leave the browser.</small></span></li>
-          <li class="hy-step hy-cloud"><span class="hy-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.5h10.5a4 4 0 0 0 .6-8 6 6 0 0 0-11.6 1.6A3.3 3.3 0 0 0 7 18.5Z"/></svg></span><span><b>Gemini in the cloud, if needed</b><small>Firebase AI Logic with App Check. Private notes are dropped.</small></span></li>
+          <li class="hy-step hy-cloud"><span class="hy-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.5h10.5a4 4 0 0 0 .6-8 6 6 0 0 0-11.6 1.6A3.3 3.3 0 0 0 7 18.5Z"/></svg></span><span><b>Gemini in the cloud, if needed</b><small>Only when your device can't answer. Private notes are dropped.</small></span></li>
         </ol>
-        <p>Every answer says where it ran. Gemini Nano runs inside desktop Chrome (version 139 or newer, on a computer that meets Chrome's on-device model requirements). Phones, tablets and other browsers do not have Gemini Nano, so they use Gemini in the cloud through Firebase AI Logic, and the app labels those answers "Cloud". App Check protects the cloud route, and each browser has a fair-use limit.</p>
+        <p>Every answer says where it ran. Gemini Nano works in recent desktop Chrome on computers that meet Chrome's requirements. Phones, tablets and other browsers use Gemini in the cloud, and those answers are labelled "Cloud". Cloud answers have a fair daily limit; answers on your device do not.</p>
 
         <h2 id="data">Where the numbers come from</h2>
         <ul class="points">
           <li><b>Live crypto prices</b> come from a public market-data provider. Its name is shown next to the prices and links to its site.</li>
-          <li><b>Today's digest and ATLAS leans</b> come from ATLAS running on your own computer. The hosted app cannot read your computer, so on the web these show "Connect ATLAS" or "not ready" instead.</li>
-          <li><b>Lights stay grey.</b> A light only turns green or red when a paper model clears a published evidence gate. Today every lean is withheld, because the models were trained on feeds that do not allow it. The app says so.</li>
+          <li><b>No predictions.</b> ATLAS Explain shows prices and explains them. It never says where a price is going.</li>
           <li><b>No made-up numbers.</b> Missing data stays missing, with the reason.</li>
         </ul>
 
         <h2 id="install">Add to Chrome</h2>
-        <p class="callout"><b>Chrome Web Store listing: coming soon.</b> When it is live, this button will take you straight to it. Until then, install the same build from the download:</p>
+        <p>Install it in four steps. It takes about two minutes.</p>
         <p><a class="btn btn-primary" href="/download/atlas-explain-chrome.zip" download>Download the extension (.zip)</a></p>
         <ol class="steps">
           <li>Unzip the file into a folder you will keep, for example <code>Documents/atlas-explain</code>.</li>
@@ -53,7 +52,7 @@
           <li>Choose Load unpacked and select the unzipped folder.</li>
           <li>Pin ATLAS Explain from the puzzle icon. Highlight a term on any page and click the icon, or press Alt+Shift+X.</li>
         </ol>
-        <p class="fine">Prefer to build it yourself? The source is at <a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">github.com/MISHHF93/atlas-explain</a> (<code>npm ci</code>, then <code>npm run build:extension</code>). Sign in on this site in the same Chrome profile and the extension uses the same account.</p>
+        <p class="fine">Signing in is optional. If you sign in on this site in the same Chrome profile, the extension uses the same account.</p>
         <p id="extension" class="fine">On a phone or a browser without extensions, use the <a href="/app">web app</a>. It is the same Explain, Assets and Learn, with answers from the cloud model, clearly labelled.</p>
 
         <h2 id="privacy">What it never does</h2>
@@ -68,7 +67,7 @@
     <footer class="site-foot">
       <p class="foot-edu">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>
       <nav aria-label="Footer"><a href="/how-it-works#install">Add to Chrome</a><a href="/how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a><a href="/support#faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>
-      <p class="fine">Free during the beta. Built for #BuildHybridAI with Firebase AI Logic and Gemini.</p>
+      <p class="fine">© 2026 ATLAS Explain · <a href="/how-its-built">How it's built</a></p>
     </footer>
   </body>
 </html>

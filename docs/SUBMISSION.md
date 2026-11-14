@@ -21,7 +21,7 @@ Keep this list in the Devpost description so the submission matches the tree:
 
 - **Hybrid inference.** Chrome tries Gemini Nano on the device first (`PREFER_ON_DEVICE`). The badge is `response.inferenceSource`, not a guessed label.
 - **Connectors library.** `src/connectors/` (documented in [connectors/README.md](connectors/README.md)) is this repo's path, separate from the private ATLAS desk. The ATLAS-local connector prefers `POST /api/mcp/public` and falls back to `GET /api/explain/assets`.
-- **Honest header states.** The pill is one of: `Hosted app` (https://atlas-explain.web.app never calls localhost), `ATLAS local` (a loopback or extension probe actually answered), `ATLAS desk` (this tab is the Markets desk), `Not connected`, or `Offline`. It does not fake a connection.
+- **Honest header states.** The pill is one of: `Live prices` (the public price feed answered; https://atlas-explain.web.app never calls localhost), `ATLAS connected` (a loopback or extension probe actually answered), `ATLAS desk` (this tab is the Markets desk) or `Offline`. With nothing to report it is hidden. It does not fake a connection, and ATLAS-only parts stay hidden for everyone without ATLAS.
 - **Education-only boundary.** No balances, account ids, positions, or keys cross into Explain. Deep links, postMessage, and MCP responses are stripped to public move-card and catalog fields.
 - **Desk hand-off.** The private ATLAS desk can open this app with `#c=` / `#card=` / `#concept=` and an "Explain this move" link. Loading a card does not auto-run the model.
 

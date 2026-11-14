@@ -51,7 +51,7 @@
         ]
       },
       {
-        "source": "/@(app|signin|privacy|terms|how-it-works|support){,/**}",
+        "source": "/@(app|signin|privacy|terms|how-it-works|how-its-built|support){,/**}",
         "headers": [
           {
             "key": "Cache-Control",
@@ -94,6 +94,10 @@
       {
         "source": "/how-it-works",
         "destination": "/how-it-works.html"
+      },
+      {
+        "source": "/how-its-built",
+        "destination": "/how-its-built.html"
       },
       {
         "source": "/privacy",

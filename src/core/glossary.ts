@@ -50,7 +50,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     id: "hybrid_inference",
     title: "Hybrid inference",
     summary:
-      "Hybrid inference means this app tries Gemini Nano on the device first and uses Gemini in the cloud only when the on-device model is unavailable or the card is too long. The badge names the path that actually ran. Private notes stay on the device.",
+      "Hybrid inference means ATLAS Explain tries Gemini Nano on your own device first, and uses Gemini in the cloud only when your browser cannot run it or the text is too long. Every answer is labelled with where it ran. Private notes never leave your device.",
   },
   {
     id: "move_card",

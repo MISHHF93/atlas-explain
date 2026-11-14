@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>How it's built · ATLAS Explain</title>
+    <meta name="description" content="The technical design of ATLAS Explain: hybrid on-device and cloud AI with Firebase AI Logic, Gemini Nano and Gemini, App Check, Remote Config and the Chrome extension." />
+    <meta name="theme-color" content="#0c6b5e" />
+    <link rel="icon" href="/favicon.svg" />
+    <script type="module" src="/src/site/site.ts"></script>
+  </head>
+  <body class="site">
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-head">
+      <a class="brand" href="/" aria-label="ATLAS Explain home"><img src="/logo.svg" alt="" width="28" height="28" /><span><b>ATLAS</b> Explain</span></a>
+      <nav class="site-nav" aria-label="Site"><a href="/how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a></nav>
+      <a class="btn btn-primary btn-sm" href="/how-it-works#install">Add to Chrome</a>
+    </header>
+    <main id="main" tabindex="-1">
+      <article class="doc">
+        <h1>How it's built</h1>
+        <p class="lede">The technical design behind ATLAS Explain, for developers and for the judges of Google's #BuildHybridAI challenge. Everyday use needs none of this.</p>
+
+        <h2 id="hybrid">Hybrid inference with Firebase AI Logic</h2>
+        <p>Every explanation goes through the Firebase AI Logic Web SDK in hybrid mode, with <code>prefer_on_device</code> as the default.</p>
+        <ol class="steps">
+          <li><b>On the device.</b> When Chrome's Prompt API reports Gemini Nano as available, the prompt runs locally. Nothing leaves the computer, and the answer is labelled "On this device".</li>
+          <li><b>In the cloud.</b> When Nano is unavailable (phones, other browsers, older hardware) or the text is too long for it, the same prompt goes to Gemini Flash-Lite in the cloud and is labelled "Cloud".</li>
+          <li><b>Private context stays local.</b> Private notes and watchlists are only ever included in on-device prompts. A cloud fallback drops them and says so.</li>
+        </ol>
+        <p>The path that actually ran is read from the SDK's response and shown on every answer. It is never guessed.</p>
+
+        <h2 id="protection">Protection and configuration</h2>
+        <ul class="points">
+          <li><b>App Check</b> with reCAPTCHA Enterprise is enforced on Firebase AI Logic, so only this site can spend cloud calls.</li>
+          <li><b>The Chrome extension</b> makes its cloud calls through a hidden page on this site that answers only the published extension id. That way App Check runs on the web origin, and the extension holds no keys.</li>
+          <li><b>Fair-use limits</b>: each browser is limited to 8 cloud answers a minute and 300 a day. Answers on the device are never limited.</li>
+          <li><b>Remote Config</b> holds the inference mode, the cloud model, the prompt template, the on-device size limits, the price provider and the billing switch. Built-in defaults apply when it can't be read.</li>
+          <li><b>Education-only guardrails</b>: a fixed system prompt, refusal of requests for trade decisions, removal of account-like numbers before anything is sent, and a scan in the release check that blocks trade-instruction wording.</li>
+        </ul>
+
+        <h2 id="data">Data</h2>
+        <ul class="points">
+          <li><b>Live crypto prices</b> come from a public market-data provider (Kraken or CoinGecko, chosen in Remote Config). The provider is named and linked next to every price, with its time.</li>
+          <li><b>No fixtures.</b> Missing data is shown as missing, with the reason.</li>
+          <li><b>ATLAS research desk.</b> ATLAS Explain can also read the public signal of the ATLAS research software when that software runs on the same computer. That integration is optional and is hidden for everyone who doesn't run ATLAS. Its paper predictions stay withheld until they pass a published evidence gate.</li>
+        </ul>
+
+        <h2 id="stack">Stack</h2>
+        <ul class="points">
+          <li>TypeScript with Vite, no UI framework. The app's routes are lazy-loaded.</li>
+          <li>Chrome extension (Manifest V3): a popup and a side panel built from the same components as the web app, a context-menu entry and keyboard shortcuts.</li>
+          <li>Firebase: AI Logic, App Check, Remote Config, Authentication (Google and email link), Firestore with owner-only rules, and Hosting.</li>
+        </ul>
+
+        <h2 id="source">Source and local install</h2>
+        <p>The code is open source under Apache-2.0 at <a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">github.com/MISHHF93/atlas-explain</a>. To build the extension yourself, run <code>npm ci</code>, then <code>npm run build:extension</code>, and load <code>extension/dist</code> as an unpacked extension in <code>chrome://extensions</code>.</p>
+      </article>
+    </main>
+    <footer class="site-foot">
+      <p class="foot-edu">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>
+      <nav aria-label="Footer"><a href="/how-it-works#install">Add to Chrome</a><a href="/how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a><a href="/support#faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>
+      <p class="fine">© 2026 ATLAS Explain · <a href="/how-its-built">How it's built</a></p>
+    </footer>
+  </body>
+</html>

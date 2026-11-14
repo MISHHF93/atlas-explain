@@ -7,9 +7,9 @@ import { ASSETS_PATH, canReachLocalAtlas, carriesPrivateFields, readAtlas, type 
 import type { AtlasLink, ConnectorProbe } from "./types";
 
 export const HOSTED_REASON =
-  "This web app never calls localhost. Install the ATLAS Explain extension and run ATLAS on this computer to connect.";
+  "The web app does not connect to ATLAS research software.";
 
-export const LOCAL_UNREACHABLE = "ATLAS is not answering at localhost:3000.";
+export const LOCAL_UNREACHABLE = "ATLAS isn't running on this computer.";
 
 export function mayCallLocalAtlas(loc: { protocol: string; hostname: string }, isExtension: boolean): boolean {
   return canReachLocalAtlas(loc, isExtension);

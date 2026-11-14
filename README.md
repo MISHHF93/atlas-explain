@@ -174,23 +174,23 @@ The app accepts that type only from `https://atlas-explain.web.app`, `https://at
 
 ATLAS Explain never reads balances, positions, or account ids. When it talks to the private ATLAS desk, it uses this repo's connectors library (`src/connectors/`, see [docs/connectors/README.md](docs/connectors/README.md)):
 
-1. The hosted web app at https://atlas-explain.web.app **never calls localhost**. Its header pill says **Hosted app**.
+1. The hosted web app at https://atlas-explain.web.app **never calls localhost**. Its header pill says **Live prices** when the public price feed answers, and shows nothing otherwise. Everything ATLAS-only (the Signal tab, the desk menu item, the ATLAS digest) is hidden.
 2. The Chrome extension and a local loopback build may probe ATLAS on this computer. They prefer public MCP (`POST /api/mcp/public`) and fall back to the REST catalog (`GET /api/explain/assets`).
-3. The header says **ATLAS local** only when one of those probes actually answers. It says **ATLAS desk** when this tab is the Markets desk, **Offline** when the browser is offline, and **Not connected** when nothing has answered. It does not fake a connection.
+3. The header says **ATLAS connected** only when one of those probes actually answers, and only then do the ATLAS-only parts appear. It says **ATLAS desk** when this tab is the Markets desk and **Offline** when the browser is offline. It does not fake a connection, and it never shows a "Not connected" state to people who don't run ATLAS.
 
 The desk can also open this app with a public move card (`#c=` / `#card=`) or a glossary concept (`#concept=`). Loading a card does not run the model until you click **Explain the move**.
 
 ## Screenshots
 
-Stills live in [docs/screenshots/](docs/screenshots/). They show honest header states, the desk hand-off, today's brief, the Signal tab's grey default, and the practice page. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
+Stills live in [docs/screenshots/](docs/screenshots/). They predate the production copy pass (header labels changed from "Hosted app" and "ATLAS local" to "Live prices" and "ATLAS connected") and are retaken with the store assets. They show honest header states, the desk hand-off, today's brief, the Signal tab's grey default, and the practice page. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
 
 ![Hosted app header](docs/screenshots/hosted-header.png)
 
-The hosted web app at https://atlas-explain.web.app shows **Hosted app** and never calls localhost.
+The hosted web app at https://atlas-explain.web.app shows **Live prices** (earlier builds said "Hosted app") and never calls localhost.
 
 ![ATLAS local header](docs/screenshots/local-header.png)
 
-A local loopback build shows **ATLAS local** only when public MCP or the REST catalog on this computer answers.
+A local loopback build shows **ATLAS connected** (earlier builds said "ATLAS local") only when public MCP or the REST catalog on this computer answers.
 
 ![Explain this move on the ATLAS desk](docs/screenshots/desk-explain-link.png)
 

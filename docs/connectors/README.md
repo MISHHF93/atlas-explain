@@ -19,7 +19,7 @@ The hosted web app at atlas-explain.web.app never calls localhost. Only the Chro
 1. If this page is the hosted web app, the header says so and no request is sent.
 2. Otherwise the registry probes official public MCP first.
 3. If MCP is missing, mid-protocol, or unreadable, it falls back to the REST catalog.
-4. The header shows "ATLAS local" only when one of those probes actually answers. It shows "ATLAS desk" when this tab is the Markets desk. It does not fake a connection.
+4. The header shows "ATLAS connected" only when one of those probes actually answers. It shows "ATLAS desk" when this tab is the Markets desk. It does not fake a connection.
 
 ## Tests
 

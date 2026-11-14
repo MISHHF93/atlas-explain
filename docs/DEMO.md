@@ -23,8 +23,8 @@ If Nano is missing, the badge will honestly say **Cloud**. Do not edit the badge
 2. `npm run build:extension`, then load `extension/dist` unpacked in `chrome://extensions` (Developer mode).
 3. Open the practice page: https://atlas-explain.web.app/demo/trading-terms.html (static text, no prices, no account).
 4. For the desk segment: start the private ATLAS desk at `http://localhost:3000/markets` with the usual deploy script. Without it, skip shots 1-3 and use the deep-link fallback in shot 1b.
-5. For the "ATLAS local" header: either use the loaded extension on a loopback page, or open a local Explain preview at `http://localhost:4173/` (not `127.0.0.1`, if the preview bound only to localhost). Dismiss any first-run onboarding (`.ob-skip`) so the header pill is visible.
-6. For the "Hosted app" header: open https://atlas-explain.web.app in a clean tab. That pill is the honest hosted state; the web app never calls localhost.
+5. For the "ATLAS connected" header: either use the loaded extension on a loopback page, or open a local Explain preview at `http://localhost:4173/` (not `127.0.0.1`, if the preview bound only to localhost). Dismiss any first-run onboarding (`.ob-skip`) so the header pill is visible.
+6. For the hosted header: open https://atlas-explain.web.app in a clean tab. The pill reads "Live prices"; the web app never calls localhost, and the ATLAS-only parts are hidden.
 7. Close password managers, email, vault windows, and any ATLAS panel that could show balances, keys, or account numbers.
 8. Turn off the App Check debug token overlay if it is visible. Do not show `.env`, DevTools with secrets, or Credential Manager.
 
@@ -44,15 +44,15 @@ Times are a guide. Keep the total near three minutes. If a shot fails, retake th
 | 3 | 0:22-0:28 | Explain wallet | Show the card loaded, model not yet run. Point at the **On-device ⇄ Cloud** strip. | Header pill, the strip reading **Gemini Nano ready**, card fields, **Explain the move** still idle. | "Before anything is sent, the strip shows Gemini Nano is ready on this device. Loading a card never runs the model by itself. I click." |
 | 4 | 0:28-0:50 | Same wallet | Click **Explain the move**. Wait for the answer. | Badge **On-device / Gemini Nano** from `inferenceSource`. If it says Cloud, stop and retake after Nano is ready. | "Firebase AI Logic tries Gemini Nano on this device first, and Gemini in the cloud only if Nano is not ready. The badge is the SDK's own inferenceSource." |
 | 5 | 0:50-1:10 | Scroll the answer | Point at three reasons on each side and "what would change." | Both-sided reasons, no trade instruction. | "Two sides on purpose: why some readers see a dip worth studying, why others see more risk. Never an instruction." |
-| 1b | (fallback) | `https://atlas-explain.web.app/#concept=shadow` or a sample card | Use this only if the desk cannot be shown. | Glossary or sample card, **Hosted app** pill on the hosted origin. | "Without the desk, a deep link or a sample card loads the same public envelope." |
+| 1b | (fallback) | `https://atlas-explain.web.app/#concept=shadow` or a sample card | Use this only if the desk cannot be shown. | Glossary or sample card, **Live prices** pill on the hosted origin. | "Without the desk, a deep link or a sample card loads the same public envelope." |
 | 6 | 1:10-1:18 | Practice page | Highlight "RSI(14) crossed above 70 while price tagged the upper Bollinger Band". | Practice page only; no prices, no account. | "Now any trading or charting page. I highlight one sentence." |
 | 7 | 1:18-1:28 | Same page | Right-click -> **Explain with ATLAS Explain**, or press `Alt+Shift+X`. | Popup or wallet, source labeled from the site name. | "Only the highlighted text, the title, and the site name leave the page. The account panel next to it is never read." |
 | 8 | 1:28-1:45 | Wallet answer | Let the answer finish, then tap **Explain simpler** under **Keep going**. | Badge, "Charting site" (or equivalent) source line, the follow-up chips and any **Related** glossary chips. | "The card says where it came from and which model answered. One tap asks for a simpler version, still on the device." |
 | 9 | 1:45-1:58 | Practice page | Highlight "Stop-limit order" in the ticket help, explain again. | Same flow on a broker-style term, still no account fields. | "Same flow on a broker-style term." |
 | 10 | 1:58-2:08 | Explain tab -> **Recent** | Open a previous item. | Recent list, no network spinner for the reopen. | "Recent explanations stay on this device. Tapping one reopens it without another model call." |
 | 11 | 2:08-2:20 | Glossary -> **Learn path** -> **Got it** | Advance one step. | Glossary copy, progress on device. | "A short path through every term, progress kept on the device." |
-| 12 | 2:20-2:32 | Hosted app tab | Show the header pill. | Pill text **Hosted app**. | "The hosted web app never calls localhost. That is an honest header, not a failed connection." |
-| 13 | 2:32-2:45 | Extension or local preview with ATLAS running | Show the header pill after a real probe. | Pill text **ATLAS local** (or **ATLAS desk** if this tab is Markets). | "On this computer, the connectors library talks to ATLAS over public MCP, with a REST fallback, and the header says ATLAS local only when a probe answers." |
+| 12 | 2:20-2:32 | Hosted app tab | Show the header pill. | Pill text **Live prices**. | "The hosted web app never calls localhost. That is an honest header, not a failed connection." |
+| 13 | 2:32-2:45 | Extension or local preview with ATLAS running | Show the header pill after a real probe. | Pill text **ATLAS connected** (or **ATLAS desk** if this tab is Markets). | "On this computer, the connectors library talks to ATLAS over public MCP, with a REST fallback, and the header says ATLAS local only when a probe answers." |
 | 14 | 2:45-2:52 | Signal tab | Open **Why this colour?** | Grey light unless a model has cleared the evidence gate. Today that is usually grey. | "The light stays grey until a model clears the evidence gate. Grey is the honest answer." |
 | 15 | 2:52-3:00 | Settings and disclaimer | Show the plan card and the footer line. | "Free during the hackathon. Billing is built in and switched off." Educational disclaimer visible. | "Educational information, not investment advice." |
 
@@ -64,8 +64,8 @@ On a desktop browser, https://atlas-explain.web.app now opens with the hybrid st
 
 Captured stills already in `docs/screenshots/`:
 
-- `hosted-header.png` — hosted web app, pill **Hosted app**
-- `local-header.png` — local loopback build, pill **ATLAS local**, after dismissing onboarding
+- `hosted-header.png` — hosted web app, pill **Live prices** (retake: the current still shows the earlier "Hosted app" label)
+- `local-header.png` — local loopback build, pill **ATLAS connected**, after dismissing onboarding (retake: the current still shows "ATLAS local")
 - `desk-explain-link.png` — Markets desk with **Explain this move** and **Concepts**
 - `local-full.png` — Explain a move plus today's brief on a local build
 - `hosted-full.png` — hosted app, today's digest not ready
