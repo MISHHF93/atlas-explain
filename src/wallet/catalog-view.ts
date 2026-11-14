@@ -21,6 +21,7 @@ import { ALL_TERMS } from "../core/terms";
 
 /** Everything the public catalog needs, in this one lazily loaded chunk (keeps popup.js small). */
 export { assetFromLiveRow } from "../core/asset-schema";
+export { EDUCATION_ASSETS } from "../core/education-assets";
 export { RECENT_KEY, addRecent, assetsFromLiveCatalog, explainAssetPrompt, findAsset, loadMarketData, readRecent } from "../core/catalog";
 import { el, labelledButton } from "./dom";
 import { icon } from "./icons";
@@ -183,7 +184,9 @@ function skeletonRow(): HTMLElement {
 }
 
 function badge(a: Asset): HTMLElement {
-  const short = a.symbol.replace(/[/:]/g, "").slice(0, 4);
+  // Forex shows its base currency (EUR), options a plain "OPT"; everything else its symbol.
+  const raw = a.classData.class === "forex" ? a.classData.base : a.class === "option" ? "OPT" : a.symbol.replace(/[/:-]/g, "");
+  const short = raw.slice(0, 4);
   const b = el("span", `asset-icon tone-${a.class}`, short.length > 4 ? short.slice(0, 3) : short);
   b.dataset.len = String(Math.min(4, short.length));
   b.setAttribute("aria-hidden", "true");
@@ -288,11 +291,12 @@ export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void
     const figures = a.facts.filter((f) => f.kind !== "filing");
     const recent = a.facts.filter((f) => f.kind === "filing");
     facts.hidden = figures.length === 0;
-    facts.replaceChildren(el("h3", undefined, "Official figures"), ...figures.map((f) => {
+    const fromSec = a.class === "stock" || a.class === "etf";
+    facts.replaceChildren(el("h3", undefined, fromSec ? "Official figures" : "Key facts"), ...figures.map((f) => {
       const p = el("p", "fact-line");
       p.append(el("span", "fact-label", `${f.label}${f.period ? ` (${f.period})` : ""}`), el("span", "fact-value", f.value), " ", link(f.source.label, f.source.attribution.href));
       return p;
-    }), el("p", "fine", "As reported by the company to the US Securities and Exchange Commission."));
+    }), ...(fromSec ? [el("p", "fine", "As reported by the company to the US Securities and Exchange Commission.")] : []));
     filings.hidden = recent.length === 0;
     filings.replaceChildren(el("h3", undefined, "Recent filings"), ...recent.map((f) => {
       const p = el("p", "fact-line");
@@ -364,10 +368,10 @@ function classLines(a: Asset): HTMLElement[] {
       lines.push(`Owned and calculated by ${d.owner}.${d.constituents ? ` About ${d.constituents} members.` : ""}`);
       break;
     case "future":
-      lines.push(`Underlying: ${d.underlying}. Contract size: ${d.contractSize}. Tick: ${d.tick}. Expiries: ${d.expiryCycle}. Exchange: ${d.exchange}.`);
+      lines.push(`Underlying: ${d.underlying}. Traded on ${d.exchange}.`);
       break;
     case "option":
-      lines.push(`${d.style === "american" ? "American" : "European"}-style options on ${d.underlying}; one contract covers ${d.multiplier} units.`);
+      lines.push(`Options on ${d.underlying}.`);
       break;
   }
   return lines.map((t) => el("p", "fine", t));

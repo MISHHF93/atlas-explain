@@ -24,7 +24,7 @@ export const SEC_ETFS: readonly { ticker: string; name: string; category: "index
   { ticker: "GLD", name: "SPDR Gold Trust", category: "commodity", about: "Holds physical gold bars in a vault." },
 ];
 
-const STOCK_TERMS = ["market_order", "spread", "volume"];
+const STOCK_TERMS = ["filings", "market_hours", "market_order"];
 const US_HOURS = "Mon–Fri, 9:30 am–4:00 pm New York time (closed on US market holidays)";
 
 /* ---------- tickers ---------- */
@@ -259,7 +259,7 @@ export function etfFromSec(input: { etf: (typeof SEC_ETFS)[number]; cik: number;
     noQuoteReason: `${NO_QUOTE_REASON.etf} ${input.etf.about}`,
     facts: [...figures, ...filings],
     status: { state: "none" },
-    relatedTerms: ["spread", "volume"],
+    relatedTerms: ["etf", "index", "filings"],
     classData: { class: "etf", cik: cik10(input.cik), exchange, etfCategory: input.etf.category },
   };
 }

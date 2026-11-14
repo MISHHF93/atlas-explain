@@ -19,14 +19,14 @@ export const CLASS_ORDER: readonly AssetClass[] = ["crypto", "stock", "etf", "in
 
 export const CLASS_INFO: Record<AssetClass, ClassInfo> = {
   crypto: { label: "Crypto", intro: "Cryptocurrencies trade around the clock, every day, on many exchanges at once. Prices here are live and move 24/7.", learn: ["spread", "volume"] },
-  stock: { label: "Stocks", intro: "A share is a small piece of ownership in a company. US stock markets are open on weekdays, 9:30 am to 4 pm New York time.", learn: ["market_order", "volume", "gap"] },
-  etf: { label: "ETFs", intro: "An exchange-traded fund holds a basket of investments, such as an index, a sector or bonds, and trades like a single stock.", learn: ["spread", "volume"] },
-  index: { label: "Indices", intro: "An index tracks a group of stocks to describe a market, like the S&P 500 for large US companies. You can't hold an index directly.", learn: ["volume"] },
-  forex: { label: "Forex", intro: "Currencies trade in pairs: EUR/USD is how many US dollars one euro buys. The rates here are official daily reference rates, not live trading prices.", learn: ["spread"] },
+  stock: { label: "Stocks", intro: "A share is a small piece of ownership in a company. US stock markets are open on weekdays, 9:30 am to 4 pm New York time.", learn: ["market_hours", "filings", "market_order"] },
+  etf: { label: "ETFs", intro: "An exchange-traded fund holds a basket of investments, such as an index, a sector or bonds, and trades like a single stock.", learn: ["etf", "index", "spread"] },
+  index: { label: "Indices", intro: "An index tracks a group of stocks to describe a market, like the S&P 500 for large US companies. You can't hold an index directly.", learn: ["index", "etf"] },
+  forex: { label: "Forex", intro: "Currencies trade in pairs: EUR/USD is how many US dollars one euro is worth. The rates here are official daily reference rates, not live trading prices.", learn: ["pip", "reference_rate"] },
   commodity: { label: "Commodities", intro: "Raw materials such as oil and natural gas. Benchmark prices are set at specific delivery points and published daily.", learn: ["volume"] },
-  future: { label: "Futures", intro: "A futures contract is an agreement to trade something at a set price on a future date. Each contract has a fixed size and an expiry.", learn: ["margin"] },
-  option: { label: "Options", intro: "An option gives the right, but not the duty, to trade something at a set price before it expires. Its value depends on time and volatility.", learn: ["implied_volatility", "margin"] },
-  rate: { label: "Rates", intro: "Government bond yields show what it costs a government to borrow for different lengths of time. Together they draw the yield curve.", learn: [] },
+  future: { label: "Futures", intro: "A futures contract is an agreement to trade something at a set price on a future date. Each contract has a fixed size and an expiry.", learn: ["futures_contract", "expiry", "margin"] },
+  option: { label: "Options", intro: "An option gives the right, but not the duty, to trade something at a set price before it expires. Its value depends on time and volatility.", learn: ["call_put", "strike", "greeks", "implied_volatility"] },
+  rate: { label: "Rates", intro: "Government bond yields show what it costs a government to borrow for different lengths of time. Together they draw the yield curve.", learn: ["yield", "yield_curve", "basis_point"] },
 };
 
 export type ClassFilter = AssetClass | "all";

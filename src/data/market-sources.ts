@@ -118,6 +118,7 @@ export function parseTreasuryCsv(csv: string, now: number = Date.now()): Asset[]
       source: SOURCES.us_treasury,
       hours: "Published each US business day, after the market closes",
       classData: { class: "rate", tenor, curve: "US Treasury par yield" },
+      relatedTerms: ["yield", "yield_curve", "basis_point"],
     }));
   }
   return out;
@@ -174,7 +175,7 @@ export function parseEcbXml(xml: string, now: number = Date.now()): Asset[] {
       source: SOURCES.ecb,
       hours: "Reference rate published each ECB business day, around 16:00 CET",
       classData: { class: "forex", base, quote, derived: base !== "EUR" },
-      relatedTerms: ["spread"],
+      relatedTerms: ["pip", "reference_rate", "spread"],
     }));
   }
   return out;
@@ -227,7 +228,7 @@ export function parseBocFx(json: string, now: number = Date.now()): Asset[] {
       source: SOURCES.boc,
       hours: "Indicative rate published each Canadian business day by 16:30 ET",
       classData: { class: "forex", base: code, quote: "CAD", derived: false },
-      relatedTerms: ["spread"],
+      relatedTerms: ["pip", "reference_rate", "spread"],
     }));
   }
   return out;
@@ -262,6 +263,7 @@ export function parseBocBonds(json: string, now: number = Date.now()): Asset[] {
       source: SOURCES.boc,
       hours: "Published each Canadian business day",
       classData: { class: "rate", tenor, curve: "Government of Canada benchmark" },
+      relatedTerms: ["yield", "yield_curve", "basis_point"],
     }));
   }
   return out;

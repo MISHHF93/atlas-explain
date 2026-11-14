@@ -14,6 +14,9 @@ export const LEARN_PATH: readonly LearnStep[] = [
   { id: "orders", title: "How orders fill", terms: ["market_order", "stop_limit", "spread"] },
   { id: "moves", title: "Reading a move", terms: ["volume", "gap", "implied_volatility"] },
   { id: "risk", title: "Measuring risk", terms: ["margin", "drawdown", "hit_rate"] },
+  { id: "markets", title: "How markets work", terms: ["market_hours", "index", "etf", "filings"] },
+  { id: "rates", title: "Rates and currencies", terms: ["yield", "yield_curve", "basis_point", "pip", "reference_rate"] },
+  { id: "derivatives", title: "Futures and options", terms: ["futures_contract", "expiry", "strike", "call_put", "greeks"] },
   { id: "explain", title: "How answers are made", terms: ["hybrid_inference"] },
 ];
 

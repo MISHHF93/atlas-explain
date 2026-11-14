@@ -72,6 +72,104 @@ export const TRADING_TERMS: readonly TermEntry[] = [
     summary:
       "The share of resolved predictions that turned out right. On its own it says little: sample size and the size of wins and misses matter too.",
   },
+  {
+    id: "market_hours",
+    group: "market",
+    title: "Market hours",
+    summary:
+      "The times an exchange is open for regular trading. US stock exchanges open 9:30 am to 4 pm New York time on weekdays. Crypto trades around the clock, and currencies trade around the clock on weekdays.",
+  },
+  {
+    id: "index",
+    group: "market",
+    title: "Index",
+    summary:
+      "A number that tracks a group of investments to describe a market, such as the S&P 500 for large US companies. An index is a measurement, not something you can own directly; funds can be built to follow it.",
+  },
+  {
+    id: "etf",
+    group: "market",
+    title: "ETF (exchange-traded fund)",
+    summary:
+      "A fund that holds a basket of investments, such as the stocks in an index or a set of bonds, and trades on an exchange like a single stock. Its price follows the value of what it holds.",
+  },
+  {
+    id: "filings",
+    group: "market",
+    title: "10-K, 10-Q and 8-K",
+    summary:
+      "Reports US public companies must file with the SEC. A 10-K is the audited annual report, a 10-Q the quarterly report, and an 8-K a notice of a major event such as results, a merger or a leadership change.",
+  },
+  {
+    id: "futures_contract",
+    group: "market",
+    title: "Futures contract",
+    summary:
+      "An agreement to exchange a set amount of something, such as oil, gold or an index's value, at a price fixed today for a date in the future. Each contract has a standard size, a smallest price step and an expiry.",
+  },
+  {
+    id: "expiry",
+    group: "market",
+    title: "Expiry",
+    summary:
+      "The date a futures or options contract ends. After it, the contract is settled by delivering the underlying item or paying the difference in cash, and it no longer trades.",
+  },
+  {
+    id: "strike",
+    group: "market",
+    title: "Strike price",
+    summary:
+      "The fixed price written into an option contract: the price at which the holder may purchase (for a call) or hand over (for a put) the underlying asset.",
+  },
+  {
+    id: "call_put",
+    group: "market",
+    title: "Call and put options",
+    summary:
+      "A call gives its holder the right, not the obligation, to purchase an asset at the strike price before expiry. A put gives the right to hand it over at the strike price. The writer of the option takes the other side.",
+  },
+  {
+    id: "greeks",
+    group: "risk",
+    title: "The Greeks",
+    summary:
+      "Measures of how an option's value reacts to change. Delta: to the asset's price. Gamma: how fast delta itself changes. Theta: to the passing of time. Vega: to changes in expected volatility.",
+  },
+  {
+    id: "yield",
+    group: "market",
+    title: "Bond yield",
+    summary:
+      "The yearly return a bond pays, as a percentage of its price. When a bond's price falls, its yield rises, and the other way round. Government yields show what it costs a government to borrow.",
+  },
+  {
+    id: "yield_curve",
+    group: "market",
+    title: "Yield curve",
+    summary:
+      "A line joining the yields of government bonds from short terms (one month) to long terms (30 years). It usually slopes up. When short-term yields are higher than long-term ones, the curve is called inverted.",
+  },
+  {
+    id: "basis_point",
+    group: "market",
+    title: "Basis point",
+    summary:
+      "One hundredth of a percentage point (0.01%). A yield moving from 4.20% to 4.25% has risen 5 basis points. Rate changes are often quoted this way, or in percentage points (pt).",
+  },
+  {
+    id: "pip",
+    group: "market",
+    title: "Pip",
+    summary:
+      "The smallest usual step in a currency rate: 0.0001 for most pairs, and 0.01 for pairs quoted in Japanese yen. A move in EUR/USD from 1.1050 to 1.1060 is 10 pips.",
+  },
+  {
+    id: "reference_rate",
+    group: "market",
+    title: "Reference rate",
+    summary:
+      "An exchange rate published once a day by a central bank, such as the European Central Bank or the Bank of Canada, from market prices at a set time. It is for information, not a price anyone can trade at.",
+  },
 ];
 
 /** ATLAS research vocabulary. Kept for desk deep links; never listed in the public glossary. */
