@@ -37,8 +37,8 @@ import { digestCard } from "../wallet/digest";
 import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../core/timeouts";
 import { CloudRateLimited } from "../core/rate-limit";
 import { classifyCloudError, report } from "../core/monitor";
-import type { AccountView } from "../core/account";
-import { accountPanel } from "../wallet/account";
+import type { AccountView, SignInOutcome } from "../core/account";
+import { accountPanel, emailConfirmPanel } from "../wallet/account";
 import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 import { twoSidedNodes } from "../wallet/two-sided";
@@ -661,16 +661,34 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         }
       });
       if (new URLSearchParams(location.search).get("account") === "open") openAccount();
-      const finished = await b.completeSignIn(() => window.prompt("Confirm the email address you used for the sign-in link") ?? null);
-      if (finished) {
-        if (/signed in/i.test(finished)) tracker.track("login", { method: "email_link" });
-        shell.announce(finished);
-        status.textContent = finished;
-        if (/[?&](signin|oobCode)=/.test(location.search)) history.replaceState(null, "", location.pathname + location.hash);
-      }
+      const outcome = await b.completeSignIn();
+      if (outcome.state === "need-email") askLinkEmail(b);
+      else reportSignIn(outcome);
     } catch {
       // Sign-in is optional. The app keeps working signed out.
     }
+  }
+
+  /** Announces how a returning sign-in ended and drops the one-time link from the address bar. */
+  function reportSignIn(outcome: SignInOutcome): void {
+    if (outcome.state === "none" || outcome.state === "need-email") return;
+    if (outcome.state === "signed-in") tracker.track("login", { method: outcome.method });
+    shell.announce(outcome.message);
+    status.textContent = outcome.message;
+    if (/[?&](signin|oobCode)=/.test(location.search)) history.replaceState(null, "", location.pathname + location.hash);
+  }
+
+  /** Email link opened on another device: ask for the address in the page, not a browser prompt. */
+  function askLinkEmail(b: WebBackend): void {
+    shell.openSheet("Finish signing in", [emailConfirmPanel(async (email) => {
+      const outcome = await b.completeSignIn(email);
+      if (outcome.state === "signed-in") {
+        reportSignIn(outcome);
+        window.setTimeout(() => (route.kind === "signin" ? afterSignIn() : shell.closeSheet()), 400);
+        return outcome.message;
+      }
+      throw new Error(outcome.state === "error" ? outcome.message : "Sign-in did not finish. Try again in a moment.");
+    })]);
   }
 
   function openAccount(): void {
@@ -1278,6 +1296,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (preview.get("onboarding") === "1") showOnboarding();
     if (preview.get("sheet") === "terms") openLegal("terms");
     if (preview.get("sheet") === "extension") shell.openSheet("Chrome extension", extensionNodes());
+    if (preview.get("sheet") === "confirm-email") {
+      shell.openSheet("Finish signing in", [emailConfirmPanel(() => Promise.reject(new Error("Preview only: there is no sign-in link to finish.")))]);
+    }
     if (preview.get("sheet") === "today") shell.select("today");
     if (preview.get("menu") === "open") document.querySelector<HTMLButtonElement>(".bar .icon-btn")?.click();
   }

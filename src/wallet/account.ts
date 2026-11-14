@@ -82,3 +82,56 @@ export function accountPanel(view: AccountView | null, handlers: AccountHandlers
   wrap.append(note, el("p", "fine", "We store your account id, email and display name, and the explanations you save. Never balances, account numbers or form fields."));
   return wrap;
 }
+
+/**
+ * Shown when an email sign-in link is opened on a device that didn't ask for it: the
+ * visitor types the address the link was sent to. `onConfirm` resolves with the message
+ * to show, or rejects with the reason, and the field stays for another try.
+ */
+export function emailConfirmPanel(onConfirm: (email: string) => Promise<string>): HTMLElement {
+  const wrap = el("div", "stack account");
+  const note = el("p", "fine");
+  note.setAttribute("role", "status");
+  note.setAttribute("aria-live", "polite");
+
+  const form = el("form", "account-form");
+  const input = document.createElement("input");
+  input.type = "email";
+  input.autocomplete = "email";
+  input.placeholder = "you@example.com";
+  input.required = true;
+  input.setAttribute("aria-label", "The email address your sign-in link was sent to");
+  const confirm = labelledButton("mail", "Finish signing in", "primary");
+  confirm.type = "submit";
+  form.append(input, confirm);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const email = input.value.trim();
+    if (!validEmail(email)) {
+      note.textContent = "That email address does not look right.";
+      input.focus();
+      return;
+    }
+    confirm.disabled = true;
+    note.textContent = "Finishing sign-in…";
+    void onConfirm(email).then(
+      (message) => {
+        note.textContent = message;
+      },
+      (error: unknown) => {
+        note.textContent = error instanceof Error ? error.message : "That did not finish. Try again.";
+        confirm.disabled = false;
+        input.focus();
+      },
+    );
+  });
+
+  wrap.append(
+    el("p", "card-title", "Confirm your email to finish signing in"),
+    el("p", "fine", "You opened the sign-in link on a different device or browser from the one where you asked for it. Enter the email address the link was sent to."),
+    form,
+    note,
+    el("p", "fine", "The address is only used to check the link. If it doesn't match, nothing changes."),
+  );
+  return wrap;
+}

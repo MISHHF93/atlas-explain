@@ -26,6 +26,7 @@ import {
   shouldFallBackToRedirect,
   validEmail,
   type AccountView,
+  type SignInOutcome,
 } from "../../core/account";
 import { report } from "../../core/monitor";
 
@@ -85,26 +86,28 @@ export async function sendEmailLink(auth: Auth, email: string, returnUrl: string
 
 /**
  * Finish whatever sign-in came back to this page: a Google redirect or an email link.
- * Returns a message to show, or null when there was nothing to finish.
+ * An email link opened on a different device has no remembered address, so the result
+ * is "need-email"; call again with the address the visitor types.
  */
-export async function completePendingSignIn(auth: Auth, href: string, askEmail: () => string | null): Promise<string | null> {
+export async function completePendingSignIn(auth: Auth, href: string, typedEmail?: string): Promise<SignInOutcome> {
   try {
     const redirected = await getRedirectResult(auth);
-    if (redirected) return "You are signed in.";
+    if (redirected) return { state: "signed-in", method: "google", message: "You are signed in." };
   } catch (error) {
     const code = errorCode(error);
     if (code === "auth/credential-already-in-use") {
       const credential = GoogleAuthProvider.credentialFromError(error as never);
       if (credential) {
         await signInWithCredential(auth, credential);
-        return "You are signed in.";
+        return { state: "signed-in", method: "google", message: "You are signed in." };
       }
     }
-    return authErrorCopy(code);
+    return { state: "error", message: authErrorCopy(code) };
   }
-  if (!isSignInWithEmailLink(auth, href)) return null;
-  const email = localStorage.getItem(EMAIL_FOR_LINK_KEY) ?? askEmail();
-  if (!email || !validEmail(email)) return "Open the sign-in link on the device where you asked for it, or enter the same email.";
+  if (!isSignInWithEmailLink(auth, href)) return { state: "none" };
+  const email = (typedEmail ?? localStorage.getItem(EMAIL_FOR_LINK_KEY) ?? "").trim();
+  if (!email) return { state: "need-email" };
+  if (!validEmail(email)) return { state: "error", message: authErrorCopy("auth/invalid-email") };
   try {
     const user = auth.currentUser;
     if (user && user.isAnonymous) {
@@ -118,9 +121,9 @@ export async function completePendingSignIn(auth: Auth, href: string, askEmail: 
       await signInWithEmailLink(auth, email, href);
     }
     localStorage.removeItem(EMAIL_FOR_LINK_KEY);
-    return "You are signed in with your email.";
+    return { state: "signed-in", method: "email_link", message: "You are signed in with your email." };
   } catch (error) {
-    return authErrorCopy(errorCode(error));
+    return { state: "error", message: authErrorCopy(errorCode(error)) };
   }
 }
 

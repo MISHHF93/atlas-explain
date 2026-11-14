@@ -78,7 +78,7 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 1. **Keep `main` green:** run release:check before every push. Never force push.
 2. **PR 6, monetization:** after the owner's Blaze decision. Stripe keys go only in Firebase secrets, and every setup step goes into the docs.
 3. **PR 5 follow-ups:**
-   - Replace the `window.prompt` used for cross-device email-link sign-in with a proper in-app field.
+   - Done on `feat/email-link-confirm-field`: the `window.prompt` for cross-device email-link sign-in is now an in-app "Finish signing in" sheet (`emailConfirmPanel` in `src/wallet/account.ts`; preview it in dev with `/app?sheet=confirm-email`). Not yet tried with a real link on a second device; the owner should do that once after deploy.
    - Optionally sync text-explanation history to the account.
 4. **Store submission support:**
    - When the owner sends the store item id, add it to `ALLOWED_EXTENSION_IDS` in `src/bridge/protocol.ts` and to `frame-ancestors` in `firebase.json`, then redeploy.

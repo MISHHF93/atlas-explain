@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { getAuth, signInAnonymously } from "firebase/auth";
-import type { AccountView } from "../../core/account";
+import type { AccountView, SignInOutcome } from "../../core/account";
 import { fetchAndActivate, getRemoteConfig, getValue } from "firebase/remote-config";
 import {
   PRO_PRICE_ID,
@@ -72,8 +72,11 @@ export interface WebBackend {
   watchAccount(onChange: (view: AccountView | null) => void): Promise<() => void>;
   signInWithGoogle(): Promise<"signed-in" | "redirecting">;
   sendEmailLink(email: string): Promise<void>;
-  /** Finishes a Google redirect or an email link that returned to this page. */
-  completeSignIn(askEmail: () => string | null): Promise<string | null>;
+  /**
+   * Finishes a Google redirect or an email link that returned to this page. When the result
+   * is "need-email" (link opened on another device), call again with the address the visitor types.
+   */
+  completeSignIn(typedEmail?: string): Promise<SignInOutcome>;
   signOut(): Promise<void>;
   loadPrefs(): Promise<UserPrefs | null>;
   savePrefs(prefs: UserPrefs): Promise<void>;
@@ -185,9 +188,9 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const url = `${window.location.origin}/signin?signin=email`;
       return (await accountFlows()).sendEmailLink(auth, email, url);
     },
-    async completeSignIn(askEmail) {
+    async completeSignIn(typedEmail) {
       await auth.authStateReady();
-      return (await accountFlows()).completePendingSignIn(auth, window.location.href, askEmail);
+      return (await accountFlows()).completePendingSignIn(auth, window.location.href, typedEmail);
     },
     async signOut() {
       return (await accountFlows()).signOutToAnonymous(auth);

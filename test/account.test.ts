@@ -46,6 +46,15 @@ describe("auth wiring", () => {
     expect(flows).toContain("signInAnonymously(auth)");
   });
 
+  it("asks for the email in the page, never with a browser prompt", () => {
+    const app = readFileSync("src/web/app.ts", "utf8");
+    const panel = readFileSync("src/wallet/account.ts", "utf8");
+    expect(app).not.toMatch(/window\.prompt|\bprompt\(/);
+    expect(app).toContain('outcome.state === "need-email"');
+    expect(app).toContain("emailConfirmPanel(");
+    expect(panel).toContain("export function emailConfirmPanel");
+  });
+
   it("restricts per-user prefs to the owner and to a fixed shape", () => {
     expect(rules).toMatch(/match \/users\/\{userId\}\/prefs\/\{prefId\}/);
     expect(rules).toContain('request.resource.data.keys().hasOnly(["theme", "updatedAt"])');
