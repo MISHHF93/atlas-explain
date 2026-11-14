@@ -23,7 +23,7 @@ export const EXPLAIN_WEB_URL = "https://atlas-explain.web.app";
 /** Chrome Web Store listing. Null until the listing is published (owner step); then every install link uses it. */
 export const CHROME_STORE_URL: string | null = null;
 /** Where every "Add to Chrome" link points. */
-export const INSTALL_URL = CHROME_STORE_URL ?? `${EXPLAIN_WEB_URL}/how-it-works#install`;
+export const INSTALL_URL = CHROME_STORE_URL ?? `${EXPLAIN_WEB_URL}/#install`;
 
 export function signalCopy(view: SignalView): SignalCopy {
   if (!view.connected || view.reason === CONNECT_ATLAS) {

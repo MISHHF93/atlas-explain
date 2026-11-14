@@ -126,6 +126,8 @@ main { flex: 1; width: 100%; max-width: 72rem; margin: 0 auto; padding: 1rem max
 
 /* bands and cards */
 .band { display: grid; gap: 1rem; padding: 2rem 0; border-top: 1px solid var(--atlas-line); }
+/* Linked sections (/#install, /#how-it-works) stop below the sticky header, with their title in view. */
+.band[id] { scroll-margin-top: 4.5rem; }
 .band-title { font-family: var(--atlas-font-serif); font-size: var(--atlas-text-xl); font-weight: 600; }
 .cards { display: grid; gap: 0.85rem; }
 .card { display: grid; align-content: start; gap: 0.55rem; padding: 1.1rem; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius-lg); background: var(--atlas-card); box-shadow: var(--atlas-shadow-sm); }

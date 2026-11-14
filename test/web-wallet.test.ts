@@ -45,7 +45,7 @@ describe("web wallet", () => {
 describe("public site", () => {
   const page = readFileSync("index.html", "utf8");
   const css = readFileSync("src/site/site.css", "utf8");
-  const pages = ["index.html", "how-it-works.html", "how-its-built.html", "welcome.html", "privacy.html", "terms.html", "support.html", "404.html"].map((f) => [f, readFileSync(f, "utf8")] as const);
+  const pages = ["index.html", "how-its-built.html", "welcome.html", "privacy.html", "terms.html", "support.html", "404.html"].map((f) => [f, readFileSync(f, "utf8")] as const);
   it("is a landing page led by the Chrome extension, with the hybrid story in static HTML", () => {
     expect(page).toContain('class="hero"');
     expect(page).toMatch(/Add to Chrome/);

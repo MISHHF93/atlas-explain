@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 const BASE = "https://atlas-explain.web.app";
 const PAGES: Record<string, string> = {
   "index.html": "/",
-  "how-it-works.html": "/how-it-works",
   "how-its-built.html": "/how-its-built",
   "welcome.html": "/welcome",
   "support.html": "/support",

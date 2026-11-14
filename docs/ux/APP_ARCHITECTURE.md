@@ -23,7 +23,7 @@ The rules do not change: education only (no buy/sell wording), selected text onl
 | Path | Served by | What it is |
 |---|---|---|
 | `/` | `index.html` (static) | Extension-first landing: **Add to Chrome**, how it works (select → explain → on-device first), hybrid diagram, popup screenshots, privacy promises, short FAQ, web-app link |
-| `/how-it-works` | `how-it-works.html` | Select-text loop, hybrid AI (and that Gemini Nano is desktop-Chrome only; phones use the labelled cloud), where numbers come from, why lights are grey/withheld, **#install** (store "coming soon" + zip download + Load unpacked steps) |
+| `/how-it-works` | redirect to `/` | Folded into Home on 14 Nov 2026. Home now has the `#how-it-works` and `#install` sections (zip download and Load unpacked steps). A 301 with no fragment keeps the visitor's `#install`, so old links and old extension builds still reach the install steps |
 | `/support` | `support.html` | Support channels (GitHub issues, privacy requests), full FAQ (`#faq`), troubleshooting |
 | `/privacy`, `/terms` | static | Full legal drafts, marked **Draft · not final** |
 | `/download/atlas-explain-chrome.zip` | build output | The same zip as the store upload, until the listing is live |

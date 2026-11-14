@@ -51,6 +51,8 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 
 **One-page app (14 Nov 2026).** After a visual audit the owner asked for the web app on one page. `/app` is now one scrolling page: Explain, Today, Learn, Assets. There is no sidebar or bottom bar: the header has the logo (back to Explain) and three links, Today, Learn and Assets. Account and settings are a sheet behind the header account button. The extension popup is unchanged. Crypto prices are kept in the browser between loads (`atlas-explain-live-prices`), reused for a minute and shown for up to 15 minutes if the free feed refuses a request, always with their own time. Details: `docs/ux/APP_ARCHITECTURE.md`. Store screenshots of the web app and the click path in `docs/DEMO.md` predate this and need redoing.
 
+**Site map (agreed 14 Nov 2026).** The public site is four pages: Home, Support, Privacy, Terms. "How it works" is folded into Home (`/#how-it-works`, `/#install`); `/how-it-works` redirects to `/`. Welcome opens only after install. "How it's built" stays for the hackathon judges until 30 Nov 2026, then should be folded into Home too. Still proposed, not built: the extension popup down to three tabs (Explain, Learn, Assets) with settings in the menu.
+
 **State on 14 Nov 2026:** every PR above, plus the audit, pricing and catalog docs, is merged into `main`. `main` is the only branch, locally and on GitHub; all other branches were checked for unmerged work and then deleted. Work on new short-lived branches off `main`, then merge back. The live site matches `main`.
 
 ## Approved pricing (docs/PRICING.md)
