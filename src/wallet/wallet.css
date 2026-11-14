@@ -1181,3 +1181,6 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .notice-line { padding: 0.45rem 0.6rem; border-radius: 8px; background: var(--atlas-warn); color: var(--atlas-warn-ink); }
 .watch-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .watch-btn[aria-pressed="true"] { border-color: var(--atlas-accent); color: var(--atlas-accent); }
+.news-box { gap: 0.5rem; }
+.news-list { display: grid; gap: 0.45rem; padding-left: 1.2rem; list-style: decimal; font-size: var(--atlas-text-sm); }
+.news-meta { white-space: nowrap; }

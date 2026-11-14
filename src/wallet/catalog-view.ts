@@ -22,6 +22,10 @@ import { ALL_TERMS } from "../core/terms";
 /** Everything the public catalog needs, in this one lazily loaded chunk (keeps popup.js small). */
 export { assetFromLiveRow } from "../core/asset-schema";
 export { EDUCATION_ASSETS } from "../core/education-assets";
+export { loadNews } from "../core/catalog";
+import { recentFilingLines } from "../core/catalog";
+import { NEWS_TARGET_IDS, newsQuestion, type NewsItem } from "../core/news";
+import { SOURCES } from "../core/asset-schema";
 export { RECENT_KEY, addRecent, assetsFromLiveCatalog, explainAssetPrompt, findAsset, loadMarketData, readRecent } from "../core/catalog";
 import { el, labelledButton } from "./dom";
 import { icon } from "./icons";
@@ -277,7 +281,15 @@ export interface AssetPageHandle {
   setSpark(points: readonly SparkPoint[] | null, caption: string): void;
 }
 
-export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void; onTerm: (title: string) => void; watchlist?: WatchView }): AssetPageHandle {
+export function assetPage(start: Asset, options: {
+  onExplain: (a: Asset) => void;
+  onTerm: (title: string) => void;
+  watchlist?: WatchView;
+  /** Loads today's headlines for an asset; null when they can't be read right now. */
+  news?: (a: Asset) => Promise<NewsItem[] | null>;
+  /** Sends a prepared question to Explain (used to summarise the headlines). */
+  onAsk?: (question: string) => void;
+}): AssetPageHandle {
   const hero = el("section", "card asset-hero");
   const spark = el("div", "spark");
   spark.hidden = true;
@@ -314,6 +326,45 @@ export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void
     watchRow.append(watchButton, watchNote);
   } else {
     watchRow.hidden = true;
+  }
+
+  // "What was in the news today": linked headlines plus new SEC filings, summarised only on request.
+  const newsBox = el("section", "card group news-box");
+  const newsButton = labelledButton("doc", "What was in the news today", "secondary");
+  const newsBody = el("div", "stack");
+  newsBody.setAttribute("aria-live", "polite");
+  newsBox.append(newsButton, newsBody);
+  const canNews = Boolean(options.news) && (NEWS_TARGET_IDS.has(start.id) || recentFilingLines(start).length > 0);
+  newsBox.hidden = !canNews;
+  newsButton.addEventListener("click", () => void showNews());
+
+  async function showNews(): Promise<void> {
+    newsButton.disabled = true;
+    newsBody.replaceChildren(el("p", "fine", "Looking for today's headlines…"));
+    const items = NEWS_TARGET_IDS.has(current.id) ? await options.news?.(current) ?? null : [];
+    const filings = recentFilingLines(current);
+    newsButton.disabled = false;
+    if (items === null && filings.length === 0) {
+      newsBody.replaceChildren(el("p", "fine", "Headlines can't be loaded right now. Try again in a minute."));
+      return;
+    }
+    const list = items ?? [];
+    if (list.length === 0 && filings.length === 0) {
+      newsBody.replaceChildren(el("p", "fine", `Nothing in the news or in new SEC filings for ${current.name} in the last day.`));
+      return;
+    }
+    const ul = el("ol", "news-list");
+    for (const n of list) {
+      const li = el("li");
+      li.append(link(n.title, n.url), el("span", "fine news-meta", ` ${n.domain} · ${ago(n.seenAt)}`));
+      ul.append(li);
+    }
+    for (const f of filings) ul.append(el("li", undefined, `SEC filing: ${f}`));
+    const summarise = labelledButton("sparkle", "Summarise these", "primary small");
+    summarise.addEventListener("click", () => options.onAsk?.(newsQuestion(current.name, current.symbol, list, filings)));
+    const credit = el("p", "fine");
+    credit.append(link(SOURCES.gdelt.attribution.text, SOURCES.gdelt.attribution.href), ". Headlines link to their publishers; we don't check or endorse them.");
+    newsBody.replaceChildren(ul, ...(options.onAsk ? [summarise] : []), ...(list.length ? [credit] : []));
   }
   paint(start);
 
@@ -396,7 +447,7 @@ export function assetPage(start: Asset, options: { onExplain: (a: Asset) => void
   }
 
   return {
-    nodes: [hero, status, explain, watchRow, terms, facts, filings, about],
+    nodes: [hero, status, explain, watchRow, newsBox, terms, facts, filings, about],
     update: (a) => paint(a),
     setSpark,
   };
@@ -436,6 +487,13 @@ function classLines(a: Asset): HTMLElement[] {
       break;
   }
   return lines.map((t) => el("p", "fine", t));
+}
+
+function ago(iso: string, now: number = Date.now()): string {
+  const mins = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  return hours < 48 ? `${hours} h ago` : `${Math.round(hours / 24)} days ago`;
 }
 
 function link(text: string, href: string): HTMLAnchorElement {

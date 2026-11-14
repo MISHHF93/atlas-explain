@@ -5,6 +5,7 @@
  */
 import { assetFromLiveRow, validateAsset, type Asset, type AssetClass } from "./asset-schema";
 import type { CatalogView } from "./assets";
+import { readNewsFile, type NewsFile, type NewsItem } from "./news";
 
 export interface ClassInfo {
   label: string;
@@ -114,6 +115,39 @@ export async function loadMarketData(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/* ---------- headlines published by the scheduled job (core/news.ts) ---------- */
+
+export const NEWS_DATA_URL = "https://atlas-explain-data.web.app/data/v1/news.json";
+let newsCache: { at: number; file: NewsFile | null } | null = null;
+
+/** Headlines for one asset, or null when the news file can't be read right now. */
+export async function loadNews(
+  assetId: string,
+  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
+  now: number = Date.now(),
+): Promise<NewsItem[] | null> {
+  if (!newsCache || now - newsCache.at > MARKET_CACHE_MS) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8_000);
+    try {
+      const res = await fetcher(NEWS_DATA_URL, { signal: ctl.signal, cache: "no-cache", credentials: "omit" });
+      newsCache = { at: now, file: res.ok ? readNewsFile(await res.json(), now) : null };
+    } catch {
+      newsCache = { at: now, file: null };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return newsCache.file ? newsCache.file.items[assetId] ?? [] : null;
+}
+
+/** SEC filings in an asset's facts made in the last two days, as one-line labels. */
+export function recentFilingLines(a: Asset, now: number = Date.now()): string[] {
+  return a.facts
+    .filter((f) => f.kind === "filing" && f.asOf && now - Date.parse(f.asOf) <= 2 * 86_400_000)
+    .map((f) => `${f.label}, ${f.value.toLowerCase()}`);
 }
 
 /* ---------- recently viewed (this device only) ---------- */

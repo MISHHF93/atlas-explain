@@ -9,6 +9,7 @@
  *   EIA_API_KEY      free key from eia.gov/opendata
  *   SEC_USER_AGENT   "Name contact@email" for SEC EDGAR's fair-access rule (kept as a secret so the email is not public)
  *   PREVIOUS_URL     the currently published market.json, reused for any source that fails this run
+ *   SKIP_NEWS=1      skip the GDELT headlines step
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { validateAsset, type Asset } from "../../src/core/asset-schema.ts";
@@ -23,6 +24,7 @@ import {
   type MarketFile,
 } from "../../src/data/market-sources.ts";
 import { SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, readTickerMap, stockFromSec } from "../../src/data/sec.ts";
+import { NEWS_GROUPS, NEWS_SCHEMA, NEWS_TARGETS, assignNews, gdeltUrl, isRateLimitNotice, parseGdelt, readNewsFile, type NewsFile, type NewsItem } from "../../src/core/news.ts";
 
 const TIMEOUT_MS = 30_000;
 const ATTEMPTS = 2;
@@ -48,9 +50,9 @@ async function text(url: string, ua: string = UA): Promise<string> {
   throw lastError instanceof Error ? lastError : new Error("request failed");
 }
 
-async function textOnce(url: string, ua: string): Promise<string> {
+async function textOnce(url: string, ua: string, timeoutMs: number = TIMEOUT_MS): Promise<string> {
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
   try {
     const res = await fetch(url, { headers: { "User-Agent": ua, Accept: "*/*" }, signal: ctl.signal });
     if (!res.ok) throw new Error(`${new URL(url).host} answered ${res.status}`);
@@ -199,6 +201,57 @@ async function main(): Promise<void> {
   writeFileSync("data-out/data/v1/market.json", JSON.stringify(file));
   writeFileSync("data-out/index.html", "<!doctype html><title>ATLAS Explain data</title><p>Market data for ATLAS Explain. Sources and licences: https://atlas-explain.web.app/how-its-built</p>\n");
   console.log(`wrote ${unique.length} assets`);
+  if (process.env.SKIP_NEWS !== "1") await buildNews();
+}
+
+/** GDELT asks for at most one request every 5 seconds. */
+const NEWS_GAP_MS = 10_000;
+const NEWS_EVERY_MS = 3 * 3_600_000;
+/** GDELT can be slow; a stuck query must not hold up the whole run. */
+const NEWS_TIMEOUT_MS = 30_000;
+
+/** Headlines for each news target, refreshed every 3 hours; a failed query keeps its last headlines. */
+async function buildNews(): Promise<void> {
+  const prevUrl = process.env.PREVIOUS_URL?.trim().replace(/market\.json$/, "news.json");
+  let prev: NewsFile | null = null;
+  if (prevUrl) {
+    try {
+      prev = readNewsFile(JSON.parse(await text(prevUrl)), now);
+    } catch {
+      prev = null;
+    }
+  }
+  if (prev && now - Date.parse(prev.generatedAt) < NEWS_EVERY_MS) {
+    writeFileSync("data-out/data/v1/news.json", JSON.stringify(prev));
+    console.log(`news: reused headlines from ${prev.generatedAt}`);
+    return;
+  }
+  // A few grouped queries (GDELT allows one request every 5 seconds), then headlines are matched to assets by name.
+  const all: NewsItem[] = [];
+  let answered = 0;
+  for (const query of NEWS_GROUPS) {
+    await sleep(NEWS_GAP_MS);
+    let body = await textOnce(gdeltUrl(query), UA, NEWS_TIMEOUT_MS).catch(() => "");
+    if (isRateLimitNotice(body)) {
+      await sleep(NEWS_GAP_MS * 2);
+      body = await textOnce(gdeltUrl(query), UA, NEWS_TIMEOUT_MS).catch(() => "");
+    }
+    const parsed = parseGdelt(body, now);
+    const status = body.trim().startsWith("{") ? "answered" : isRateLimitNotice(body) ? "rate-limited" : "no answer";
+    if (status === "answered") answered += 1;
+    console.log(`news query ${NEWS_GROUPS.indexOf(query) + 1}: ${status}, ${parsed.length} headlines`);
+    all.push(...parsed);
+  }
+  const fresh = assignNews(all);
+  const items: Record<string, NewsItem[]> = {};
+  for (const t of NEWS_TARGETS) {
+    // An asset with no fresh match keeps its last headlines while they are still recent.
+    const list = fresh[t.assetId] ?? prev?.items[t.assetId] ?? [];
+    if (list.length) items[t.assetId] = list;
+  }
+  const file: NewsFile = { schema: NEWS_SCHEMA, generatedAt: new Date(now).toISOString(), items };
+  writeFileSync("data-out/data/v1/news.json", JSON.stringify(file));
+  console.log(`news: ${answered}/${NEWS_GROUPS.length} queries answered, ${all.length} headlines, ${Object.keys(fresh).length} assets matched`);
 }
 
 main().catch((error: unknown) => {

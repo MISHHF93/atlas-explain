@@ -160,6 +160,11 @@ export function mountAssets(options: {
         options.onExplain(`Explain "${title}" in plain language with a short example. Do not recommend a trade.`);
       },
       watchlist: options.watchlist,
+      news: (x) => view.loadNews(x.id),
+      onAsk: (question) => {
+        shell.closeSheet();
+        options.onExplain(question);
+      },
     });
     shell.openSheet(a.name, page.nodes);
     if (a.class !== "crypto" || last.kind !== "ready" || !isLivePriceSource(last.catalog.source)) return;
