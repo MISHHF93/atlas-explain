@@ -22,9 +22,13 @@ describe("hosting security headers", () => {
     expect(csp).toContain("base-uri 'self'");
     expect(csp).not.toMatch(/unsafe-eval/);
     expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
-    // The Assets tab reads the user's own ATLAS over http://localhost, so never auto-upgrade it.
-    expect(csp).not.toContain("upgrade-insecure-requests");
-    expect(csp).toMatch(/connect-src[^;]*http:\/\/localhost:3000/);
+    // The hosted app never calls localhost (local builds run under Vite, without these headers),
+    // so production upgrades any stray http request and does not allow localhost connections.
+    expect(csp).toContain("upgrade-insecure-requests");
+    expect(csp).not.toMatch(/connect-src[^;]*localhost/);
+    expect(csp).not.toMatch(/connect-src[^;]*127\.0\.0\.1/);
+    // The owner's ATLAS desk (on localhost) embeds the app for "Explain this move"; only it and the extension may frame us.
+    expect(csp).toMatch(/frame-ancestors 'self' http:\/\/localhost:3000 http:\/\/127\.0\.0\.1:3000 chrome-extension:\/\/[a-p]{32}/);
     expect(csp).toMatch(/connect-src[^;]*https:\/\/\*\.googleapis\.com/);
     expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.kraken\.com/);
     expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.coingecko\.com/);

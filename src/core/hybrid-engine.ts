@@ -40,6 +40,9 @@ export function mapAvailability(value: string | null | undefined): Exclude<Engin
   }
 }
 
+/** How long to wait for Chrome to say whether Gemini Nano is available. */
+export const AVAILABILITY_DEADLINE_MS = 3_000;
+
 /** Reads the on-device model state from `globalThis.LanguageModel` without side effects. */
 export async function readEngineState(
   scope: { LanguageModel?: AvailabilityApi } = globalThis as { LanguageModel?: AvailabilityApi },
@@ -49,7 +52,12 @@ export async function readEngineState(
   const api = scope.LanguageModel;
   if (api && typeof api.availability === "function") {
     try {
-      state = mapAvailability(await api.availability());
+      // Some Chrome builds take a long time to answer; after a few seconds, say "cloud" rather than "checking" forever.
+      const answer = await Promise.race([
+        api.availability(),
+        new Promise<string>((resolve) => setTimeout(() => resolve("timeout"), AVAILABILITY_DEADLINE_MS)),
+      ]);
+      state = mapAvailability(answer);
     } catch {
       state = "cloud";
     }

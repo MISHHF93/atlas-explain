@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { engineCopy, isEngineState, lastRunLine, mapAvailability, readEngineState, type EngineState } from "../src/core/hybrid-engine";
 
 const ALL: EngineState[] = ["checking", "ready", "downloadable", "downloading", "cloud", "offline"];
@@ -65,5 +65,19 @@ describe("hybrid engine status", () => {
       expect(src).toContain("engine.markRun(");
     }
     expect(css).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.engine-pulse \{ animation: none !important; \}/);
+  });
+});
+
+describe("engine check deadline", () => {
+  it("answers 'cloud' when Chrome never says whether Gemini Nano is available", async () => {
+    const { readEngineState, AVAILABILITY_DEADLINE_MS } = await import("../src/core/hybrid-engine");
+    vi.useFakeTimers();
+    try {
+      const pending = readEngineState({ LanguageModel: { availability: () => new Promise<string>(() => undefined) } }, true);
+      await vi.advanceTimersByTimeAsync(AVAILABILITY_DEADLINE_MS + 10);
+      expect(await pending).toBe("cloud");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
