@@ -39,3 +39,21 @@ Education only: no buy/sell wording, never reads balances or account details.
 ### After judging
 13. **Billing switch-on:** set up Stripe (Run Payments with Stripe extension), set the real Pro price id in `src/core/billing.ts`, test in Stripe test mode, then flip Remote Config `billing_enabled` to `true`. Requires the Blaze plan.
 14. **Monitoring sink:** add a real sink (for example Firebase Analytics or Sentry) with `addMonitorSink` and mention it in the privacy policy.
+
+## Added in the production pass (November 2026)
+
+### Owner steps (free)
+- [ ] **GitHub secrets** for the market-data job: `FIREBASE_SERVICE_ACCOUNT`, `SEC_USER_AGENT` ("ATLAS Explain you@yourdomain"), optional `EIA_API_KEY`.
+- [ ] **Remote Config**: `price_provider` = `coingecko`; optional `logo_dev_token` (Logo.dev publishable key, `pk_…`).
+- [ ] **Analytics (optional)**: link Google Analytics to the Firebase project, set data retention to 2 months, then set Remote Config `analytics_enabled` = `true`. The web app then asks each visitor once; nothing loads before that.
+- [ ] **Legal**: add the operator's legal name and a privacy/support email to `/privacy` and `/terms`, then go through docs/legal/REVIEW_NOTES.md with a lawyer.
+- [ ] **Chrome Web Store**: developer account (US$5), listing, screenshots retaken after these PRs, and set `CHROME_STORE_URL` in `src/core/popup-copy.ts` once the listing is live.
+- [ ] **Blaze plan (card on file, $0 usage)**: only needed for paid plans (Stripe) and server-side quotas. Billing stays off without it.
+
+### Before charging money
+- [ ] A commercial licence for crypto prices (CoinGecko paid plan) if crypto stays part of what Pro sells; see docs/ux/MULTI_ASSET_CATALOG.md §9.
+- [ ] Server-side cloud quota (`explainCloud` function, Blaze plan) instead of the client counter.
+
+### Checks that now run automatically
+- `npm run release:check`: types, lint, tests (including the design-system, privacy-surface and bundle-size guards), both builds, manifest least-privilege, bundle budget, npm audit, trade-word scan.
+- `npm run test:rules` (CI job "rules"): Firestore rules on the emulator.
