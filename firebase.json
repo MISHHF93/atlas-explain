@@ -51,7 +51,7 @@
         ]
       },
       {
-        "source": "/@(app|signin|privacy|terms|how-it-works|how-its-built|support){,/**}",
+        "source": "/@(app|signin|privacy|terms|how-it-works|how-its-built|welcome|support){,/**}",
         "headers": [
           {
             "key": "Cache-Control",
@@ -100,6 +100,10 @@
         "destination": "/how-its-built.html"
       },
       {
+        "source": "/welcome",
+        "destination": "/welcome.html"
+      },
+      {
         "source": "/privacy",
         "destination": "/privacy.html"
       },
@@ -110,6 +114,13 @@
       {
         "source": "/support",
         "destination": "/support.html"
+      }
+    ],
+    "redirects": [
+      {
+        "source": "/demo/trading-terms.html",
+        "destination": "/welcome",
+        "type": 301
       }
     ]
   },

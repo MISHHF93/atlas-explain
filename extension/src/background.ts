@@ -11,12 +11,17 @@ interface PendingExplain {
   auto: boolean;
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+/** Kept as a literal so the background script stays tiny; equals WELCOME_URL in src/core/popup-copy.ts. */
+const WELCOME_URL = "https://atlas-explain.web.app/welcome?installed=1";
+
+chrome.runtime.onInstalled.addListener((details) => {
   chrome.contextMenus.create({
     id: MENU_ID,
     title: MENU_TITLE,
     contexts: ["selection"],
   });
+  // First install only (not updates): open the welcome page to pin the extension and try it.
+  if (details.reason === "install") void chrome.tabs.create({ url: WELCOME_URL });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {

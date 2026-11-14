@@ -88,6 +88,11 @@ export function whyQuestion(view: SignalView): string {
   return `Why would an educational signal light show "${copy.headline}"? Explain hit rate, sample size, and why a model can lack evidence. Do not recommend a trade.`;
 }
 
+/** The sample explained by "Try a sample now" in onboarding: the fastest path to a first answer. */
+export const SAMPLE_TERM = "Stop-limit order";
+/** Opened once when the extension is first installed: pin it, then try it on a practice passage. */
+export const WELCOME_URL = `${EXPLAIN_WEB_URL}/welcome?installed=1`;
+
 export const EMPTY_TITLE = "Highlight anything you don't understand";
 export const EMPTY_BODY =
   "Select a term on any page, then press Explain. You can also right-click and choose Explain with ATLAS.";

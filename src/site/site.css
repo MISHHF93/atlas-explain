@@ -197,3 +197,12 @@ tr:last-child td { border-bottom: 0; }
   .hero-dot { animation: none; }
   .btn, .btn:hover { transition: none; transform: none; }
 }
+
+/* Welcome page (/welcome): numbered steps and a practice passage to highlight. */
+.welcome-step h2 { display: flex; align-items: center; gap: var(--atlas-space-2); margin: 0; font-family: var(--atlas-font-serif); font-size: var(--atlas-text-lg); font-weight: 600; }
+.step-n { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--atlas-radius-pill); background: var(--atlas-accent); color: var(--atlas-accent-ink); font-family: var(--atlas-font-sans); font-size: var(--atlas-text-sm); font-weight: 700; }
+.practice { display: grid; gap: var(--atlas-space-2); padding: var(--atlas-space-4); border-left: 3px solid var(--atlas-accent); border-radius: 0 var(--atlas-radius) var(--atlas-radius) 0; background: var(--atlas-surface-2); }
+.practice p { margin: 0; color: var(--atlas-ink); font-size: var(--atlas-text-base); line-height: 1.6; }
+.practice ::selection { background: color-mix(in srgb, var(--atlas-accent) 35%, transparent); }
+kbd { padding: 0 0.3rem; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius-xs); background: var(--atlas-card); font-family: inherit; font-size: var(--atlas-text-sm); }
+.installed-chip { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0.35rem 0.8rem; border-radius: var(--atlas-radius-pill); background: var(--atlas-device); color: var(--atlas-accent); font-size: var(--atlas-text-sm); font-weight: 700; }

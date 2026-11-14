@@ -228,7 +228,7 @@ If Nano is not available and the card has no private notes, `PREFER_ON_DEVICE` f
 
 ## Demo
 
-Try the highlight flow on a static practice page with no prices and no account: [atlas-explain.web.app/demo/trading-terms.html](https://atlas-explain.web.app/demo/trading-terms.html). Highlight a sentence, right-click, and choose **Explain with ATLAS Explain**, or press `Alt+Shift+X`. `Alt+Shift+E` opens the Explain popup.
+Try the highlight flow on a static practice page with no prices and no account: [atlas-explain.web.app/welcome](https://atlas-explain.web.app/welcome). Highlight a sentence, right-click, and choose **Explain with ATLAS Explain**, or press `Alt+Shift+X`. `Alt+Shift+E` opens the Explain popup.
 
 The full three-minute script (ATLAS desk → Explain → on-device badge → two-sided reasons → highlighted text on a trading page → Recent and Learn path → signal light) is in [docs/DEMO.md](docs/DEMO.md). The submission checklist is in [docs/SUBMISSION.md](docs/SUBMISSION.md).
 

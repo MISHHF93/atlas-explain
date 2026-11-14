@@ -98,7 +98,7 @@ Certify all three: not sold or transferred to third parties outside the approved
 ## 4. Test instructions for the reviewer
 
 ```
-No account is needed. Open https://atlas-explain.web.app/demo/trading-terms.html, highlight "stop-limit order", then click the ATLAS Explain toolbar icon (or press Alt+Shift+X) and press Explain. If Gemini Nano is not available on the review machine, the answer comes from the cloud and is labelled "Cloud". Optional: Settings → Open side panel. The Assets tab shows live crypto prices with the provider named; "Connect ATLAS" refers to an optional desktop app on localhost:3000 and is expected to be unavailable.
+No account is needed. The extension opens https://atlas-explain.web.app/welcome on install. Highlight "stop-limit order" in its practice passage, then click the ATLAS Explain toolbar icon (or press Alt+Shift+X) and press Explain. If Gemini Nano is not available on the review machine, the answer comes from the cloud and is labelled "Cloud". Optional: Settings → Open side panel. The Assets tab shows live crypto prices with the provider named, plus official rates and SEC company figures.
 ```
 
 ## 5. Submission steps (owner)

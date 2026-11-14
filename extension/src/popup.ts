@@ -11,6 +11,7 @@ import {
   ATLAS_DESK_URL,
   EXPLAIN_WEB_URL,
   SAMPLE_EXPLANATION,
+  SAMPLE_TERM,
   SHORTCUT_HINT,
   whyQuestion,
 } from "../../src/core/popup-copy";
@@ -375,10 +376,21 @@ async function boot(): Promise<void> {
 }
 
 function showOnboarding(): void {
-  shell.overlay(onboarding(() => {
+  const close = (): void => {
     shell.overlay(null);
     void store.set({ onboarded: true });
+  };
+  shell.overlay(onboarding(() => {
+    close();
     explainButton.focus();
+  }, {
+    onTry: () => {
+      close();
+      question.value = SAMPLE_TERM;
+      syncComposer();
+      shell.select("explain");
+      void run({ highlight: false, fromPage: false });
+    },
   }));
 }
 

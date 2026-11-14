@@ -341,7 +341,7 @@ const ONBOARDING: { icon: IconName; title: string; body: string; light?: "grey" 
   {
     icon: "sparkle",
     title: "Understand the move, not a tip",
-    body: "ATLAS Explain turns trading jargon and market moves into plain language. It is education only, never a trade instruction.",
+    body: "Highlight a term or a headline on any page and get it in plain language. Education only, never a trade instruction.",
   },
   {
     icon: "chip",
@@ -355,7 +355,11 @@ const ONBOARDING: { icon: IconName; title: string; body: string; light?: "grey" 
   },
 ];
 
-export function onboarding(onDone: () => void): HTMLElement {
+/**
+ * The first-run slides. With onTry, the first slide offers "Try a sample now", which closes the
+ * slides and explains a sample term straight away: the quickest way to a first answer.
+ */
+export function onboarding(onDone: () => void, options: { onTry?: () => void } = {}): HTMLElement {
   const wrap = el("div", "onboarding");
   wrap.setAttribute("role", "dialog");
   wrap.setAttribute("aria-modal", "true");
@@ -405,6 +409,11 @@ export function onboarding(onDone: () => void): HTMLElement {
       art.append(icon(step.icon, 28));
     }
     slide.replaceChildren(art, el("h2", "ob-title", step.title), el("p", "ob-body", step.body));
+    if (at === 0 && options.onTry) {
+      const tryNow = labelledButton("sparkle", "Try a sample now", "secondary ob-try");
+      tryNow.addEventListener("click", () => options.onTry?.());
+      slide.append(tryNow);
+    }
     replay(slide, "enter");
     [...dots.children].forEach((dot, i) => dot.classList.toggle("on", i === at));
     const label = next.querySelector("span");

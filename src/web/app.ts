@@ -4,7 +4,7 @@ import { conceptQuestion, getConcept, isGlossaryId } from "../core/glossary";
 import { EXPLAIN_LOAD_MESSAGE, inboundReply, readInboundMessage } from "../core/inbound";
 import { applyPrivateFields, parseMoveCardJson, publicMoveCard } from "../core/move-card";
 import { ExplanationParseError } from "../core/parse-explanation";
-import { ATLAS_DESK_URL } from "../core/popup-copy";
+import { ATLAS_DESK_URL, SAMPLE_TERM } from "../core/popup-copy";
 import { OnDeviceUnavailableError } from "../core/run-explanation";
 import { SAMPLE_MOVES, type SampleMove } from "../core/samples";
 import { DEFAULT_SETTINGS } from "../core/settings";
@@ -678,7 +678,16 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         scroller.scrollTop = 0;
         scroller.style.scrollBehavior = previous;
       }
-      explainButton.focus({ preventScroll: true });
+      // The text composer is the main way in (the move-card button is hidden until a desk link opens it).
+      textInput.focus({ preventScroll: true });
+    }, {
+      onTry: () => {
+        shell.overlay(null);
+        writeFlag(ONBOARDED_KEY);
+        navigate({ kind: "tab", tab: "explain" });
+        textInput.value = SAMPLE_TERM;
+        void onExplainText();
+      },
     }));
   }
 

@@ -8,3 +8,14 @@ import "./site.css";
  */
 const target = legacyRedirect(location);
 if (target) location.replace(target);
+
+// Opened by the extension right after install (/welcome?installed=1): confirm it instead of offering "Add to Chrome".
+if (new URLSearchParams(location.search).get("installed") === "1") {
+  const add = document.querySelector<HTMLAnchorElement>(".site-head .btn-primary");
+  if (add) {
+    const done = document.createElement("span");
+    done.className = "installed-chip";
+    done.textContent = "Installed";
+    add.replaceWith(done);
+  }
+}

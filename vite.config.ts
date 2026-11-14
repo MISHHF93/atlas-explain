@@ -11,6 +11,7 @@ export default defineConfig({
         site: "index.html",
         howItWorks: "how-it-works.html",
         howItsBuilt: "how-its-built.html",
+        welcome: "welcome.html",
         privacy: "privacy.html",
         terms: "terms.html",
         support: "support.html",

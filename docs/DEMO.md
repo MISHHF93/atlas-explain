@@ -21,7 +21,7 @@ If Nano is missing, the badge will honestly say **Cloud**. Do not edit the badge
    - If the result is `downloadable`, run `await LanguageModel.create()` and wait until it finishes.
    - If the result is `unavailable`, stop and fix Chrome; do not record the on-device segment.
 2. `npm run build:extension`, then load `extension/dist` unpacked in `chrome://extensions` (Developer mode).
-3. Open the practice page: https://atlas-explain.web.app/demo/trading-terms.html (static text, no prices, no account).
+3. Open the welcome page: https://atlas-explain.web.app/welcome (it also opens by itself on first install; static practice text, no prices, no account).
 4. For the desk segment: start the private ATLAS desk at `http://localhost:3000/markets` with the usual deploy script. Without it, skip shots 1-3 and use the deep-link fallback in shot 1b.
 5. For the "ATLAS connected" header: either use the loaded extension on a loopback page, or open a local Explain preview at `http://localhost:4173/` (not `127.0.0.1`, if the preview bound only to localhost). Dismiss any first-run onboarding (`.ob-skip`) so the header pill is visible.
 6. For the hosted header: open https://atlas-explain.web.app in a clean tab. The pill reads "Live prices"; the web app never calls localhost, and the ATLAS-only parts are hidden.
