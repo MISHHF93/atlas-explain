@@ -45,7 +45,7 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 | 3 | Design system: type, spacing and radius tokens, enforced by tests | Done | in the stack |
 | 4 | Onboarding: `/welcome` page on install, "Try a sample now" | Done | in the stack |
 | 5 | Account: Google and email-link sign-in, download my data, delete my account | Done | `feat/account` |
-| 6 | **Monetization (Stripe, Pro plan)** | **Blocked: needs the owner's decision** | — |
+| 6 | Monetization without a server (Stripe Payment Links, plan sync job) | Built, switched off; not merged or deployed; owner setup pending | `feat/monetization-spark` |
 | 7 | Hardening: tighter CSP, consented analytics, legal pages, Firestore rules tests | Done | `feat/hardening` |
 | 8 | Store and SEO: meta/OG tags, robots.txt, sitemap.xml, store images, CHROME_STORE.md, optional localhost permission | Done; deployed 14 Nov 2026 | `feat/store-seo` (commit `19c89e5`) |
 
@@ -56,9 +56,10 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 - **Free:** unlimited on-device answers, 10 cloud answers a day with Gemini Flash-Lite.
 - **Pro:** US$5.99 a month or US$47.99 a year. 300 cloud answers a day with Gemini Flash, and history synced to the account.
 - No trial. A FOUNDER coupon. Refundable on request within 14 days.
-- Architecture: while `billing_enabled` is false, the hybrid stays as it is. When it's true, cloud fallback goes through an `explainCloud` Cloud Function that enforces the quota on the server.
-
-**Why PR 6 is blocked:** Stripe through Firebase and the `explainCloud` function both need the Blaze (pay-as-you-go) plan, which means putting a card on file. Ask the owner whether they can do that (usage would likely stay within the free allowance). If not, propose a zero-cost alternative before building anything. Billing stays off either way until after judging.
+- **Owner decision, 14 Nov 2026: no card on file, so no Blaze plan.** The `explainCloud` function and the Firebase Stripe extension are dropped. Do not ask again unless the owner raises it.
+- Architecture on the free plan (`docs/MONETIZATION.md`): Stripe Payment Links for checkout, Stripe's portal link to cancel, and a GitHub Actions job (`billing-sync.yml`) that reads Stripe with a read-only key and writes `users/{uid}/plan/current`. The app counts cloud answers itself; no server enforces the limit.
+- Sold at first: a higher daily cloud limit (`pro_cloud_daily_limit`, default 100, not 300) and the larger watchlist. Free is 10 a day once billing is on. The stronger-model row is not sold. Synced history is still free for any signed-in account; gating it is an open owner decision.
+- **Gemini free-tier terms (checked 14 Nov 2026):** the cloud fallback may not be offered to users in the EEA, Switzerland or the UK on the free tier, and Google may use free-tier prompts to improve its products. The privacy page now says the second part; the first needs an owner decision (`docs/legal/REVIEW_NOTES.md` point 11).
 
 ## Multi-asset catalog (done; plan in docs/ux/MULTI_ASSET_CATALOG.md, $0 a month)
 
@@ -76,7 +77,7 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 ## Open work, in priority order
 
 1. **Keep `main` green:** run release:check before every push. Never force push.
-2. **PR 6, monetization:** after the owner's Blaze decision. Stripe keys go only in Firebase secrets, and every setup step goes into the docs.
+2. **PR 6, monetization:** built on `feat/monetization-spark`. Still to do: merge and deploy when the owner says so; the owner's Stripe and GitHub steps (`docs/MONETIZATION.md`, "Go-live"); the first real run of the sync job (its live calls have never run against Stripe or Firestore); the EEA/UK decision above. The Stripe key goes only in GitHub Actions secrets.
 3. **PR 5 follow-ups:**
    - Replace the `window.prompt` used for cross-device email-link sign-in with a proper in-app field.
    - Optionally sync text-explanation history to the account.
@@ -101,4 +102,4 @@ The full list is in `docs/LAUNCH_CHECKLIST.md`:
 
 ## First thing to do
 
-Run `git status` and `npm run release:check` (in PowerShell) on `main` to confirm the state is green. Then ask the owner whether they can put a card on the Blaze plan for PR 6.
+Run `git status` and `npm run release:check` (in PowerShell) on `main` to confirm the state is green. Then check whether `feat/email-link-confirm-field` and `feat/monetization-spark` are merged, and ask the owner before merging or deploying either.

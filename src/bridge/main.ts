@@ -60,9 +60,10 @@ function start(): void {
       ]);
       await auth.authStateReady();
       uid = auth.currentUser?.uid ?? (await signInAnonymously(auth).then((c) => c.user.uid).catch(() => null));
-      const used = uid ? await usage.readCloudCallsToday(getFirestore(app), uid).catch(() => 0) : 0;
-      const allowed = uid ? allowCloudCall({ billingEnabled: true, plan: "free", freeCloudDailyLimit: settings.freeCloudDailyLimit, cloudCallsToday: used }) : false;
-      if (!allowed) return { blocked: true, text: "Today's free cloud explanations are used up. Explanations that run on this device are still unlimited." };
+      const db = getFirestore(app);
+      const [used, plan] = uid ? await Promise.all([usage.readCloudCallsToday(db, uid).catch(() => 0), usage.readPlan(db, uid)]) : [0, "free" as const];
+      const allowed = uid ? allowCloudCall({ billingEnabled: true, plan, freeCloudDailyLimit: settings.freeCloudDailyLimit, proCloudDailyLimit: settings.proCloudDailyLimit, cloudCallsToday: used }) : false;
+      if (!allowed) return { blocked: true, text: `Today's ${plan === "pro" ? "Pro" : "free"} cloud explanations are used up. Explanations that run on this device are still unlimited.` };
     }
     const slot = takeCloudSlot(localRateStore());
     if (!slot.ok) {

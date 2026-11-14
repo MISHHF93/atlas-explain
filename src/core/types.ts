@@ -122,6 +122,12 @@ export interface AppSettings {
   analyticsEnabled: boolean;
   /** Cloud explanations per day on the free plan, used only when billing is on. */
   freeCloudDailyLimit: number;
+  /** Cloud explanations per day on Pro (a printed fair-use cap), used only when billing is on. */
+  proCloudDailyLimit: number;
+  /** Public Stripe Payment Links and customer portal link. Empty until the owner sets them. */
+  proMonthlyLink: string;
+  proYearlyLink: string;
+  billingPortalLink: string;
   /** Public live-price feed when ATLAS on this computer is not reachable. */
   priceProvider: "kraken" | "coingecko";
 }

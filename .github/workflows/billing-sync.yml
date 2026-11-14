@@ -1,0 +1,41 @@
+name: Billing plan sync
+
+# Reads paid subscriptions from Stripe (read-only key) and writes each account's plan to Firestore.
+# This replaces a Stripe webhook: the project is on Firebase's free plan, which has no server functions.
+# It does nothing until the owner sets the repository variable BILLING_SYNC to "on" and adds the
+# secrets. Setup steps: docs/MONETIZATION.md.
+on:
+  schedule:
+    # Every 15 minutes. GitHub may start scheduled runs late, so the app says "within about 15 minutes".
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report what would change without writing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: billing-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: vars.BILLING_SYNC == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # No npm install: the job uses only Node built-ins and the repo's own TypeScript.
+      - name: Sync plans from Stripe to Firestore
+        run: node scripts/billing/sync-plans.ts
+        env:
+          STRIPE_RESTRICTED_KEY: ${{ secrets.STRIPE_RESTRICTED_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}

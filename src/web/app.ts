@@ -1,4 +1,4 @@
-import { CloudAllowanceUsed, WatchlistAllowance, pricingActions, pricingView, type BillingSnapshot } from "../core/billing";
+import { CloudAllowanceUsed, PREVIEW_BILLING_LINKS, PRO_PRICE_LABELS, WatchlistAllowance, billingSnapshot, pricingActions, pricingView, type BillingSnapshot, type ProInterval } from "../core/billing";
 import { parseContextHash, type ParsedContextLink } from "../core/context-link";
 import { conceptQuestion, getConcept, isGlossaryId } from "../core/glossary";
 import { EXPLAIN_LOAD_MESSAGE, inboundReply, readInboundMessage } from "../core/inbound";
@@ -634,6 +634,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     void refreshPlan();
     void loadHistory();
     void startAccount(backend);
+    if (new URLSearchParams(location.search).get("checkout") === "done") {
+      // Stripe sends people back here after paying. The plan sync job turns Pro on a little later.
+      const thanks = "Thank you. Pro turns on for your account within about 15 minutes; you don't need to keep this page open.";
+      shell.announce(thanks);
+      accountNote.textContent = thanks;
+      history.replaceState(null, "", location.pathname + location.hash);
+    }
   }
 
   /* ---------- account ---------- */
@@ -1207,16 +1214,40 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   function renderPlan(view: ReturnType<typeof pricingView>, snapshot: BillingSnapshot | null): void {
     const extras: Node[] = [];
     const acts = pricingActions(view);
-    // Sign-in lives in the Account group below; the plan card only carries checkout.
-    if (backend && acts.includes("checkout") && snapshot?.pricing.showCheckout) {
-      const checkout = labelledButton("card", "Continue to checkout", "primary");
-      checkout.addEventListener("click", () => {
-        accountNote.textContent = "Starting checkout…";
-        void backend?.startCheckout().catch((error: unknown) => {
-          accountNote.textContent = error instanceof Error ? error.message : "Checkout did not start.";
+    yourData.setPro(Boolean(snapshot?.pricing.showManage));
+    const b = backend;
+    if (b && snapshot && acts.includes("checkout") && snapshot.pricing.showCheckout) {
+      // Pro is tied to an account, so checkout needs a sign-in first. A plan with no link set up shows no button.
+      const offers = (["yearly", "monthly"] as const).filter((interval) => snapshot.checkout[interval]);
+      const gains = view.rows.filter((r) => r.free !== r.pro).map((r) => `${r.label.toLowerCase()} ${r.pro.toLowerCase()}`).join("; ");
+      if (gains) extras.push(el("p", "fine", `With Pro: ${gains}.`));
+      if (!account?.signedIn) {
+        const signIn = labelledButton("user", "Sign in to get Pro", "secondary");
+        signIn.addEventListener("click", () => navigate({ kind: "signin" }));
+        extras.push(el("p", "fine", `Pro is ${PRO_PRICE_LABELS.monthly} or ${PRO_PRICE_LABELS.yearly}. It is added to your account, so sign in first.`), signIn);
+      } else if (offers.length) {
+        const pay = (interval: ProInterval) => {
+          const button = labelledButton("card", `Get Pro: ${PRO_PRICE_LABELS[interval]}`, interval === offers[0] ? "primary" : "secondary");
+          button.addEventListener("click", () => {
+            accountNote.textContent = "Opening Stripe checkout…";
+            void b.startCheckout(interval).catch((error: unknown) => {
+              accountNote.textContent = error instanceof Error ? error.message : "Checkout did not start. Nothing was charged.";
+            });
+          });
+          return button;
+        };
+        extras.push(...offers.map(pay), el("p", "fine", "You pay on Stripe's page; we never see your card. Pro turns on within about 15 minutes of paying. Cancel any time."));
+      }
+    }
+    if (b && snapshot?.pricing.showManage && snapshot.portalUrl) {
+      const manage = labelledButton("card", "Manage or cancel Pro", "secondary");
+      manage.addEventListener("click", () => {
+        accountNote.textContent = "Opening Stripe…";
+        void b.openBillingPortal().catch((error: unknown) => {
+          accountNote.textContent = error instanceof Error ? error.message : "That did not open. Try again.";
         });
       });
-      extras.push(checkout);
+      extras.push(manage);
     }
     extras.push(accountNote);
     planSlot.replaceChildren(planCard(view, extras));
@@ -1278,6 +1309,26 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (preview.get("onboarding") === "1") showOnboarding();
     if (preview.get("sheet") === "terms") openLegal("terms");
     if (preview.get("sheet") === "extension") shell.openSheet("Chrome extension", extensionNodes());
+    // ?plan=free | account | pro: the plan card as it looks once billing is on (Stripe test-mode style links).
+    const planPreview = preview.get("plan");
+    if (planPreview === "free" || planPreview === "account" || planPreview === "pro") {
+      const show = (): void => {
+      if (planPreview !== "free") account = { uid: "PreviewUid1", signedIn: true, label: "Preview account", email: null, initials: "PA", provider: "google" };
+      const snapshot = billingSnapshot({
+        billingEnabled: true,
+        plan: planPreview === "pro" ? "pro" : "free",
+        freeCloudDailyLimit: DEFAULT_SETTINGS.freeCloudDailyLimit,
+        proCloudDailyLimit: DEFAULT_SETTINGS.proCloudDailyLimit,
+        cloudCallsToday: 0,
+        links: PREVIEW_BILLING_LINKS,
+        accountUid: account?.uid ?? null,
+      });
+      renderPlan(snapshot.pricing, snapshot);
+      };
+      // After the real account and plan have loaded, so they don't replace the preview.
+      window.setTimeout(show, 2500);
+      shell.select("settings");
+    }
     if (preview.get("sheet") === "today") shell.select("today");
     if (preview.get("menu") === "open") document.querySelector<HTMLButtonElement>(".bar .icon-btn")?.click();
   }

@@ -1,3 +1,4 @@
+import { DEFAULT_PRO_CLOUD_DAILY_LIMIT, isPaymentLink, isPortalLink } from "./billing";
 import { parsePriceProvider } from "./price-feed";
 import { DEFAULT_PROMPT_TEMPLATE } from "./prompt";
 import { DEFAULT_TAXONOMY, parseTaxonomyConfig } from "./taxonomy";
@@ -16,7 +17,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maxOutputTokens: 1_200,
   billingEnabled: false,
   analyticsEnabled: false,
-  freeCloudDailyLimit: 50,
+  freeCloudDailyLimit: 10,
+  proCloudDailyLimit: DEFAULT_PRO_CLOUD_DAILY_LIMIT,
+  proMonthlyLink: "",
+  proYearlyLink: "",
+  billingPortalLink: "",
   priceProvider: "coingecko",
 };
 
@@ -32,6 +37,10 @@ export const REMOTE_CONFIG_KEYS = [
   "billing_enabled",
   "analytics_enabled",
   "free_cloud_daily_limit",
+  "pro_cloud_daily_limit",
+  "pro_monthly_link",
+  "pro_yearly_link",
+  "billing_portal_link",
   "price_provider",
   "coingecko_demo_api_key",
   "logo_dev_token",
@@ -52,6 +61,10 @@ export function remoteConfigDefaults(): Record<RemoteConfigKey, string> {
     billing_enabled: DEFAULT_SETTINGS.billingEnabled ? "true" : "false",
     analytics_enabled: DEFAULT_SETTINGS.analyticsEnabled ? "true" : "false",
     free_cloud_daily_limit: String(DEFAULT_SETTINGS.freeCloudDailyLimit),
+    pro_cloud_daily_limit: String(DEFAULT_SETTINGS.proCloudDailyLimit),
+    pro_monthly_link: "",
+    pro_yearly_link: "",
+    billing_portal_link: "",
     price_provider: DEFAULT_SETTINGS.priceProvider,
     coingecko_demo_api_key: "",
     logo_dev_token: "",
@@ -152,6 +165,17 @@ export function parseRemoteSettings(values: Record<string, string>): {
     "free_cloud_daily_limit",
     warnings,
   );
+  settings.proCloudDailyLimit = readBoundedInt(
+    values.pro_cloud_daily_limit,
+    1,
+    10_000,
+    DEFAULT_SETTINGS.proCloudDailyLimit,
+    "pro_cloud_daily_limit",
+    warnings,
+  );
+  settings.proMonthlyLink = readLink(values.pro_monthly_link, isPaymentLink, "pro_monthly_link", "a Stripe Payment Link (https://buy.stripe.com/...)", warnings);
+  settings.proYearlyLink = readLink(values.pro_yearly_link, isPaymentLink, "pro_yearly_link", "a Stripe Payment Link (https://buy.stripe.com/...)", warnings);
+  settings.billingPortalLink = readLink(values.billing_portal_link, isPortalLink, "billing_portal_link", "a Stripe customer portal link (https://billing.stripe.com/p/login/...)", warnings);
   settings.maxOutputTokens = readBoundedInt(
     values.max_output_tokens,
     256,
@@ -171,6 +195,21 @@ export function parseRemoteSettings(values: Record<string, string>): {
   }
 
   return { settings, warnings };
+}
+
+/** A public Stripe link, or "" when unset. Anything else is dropped so the app never sends people to another site to pay. */
+function readLink(
+  raw: string | undefined,
+  valid: (value: string) => boolean,
+  key: string,
+  expected: string,
+  warnings: string[],
+): string {
+  const value = raw?.trim() ?? "";
+  if (value === "") return "";
+  if (valid(value)) return value;
+  warnings.push(`${key} is not ${expected}. Checkout stays hidden for it.`);
+  return "";
 }
 
 function readBool(

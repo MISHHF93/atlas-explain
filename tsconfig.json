@@ -18,5 +18,5 @@
     "allowImportingTsExtensions": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "test", "scripts/data", "vite.config.ts"]
+  "include": ["src", "test", "scripts/data", "scripts/billing", "vite.config.ts"]
 }

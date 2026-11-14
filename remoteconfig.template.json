@@ -72,9 +72,37 @@
     },
     "free_cloud_daily_limit": {
       "defaultValue": {
-        "value": "50"
+        "value": "10"
       },
       "description": "Cloud explanations per day on the free plan after billing_enabled is true.",
+      "valueType": "STRING"
+    },
+    "pro_cloud_daily_limit": {
+      "defaultValue": {
+        "value": "100"
+      },
+      "description": "Cloud explanations per day on Pro after billing_enabled is true. Keep it within what the project's Gemini quota can serve; the app prints this number.",
+      "valueType": "STRING"
+    },
+    "pro_monthly_link": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Stripe Payment Link for Pro monthly (https://buy.stripe.com/...). Public, not a secret. Empty hides the button.",
+      "valueType": "STRING"
+    },
+    "pro_yearly_link": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Stripe Payment Link for Pro yearly (https://buy.stripe.com/...). Public, not a secret. Empty hides the button.",
+      "valueType": "STRING"
+    },
+    "billing_portal_link": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Stripe customer portal login link (https://billing.stripe.com/p/login/...), where subscribers change or cancel. Public, not a secret.",
       "valueType": "STRING"
     },
     "price_provider": {

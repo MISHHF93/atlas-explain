@@ -4,7 +4,10 @@ import {
   PRO_ENTITLEMENTS,
   allowCloudCall,
   applyCloudGate,
-  checkoutSessionAllowed,
+  billingSnapshot,
+  checkoutUrl,
+  planFromDoc,
+  portalUrl,
   pricingActions,
   pricingView,
   resolveEntitlements,
@@ -46,7 +49,16 @@ describe("entitlements", () => {
     expect(resolveEntitlements(input).onDeviceExplanations).toBe("unlimited");
     expect(allowCloudCall(input)).toBe(false);
     expect(allowCloudCall({ ...input, cloudCallsToday: 49 })).toBe(true);
-    expect(allowCloudCall({ ...input, plan: "pro", cloudCallsToday: 500 })).toBe(true);
+    expect(allowCloudCall({ ...input, plan: "pro", proCloudDailyLimit: 100, cloudCallsToday: 99 })).toBe(true);
+  });
+
+  it("gives Pro a higher printed cap, never an unlimited one, and never below Free", () => {
+    const pro = { billingEnabled: true, plan: "pro" as const, freeCloudDailyLimit: 10, proCloudDailyLimit: 100 };
+    expect(resolveEntitlements(pro).cloudExplanationsPerDay).toBe(100);
+    expect(allowCloudCall({ ...pro, cloudCallsToday: 100 })).toBe(false);
+    expect(resolveEntitlements({ ...pro, proCloudDailyLimit: 3 }).cloudExplanationsPerDay).toBe(10);
+    const rows = pricingView({ ...pro, plan: "free" }).rows;
+    expect(rows.find((row) => row.label === "Cloud explanations")).toEqual({ label: "Cloud explanations", free: "10 a day", pro: "Up to 100 a day" });
   });
 
   it("limits the free watchlist and leaves pro at the card cap", () => {
@@ -75,6 +87,8 @@ describe("billing flag off", () => {
     expect(pricingActions(view)).toContain("checkout");
     const pro = pricingView({ billingEnabled: true, plan: "pro", freeCloudDailyLimit: 50 });
     expect(pro.showCheckout).toBe(false);
+    expect(pro.showManage).toBe(true);
+    expect(view.showManage).toBe(false);
   });
 });
 
@@ -115,19 +129,44 @@ describe("usage writes", () => {
     expect(usageWriteAllowed(day, null, { cloudCalls: 1, date: "2026-11-14" })).toBe(false);
   });
 
-  it("allows a checkout session shape and rejects a missing price", () => {
-    expect(checkoutSessionAllowed({
-      mode: "subscription",
-      price: "price_pro_placeholder",
-      success_url: "https://atlas-explain.web.app/",
-      cancel_url: "https://atlas-explain.web.app/",
-    })).toBe(true);
-    expect(checkoutSessionAllowed({
-      mode: "subscription",
-      price: "",
-      success_url: "https://atlas-explain.web.app/",
-      cancel_url: "https://atlas-explain.web.app/",
-    })).toBe(false);
+});
+
+describe("Stripe links without a server", () => {
+  const links = {
+    proMonthlyLink: "https://buy.stripe.com/test_aBc123XyZ",
+    proYearlyLink: "https://buy.stripe.com/test_dEf456UvW",
+    billingPortalLink: "https://billing.stripe.com/p/login/test_gHi789",
+  };
+  const base = { billingEnabled: true, plan: "free" as const, freeCloudDailyLimit: 10, cloudCallsToday: 0, links };
+
+  it("attaches the account id to the Payment Link and nothing else", () => {
+    expect(checkoutUrl(links.proMonthlyLink, "Uid123abc")).toBe("https://buy.stripe.com/test_aBc123XyZ?client_reference_id=Uid123abc");
+  });
+
+  it("refuses anything that is not a Stripe link or a plain account id", () => {
+    expect(checkoutUrl("https://buy.stripe.com.evil.example/x1234", "Uid123")).toBeNull();
+    expect(checkoutUrl("http://buy.stripe.com/test_aBc123XyZ", "Uid123")).toBeNull();
+    expect(checkoutUrl("https://buy.stripe.com/test_aBc123XyZ?x=1", "Uid123")).toBeNull();
+    expect(checkoutUrl("", "Uid123")).toBeNull();
+    expect(checkoutUrl(links.proMonthlyLink, "uid&prefilled_email=x")).toBeNull();
+    expect(portalUrl("https://billing.stripe.com/p/login/test_gHi789")).toBe(links.billingPortalLink);
+    expect(portalUrl("https://example.com/p/login/test_gHi789")).toBeNull();
+  });
+
+  it("offers checkout only to a signed-in account, and only while billing is on", () => {
+    expect(billingSnapshot({ ...base, accountUid: null }).checkout).toEqual({ monthly: null, yearly: null });
+    expect(billingSnapshot({ ...base, accountUid: "Uid123" }).checkout.yearly).toBe("https://buy.stripe.com/test_dEf456UvW?client_reference_id=Uid123");
+    const off = billingSnapshot({ ...base, billingEnabled: false, accountUid: "Uid123" });
+    expect(off.checkout).toEqual({ monthly: null, yearly: null });
+    expect(off.portalUrl).toBeNull();
+    expect(billingSnapshot({ ...base, links: undefined, accountUid: "Uid123" }).checkout).toEqual({ monthly: null, yearly: null });
+  });
+
+  it("reads Pro only from a plan document that says so", () => {
+    expect(planFromDoc({ plan: "pro", status: "active" })).toBe("pro");
+    expect(planFromDoc({ plan: "free" })).toBe("free");
+    expect(planFromDoc(undefined)).toBe("free");
+    expect(planFromDoc("pro")).toBe("free");
   });
 });
 

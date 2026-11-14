@@ -16,7 +16,8 @@ import {
   type DocumentData,
   type Firestore,
 } from "firebase/firestore";
-import { incrementCloudCalls, readCloudCallsToday } from "./usage";
+import { incrementCloudCalls, readCloudCallsToday, readPlan } from "./usage";
+import type { PlanId } from "../../core/billing";
 import { cleanIds } from "../../core/watchlist";
 import { usageDeleteAllowed } from "../../core/account-data";
 
@@ -26,6 +27,7 @@ import { usageDeleteAllowed } from "../../core/account-data";
  */
 export interface WebStore {
   readonly db: Firestore;
+  plan(uid: string): Promise<PlanId>;
   cloudCallsToday(uid: string): Promise<number>;
   addCloudCall(uid: string): Promise<void>;
   addExplanation(uid: string, data: Record<string, unknown>): Promise<void>;
@@ -46,6 +48,7 @@ export function openStore(app: FirebaseApp): WebStore {
   const db = getFirestore(app);
   return {
     db,
+    plan: (uid) => readPlan(db, uid),
     cloudCallsToday: (uid) => readCloudCallsToday(db, uid),
     addCloudCall: (uid) => incrementCloudCalls(db, uid),
     async addExplanation(uid, data) {

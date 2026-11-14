@@ -9,7 +9,7 @@ describe("parseRemoteSettings", () => {
     expect(settings.cloudModel).toBe(DEFAULT_SETTINGS.cloudModel);
     expect(settings.topics.map((topic) => topic.id)).toEqual([...TOPIC_IDS]);
     expect(settings.billingEnabled).toBe(false);
-    expect(settings.freeCloudDailyLimit).toBe(50);
+    expect(settings.freeCloudDailyLimit).toBe(10);
     expect(settings.priceProvider).toBe("coingecko");
     expect(warnings).toEqual([]);
   });
