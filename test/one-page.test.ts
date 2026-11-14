@@ -24,6 +24,15 @@ describe("the web app is one page", () => {
     expect(shell).toContain('button?.setAttribute("aria-current", "true")');
   });
 
+  it("has no side rail or bottom bar: the links live in the header and the logo goes back to the top", () => {
+    expect(shell).toContain("if (paged) header.insertBefore(nav, tools);");
+    expect(shell).toContain("if (paged) frame.append(header, body, foot, sheet, overlaySlot, live);");
+    expect(shell).toContain('"ATLAS Explain: back to the top"');
+    const css = readFileSync("src/app/app.css", "utf8");
+    expect(css).not.toMatch(/grid-template-areas|\.tabbar/);
+    expect(css).toContain(".section-link[aria-current=\"true\"]");
+  });
+
   it("opens Explain at /app and keeps every old address working", () => {
     expect(pathFor({ kind: "tab", tab: "explain" })).toBe("/app");
     for (const [path, tab] of [["/app/explain", "explain"], ["/app/today", "today"], ["/app/learn", "glossary"], ["/app/assets", "assets"], ["/app/account", "settings"]] as const) {

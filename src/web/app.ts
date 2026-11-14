@@ -83,8 +83,8 @@ export interface WebWalletOptions {
 
 /**
  * The hosted ATLAS Explain app at /app: the same wallet parts as the extension, laid out as
- * one scrolling page (Explain first, then Today, Learn and Assets). The side rail on desktop
- * and the bottom bar on phones jump between sections; each section keeps its own address.
+ * one scrolling page (Explain first, then Today, Learn and Assets). Slim links in the header
+ * jump between sections, the logo goes back to the top, and each section keeps its own address.
  */
 export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): void {
   host.replaceChildren();

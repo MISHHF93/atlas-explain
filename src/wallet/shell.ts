@@ -86,7 +86,13 @@ export function createWalletShell(options: {
 
   /* header */
   const header = el("header", "bar");
-  const lockup = el("div", "lockup");
+  // Page layout: the logo is the way back to the top (the first section).
+  const lockup = paged ? el("button", "lockup lockup-home") : el("div", "lockup");
+  if (lockup instanceof HTMLButtonElement) {
+    lockup.type = "button";
+    lockup.setAttribute("aria-label", "ATLAS Explain: back to the top");
+    lockup.addEventListener("click", () => select(tabs[0]?.id ?? firstTab, { focus: true }));
+  }
   const logo = document.createElement("img");
   logo.src = options.surface === "extension" ? "./logo.svg" : "/logo.svg";
   logo.alt = "";
@@ -187,24 +193,27 @@ export function createWalletShell(options: {
     body.append(panel);
   }
 
-  /* bottom navigation */
-  const nav = el("nav", "tabbar");
-  nav.setAttribute("aria-label", "ATLAS Explain");
-  const list = el("div", "tabbar-list");
+  /* navigation: bottom tabs, or (page layout) slim section links in the header */
+  const nav = el("nav", paged ? "section-nav" : "tabbar");
+  nav.setAttribute("aria-label", paged ? "Sections" : "ATLAS Explain");
+  const list = el("div", paged ? "section-links" : "tabbar-list");
   list.style.setProperty("--tab-count", String(tabs.length));
   if (!paged) list.setAttribute("role", "tablist");
   const tabButtons = new Map<TabId, HTMLButtonElement>();
   const hiddenTabs = new Set<TabId>();
-  for (const tab of tabs) {
-    const button = el("button", "tab");
+  // Page layout: the first section is the top of the page, reached by the logo, so it gets no link.
+  for (const tab of paged ? tabs.slice(1) : tabs) {
+    const button = el("button", paged ? "section-link" : "tab");
     button.type = "button";
     button.id = `tab-${tab.id}`;
     if (!paged) button.setAttribute("role", "tab");
     button.setAttribute("aria-controls", `panel-${tab.id}`);
     button.dataset.tab = tab.id;
-    button.append(icon(tab.icon, 20), el("span", undefined, tab.label));
+    if (paged) button.append(el("span", undefined, tab.label));
+    else button.append(icon(tab.icon, 20), el("span", undefined, tab.label));
     button.addEventListener("click", () => select(tab.id));
     button.addEventListener("keydown", (event) => {
+      if (paged) return;
       const order = tabs.map((t) => t.id).filter((id) => !hiddenTabs.has(id));
       const at = order.indexOf(tab.id);
       let next: TabId | undefined;
@@ -223,8 +232,10 @@ export function createWalletShell(options: {
   }
   const indicator = el("span", "tab-indicator");
   indicator.setAttribute("aria-hidden", "true");
-  list.append(indicator);
+  if (!paged) list.append(indicator);
   nav.append(list);
+  // Page layout: the links sit in the header, between the logo and the tools.
+  if (paged) header.insertBefore(nav, tools);
 
   /* footer line */
   const foot = el("p", "edu-line");
@@ -257,7 +268,8 @@ export function createWalletShell(options: {
   live.setAttribute("role", "status");
   live.setAttribute("aria-live", "polite");
 
-  frame.append(header, body, foot, nav, sheet, overlaySlot, live);
+  if (paged) frame.append(header, body, foot, sheet, overlaySlot, live);
+  else frame.append(header, body, foot, nav, sheet, overlaySlot, live);
   options.host.append(frame);
 
   let current: TabId = paged && !isSection(firstTab) ? tabs[0]?.id ?? firstTab : firstTab;
