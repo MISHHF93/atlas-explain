@@ -2,9 +2,9 @@
 
 /*
  * ATLAS Explain app at /app. The wallet parts laid out as one scrolling page
- * (Explain, Today, Learn, Assets): phones (360px and up) get the header, the page
- * and a bottom bar of section links; tablets and desktops get a side rail and a
- * calm, centred reading column.
+ * (Explain, Today, Learn, Assets) with no side rail and no bottom bar. The header
+ * carries the logo (back to the top), slim section links and the account button;
+ * on phones (360px and up) the links sit on their own row under the logo.
  * Tokens only. No font below 11px. Safe areas for installed phone apps.
  */
 
@@ -24,8 +24,7 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 }
 
 .wallet[data-surface="app"] .bar { padding-top: max(0.6rem, env(safe-area-inset-top)); padding-left: max(0.75rem, env(safe-area-inset-left)); padding-right: max(0.75rem, env(safe-area-inset-right)); }
-.wallet[data-surface="app"] .tabbar { padding-bottom: env(safe-area-inset-bottom); }
-.wallet[data-surface="app"] .tab { min-height: 3.4rem; font-size: var(--atlas-text-xs); }
+.wallet[data-surface="app"] .edu-line { padding-bottom: max(0.35rem, env(safe-area-inset-bottom)); }
 .wallet[data-surface="app"] .panel { width: 100%; max-width: 46rem; margin: 0 auto; padding: 1rem max(1rem, env(safe-area-inset-left)) 2rem; gap: 0.85rem; }
 .wallet[data-surface="app"] .panel-title h1 { font-size: var(--atlas-text-xl); }
 .wallet[data-surface="app"] .sheet-body { padding: 1rem; font-size: var(--atlas-text-md); }
@@ -33,8 +32,33 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 /* One page: every section is shown, separated by a rule; the navigation marks the one in view. */
 .wallet[data-layout="page"] .panel.enter { animation: none; }
 .wallet[data-layout="page"] .panel:not([hidden]) ~ .panel:not([hidden]) { border-top: 1px solid var(--atlas-line); }
-.wallet[data-layout="page"] .tab[aria-current="true"] { color: var(--atlas-accent); }
-.wallet[data-layout="page"] .tab[aria-current="true"] .icon { background: var(--atlas-accent-soft); }
+.wallet[data-layout="page"] .bar { flex-wrap: wrap; row-gap: 0.35rem; }
+.lockup-home { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: var(--atlas-radius-sm); }
+.lockup-home:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 3px; }
+/* Phones: the links take their own row under the logo and tools. */
+.section-nav { order: 3; flex: 1 0 100%; min-width: 0; }
+.section-links { display: flex; gap: 0.25rem; }
+.section-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: var(--atlas-radius-pill);
+  background: none;
+  color: var(--atlas-muted);
+  font: inherit;
+  font-size: var(--atlas-text-sm);
+  font-weight: 650;
+  cursor: pointer;
+}
+.section-link:hover { background: var(--atlas-surface-2); color: var(--atlas-ink); }
+.section-link[aria-current="true"] { background: var(--atlas-accent-soft); color: var(--atlas-accent); }
+.section-link:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 2px; }
+@media (min-width: 700px) {
+  .section-nav { order: 0; flex: 0 1 auto; margin: 0 auto 0 1.5rem; }
+  .section-link { min-height: 2.25rem; }
+}
 .wallet[data-layout="page"] .panel-last { min-height: calc(100dvh - 9rem); }
 .wallet[data-layout="page"] .catalog-more { padding: var(--atlas-space-2) 0; }
 
@@ -50,41 +74,9 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 }
 .skip:focus { top: 0.75rem; }
 
-/* Tablets and desktops: side rail navigation, reading column, sheet as a side drawer. */
+/* Tablets and desktops: a centred reading column under the header; the sheet becomes a side drawer. */
 @media (min-width: 900px) {
-  .wallet[data-surface="app"] {
-    display: grid;
-    grid-template-columns: 15rem minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-areas: "bar bar" "nav main" "nav foot";
-  }
-  .wallet[data-surface="app"] .bar { grid-area: bar; padding-left: 1.25rem; padding-right: 1.25rem; }
-  .wallet[data-surface="app"] .wallet-body { grid-area: main; }
-  .wallet[data-surface="app"] .edu-line { grid-area: foot; }
-  .wallet[data-surface="app"] .tabbar {
-    grid-area: nav;
-    border-top: 0;
-    border-right: 1px solid var(--atlas-line);
-    box-shadow: none;
-    padding: 1rem 0.75rem;
-    background: var(--atlas-card);
-  }
-  .wallet[data-surface="app"] .tabbar-list { display: flex; flex-direction: column; gap: 0.25rem; }
-  .wallet[data-surface="app"] .tab {
-    grid-template-columns: auto 1fr;
-    justify-items: start;
-    align-items: center;
-    gap: 0.7rem;
-    min-height: 2.75rem;
-    padding: 0.5rem 0.85rem;
-    border-radius: var(--atlas-radius);
-    font-size: var(--atlas-text-md);
-    text-align: left;
-  }
-  .wallet[data-surface="app"] .tab:hover { background: var(--atlas-surface-2); }
-  .wallet[data-surface="app"] .tab[aria-selected="true"],
-  .wallet[data-surface="app"] .tab[aria-current="true"] { background: var(--atlas-accent-soft); }
-  .wallet[data-surface="app"] .tab-indicator { display: none; }
+  .wallet[data-surface="app"] .bar { padding-left: 1.25rem; padding-right: 1.25rem; }
   .wallet[data-layout="page"] .term-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .wallet[data-surface="app"] .panel { padding: 2rem 2rem 3rem; gap: 1rem; }
   .wallet[data-surface="app"] .panel-title h1 { font-size: var(--atlas-text-2xl); }
