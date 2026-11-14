@@ -196,10 +196,14 @@ let assets: ReturnType<typeof mountAssets> | null = null;
 let atlasLocal = false;
 let livePrices = false;
 
+/** ATLAS on this computer is read only after its owner grants this optional permission (Settings). */
+const ATLAS_ORIGINS = ["http://localhost:3000/*"];
+let atlasAllowed = false;
+
 function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): void {
   assets = mountAssets({
     shell,
-    canReachAtlas: hasChrome,
+    canReachAtlas: hasChrome && atlasAllowed,
     priceFeed,
     // Kept on this device in the extension; account sync for the extension comes through the website later.
     watchlist: createWatchlist(localKeyValue(), null),
@@ -275,6 +279,14 @@ shell.panels.glossary.append(glossaryHead, learnSlot);
 /* ---------- Settings tab ---------- */
 
 const toolsStatus = el("p", "fine");
+// Asks for the optional localhost permission in the click itself (Chrome requires a user gesture).
+const atlasRow = row("plug", "Connect ATLAS on this computer", () => {
+  if (!hasChrome) return;
+  const change = atlasAllowed
+    ? chrome.permissions.remove({ origins: ATLAS_ORIGINS })
+    : chrome.permissions.request({ origins: ATLAS_ORIGINS });
+  void change.then(() => location.reload()).catch(() => undefined);
+});
 toolsStatus.setAttribute("role", "status");
 const themeSlot = el("div");
 const version = hasChrome ? chrome.runtime.getManifest().version : "preview";
@@ -300,6 +312,10 @@ shell.panels.settings.append(
   group("Your data", [
     el("p", "fine", "Download your data or delete your account on the ATLAS Explain website. Recent explanations in the extension stay in this browser; clear them from Recent."),
     row("external", "Download or delete your data", () => openUrl(`${EXPLAIN_WEB_URL}/app/account`)),
+  ]),
+  group("For ATLAS users", [
+    el("p", "fine", "If you run ATLAS research software on this computer, ATLAS Explain can read its prices and research figures. Most people don't need this."),
+    atlasRow,
   ]),
   group("About", [el("p", "fine", `ATLAS Explain ${version} · Apache-2.0 · ${SHORTCUT_HINT}`), row("external", "Open the web app", () => openUrl(EXPLAIN_WEB_URL))]),
 );
@@ -358,6 +374,9 @@ async function boot(): Promise<void> {
     if (import.meta.env.DEV) applyPreviewState();
     return;
   }
+  atlasAllowed = await chrome.permissions.contains({ origins: ATLAS_ORIGINS }).catch(() => false);
+  const atlasLabel = atlasRow.querySelector("span");
+  if (atlasLabel && atlasAllowed) atlasLabel.textContent = "Disconnect ATLAS on this computer";
   const priceFeed: PriceFeedOptions = { ...DEFAULT_PRICE_FEED };
   startAssets(priceFeed);
   void import("./cloud").then(async (cloud) => {

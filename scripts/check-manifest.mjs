@@ -16,7 +16,9 @@ export const ALLOWED_OPTIONAL_PERMISSIONS = { sidePanel: "chrome.sidePanel" };
  * Hosts the extension may reach: the user's own ATLAS desk, and our own web app, whose
  * bridge page runs App Check-protected cloud calls and shares the web sign-in.
  */
-export const ALLOWED_HOSTS = ["http://localhost:3000/*", "https://atlas-explain.web.app/*"];
+export const ALLOWED_HOSTS = ["https://atlas-explain.web.app/*"];
+/** Requested at runtime, only by people who run ATLAS on their own computer (Settings, "For ATLAS users"). */
+export const ALLOWED_OPTIONAL_HOSTS = ["http://localhost:3000/*"];
 
 export function checkManifest(manifest, source) {
   const problems = [];
@@ -30,9 +32,13 @@ export function checkManifest(manifest, source) {
     else if (!source.includes(ALLOWED_OPTIONAL_PERMISSIONS[p])) problems.push(`optional permission "${p}" is never used`);
   }
   for (const h of manifest.host_permissions ?? []) {
-    if (!ALLOWED_HOSTS.includes(h)) problems.push(`host permission "${h}" is not the local ATLAS desk or the ATLAS Explain web app`);
+    if (!ALLOWED_HOSTS.includes(h)) problems.push(`host permission "${h}" is not the ATLAS Explain web app`);
   }
-  for (const key of ["content_scripts", "web_accessible_resources", "externally_connectable", "optional_host_permissions"]) {
+  for (const h of manifest.optional_host_permissions ?? []) {
+    if (!ALLOWED_OPTIONAL_HOSTS.includes(h)) problems.push(`optional host "${h}" is not the local ATLAS desk`);
+    else if (!source.includes("chrome.permissions.request({ origins: ATLAS_ORIGINS })")) problems.push(`optional host "${h}" is declared but never requested`);
+  }
+  for (const key of ["content_scripts", "web_accessible_resources", "externally_connectable"]) {
     if (manifest[key] != null) problems.push(`"${key}" widens the extension's reach; inject on demand with activeTab + scripting instead`);
   }
   const csp = manifest.content_security_policy?.extension_pages ?? "";
@@ -68,5 +74,5 @@ if (isMain) {
     for (const p of problems) console.error(`✗ ${p}`);
     process.exit(1);
   }
-  console.log(`✓ manifest least-privilege: ${manifest.permissions.join(", ")} + host ${manifest.host_permissions.join(", ")}`);
+  console.log(`✓ manifest least-privilege: ${manifest.permissions.join(", ")} + host ${manifest.host_permissions.join(", ")} (optional: ${(manifest.optional_host_permissions ?? []).join(", ") || "none"})`);
 }

@@ -1,19 +1,18 @@
 // Renders the Chrome Web Store listing images in store/ from real extension screenshots.
-// Not part of the build. Needs Playwright with Chromium on the machine that runs it:
-//   1. npm run build && npm run build:extension, then serve dist/ on :4173 and extension/dist/ on :4174
-//   2. capture store/src/shots/*.png (popup at 360x600 @2x: ?demo=answer&engine=ready, ?engine=ready,
-//      ?tab=glossary&engine=ready; side panel at 420x800 @2x: ?demo=answer&view=panel&engine=ready)
+// Not part of the build. Needs only Node 22+ and Chrome (no npm packages):
+//   1. capture the screenshots: see store/src/capture.mjs
+//   2. npm run build, then serve the web app: npx vite preview --port 4173 --strictPort
 //   3. node store/src/generate.mjs   (writes store/*.png, 24-bit PNG without alpha)
-import { chromium } from "playwright";
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { launchChrome } from "./cdp.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "..");
 const img = (name) => `data:image/png;base64,${readFileSync(join(here, "shots", `${name}.png`)).toString("base64")}`;
 const logo = `data:image/svg+xml;base64,${readFileSync(join(here, "..", "..", "public", "logo.svg")).toString("base64")}`;
-const demoPage = process.env.DEMO_URL ?? "http://127.0.0.1:4173/demo/trading-terms.html";
+const demoPage = process.env.DEMO_URL ?? "http://localhost:4173/welcome.html";
 
 // Brand values mirror src/brand/tokens.css (light theme).
 const css = `
@@ -56,14 +55,14 @@ const hero = (title, lede, shot, chips = []) => `
   <p class="fine">Educational information, not investment advice.</p>`;
 
 const screens = {
-  "screenshot-1-explain": hero("Select any market term. <span>Get it in plain language.</span>", "Highlight jargon on any page and get a calm, two-sided explanation. Never a trade call.", "popup-answer", ["On-device first", "Two sides, every time"]),
-  "screenshot-2-highlight": hero("Highlight, then Explain. <span>On your device first.</span>", "Gemini Nano answers inside Chrome when your computer has it. Otherwise Gemini answers in the cloud, and the app says which one ran.", "popup-explain", ["Gemini Nano", "Firebase AI Logic"]),
+  "screenshot-1-explain": hero("Select any market term. <span>Get it in plain language.</span>", "Highlight jargon on any page and get a calm, plain explanation. Then ask for it simpler, with an example, or why it matters.", "popup-answer", ["On-device first", "Education only"]),
+  "screenshot-2-highlight": hero("On your device first. <span>Reads only what you select.</span>", "Gemini Nano answers inside Chrome when your computer has it; otherwise Gemini answers in the cloud, and the app says which one ran. Never balances, account numbers or form fields.", "popup-explain", ["Gemini Nano", "Firebase AI Logic"]),
   "screenshot-3-sidepanel": `
     <div class="browser"><div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">Any page you read: news, charts, filings</span></div>
     <div class="split"><iframe src="${demoPage}"></iframe><div class="panel"><img src="${img("panel-answer")}" alt=""></div></div></div>
     <div class="tag">Keep it open beside the page in the side panel</div>`,
-  "screenshot-4-learn": hero("Learn the words <span>behind the moves.</span>", "A plain-language glossary and a short learn path: how orders fill, reading a move, measuring risk.", "popup-learn", ["17 core terms", "Free during beta"]),
-  "screenshot-5-privacy": hero("Private by design. <span>Reads only what you select.</span>", "Only the highlighted text, page title and site name, and only when you ask. Never balances, account numbers or form fields.", "popup-explain", ["No account data", "No made-up numbers"]),
+  "screenshot-4-assets": hero("Every asset class, <span>one plain catalog.</span>", "Stocks, ETFs, crypto, currencies, bonds and commodities, with figures from free official sources and every source named. Missing data stays missing.", "popup-assets", ["SEC · Treasury · ECB", "No made-up numbers"]),
+  "screenshot-5-learn": hero("Learn the words <span>behind the moves.</span>", "A plain-language glossary and a short learn path: how markets and rates work, how orders fill, what derivatives are.", "popup-learn", ["Plain-language glossary", "Free to use"]),
 };
 
 const promo = (w, h, big) => `
@@ -78,13 +77,13 @@ const promo = (w, h, big) => `
     ${big ? `<div style="margin-left:auto;flex:none;width:300px;border-radius:22px;overflow:hidden;box-shadow:0 30px 60px -20px rgba(0,0,0,0.6)"><img src="${img("popup-answer")}" style="width:300px;display:block" alt=""></div>` : ""}
   </div>`;
 
-const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
+const chrome = await launchChrome();
+const tmp = join(here, ".render.html");
 async function render(name, body, w, h, scale = 1) {
-  const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: scale });
-  await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>${body}</body></html>`, { waitUntil: "load" });
-  await page.waitForTimeout(400);
-  // The store wants 24-bit PNGs without alpha: JPEG-free, opaque white background under everything.
-  await page.screenshot({ path: join(out, `${name}.png`), omitBackground: false, type: "png" });
+  writeFileSync(tmp, `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${body}</body></html>`);
+  const page = await chrome.open(w, h, scale);
+  await page.goto(pathToFileURL(tmp).href, 2500);
+  writeFileSync(join(out, `${name}.png`), await page.png());
   await page.close();
   console.log(name, `${w * scale}x${h * scale}`);
 }
@@ -94,4 +93,5 @@ for (const [name, body] of Object.entries(screens)) {
 }
 await render("promo-small-440x280", promo(440, 280, false), 440, 280);
 await render("promo-marquee-1400x560", promo(1400, 560, true), 1400, 560);
-await browser.close();
+await chrome.close();
+rmSync(tmp, { force: true });

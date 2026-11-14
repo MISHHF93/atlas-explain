@@ -15,8 +15,11 @@ describe("assets UI and extension", () => {
   const web = readFileSync("src/web/app.ts", "utf8");
   const legal = readFileSync("src/wallet/legal.ts", "utf8");
 
-  it("asks only for the local ATLAS host and our own web app, and explains why in plain words", () => {
-    expect(manifest.host_permissions).toEqual(["http://localhost:3000/*", "https://atlas-explain.web.app/*"]);
+  it("asks at install only for our own web app; the local ATLAS host is optional and requested on demand", () => {
+    expect(manifest.host_permissions).toEqual(["https://atlas-explain.web.app/*"]);
+    expect((manifest as { optional_host_permissions?: string[] }).optional_host_permissions).toEqual(["http://localhost:3000/*"]);
+    expect(popup).toContain("chrome.permissions.request({ origins: ATLAS_ORIGINS })");
+    expect(popup).toContain("canReachAtlas: hasChrome && atlasAllowed");
     expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/atlas-explain\.web\.app/);
     expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/ATLAS research software/);
     expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/never reads balances, accounts or keys/);

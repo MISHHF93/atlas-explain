@@ -31,8 +31,10 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://localhost:3000/*",
     "https://atlas-explain.web.app/*"
+  ],
+  "optional_host_permissions": [
+    "http://localhost:3000/*"
   ],
   "optional_permissions": [
     "sidePanel"

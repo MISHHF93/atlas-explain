@@ -1,0 +1,7 @@
+# ATLAS Explain
+User-agent: *
+Allow: /
+Disallow: /signin
+Disallow: /app/account
+
+Sitemap: https://atlas-explain.web.app/sitemap.xml

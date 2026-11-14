@@ -26,7 +26,7 @@ describe("Chrome Web Store readiness", () => {
       ["store/promo-small-440x280.png", 440, 280],
       ["store/promo-marquee-1400x560.png", 1400, 560],
     ];
-    for (const n of ["1-explain", "2-highlight", "3-sidepanel", "4-learn", "5-privacy"]) {
+    for (const n of ["1-explain", "2-highlight", "3-sidepanel", "4-assets", "5-learn"]) {
       files.push([`store/screenshot-${n}-1280x800.png`, 1280, 800], [`store/screenshot-${n}-640x400.png`, 640, 400]);
     }
     for (const [file, w, h] of files) {
@@ -44,7 +44,7 @@ describe("Chrome Web Store readiness", () => {
   });
 
   it("documents a justification for every permission and host, and the privacy URL", () => {
-    for (const p of [...manifest.permissions, ...manifest.optional_permissions, ...manifest.host_permissions]) {
+    for (const p of [...manifest.permissions, ...manifest.optional_permissions, ...manifest.host_permissions, ...(manifest.optional_host_permissions ?? [])]) {
       expect(doc, p).toContain(`\`${p}\``);
     }
     expect(doc).toContain("https://atlas-explain.web.app/privacy");
