@@ -19,6 +19,19 @@ that parameter is published as `coingecko`.
 | IEX / stock prices | Stock rows and paper stats | Only through ATLAS on this computer | Not fetched directly by Explain. The hosted app tells the visitor to connect ATLAS. | Shown as a gap with an honest "Connect ATLAS" note when only a public crypto feed is used |
 | Firebase / Gemini | Educational explanations | Firebase AI Logic, App Check | Google's terms for Firebase and Gemini. Explanations are generated, not a market-data feed. | Cloud fallback and the hosted app |
 
+## Official free sources (scheduled data job)
+
+Added 2026-11-13. Fetched by `.github/workflows/market-data.yml` (`scripts/data/build-data.ts`), validated against the Asset schema, and published to the separate free hosting site https://atlas-explain-data.web.app. The app re-validates every record before showing it. Plan: docs/ux/MULTI_ASSET_CATALOG.md.
+
+| Source | What the app shows | Licence (summary; legal review to confirm ⚑ rows) | Attribution shown |
+| --- | --- | --- | --- |
+| US Treasury daily par yield curve | US yields 1M–30Y, daily | US federal government data ⚑ | "Source: U.S. Department of the Treasury" |
+| ECB euro reference rates | EUR pairs and crosses derived from two ECB rates (labelled) | Free use if reproduced accurately with the ECB cited; for information, not transactions | "Source: European Central Bank" |
+| Bank of Canada Valet API | CAD pairs; Government of Canada benchmark bond yields | Free to use, copy and distribute with attribution ⚑ | "Source: Bank of Canada" |
+| EIA open data | WTI, Brent and Henry Hub daily spot (needs a free `EIA_API_KEY`; skipped without it) | US government data, public domain | "Source: U.S. Energy Information Administration" |
+
+None of these feeds is used to train a model. Stock, ETF, index, gold and silver prices are **not** shown: no free source is licensed for public display.
+
 ## Switching to CoinGecko
 
 1. Firebase console → the `atlas-explain` project → Remote Config.

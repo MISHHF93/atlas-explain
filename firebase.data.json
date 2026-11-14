@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "site": "atlas-explain-data",
+    "public": "data-out",
+    "ignore": ["**/.*"],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "Access-Control-Allow-Origin", "value": "*" },
+          { "key": "Cache-Control", "value": "public, max-age=900" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Content-Security-Policy", "value": "default-src 'none'; frame-ancestors 'none'" }
+        ]
+      }
+    ]
+  }
+}

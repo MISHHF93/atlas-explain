@@ -1,0 +1,47 @@
+name: Market data
+
+# Fetches free official market data (US Treasury, ECB, Bank of Canada, EIA), validates every
+# record against the Asset schema, and publishes data-out/ to the separate free hosting site
+# atlas-explain-data.web.app. It never deploys the app itself. See docs/ux/MULTI_ASSET_CATALOG.md §3.
+on:
+  schedule:
+    # Hourly. The sources publish once a business day; hourly picks each one up soon after.
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: market-data
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_DEPLOY_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # No npm install: the job uses only Node built-ins and the repo's own TypeScript.
+      - name: Build and validate market data
+        run: node scripts/data/build-data.ts
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          PREVIOUS_URL: https://atlas-explain-data.web.app/data/v1/market.json
+      - name: Publish to the data site
+        if: env.HAS_DEPLOY_KEY == 'true'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@15.36.0 deploy \
+            --only hosting --config firebase.data.json --project atlas-explain --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"
+      - name: Note when publishing is not set up
+        if: env.HAS_DEPLOY_KEY != 'true'
+        run: echo "::notice::Built and validated, but not published. Add the FIREBASE_SERVICE_ACCOUNT secret to publish."

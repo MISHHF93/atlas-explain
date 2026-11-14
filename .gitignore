@@ -12,3 +12,4 @@ firestore-debug.log
 ui-debug.log
 coverage/
 release/
+data-out/

@@ -3,7 +3,7 @@
  * number formatting and the Explain prompt. Pure functions on the Asset schema; no network, no DOM.
  * See docs/ux/MULTI_ASSET_CATALOG.md §5.
  */
-import { assetFromLiveRow, type Asset, type AssetClass } from "./asset-schema";
+import { assetFromLiveRow, validateAsset, type Asset, type AssetClass } from "./asset-schema";
 import type { CatalogView } from "./assets";
 
 export interface ClassInfo {
@@ -69,6 +69,53 @@ export function findAsset(assets: readonly Asset[], key: string): Asset | undefi
   return assets.find((a) => a.symbol.toUpperCase() === k || a.symbol.replace("/", "").toUpperCase() === k || a.id.toUpperCase() === k);
 }
 
+/* ---------- official data published by the scheduled job ---------- */
+
+/** The free data hosting site the job deploys to (separate from the app, so the app is never redeployed by it). */
+export const MARKET_DATA_URL = "https://atlas-explain-data.web.app/data/v1/market.json";
+const MARKET_SCHEMA = "atlas-explain-market-v1";
+
+/**
+ * Reads the published market file. Every record is re-validated here, so a bad file can
+ * never put an unattributed or invented number on screen: invalid records are dropped.
+ */
+export function readMarketFile(body: unknown, now: number = Date.now()): Asset[] {
+  if (!body || typeof body !== "object") return [];
+  const file = body as { schema?: unknown; assets?: unknown };
+  if (file.schema !== MARKET_SCHEMA || !Array.isArray(file.assets)) return [];
+  return (file.assets as Asset[]).filter((a) => {
+    try {
+      return a.class !== "crypto" && validateAsset(a, now).ok;
+    } catch {
+      return false;
+    }
+  }).slice(0, 2000);
+}
+
+let marketCache: { at: number; assets: Asset[] } | null = null;
+const MARKET_CACHE_MS = 10 * 60_000;
+
+/** Fetches the published file (8 s timeout, 10 min cache). Failure means "no official data right now", never an error page. */
+export async function loadMarketData(
+  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
+  now: number = Date.now(),
+): Promise<Asset[]> {
+  if (marketCache && now - marketCache.at < MARKET_CACHE_MS) return marketCache.assets;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 8_000);
+  try {
+    const res = await fetcher(MARKET_DATA_URL, { signal: ctl.signal, cache: "no-cache", credentials: "omit" });
+    if (!res.ok) return marketCache?.assets ?? [];
+    const assets = readMarketFile(await res.json(), now);
+    marketCache = { at: now, assets };
+    return assets;
+  } catch {
+    return marketCache?.assets ?? [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /* ---------- recently viewed (this device only) ---------- */
 
 export const RECENT_KEY = "atlas-explain-recent-assets";
@@ -95,7 +142,10 @@ export function formatValue(a: Asset): string | null {
   const q = a.quote;
   if (!q) return null;
   if (a.class === "rate" || a.currency === "%") return `${q.value.toFixed(2)}%`;
-  if (a.class === "forex") return q.value.toFixed(q.value < 10 ? 4 : 2);
+  if (a.class === "forex") {
+    const v = q.value;
+    return v.toFixed(v >= 100 ? 2 : v >= 10 ? 3 : v >= 1 ? 4 : v >= 0.01 ? 5 : 6);
+  }
   const digits = q.value >= 1000 ? 2 : q.value >= 1 ? 2 : q.value >= 0.01 ? 4 : 6;
   try {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: a.currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(q.value);

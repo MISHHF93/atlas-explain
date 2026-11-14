@@ -12,7 +12,7 @@
         "headers": [
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://apis.google.com; connect-src 'self' https://api.kraken.com https://api.coingecko.com https://*.googleapis.com https://www.google.com https://apis.google.com http://localhost:3000 http://127.0.0.1:3000; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ https://atlas-explain.firebaseapp.com; img-src 'self' data: https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' http://localhost:3000 http://127.0.0.1:3000 chrome-extension://ppobolmelmhmaofinpcihihlnhokiomm"
+            "value": "default-src 'self'; script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://apis.google.com; connect-src 'self' https://atlas-explain-data.web.app https://api.kraken.com https://api.coingecko.com https://*.googleapis.com https://www.google.com https://apis.google.com http://localhost:3000 http://127.0.0.1:3000; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ https://atlas-explain.firebaseapp.com; img-src 'self' data: https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' http://localhost:3000 http://127.0.0.1:3000 chrome-extension://ppobolmelmhmaofinpcihihlnhokiomm"
           },
           {
             "key": "X-Content-Type-Options",

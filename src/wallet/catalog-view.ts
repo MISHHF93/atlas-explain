@@ -21,13 +21,13 @@ import { ALL_TERMS } from "../core/terms";
 
 /** Everything the public catalog needs, in this one lazily loaded chunk (keeps popup.js small). */
 export { assetFromLiveRow } from "../core/asset-schema";
-export { RECENT_KEY, addRecent, assetsFromLiveCatalog, explainAssetPrompt, findAsset, readRecent } from "../core/catalog";
+export { RECENT_KEY, addRecent, assetsFromLiveCatalog, explainAssetPrompt, findAsset, loadMarketData, readRecent } from "../core/catalog";
 import { el, labelledButton } from "./dom";
 import { icon } from "./icons";
 
 export type CatalogPanelState =
   | { kind: "loading" }
-  | { kind: "ready"; assets: Asset[] }
+  | { kind: "ready"; assets: Asset[]; notice?: string }
   | { kind: "error"; title: string; reason: string };
 
 export interface CatalogPanelHandle {
@@ -129,11 +129,13 @@ export function catalogPanel(options: {
       return;
     }
     const assets = state.assets;
+    const notice = state.notice;
     renderFilters(assets);
     renderRecent(assets);
     const query = input.value;
     const rows = searchAssets(assets, query, { klass });
     meta.replaceChildren(rows.length === assets.length ? `${assets.length} assets` : `${rows.length} of ${assets.length} assets`);
+    const noticeNode = notice ? [el("p", "fine notice-line", notice)] : [];
     if (rows.length === 0) {
       const none = el("section", "card state state-empty");
       none.append(el("p", "fine", "No asset matches. Try a name or a symbol like BTC or EUR/USD."));
@@ -142,11 +144,11 @@ export function catalogPanel(options: {
     }
     // All, no search: one calm section per class. Otherwise one list, with the class intro when filtered.
     if (klass === "all" && !query.trim()) {
-      body.replaceChildren(...groupByClass(rows).map((g) => section(g.klass, g.assets)));
+      body.replaceChildren(...noticeNode, ...groupByClass(rows).map((g) => section(g.klass, g.assets)));
     } else if (klass !== "all") {
-      body.replaceChildren(section(klass, rows));
+      body.replaceChildren(...noticeNode, section(klass, rows));
     } else {
-      body.replaceChildren(list(rows, true));
+      body.replaceChildren(...noticeNode, list(rows, true));
     }
   }
 

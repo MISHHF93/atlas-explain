@@ -15,7 +15,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "test", "vite.config.ts"]
+  "include": ["src", "test", "scripts/data", "vite.config.ts"]
 }

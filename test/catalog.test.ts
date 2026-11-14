@@ -103,3 +103,15 @@ describe("public catalog", () => {
     }
   });
 });
+
+describe("asset addresses", () => {
+  it("round-trips every public symbol through the app router", async () => {
+    const { parseRoute, pathFor } = await import("../src/app/routes");
+    for (const a of all) {
+      const segment = a.symbol.replace("/", "");
+      const route = parseRoute(pathFor({ kind: "asset", symbol: segment }));
+      expect(route.kind, a.symbol).toBe("asset");
+      expect(findAsset(all, (route as { symbol: string }).symbol)?.id).toBe(a.id);
+    }
+  });
+});

@@ -84,11 +84,19 @@ export function mountAssets(options: {
         publicSlot.hidden = true;
         panel.node.hidden = false;
         panel.update(last);
-      } else if (last.kind === "ready") {
-        publicAssets = (await ui()).assetsFromLiveCatalog(last.catalog);
-        await showPublic({ kind: "ready", assets: publicAssets });
-      } else if (last.kind === "error" || last.kind === "not_connected" || last.kind === "hosted") {
-        await showPublic({ kind: "error", title: last.kind === "error" && last.title ? last.title : "Prices couldn't be loaded", reason: last.kind === "error" || last.kind === "not_connected" ? last.reason : "Try again in a minute." });
+      } else if (last.kind !== "loading") {
+        // Public catalog: live crypto plus the official data published by the scheduled job.
+        const v = await ui();
+        const official = await v.loadMarketData();
+        if (last.kind === "ready") {
+          publicAssets = [...v.assetsFromLiveCatalog(last.catalog), ...official];
+          await showPublic({ kind: "ready", assets: publicAssets });
+        } else if (official.length) {
+          publicAssets = official;
+          await showPublic({ kind: "ready", assets: publicAssets, notice: "Crypto prices couldn't be loaded right now. We'll try again shortly." });
+        } else {
+          await showPublic({ kind: "error", title: last.kind === "error" && last.title ? last.title : "Prices couldn't be loaded", reason: last.kind === "error" || last.kind === "not_connected" ? last.reason : "Try again in a minute." });
+        }
       }
       options.onState?.(last);
     } finally {
@@ -137,7 +145,8 @@ export function mountAssets(options: {
     openKey = a.id;
     writeRecent(view, a.id);
     catalog?.refreshRecent();
-    options.onOpen?.(a.symbol);
+    // Addresses use the slashless symbol (EURUSD), which the router accepts and findAsset resolves.
+    options.onOpen?.(a.symbol.replace("/", ""));
     const page = view.assetPage(a, {
       onExplain: (x) => {
         shell.closeSheet();

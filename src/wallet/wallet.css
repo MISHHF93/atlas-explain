@@ -1178,3 +1178,4 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .fact-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; font-size: var(--atlas-text-xs); }
 .fact-label { color: var(--atlas-muted); }
 .fact-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.notice-line { padding: 0.45rem 0.6rem; border-radius: 8px; background: var(--atlas-warn); color: var(--atlas-warn-ink); }
