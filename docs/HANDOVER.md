@@ -49,7 +49,7 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 | 7 | Hardening: tighter CSP, consented analytics, legal pages, Firestore rules tests | Done | `feat/hardening` |
 | 8 | Store and SEO: meta/OG tags, robots.txt, sitemap.xml, store images, CHROME_STORE.md, optional localhost permission | Done; deployed 14 Nov 2026 | `feat/store-seo` (commit `19c89e5`) |
 
-**Important:** none of PRs 2–8 are merged into `main` yet. They form one stacked chain ending at `feat/store-seo`; `git log main..feat/store-seo` lists it. The live site was deployed from `feat/store-seo`. The owner still has to open and merge the PRs, or merge the stack in one go.
+**State on 14 Nov 2026:** every PR above, plus the audit, pricing and catalog docs, is merged into `main`. `main` is the only branch, locally and on GitHub; all other branches were checked for unmerged work and then deleted. Work on new short-lived branches off `main`, then merge back. The live site matches `main`.
 
 ## Approved pricing (docs/PRICING.md)
 
@@ -75,7 +75,7 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 
 ## Open work, in priority order
 
-1. **Merge path:** help the owner turn the stacked branches into PRs on `main`, or merge them in order. Never force push.
+1. **Keep `main` green:** run release:check before every push. Never force push.
 2. **PR 6, monetization:** after the owner's Blaze decision. Stripe keys go only in Firebase secrets, and every setup step goes into the docs.
 3. **PR 5 follow-ups:**
    - Replace the `window.prompt` used for cross-device email-link sign-in with a proper in-app field.
@@ -101,4 +101,4 @@ The full list is in `docs/LAUNCH_CHECKLIST.md`:
 
 ## First thing to do
 
-Run `git status` and `npm run release:check` (in PowerShell) on `feat/store-seo` to confirm the state is green. Then ask the owner two things: whether to merge the stack into `main` now, and whether they can put a card on the Blaze plan for PR 6.
+Run `git status` and `npm run release:check` (in PowerShell) on `main` to confirm the state is green. Then ask the owner whether they can put a card on the Blaze plan for PR 6.
