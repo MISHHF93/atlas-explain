@@ -16,15 +16,30 @@
   --atlas-signal-flat: #8a8175;
   --atlas-font-sans: "Segoe UI", "Helvetica Neue", sans-serif;
   --atlas-font-serif: Georgia, "Iowan Old Style", serif;
+  /* Type scale: 11 12 13 14 16 18 22 28 32 px. Components use these, never raw sizes; nothing goes below 11px. */
   --atlas-text-2xs: 11px;
   --atlas-text-xs: 12px;
   --atlas-text-sm: 13px;
-  --atlas-text-md: 14px;
-  --atlas-text-lg: 1.35rem;
-  --atlas-text-xl: 2rem;
+  --atlas-text-md: 14px;      /* body */
+  --atlas-text-base: 1rem;    /* 16: emphasis, small headings */
+  --atlas-text-lg: 1.125rem;  /* 18: card, sheet and panel titles in the popup */
+  --atlas-text-xl: 1.375rem;  /* 22: section headings */
+  --atlas-text-2xl: 1.75rem;  /* 28: page titles on wide screens */
+  --atlas-text-3xl: 2rem;     /* 32: hero numbers */
+  /* Spacing scale (4px grid). */
+  --atlas-space-1: 0.25rem;
+  --atlas-space-2: 0.5rem;
   --atlas-space: 0.75rem;
+  --atlas-space-4: 1rem;
+  --atlas-space-6: 1.5rem;
+  --atlas-space-8: 2rem;
+  /* Radii. */
+  --atlas-radius-xs: 4px;
+  --atlas-radius-sm: 8px;
   --atlas-radius: 12px;
   --atlas-radius-lg: 16px;
+  --atlas-radius-2xl: 28px;
+  --atlas-radius-pill: 999px;
   --atlas-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --atlas-dur: 200ms;
   --atlas-shadow-sm: 0 1px 2px color-mix(in srgb, var(--atlas-ink) 8%, transparent);
@@ -37,17 +52,6 @@
   --atlas-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --atlas-dur-fast: 140ms;
   --atlas-dur-slow: 360ms;
-  --ink: var(--atlas-ink);
-  --muted: var(--atlas-muted);
-  --paper: var(--atlas-paper);
-  --card: var(--atlas-card);
-  --line: var(--atlas-line);
-  --accent: var(--atlas-accent);
-  --accent-ink: var(--atlas-accent-ink);
-  --device: var(--atlas-device);
-  --warn: var(--atlas-warn);
-  --warn-ink: var(--atlas-warn-ink);
-  --focus: var(--atlas-accent);
   font-family: var(--atlas-font-sans);
   font-size: var(--atlas-text-md);
   line-height: 1.45;
