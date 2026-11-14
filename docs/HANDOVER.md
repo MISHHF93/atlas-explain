@@ -49,6 +49,8 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 | 7 | Hardening: tighter CSP, consented analytics, legal pages, Firestore rules tests | Done | `feat/hardening` |
 | 8 | Store and SEO: meta/OG tags, robots.txt, sitemap.xml, store images, CHROME_STORE.md, optional localhost permission | Done; deployed 14 Nov 2026 | `feat/store-seo` (commit `19c89e5`) |
 
+**One-page app (14 Nov 2026).** After a visual audit the owner asked for the web app on one page. `/app` is now one scrolling page: Explain, Today, Learn, Assets. Account and settings are a sheet behind the header account button. The extension popup is unchanged. Crypto prices are kept in the browser between loads (`atlas-explain-live-prices`), reused for a minute and shown for up to 15 minutes if the free feed refuses a request, always with their own time. Details: `docs/ux/APP_ARCHITECTURE.md`. Store screenshots of the web app and the click path in `docs/DEMO.md` predate this and need redoing.
+
 **State on 14 Nov 2026:** every PR above, plus the audit, pricing and catalog docs, is merged into `main`. `main` is the only branch, locally and on GitHub; all other branches were checked for unmerged work and then deleted. Work on new short-lived branches off `main`, then merge back. The live site matches `main`.
 
 ## Approved pricing (docs/PRICING.md)

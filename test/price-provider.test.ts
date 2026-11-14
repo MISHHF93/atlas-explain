@@ -95,4 +95,37 @@ describe("price provider selection", () => {
     await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 1000 + PRICE_CACHE_MS, 8000, cache);
     expect(calls).toBe(3);
   });
+
+  it("reuses the stored list on a reload within the minute, without calling the feed", async () => {
+    let calls = 0;
+    const fetcher: Fetcher = async () => {
+      calls += 1;
+      return json(krakenTicker);
+    };
+    let saved: string | null = null;
+    const store = { read: () => saved, write: (value: string) => { saved = value; } };
+    await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW, 8000, createPriceCache(), store);
+    expect(calls).toBe(1);
+    expect(saved).toContain('"kind":"ready"');
+    // A new page load has an empty in-memory cache but the same browser storage.
+    const reload = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 20_000, 8000, createPriceCache(), store);
+    expect(reload.kind).toBe("ready");
+    expect(calls).toBe(1);
+  });
+
+  it("shows the last good list when the feed refuses, but only while it is recent", async () => {
+    let fail = false;
+    const fetcher: Fetcher = async () => (fail ? json({}, 429) : json(krakenTicker));
+    let saved: string | null = null;
+    const store = { read: () => saved, write: (value: string) => { saved = value; } };
+    const good = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW, 8000, createPriceCache(), store);
+    fail = true;
+    const busy = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 5 * 60_000, 8000, createPriceCache(), store);
+    expect(busy).toEqual(good);
+    const tooOld = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 16 * 60_000, 8000, createPriceCache(), store);
+    expect(tooOld.kind).not.toBe("ready");
+    // A stored list for another feed, or junk, is never used.
+    saved = "not json";
+    expect((await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 1000, 8000, createPriceCache(), store)).kind).not.toBe("ready");
+  });
 });
