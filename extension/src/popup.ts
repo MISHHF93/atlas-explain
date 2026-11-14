@@ -34,7 +34,8 @@ import {
 } from "../../src/wallet/cards";
 import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../../src/core/timeouts";
 import { addMonitorSink, classifyCloudError, consoleSink, report } from "../../src/core/monitor";
-addMonitorSink(consoleSink);
+// The extension sends no analytics; errors are logged to the console in development builds only.
+if (import.meta.env.DEV) addMonitorSink(consoleSink);
 import { mountAssets } from "../../src/wallet/assets-controller";
 import { createWatchlist, localKeyValue } from "../../src/core/watchlist";
 import { loadDigest, todayToronto } from "../../src/core/digest";

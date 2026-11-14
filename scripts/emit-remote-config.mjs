@@ -18,6 +18,8 @@ const descriptions = {
   billing_enabled:
     "Kill switch. false keeps the app free: every Pro entitlement is on and checkout is hidden. true meters cloud calls.",
   free_cloud_daily_limit: "Cloud explanations per day on the free plan after billing_enabled is true.",
+  analytics_enabled:
+    "Anonymous web-app usage statistics (Firebase Analytics, Google Analytics must be linked in the console). true still asks each visitor first; false loads nothing.",
   price_provider:
     "Live crypto prices: coingecko (default: free with attribution, includes coin images) or kraken (demo only: its terms restrict third-party apps).",
   coingecko_demo_api_key:

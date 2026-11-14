@@ -18,6 +18,7 @@ import {
   type ClassFilter,
 } from "../core/catalog";
 import { ALL_TERMS } from "../core/terms";
+import { tracker } from "../core/analytics";
 
 /** Everything the public catalog needs, in this one lazily loaded chunk (keeps popup.js small). */
 export { assetFromLiveRow } from "../core/asset-schema";
@@ -323,6 +324,7 @@ export function assetPage(start: Asset, options: {
   watchNote.setAttribute("role", "status");
   let current = start;
   explain.addEventListener("click", () => options.onExplain(current));
+  tracker.track("asset_view", { asset_class: start.class });
   const watchButton = el("button", "secondary watch-btn");
   watchButton.type = "button";
   const paintWatch = () => {
@@ -332,6 +334,7 @@ export function assetPage(start: Asset, options: {
   };
   watchButton.addEventListener("click", () => {
     void options.watchlist?.toggle(current.id).then((r) => {
+      if (r === "added") tracker.track("watchlist_add", { asset_class: current.class });
       paintWatch();
       watchNote.textContent = r === "full"
         ? "Your watchlist is full (50). Remove one to add another."
@@ -358,6 +361,7 @@ export function assetPage(start: Asset, options: {
   newsButton.addEventListener("click", () => void showNews());
 
   async function showNews(): Promise<void> {
+    tracker.track("news_open");
     newsButton.disabled = true;
     newsBody.replaceChildren(el("p", "fine", "Looking for today's headlines…"));
     const items = NEWS_TARGET_IDS.has(current.id) ? await options.news?.(current) ?? null : [];

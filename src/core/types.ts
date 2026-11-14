@@ -118,6 +118,8 @@ export interface AppSettings {
   maxOutputTokens: number;
   /** Remote Config kill switch. Default false until after hackathon judging. */
   billingEnabled: boolean;
+  /** Owner switch for anonymous web-app usage statistics (still asks each visitor first). Default false. */
+  analyticsEnabled: boolean;
   /** Cloud explanations per day on the free plan, used only when billing is on. */
   freeCloudDailyLimit: number;
   /** Public live-price feed when ATLAS on this computer is not reachable. */

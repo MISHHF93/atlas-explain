@@ -44,3 +44,12 @@ describe("popup size", () => {
     expect(popup).toContain('import("./learn-tab")');
   });
 });
+
+describe("web app entry size", () => {
+  it("loads the catalog layer on demand, never from the app entry", () => {
+    const staticImports = [...web.matchAll(/^import [^;]*? from "([^"]+)";/gm)].map((m) => m[1]!);
+    for (const banned of ["/core/catalog", "/core/asset-schema", "/core/news", "/core/education-assets", "/wallet/catalog-view"]) {
+      expect(staticImports.filter((p) => p.endsWith(banned)), banned).toEqual([]);
+    }
+  });
+});

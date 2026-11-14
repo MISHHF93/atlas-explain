@@ -63,6 +63,13 @@
       "description": "Kill switch. false keeps the app free: every Pro entitlement is on and checkout is hidden. true meters cloud calls.",
       "valueType": "STRING"
     },
+    "analytics_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Anonymous web-app usage statistics (Firebase Analytics, Google Analytics must be linked in the console). true still asks each visitor first; false loads nothing.",
+      "valueType": "STRING"
+    },
     "free_cloud_daily_limit": {
       "defaultValue": {
         "value": "50"

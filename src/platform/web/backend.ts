@@ -20,6 +20,7 @@ import { CloudRateLimited, localRateStore, peekCloudSlot, recordCloudCall } from
 import { CloudAllowanceUsed } from "../../core/billing";
 import { type PriceFeedOptions, priceFeedFromRemoteValues } from "../../core/price-feed";
 import { REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../../core/settings";
+import type { AnalyticsSink } from "../../core/analytics";
 import type { AppSettings, ExplanationRun, InferenceSourceName, MoveCard } from "../../core/types";
 import { EXTENSION_SYSTEM, buildExtensionPrompt, toPageContext } from "../../core/extension-prompt";
 import { parseTwoSided, type TwoSided } from "../../core/two-sided";
@@ -83,6 +84,8 @@ export interface WebBackend {
   exportAccountData(): Promise<{ account: { uid: string; email: string | null; displayName: string | null; provider: string }; settings: { theme: string } | null; watchlist: string[]; savedExplanations: Array<Record<string, unknown>> } | null>;
   /** Deletes the account's data, then the sign-in account itself, then continues signed out. */
   deleteAccount(): Promise<{ status: "deleted" | "reauth-needed"; deleted: number; keptToday: boolean }>;
+  /** Starts Firebase Analytics after consent; null when unsupported or blocked. Loaded on demand. */
+  startAnalytics(): Promise<AnalyticsSink | null>;
   /** Throws if billing is off. The pricing panel does not call this unless checkout is shown. */
   startCheckout(): Promise<void>;
 }
@@ -208,6 +211,17 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const user = auth.currentUser;
       if (!user || user.isAnonymous) return;
       await (await store()).writeWatchlist(user.uid, ids);
+    },
+    async startAnalytics() {
+      try {
+        const mod = await import("firebase/analytics");
+        if (!(await mod.isSupported())) return null;
+        mod.setConsent({ analytics_storage: "granted", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" });
+        const analytics = mod.initializeAnalytics(app, { config: { allow_google_signals: false, allow_ad_personalization_signals: false, send_page_view: false } });
+        return { log: (name, params) => mod.logEvent(analytics, name as string, params) };
+      } catch {
+        return null;
+      }
     },
     async exportAccountData() {
       const user = auth.currentUser;

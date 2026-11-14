@@ -2,10 +2,13 @@ import { readPublicEnv } from "./platform/web/env";
 import { mountWebWallet } from "./web/app";
 import { installErrorBoundary } from "./wallet/error-boundary";
 import { addMonitorSink, consoleSink } from "./core/monitor";
+import { tracker } from "./core/analytics";
 import "./app/app.css";
 
-// Monitoring hook: swap or add a real sink (Analytics, Sentry, a log endpoint) at launch.
-addMonitorSink(consoleSink);
+// Monitoring: errors become scrubbed "app_error" events, sent only if the visitor allowed analytics.
+// The console sink is for development only.
+if (import.meta.env.DEV) addMonitorSink(consoleSink);
+addMonitorSink((event) => tracker.track("app_error", { code: event.kind, surface: event.surface }));
 
 const queried = document.querySelector("#app");
 if (!(queried instanceof HTMLElement)) {

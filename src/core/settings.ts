@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   longDocumentChars: 1_200,
   maxOutputTokens: 1_200,
   billingEnabled: false,
+  analyticsEnabled: false,
   freeCloudDailyLimit: 50,
   priceProvider: "coingecko",
 };
@@ -29,6 +30,7 @@ export const REMOTE_CONFIG_KEYS = [
   "long_document_chars",
   "max_output_tokens",
   "billing_enabled",
+  "analytics_enabled",
   "free_cloud_daily_limit",
   "price_provider",
   "coingecko_demo_api_key",
@@ -48,6 +50,7 @@ export function remoteConfigDefaults(): Record<RemoteConfigKey, string> {
     long_document_chars: String(DEFAULT_SETTINGS.longDocumentChars),
     max_output_tokens: String(DEFAULT_SETTINGS.maxOutputTokens),
     billing_enabled: DEFAULT_SETTINGS.billingEnabled ? "true" : "false",
+    analytics_enabled: DEFAULT_SETTINGS.analyticsEnabled ? "true" : "false",
     free_cloud_daily_limit: String(DEFAULT_SETTINGS.freeCloudDailyLimit),
     price_provider: DEFAULT_SETTINGS.priceProvider,
     coingecko_demo_api_key: "",
@@ -140,6 +143,7 @@ export function parseRemoteSettings(values: Record<string, string>): {
     "billing_enabled",
     warnings,
   );
+  settings.analyticsEnabled = readBool(values.analytics_enabled, DEFAULT_SETTINGS.analyticsEnabled, "analytics_enabled", warnings);
   settings.freeCloudDailyLimit = readBoundedInt(
     values.free_cloud_daily_limit,
     1,

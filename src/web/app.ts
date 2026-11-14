@@ -58,7 +58,9 @@ import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } fro
 import type { TabDef } from "../wallet/shell";
 import { createWatchlist, localKeyValue } from "../core/watchlist";
 import { yourDataGroup } from "../wallet/your-data";
-import { RECENT_KEY, readRecent } from "../core/catalog";
+import { tracker } from "../core/analytics";
+import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
+import { RECENT_KEY, readRecent } from "../core/recent";
 
 /** Navigation for the full-page app. Internal ids stay stable; labels read as a product. */
 export const APP_TABS: readonly TabDef[] = [
@@ -460,8 +462,41 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const settingsHead = el("div", "panel-title");
   settingsHead.append(el("h1", undefined, "Account"), el("span", "fine", "Settings and privacy"));
   const accountLine = el("p", "fine", "You're using ATLAS Explain without an account. Sign in to keep your explanations across devices.");
+  const statsLine = el("p", "fine");
+  const statsToggle = row("shield", "", () => {
+    const next = storedConsent() === "granted" ? "denied" : "granted";
+    storeConsent(next);
+    applyConsent(next);
+  });
+  const statsGroup = group("Usage statistics", [statsLine, statsToggle]);
+  statsGroup.hidden = true;
+  function paintStats(): void {
+    const on = storedConsent() === "granted";
+    statsLine.textContent = on
+      ? "On. Anonymous usage statistics help improve ATLAS Explain. We never collect what you highlight, type or save."
+      : "Off. Nothing about how you use ATLAS Explain is collected.";
+    const label = statsToggle.querySelector("span");
+    if (label) label.textContent = on ? "Turn off usage statistics" : "Turn on usage statistics";
+  }
+  function applyConsent(value: "granted" | "denied" | "unset"): void {
+    paintStats();
+    if (value !== "granted") {
+      tracker.attach(null);
+      return;
+    }
+    void backend?.startAnalytics().then((sink) => tracker.attach(sink));
+  }
+  /** Only when the owner has turned analytics on: ask once, or apply the earlier answer. */
+  function setupAnalytics(enabled: boolean): void {
+    if (!enabled) return;
+    statsGroup.hidden = false;
+    const consent = storedConsent();
+    if (consent === "unset") document.body.append(consentBar((value) => applyConsent(value)));
+    else applyConsent(consent);
+  }
   const yourData = yourDataGroup({
     collect: async () => {
+      tracker.track("data_export");
       const remote = backend ? await backend.exportAccountData().catch(() => null) : null;
       let recent: string[];
       try {
@@ -480,6 +515,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     },
     deleteAccount: async () => {
       if (!backend) throw new Error("Account deletion isn't available right now. Reload the page and try again.");
+      tracker.track("account_delete");
       return backend.deleteAccount();
     },
     afterClear: () => {
@@ -503,6 +539,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     })]),
     group("Account", [accountLine, row("user", "Sign in or manage your account", () => openAccount())]),
     yourData.node,
+    statsGroup,
     group("How answers are made", [
       el("p", "fine", "When your browser supports it, Gemini Nano answers on your device and nothing is sent. Otherwise Gemini answers in the cloud. Every answer is labelled."),
     ]),
@@ -587,7 +624,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo") && !deepLink && !location.hash) showOnboarding();
     if (route.kind === "signin" || route.kind === "not_found") void showRouteSheet();
     if (!backend) return;
-    void backend.loadSettings().then(({ priceFeed: next }) => {
+    void backend.loadSettings().then(({ settings, priceFeed: next }) => {
+      setupAnalytics(settings.analyticsEnabled);
       const changed = next.provider !== priceFeed.provider || next.coinGeckoDemoKey !== priceFeed.coinGeckoDemoKey;
       priceFeed.provider = next.provider;
       priceFeed.coinGeckoDemoKey = next.coinGeckoDemoKey;
@@ -625,6 +663,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       if (new URLSearchParams(location.search).get("account") === "open") openAccount();
       const finished = await b.completeSignIn(() => window.prompt("Confirm the email address you used for the sign-in link") ?? null);
       if (finished) {
+        if (/signed in/i.test(finished)) tracker.track("login", { method: "email_link" });
         shell.announce(finished);
         status.textContent = finished;
         if (/[?&](signin|oobCode)=/.test(location.search)) history.replaceState(null, "", location.pathname + location.hash);
@@ -644,6 +683,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       onGoogle: async () => {
         const result = await b.signInWithGoogle();
         if (result === "redirecting") return "Taking you to Google…";
+        tracker.track("login", { method: "google" });
         window.setTimeout(() => (route.kind === "signin" ? afterSignIn() : openAccount()), 400);
         return "You are signed in.";
       },
@@ -700,6 +740,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   }
 
   function showOnboarding(): void {
+    tracker.track("tutorial_begin");
     shell.overlay(onboarding(() => {
       shell.overlay(null);
       writeFlag(ONBOARDED_KEY);
@@ -715,6 +756,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       textInput.focus({ preventScroll: true });
     }, {
       onTry: () => {
+        tracker.track("try_sample");
         shell.overlay(null);
         writeFlag(ONBOARDED_KEY);
         navigate({ kind: "tab", tab: "explain" });
@@ -817,6 +859,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       textStatus.textContent = "";
       const source = run.inferenceSource === "on_device" ? "on_device" : run.inferenceSource === "in_cloud" ? "in_cloud" : "unknown";
       engine.markRun(source);
+      tracker.track("explanation_ready", { source: source === "in_cloud" ? "cloud" : source, kind: followUp ? "follow_up" : "text" });
       showTextAnswer(text, run.answer, run.plain, source, run);
       shell.announce("Explanation ready.");
       if (!followUp) {
@@ -825,6 +868,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       }
     } catch (error) {
       textStatus.textContent = "";
+      tracker.track("explanation_failed", { reason: error instanceof CloudAllowanceUsed || error instanceof CloudRateLimited ? "limit" : !navigator.onLine ? "offline" : "error" });
       if (error instanceof CloudRateLimited) report("rate_limited", "web", "browser_limit");
       else if (!(error instanceof CloudAllowanceUsed)) report(classifyCloudError(error instanceof Error ? error.message : ""), "web", error instanceof Error ? error.name : "unknown");
       if (error instanceof CloudAllowanceUsed || error instanceof CloudRateLimited) textResult.replaceChildren(limitCard(error.message));
