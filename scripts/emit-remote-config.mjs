@@ -18,6 +18,12 @@ const descriptions = {
   billing_enabled:
     "Kill switch. false keeps the app free: every Pro entitlement is on and checkout is hidden. true meters cloud calls.",
   free_cloud_daily_limit: "Cloud explanations per day on the free plan after billing_enabled is true.",
+  pro_cloud_daily_limit:
+    "Cloud explanations per day on Pro after billing_enabled is true. Keep it within what the project's Gemini quota can serve; the app prints this number.",
+  pro_monthly_link: "Stripe Payment Link for Pro monthly (https://buy.stripe.com/...). Public, not a secret. Empty hides the button.",
+  pro_yearly_link: "Stripe Payment Link for Pro yearly (https://buy.stripe.com/...). Public, not a secret. Empty hides the button.",
+  billing_portal_link:
+    "Stripe customer portal login link (https://billing.stripe.com/p/login/...), where subscribers change or cancel. Public, not a secret.",
   analytics_enabled:
     "Anonymous web-app usage statistics (Firebase Analytics, Google Analytics must be linked in the console). true still asks each visitor first; false loads nothing.",
   price_provider:

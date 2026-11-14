@@ -1,5 +1,15 @@
 import { doc, getDoc, runTransaction, type Firestore } from "firebase/firestore";
-import { usageDayId } from "../../core/billing";
+import { planFromDoc, usageDayId, type PlanId } from "../../core/billing";
+
+/** The account's plan, from the document only the plan sync job can write. Unreadable counts as Free. */
+export async function readPlan(db: Firestore, uid: string): Promise<PlanId> {
+  try {
+    const snap = await getDoc(doc(db, "users", uid, "plan", "current"));
+    return snap.exists() ? planFromDoc(snap.data()) : "free";
+  } catch {
+    return "free";
+  }
+}
 
 export async function readCloudCallsToday(db: Firestore, uid: string, now = new Date()): Promise<number> {
   const snap = await getDoc(doc(db, "users", uid, "usage", usageDayId(now)));

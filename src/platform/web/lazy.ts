@@ -1,6 +1,4 @@
 import type { FirebaseApp } from "firebase/app";
-import type { Firestore } from "firebase/firestore";
-import type { PaymentProvider } from "../../core/payments";
 import type { HybridExplainer } from "../../core/types";
 
 /**
@@ -18,20 +16,3 @@ export function lazyExplainer(app: FirebaseApp): HybridExplainer {
   };
 }
 
-/**
- * Billing ships switched off. The Stripe checkout module is only fetched
- * when Remote Config turns billing on and a plan or checkout is needed.
- */
-export function lazyPayments(db: () => Promise<Firestore>): PaymentProvider {
-  let ready: Promise<PaymentProvider> | null = null;
-  const load = () => (ready ??= Promise.all([import("./stripe-payments"), db()]).then(([mod, firestore]) => mod.createStripePayments(firestore)));
-  return {
-    id: "stripe",
-    async startCheckout(request) {
-      return (await load()).startCheckout(request);
-    },
-    async currentPlan(uid) {
-      return (await load()).currentPlan(uid);
-    },
-  };
-}

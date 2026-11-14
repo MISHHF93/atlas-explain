@@ -45,7 +45,7 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 | 3 | Design system: type, spacing and radius tokens, enforced by tests | Done | in the stack |
 | 4 | Onboarding: `/welcome` page on install, "Try a sample now" | Done | in the stack |
 | 5 | Account: Google and email-link sign-in, download my data, delete my account | Done | `feat/account` |
-| 6 | **Monetization (Stripe, Pro plan)** | **Blocked: needs the owner's decision** | — |
+| 6 | Monetization without a server (Stripe Payment Links, plan sync job) | Built and merged, switched off; owner setup pending | `feat/monetization-spark` |
 | 7 | Hardening: tighter CSP, consented analytics, legal pages, Firestore rules tests | Done | `feat/hardening` |
 | 8 | Store and SEO: meta/OG tags, robots.txt, sitemap.xml, store images, CHROME_STORE.md, optional localhost permission | Done; deployed 14 Nov 2026 | `feat/store-seo` (commit `19c89e5`) |
 
@@ -56,9 +56,10 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 - **Free:** unlimited on-device answers, 10 cloud answers a day with Gemini Flash-Lite.
 - **Pro:** US$5.99 a month or US$47.99 a year. 300 cloud answers a day with Gemini Flash, and history synced to the account.
 - No trial. A FOUNDER coupon. Refundable on request within 14 days.
-- Architecture: while `billing_enabled` is false, the hybrid stays as it is. When it's true, cloud fallback goes through an `explainCloud` Cloud Function that enforces the quota on the server.
-
-**Why PR 6 is blocked:** Stripe through Firebase and the `explainCloud` function both need the Blaze (pay-as-you-go) plan, which means putting a card on file. Ask the owner whether they can do that (usage would likely stay within the free allowance). If not, propose a zero-cost alternative before building anything. Billing stays off either way until after judging.
+- **Owner decision, 14 Nov 2026: no card on file, so no Blaze plan.** The `explainCloud` function and the Firebase Stripe extension are dropped. Do not ask again unless the owner raises it.
+- Architecture on the free plan (`docs/MONETIZATION.md`): Stripe Payment Links for checkout, Stripe's portal link to cancel, and a GitHub Actions job (`billing-sync.yml`) that reads Stripe with a read-only key and writes `users/{uid}/plan/current`. The app counts cloud answers itself; no server enforces the limit.
+- Sold at first: a higher daily cloud limit (`pro_cloud_daily_limit`, default 100, not 300) and the larger watchlist. Free is 10 a day once billing is on. The stronger-model row is not sold. Synced history is still free for any signed-in account; gating it is an open owner decision.
+- **Gemini free-tier terms (checked 14 Nov 2026):** the cloud fallback may not be offered to users in the EEA, Switzerland or the UK on the free tier, and Google may use free-tier prompts to improve its products. The privacy page now says the second part; the first needs an owner decision (`docs/legal/REVIEW_NOTES.md` point 11).
 
 ## Multi-asset catalog (done; plan in docs/ux/MULTI_ASSET_CATALOG.md, $0 a month)
 
@@ -76,9 +77,10 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 ## Open work, in priority order
 
 1. **Keep `main` green:** run release:check before every push. Never force push.
-2. **PR 6, monetization:** after the owner's Blaze decision. Stripe keys go only in Firebase secrets, and every setup step goes into the docs.
+   - **GitHub Actions is not running (found 14 Nov 2026).** Every job fails in two seconds with "The job was not started because your account is locked due to a billing issue", and no run has ever succeeded. So CI (including the Firestore rules tests on the emulator) is not checking anything, the hourly market-data job is not refreshing the data site (its files were last published by hand at 01:55 UTC on 14 Nov), and the plan sync job for PR 6 cannot run. Only the owner can fix this, in GitHub → Settings → Billing and plans. Until then, release:check on this machine is the only gate, and the rules tests for PR 6 have not been run anywhere (this machine has Java 17; the emulator needs Java 21).
+2. **PR 6, monetization:** merged into `main` on 14 Nov 2026. Still to do: the owner's Stripe and GitHub steps (`docs/MONETIZATION.md`, "Go-live"); the first real run of the sync job (its live calls have never run against Stripe or Firestore); the EEA/UK decision above. The Stripe key goes only in GitHub Actions secrets.
 3. **PR 5 follow-ups:**
-   - Done on `feat/email-link-confirm-field`: the `window.prompt` for cross-device email-link sign-in is now an in-app "Finish signing in" sheet (`emailConfirmPanel` in `src/wallet/account.ts`; preview it in dev with `/app?sheet=confirm-email`). Not yet tried with a real link on a second device; the owner should do that once after deploy.
+   - Done and merged (`feat/email-link-confirm-field`): the `window.prompt` for cross-device email-link sign-in is now an in-app "Finish signing in" sheet (`emailConfirmPanel` in `src/wallet/account.ts`; preview it in dev with `/app?sheet=confirm-email`). Not yet tried with a real link on a second device; the owner should do that once after deploy.
    - Optionally sync text-explanation history to the account.
 4. **Store submission support:**
    - When the owner sends the store item id, add it to `ALLOWED_EXTENSION_IDS` in `src/bridge/protocol.ts` and to `frame-ancestors` in `firebase.json`, then redeploy.
@@ -96,9 +98,9 @@ The full list is in `docs/LAUNCH_CHECKLIST.md`:
 - any paid data plan
 - the support email
 - legal review of `privacy.html` and `terms.html` (see `docs/legal/REVIEW_NOTES.md`)
-- GitHub Actions secrets
+- GitHub Actions secrets, and unlocking the GitHub account's billing so Actions can run
 - submitting the sitemap in Google Search Console
 
 ## First thing to do
 
-Run `git status` and `npm run release:check` (in PowerShell) on `main` to confirm the state is green. Then ask the owner whether they can put a card on the Blaze plan for PR 6.
+Run `git status` and `npm run release:check` (in PowerShell) on `main` to confirm the state is green. Then check whether the owner has unlocked GitHub Actions (see open work, item 1).

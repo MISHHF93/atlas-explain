@@ -99,13 +99,16 @@ describe("saved explanations", () => {
   });
 });
 
-describe("payments (Stripe extension collections)", () => {
-  it("lets a user start a subscription checkout but never write a subscription or payment", async () => {
-    await assertSucceeds(setDoc(doc(as("alice"), "customers/alice/checkout_sessions/s1"), { price: "price_123", success_url: "https://atlas-explain.web.app/app", cancel_url: "https://atlas-explain.web.app/app", mode: "subscription" }));
-    await assertFails(setDoc(doc(as("alice"), "customers/alice/checkout_sessions/s2"), { price: "price_123", success_url: "https://atlas-explain.web.app/app", cancel_url: "https://atlas-explain.web.app/app", mode: "payment" }));
-    await assertFails(setDoc(doc(as("alice"), "customers/alice/subscriptions/sub1"), { status: "active" }));
-    await assertFails(setDoc(doc(as("alice"), "customers/alice/payments/p1"), { amount: 1 }));
-    await assertFails(setDoc(doc(as("bob"), "customers/alice/checkout_sessions/s3"), { price: "price_123", success_url: "https://x.example", cancel_url: "https://x.example", mode: "subscription" }));
+describe("the paid plan", () => {
+  it("lets an account read its own plan and never write or delete it", async () => {
+    await seed("users/alice/plan/current", { plan: "pro", status: "active" });
+    await assertSucceeds(getDoc(doc(as("alice"), "users/alice/plan/current")));
+    await assertFails(getDoc(doc(as("bob"), "users/alice/plan/current")));
+    await assertFails(getDoc(doc(anon(), "users/alice/plan/current")));
+    await assertFails(setDoc(doc(as("alice"), "users/alice/plan/current"), { plan: "pro", status: "active" }));
+    await assertFails(setDoc(doc(as("bob"), "users/bob/plan/current"), { plan: "pro" }));
+    await assertFails(updateDoc(doc(as("alice"), "users/alice/plan/current"), { status: "trialing" }));
+    await assertFails(deleteDoc(doc(as("alice"), "users/alice/plan/current")));
   });
 });
 

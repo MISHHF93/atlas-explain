@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 /**
  * The Firestore emulator is not part of `npm test`.
  * These assertions lock the clauses the emulator would enforce.
- * See docs/MONETIZATION.md for the emulator command.
+ * The real rules engine runs them in `npm run test:rules` (test/rules/firestore.rules.ts).
  */
 describe("firestore.rules metering clauses", () => {
   const rules = readFileSync("firestore.rules", "utf8");
@@ -16,8 +16,8 @@ describe("firestore.rules metering clauses", () => {
     expect(rules).toContain("affectedKeys().hasOnly([\"cloudCalls\"])");
   });
 
-  it("does not let a client write a subscription", () => {
-    expect(rules).toContain("match /subscriptions/{subscriptionId}");
-    expect(rules).toContain("allow write: if false");
+  it("does not let a client write its own plan", () => {
+    expect(rules).toMatch(/match \/users\/\{userId\}\/plan\/\{planDoc\} \{\s*allow read: if signedIn\(userId\);\s*allow write: if false;/);
+    expect(rules).not.toContain("customers");
   });
 });

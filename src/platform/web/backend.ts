@@ -4,7 +4,6 @@ import { getAuth, signInAnonymously } from "firebase/auth";
 import type { AccountView, SignInOutcome } from "../../core/account";
 import { fetchAndActivate, getRemoteConfig, getValue } from "firebase/remote-config";
 import {
-  PRO_PRICE_ID,
   WatchlistAllowance,
   allowCloudCall,
   billingSnapshot,
@@ -12,6 +11,7 @@ import {
   watchlistFits,
   type BillingSnapshot,
   type PlanId,
+  type ProInterval,
 } from "../../core/billing";
 import { publicMoveCard } from "../../core/move-card";
 import { runExplanation } from "../../core/run-explanation";
@@ -25,7 +25,7 @@ import type { AppSettings, ExplanationRun, InferenceSourceName, MoveCard } from 
 import { EXTENSION_SYSTEM, buildExtensionPrompt, toPageContext } from "../../core/extension-prompt";
 import { parseTwoSided, type TwoSided } from "../../core/two-sided";
 import type { PublicEnvConfig } from "./env";
-import { lazyExplainer, lazyPayments } from "./lazy";
+import { lazyExplainer } from "./lazy";
 import type { WebStore } from "./store";
 
 export interface HistoryEntry {
@@ -89,8 +89,10 @@ export interface WebBackend {
   deleteAccount(): Promise<{ status: "deleted" | "reauth-needed"; deleted: number; keptToday: boolean }>;
   /** Starts Firebase Analytics after consent; null when unsupported or blocked. Loaded on demand. */
   startAnalytics(): Promise<AnalyticsSink | null>;
-  /** Throws if billing is off. The pricing panel does not call this unless checkout is shown. */
-  startCheckout(): Promise<void>;
+  /** Opens the Stripe Payment Link for this account. Throws if billing is off, signed out, or the link is not set up. */
+  startCheckout(interval: ProInterval): Promise<void>;
+  /** Opens Stripe's customer portal, where a subscriber changes or cancels the plan. */
+  openBillingPortal(): Promise<void>;
 }
 
 export function startWebBackend(env: PublicEnvConfig): WebBackend {
@@ -122,7 +124,6 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
   remoteConfig.defaultConfig = { ...remoteConfigDefaults() };
 
   const explainer = lazyExplainer(app);
-  const payments = lazyPayments(async () => (await store()).db);
 
   // Signed-out visitors get an anonymous id; a signed-in account is never replaced by one.
   let anonymous: Promise<string | null> | null = null;
@@ -155,8 +156,11 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
 
   const loadPlan = async (settings: AppSettings, uid: string | null): Promise<PlanId> => {
     if (!settings.billingEnabled || !uid) return "free";
-    return payments.currentPlan(uid);
+    return store().then((s) => s.plan(uid)).catch(() => "free" as const);
   };
+
+  /** Pro belongs to a real account, so a signed-out (anonymous) visitor has no checkout link. */
+  const accountUid = (): string | null => (auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : null);
 
   const loadBilling = async (): Promise<BillingSnapshot> => {
     const { settings } = await loadSettings();
@@ -167,7 +171,10 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       billingEnabled: settings.billingEnabled,
       plan,
       freeCloudDailyLimit: settings.freeCloudDailyLimit,
+      proCloudDailyLimit: settings.proCloudDailyLimit,
       cloudCallsToday,
+      links: settings,
+      accountUid: accountUid(),
     });
   };
 
@@ -244,19 +251,18 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       if (status === "deleted") await flows.signOutToAnonymous(auth);
       return { status, ...result };
     },
-    async startCheckout() {
-      const { settings } = await loadSettings();
-      if (!settings.billingEnabled) {
-        throw new Error("Payments are switched off.");
-      }
-      const uid = await currentUserId();
-      if (!uid) throw new Error("Anonymous sign-in has not finished yet.");
-      await payments.startCheckout({
-        uid,
-        priceId: PRO_PRICE_ID,
-        successUrl: window.location.origin,
-        cancelUrl: window.location.origin,
-      });
+    async startCheckout(interval) {
+      const snapshot = await loadBilling();
+      if (!snapshot.billingEnabled) throw new Error("Payments are switched off.");
+      if (!accountUid()) throw new Error("Sign in first, so Pro is added to your account.");
+      const url = snapshot.checkout[interval];
+      if (!url) throw new Error("Checkout isn't available right now. Nothing was charged.");
+      window.location.assign(url);
+    },
+    async openBillingPortal() {
+      const { portalUrl } = await loadBilling();
+      if (!portalUrl) throw new Error("Plan management isn't available right now. Email support and we'll help.");
+      window.location.assign(portalUrl);
     },
     async explainText(text, question, hooks) {
       const { settings } = await loadSettings();
@@ -266,7 +272,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const uid = await currentUserId();
       const plan = await loadPlan(settings, uid);
       const cloudCallsToday = uid && settings.billingEnabled ? await store().then((s) => s.cloudCallsToday(uid)).catch(() => 0) : 0;
-      const allowByPlan = allowCloudCall({ billingEnabled: settings.billingEnabled, plan, freeCloudDailyLimit: settings.freeCloudDailyLimit, cloudCallsToday });
+      const allowByPlan = allowCloudCall({ billingEnabled: settings.billingEnabled, plan, freeCloudDailyLimit: settings.freeCloudDailyLimit, proCloudDailyLimit: settings.proCloudDailyLimit, cloudCallsToday });
       const rate = peekCloudSlot(localRateStore());
       const cloudBlocked = !(allowByPlan && rate.ok);
       const mode = cloudBlocked ? "only_on_device" : settings.inferenceMode;
@@ -315,6 +321,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
         billingEnabled: settings.billingEnabled,
         plan,
         freeCloudDailyLimit: settings.freeCloudDailyLimit,
+        proCloudDailyLimit: settings.proCloudDailyLimit,
       });
       if (!watchlistFits(card.watchlist.length, entitlements)) {
         const limit = entitlements.watchlistSize;
@@ -327,6 +334,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
             billingEnabled: settings.billingEnabled,
             plan,
             freeCloudDailyLimit: settings.freeCloudDailyLimit,
+            proCloudDailyLimit: settings.proCloudDailyLimit,
             cloudCallsToday,
           })
         : !settings.billingEnabled;

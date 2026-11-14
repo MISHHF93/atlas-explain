@@ -1,6 +1,16 @@
 # Pricing
 
-**Status: PROPOSED. Waiting for owner approval. Nothing here is live.** `billing_enabled` stays `false` until the owner flips it after hackathon judging.
+**Status: approved 13 Nov 2026; adjusted 14 Nov 2026 for the free Firebase plan. Nothing here is live.** `billing_enabled` stays `false` until the owner flips it after hackathon judging.
+
+**What changed on 14 Nov 2026.** The owner decided not to put a card on file, so there is no Blaze plan and no server (see `docs/MONETIZATION.md`). Until revenue can pay for one:
+
+- Pro's cloud limit is the Remote Config value `pro_cloud_daily_limit` (default **100** a day), not 300, because cloud answers come from Gemini's shared free quota.
+- The "Gemini Flash" model row is not sold or shown.
+- Limits are counted by the app, not enforced by a server.
+- Pro turns on within about 15 minutes of paying, not instantly.
+- Synced history is available to every signed-in account today, so it is not listed as a Pro benefit. Whether to make it Pro-only is an open owner decision.
+
+Prices, no trial, the FOUNDER code and the refund terms are unchanged. The rest of this page is the original approved plan and applies again once a server exists.
 
 ## Principles
 

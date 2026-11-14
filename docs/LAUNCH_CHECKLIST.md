@@ -37,7 +37,7 @@ Education only: no buy/sell wording, never reads balances or account details.
 12. **Licensed price feed.** Remote Config `price_provider` defaults to `kraken`. Before a public market launch, set it to `coingecko` and obtain a paid CoinGecko commercial plan (attribution is already shown), or keep Kraken only after written consent. Optional: set `coingecko_demo_api_key` in Remote Config (never commit a key). See `docs/legal/DATA_SOURCES.md`. Do not train any model on these feeds.
 
 ### After judging
-13. **Billing switch-on:** set up Stripe (Run Payments with Stripe extension), set the real Pro price id in `src/core/billing.ts`, test in Stripe test mode, then flip Remote Config `billing_enabled` to `true`. Requires the Blaze plan.
+13. **Billing switch-on:** follow "Go-live" in `docs/MONETIZATION.md` (Stripe account, Payment Links, portal link, read-only key, GitHub secret and variable, test purchase), then flip Remote Config `billing_enabled` to `true`. No Blaze plan needed.
 14. **Monitoring sink:** add a real sink (for example Firebase Analytics or Sentry) with `addMonitorSink` and mention it in the privacy policy.
 
 ## Added in the production pass (November 2026)
@@ -48,11 +48,14 @@ Education only: no buy/sell wording, never reads balances or account details.
 - [ ] **Analytics (optional)**: link Google Analytics to the Firebase project, set data retention to 2 months, then set Remote Config `analytics_enabled` = `true`. The web app then asks each visitor once; nothing loads before that.
 - [ ] **Legal**: add the operator's legal name and a privacy/support email to `/privacy` and `/terms`, then go through docs/legal/REVIEW_NOTES.md with a lawyer.
 - [ ] **Chrome Web Store**: developer account (US$5), listing, screenshots retaken after these PRs, and set `CHROME_STORE_URL` in `src/core/popup-copy.ts` once the listing is live.
-- [ ] **Blaze plan (card on file, $0 usage)**: only needed for paid plans (Stripe) and server-side quotas. Billing stays off without it.
+- [x] **Blaze plan**: decided against on 14 Nov 2026 (no card on file). Paid plans run without it; see `docs/MONETIZATION.md`.
+- [ ] **Gemini free tier and Europe**: decide how to handle the EEA, Switzerland and the UK, where the free tier may not be used for the cloud fallback (`docs/legal/REVIEW_NOTES.md` point 11).
 
 ### Before charging money
 - [ ] A commercial licence for crypto prices (CoinGecko paid plan) if crypto stays part of what Pro sells; see docs/ux/MULTI_ASSET_CATALOG.md §9.
-- [ ] Server-side cloud quota (`explainCloud` function, Blaze plan) instead of the client counter.
+- [ ] Stripe and GitHub setup, a dry run of the plan sync job, and a test purchase (`docs/MONETIZATION.md`, steps 2 to 9).
+- [ ] Set `pro_cloud_daily_limit` to what the Gemini quota page shows the project can serve.
+- [ ] Later, if revenue allows: Blaze plan and a server-side cloud quota instead of the app's own counter.
 
 ### Checks that now run automatically
 - `npm run release:check`: types, lint, tests (including the design-system, privacy-surface and bundle-size guards), both builds, manifest least-privilege, bundle budget, npm audit, trade-word scan.

@@ -32,7 +32,7 @@ from any cloud request.
 
 ## Where explanations run
 - **On your device:** Gemini Nano in Chrome. The prompt does not leave your computer.
-- **In the cloud:** Gemini through Google's Firebase AI Logic, with App Check. The public move card or highlighted text and your question are sent to Google to generate the answer. See Google's terms for the Gemini API: [TODO link to the applicable Google terms].
+- **In the cloud:** Gemini through Google's Firebase AI Logic, with App Check. The public move card or highlighted text and your question are sent to Google to generate the answer. See Google's terms for the Gemini API: https://aistudio.google.com/docs/terms. The project uses the free tier, where Google may use this text and the answer to improve its products and human reviewers may read it.
 
 ## Service providers
 - Google Firebase (hosting, authentication, database, App Check, Remote Config, AI Logic). Google acts as our processor. Data may be processed outside Canada.

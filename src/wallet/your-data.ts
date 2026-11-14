@@ -17,7 +17,8 @@ export interface YourDataHandlers {
   closeSheet: () => void;
 }
 
-export function yourDataGroup(handlers: YourDataHandlers): { node: HTMLElement; setSignedIn: (signedIn: boolean) => void } {
+export function yourDataGroup(handlers: YourDataHandlers): { node: HTMLElement; setSignedIn: (signedIn: boolean) => void; setPro: (pro: boolean) => void } {
+  let pro = false;
   const status = el("p", "fine");
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
@@ -87,6 +88,7 @@ export function yourDataGroup(handlers: YourDataHandlers): { node: HTMLElement; 
     handlers.openSheet("Delete your account", [
       el("p", undefined, "This permanently deletes your ATLAS Explain account and what it keeps: saved explanations, settings and your watchlist. History in this browser is cleared too."),
       el("p", "fine", "You can download your data first. You can keep using ATLAS Explain without an account afterwards."),
+      ...(pro ? [el("p", undefined, "You have a Pro subscription. Deleting your account does not cancel it: cancel Pro first with Manage or cancel Pro, or you will keep being charged.")] : []),
       yes,
       no,
       note,
@@ -120,5 +122,5 @@ export function yourDataGroup(handlers: YourDataHandlers): { node: HTMLElement; 
     }
   }
 
-  return { node, setSignedIn };
+  return { node, setSignedIn, setPro: (next) => { pro = next; } };
 }
