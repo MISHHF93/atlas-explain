@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../src/core/follow-ups";
+import { FOLLOW_UPS, followUpQuestion } from "../src/core/follow-ups";
+import { relatedTerms } from "../src/core/related-terms";
 
 describe("keep-going follow-ups", () => {
   it("offers three follow-ups with plain labels", () => {

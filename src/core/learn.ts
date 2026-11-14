@@ -20,7 +20,7 @@ export const LEARN_PATH: readonly LearnStep[] = [
   { id: "explain", title: "How answers are made", terms: ["hybrid_inference"] },
 ];
 
-export const LEARN_KEY = "learned";
+export { LEARN_KEY } from "./learn-key";
 
 export function learnTerms(step: LearnStep): TermEntry[] {
   return step.terms.map((id) => ALL_TERMS.find((term) => term.id === id)).filter((t): t is TermEntry => Boolean(t));

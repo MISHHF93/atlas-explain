@@ -15,7 +15,6 @@ import type { PublicEnvConfig } from "../platform/web/env";
 import {
   emptyCard,
   explanationCard,
-  glossaryPanel,
   group,
   limitCard,
   loadingCard,
@@ -27,6 +26,7 @@ import {
   themePicker,
 } from "../wallet/cards";
 import { el, labelledButton, prefersReducedMotion } from "../wallet/dom";
+import { glossaryPanel } from "../wallet/glossary-panel";
 import { icon } from "../wallet/icons";
 import { extensionNodes, privacyNodes, termsNodes } from "../wallet/legal";
 import { canReachLocalAtlas } from "../core/assets";
@@ -46,7 +46,8 @@ import { engineStrip } from "../wallet/engine";
 import { marketDigestCard } from "../wallet/market-digest";
 import { buildMarketDigest } from "../core/market-digest";
 import type { CatalogView } from "../core/assets";
-import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../core/follow-ups";
+import { FOLLOW_UPS, followUpQuestion } from "../core/follow-ups";
+import { relatedTerms } from "../core/related-terms";
 import { isEngineState } from "../core/hybrid-engine";
 import { TEXT_HISTORY_KEY, addTextHistory, ageLabel, readTextHistory, removeTextHistory, type TextHistoryEntry } from "../core/text-history";
 import { twoSidedCopyText } from "../core/two-sided";

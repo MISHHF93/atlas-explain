@@ -34,3 +34,13 @@ describe("public surface", () => {
     expect(popup).not.toMatch(/Pro entitlement|coming after beta/);
   });
 });
+
+describe("popup size", () => {
+  it("loads the glossary on demand, never at popup start", () => {
+    const staticImports = [...popup.matchAll(/^import [^;]*? from "([^"]+)";/gm)].map((m) => m[1]!);
+    for (const banned of ["/core/terms", "/core/learn", "/core/related-terms", "/core/glossary", "/wallet/glossary-panel", "/wallet/learn-card"]) {
+      expect(staticImports.filter((p) => p.endsWith(banned)), banned).toEqual([]);
+    }
+    expect(popup).toContain('import("./learn-tab")');
+  });
+});

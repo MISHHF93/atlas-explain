@@ -20,7 +20,6 @@ import { mapSignal, readPublicSignal, type SignalView } from "../../src/core/sig
 import {
   emptyCard,
   explanationCard,
-  glossaryPanel,
   group,
   limitCard,
   loadingCard,
@@ -44,11 +43,11 @@ import { el, labelledButton, prefersReducedMotion } from "../../src/wallet/dom";
 import { installErrorBoundary } from "../../src/wallet/error-boundary";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../src/wallet/shell";
 import { HISTORY_KEY, addToHistory, makeEntry, parseHistory, type HistoryEntry } from "../../src/core/history";
-import { LEARN_KEY, parseLearned } from "../../src/core/learn";
+import { LEARN_KEY } from "../../src/core/learn-key";
 import { pageKindLine } from "../../src/core/page-kind";
 import { TWO_SIDED_SCHEMA, parseTwoSided, twoSidedCopyText } from "../../src/core/two-sided";
 import { twoSidedNodes } from "../../src/wallet/two-sided";
-import { historyCard, learnCard } from "../../src/wallet/history-learn";
+import { historyCard } from "../../src/wallet/history-learn";
 import { engineStrip } from "../../src/wallet/engine";
 import { todayRow } from "../../src/wallet/today-row";
 import { marketDigestCard } from "../../src/wallet/market-digest";
@@ -57,7 +56,7 @@ import type { CatalogView } from "../../src/core/assets";
 import type { DigestView } from "../../src/core/digest";
 import { icon } from "../../src/wallet/icons";
 import { COMPOSER_PLACEHOLDER, composerAction, composerHint } from "../../src/core/composer";
-import { FOLLOW_UPS, followUpQuestion, relatedTerms } from "../../src/core/follow-ups";
+import { FOLLOW_UPS, followUpQuestion } from "../../src/core/follow-ups";
 import { isEngineState } from "../../src/core/hybrid-engine";
 import { explainOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
@@ -96,6 +95,9 @@ const shell = createWalletShell({
   host,
   surface: "extension",
   onAccount: () => void openAccount(),
+  onSelect: (tab) => {
+    if (tab === "glossary") void ensureLearn();
+  },
   menu: [
     { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
     { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => openUrl(ATLAS_DESK_URL) },
@@ -237,40 +239,36 @@ shell.panels.signal.append(signalHead, signal.node);
 
 const glossaryHead = el("div", "panel-title");
 glossaryHead.append(el("h1", undefined, "Learn"), el("span", "fine", "Plain language"));
-// Learn path progress is a list of term ids in chrome.storage.local.
+// Learn path progress is a list of term ids in chrome.storage.local. The glossary itself loads on demand.
 const learnSlot = el("div");
-let learned = new Set<string>();
+learnSlot.append(el("p", "fine", "Loading the glossary…"));
+let storedLearned: unknown = [];
+let learnModule: Promise<typeof import("./learn-tab")> | null = null;
+let learnMounted = false;
+function loadLearnModule(): Promise<typeof import("./learn-tab")> {
+  learnModule ??= import("./learn-tab");
+  return learnModule;
+}
+async function ensureLearn(): Promise<void> {
+  const mod = await loadLearnModule();
+  if (learnMounted) return;
+  learnMounted = true;
+  mod.mountLearn(learnSlot, {
+    storedLearned,
+    onAsk: askTerm,
+    save: (patch) => void store.set(patch),
+    announce: (text) => shell.announce(text),
+  });
+}
+/** Set once the learn chunk has loaded, so answers can show related-term chips. */
+let relatedTermsFn: ((text: string, topic?: string) => { id: string; title: string }[]) | null = null;
 function askTerm(term: { title: string }): void {
   question.value = `Explain "${term.title}" in plain language with a short example. Do not recommend a trade.`;
   syncComposer();
   shell.select("explain");
   void run({ highlight: false, fromPage: false });
 }
-function renderLearn(): void {
-  learnSlot.replaceChildren(learnCard({
-    learned,
-    onAsk: askTerm,
-    onMark: (term) => {
-      learned = new Set([...learned, term.id]);
-      void store.set({ [LEARN_KEY]: [...learned] });
-      renderLearn();
-      shell.announce(`${term.title} marked as learned.`);
-    },
-    onReset: () => {
-      learned = new Set();
-      void store.set({ [LEARN_KEY]: [] });
-      renderLearn();
-    },
-  }));
-}
-shell.panels.glossary.append(
-  glossaryHead,
-  learnSlot,
-  glossaryPanel({
-    askLabel: "Explain in more depth",
-    onAsk: askTerm,
-  }),
-);
+shell.panels.glossary.append(glossaryHead, learnSlot);
 
 /* ---------- Settings tab ---------- */
 
@@ -338,13 +336,16 @@ async function boot(): Promise<void> {
     void store.set({ theme: choice });
   }));
   history = parseHistory(stored.history);
-  learned = parseLearned(stored.learned);
+  storedLearned = stored[LEARN_KEY as "learned"] ?? [];
   if (import.meta.env.DEV && !hasChrome) {
     const done = preview.get("learned");
-    if (done) learned = parseLearned(done.split(","));
+    if (done) storedLearned = done.split(",");
   }
   renderHistory();
-  renderLearn();
+  // Load the glossary chunk once the popup is idle, so related-term chips are ready for the first answer.
+  const warm = () => void loadLearnModule().then((mod) => { relatedTermsFn = mod.relatedTerms; }).catch(() => undefined);
+  if ("requestIdleCallback" in window) requestIdleCallback(warm, { timeout: 2_000 });
+  else setTimeout(warm, 800);
   if (!hasChrome) {
     // Opened as a plain page (development screenshots): live prices only, no Chrome APIs.
     startAssets();
@@ -500,7 +501,7 @@ function keepGoingFor(topic: string, answerText: string) {
         followUp: followUpQuestion(item.kind, subject),
       }),
     })),
-    related: relatedTerms(`${subject}\n${answerText}`, subject).map((term) => ({
+    related: (relatedTermsFn?.(`${subject}\n${answerText}`, subject) ?? []).map((term) => ({
       title: term.title,
       run: () => askTerm(term),
     })),
