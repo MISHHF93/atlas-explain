@@ -77,6 +77,7 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
 ## Open work, in priority order
 
 1. **Keep `main` green:** run release:check before every push. Never force push.
+   - **GitHub Actions is not running (found 14 Nov 2026).** Every job fails in two seconds with "The job was not started because your account is locked due to a billing issue", and no run has ever succeeded. So CI (including the Firestore rules tests on the emulator) is not checking anything, the hourly market-data job is not refreshing the data site (its files were last published by hand at 01:55 UTC on 14 Nov), and the plan sync job for PR 6 cannot run. Only the owner can fix this, in GitHub → Settings → Billing and plans. Until then, release:check on this machine is the only gate, and the rules tests for PR 6 have not been run anywhere (this machine has Java 17; the emulator needs Java 21).
 2. **PR 6, monetization:** built on `feat/monetization-spark`. Still to do: merge and deploy when the owner says so; the owner's Stripe and GitHub steps (`docs/MONETIZATION.md`, "Go-live"); the first real run of the sync job (its live calls have never run against Stripe or Firestore); the EEA/UK decision above. The Stripe key goes only in GitHub Actions secrets.
 3. **PR 5 follow-ups:**
    - Replace the `window.prompt` used for cross-device email-link sign-in with a proper in-app field.
@@ -97,7 +98,7 @@ The full list is in `docs/LAUNCH_CHECKLIST.md`:
 - any paid data plan
 - the support email
 - legal review of `privacy.html` and `terms.html` (see `docs/legal/REVIEW_NOTES.md`)
-- GitHub Actions secrets
+- GitHub Actions secrets, and unlocking the GitHub account's billing so Actions can run
 - submitting the sitemap in Google Search Console
 
 ## First thing to do
