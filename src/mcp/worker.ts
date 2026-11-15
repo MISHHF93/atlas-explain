@@ -4,13 +4,14 @@
  * Deployed with `npm run deploy:mcp` (wrangler.toml). See docs/MCP.md.
  */
 import { handleHttp } from "./http";
+import { CONNECT_URL, DATA_SITE_URL } from "../core/links";
 import type { Fetcher } from "./server";
 
 /**
  * The only place the server's data comes from: ATLAS Explain's own data site. Any other address is
  * refused, so the connector never calls a third-party API itself (the data job does that, hourly).
  */
-export const DATA_ORIGIN = "https://atlas-explain-data.web.app";
+export const DATA_ORIGIN = DATA_SITE_URL;
 
 // The data files change hourly at most, so Cloudflare's edge keeps them for 5 minutes.
 // The app's shared readers pass browser-only options (cache, credentials) that Workers reject, so
@@ -20,7 +21,7 @@ export const ownDataFetch: Fetcher = (url, init = {}) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { cache, credentials, ...rest } = init;
   const headers = new Headers(rest.headers);
-  headers.set("User-Agent", "ATLAS Explain MCP (+https://atlas-explain.web.app/connect)");
+  headers.set("User-Agent", `ATLAS Explain MCP (+${CONNECT_URL})`);
   return fetch(url, { ...rest, headers, cf: { cacheTtl: 300, cacheEverything: true } } as RequestInit);
 };
 

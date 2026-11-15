@@ -205,7 +205,7 @@ describe("structured output, prompts, icons and the chart app", () => {
 
   it("announces tools, resources and prompts, with its icon", async () => {
     const init = (await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25" } }, full))?.result as { capabilities: Record<string, unknown>; serverInfo: { icons: unknown[] } };
-    expect(Object.keys(init.capabilities).sort()).toEqual(["prompts", "resources", "tools"]);
+    expect(Object.keys(init.capabilities).sort()).toEqual(["completions", "prompts", "resources", "tools"]);
     expect(init.serverInfo.icons).toHaveLength(2);
   });
 });

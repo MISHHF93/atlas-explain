@@ -17,23 +17,23 @@
  *
  * The HTTP transport is in src/mcp/http.ts; this file holds the tools and the JSON-RPC handler.
  */
-import { CLASS_INFO, findAsset, formatChange as assetChange, formatValue, MARKET_DATA_URL, NEWS_DATA_URL, readMarketFile, searchAssets } from "../core/catalog";
+import { CLASS_INFO, findAsset, formatChange as assetChange, formatValue, readMarketFile, searchAssets } from "../core/catalog";
 import type { Asset } from "../core/asset-schema";
 import { formatChange, formatPrice } from "../core/assets";
 import { thinEvenly } from "../core/coingecko";
 import { EDUCATION_ASSETS } from "../core/education-assets";
-import { CRYPTO_COINS, CRYPTO_CREDIT, CRYPTO_DATA_URL, readCryptoFile, type CryptoFile, type CryptoSource } from "../data/crypto";
+import { CRYPTO_COINS, CRYPTO_CREDIT, readCryptoFile, type CryptoFile, type CryptoSource } from "../data/crypto";
 import { LEARN_PATH, learnTerms } from "../core/learn";
 import { readNewsFile, type NewsItem } from "../core/news";
 import { CHART_APP_HTML, CHART_APP_URI, MCP_APP_MIME } from "./chart-app";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.2.0";
+export const SERVER_VERSION = "1.3.0";
 /** Newest first. A client asking for a version not listed gets the newest, as the spec allows. */
 export const SUPPORTED_PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"] as const;
-export const EDUCATION_LINE = "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.";
-const APP_URL = "https://atlas-explain.web.app/app";
+import { APP_URL, CRYPTO_DATA_URL, EDUCATION_LINE, EXPLAIN_WEB_URL, MARKET_DATA_URL, MCP_ORIGIN, NEWS_DATA_URL } from "../core/links";
+export { EDUCATION_LINE, MCP_ORIGIN };
 
 /** The platform fetch (Cloudflare Workers, Node or a test double). */
 export type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
@@ -56,7 +56,6 @@ const str = (description: string) => ({ type: "string", description });
 const nullable = (type: string) => ({ type: [type, "null"] });
 /** The ATLAS Explain mark, shown next to the server and its tools in clients that support icons (MCP 2025-11-25). */
 // Served by this server from its own address (src/mcp/http.ts): a PNG every client supports, and the SVG.
-export const MCP_ORIGIN = "https://atlas-explain-mcp.atlas-explain.workers.dev";
 export const ICONS = [
   { src: `${MCP_ORIGIN}/icon.png`, mimeType: "image/png", sizes: ["512x512"] },
   { src: `${MCP_ORIGIN}/icon.svg`, mimeType: "image/svg+xml", sizes: ["any"] },
@@ -170,6 +169,19 @@ export const PROMPTS = [
     text: (a: Record<string, string>) => `Using ATLAS Explain, teach me ${a.topic ? `the "${a.topic}" topic` : "the first topic"} of the learning path (browse_glossary). Explain each term in plain language with a simple example, then ask me one short question to check I understood. Education only.`,
   },
 ] as const;
+
+/** Suggestions while someone fills in a prompt (MCP completions): coins and catalog names, or learning topics. */
+export function completePromptArgument(prompt: string, argument: string, typed: string): string[] {
+  const q = typed.trim().toLowerCase();
+  const pool =
+    prompt === "explain_asset" && argument === "asset"
+      ? [...CRYPTO_COINS.flatMap((c) => [c.name, c.symbol]), ...EDUCATION_ASSETS.map((a) => a.name)]
+      : prompt === "learn_next" && argument === "topic"
+        ? LEARN_PATH.flatMap((s) => [s.id, s.title])
+        : [];
+  const unique = [...new Set(pool)];
+  return q ? unique.filter((v) => v.toLowerCase().startsWith(q)).concat(unique.filter((v) => !v.toLowerCase().startsWith(q) && v.toLowerCase().includes(q))) : unique;
+}
 
 type ToolResult = { content: { type: "text"; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean };
 
@@ -463,8 +475,8 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
       const protocolVersion = (SUPPORTED_PROTOCOLS as readonly string[]).includes(asked) ? asked : SUPPORTED_PROTOCOLS[0];
       return ok({
         protocolVersion,
-        capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false } },
-        serverInfo: { name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: "https://atlas-explain.web.app", icons: ICONS },
+        capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false }, completions: {} },
+        serverInfo: { name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: ICONS },
         instructions:
           "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed hourly) and past moves; todays_headlines for recent news. Every result names its source and time. Education only: never present results as trade advice or a forecast.",
       });
@@ -483,6 +495,12 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
     }
     case "prompts/list":
       return ok({ prompts: PROMPTS.map(({ text: _t, ...p }) => ({ ...p, icons: ICONS })) });
+    case "completion/complete": {
+      const ref = message.params?.ref as { type?: string; name?: string } | undefined;
+      const arg = message.params?.argument as { name?: string; value?: string } | undefined;
+      const values = ref?.type === "ref/prompt" ? completePromptArgument(String(ref.name), String(arg?.name), typeof arg?.value === "string" ? arg.value : "") : [];
+      return ok({ completion: { values: values.slice(0, 20), total: values.length, hasMore: values.length > 20 } });
+    }
     case "prompts/get": {
       const prompt = PROMPTS.find((p) => p.name === message.params?.name);
       if (!prompt) return fail(-32602, `Unknown prompt: ${String(message.params?.name)}`);

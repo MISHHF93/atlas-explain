@@ -21,7 +21,7 @@ const MAX_BODY_BYTES = 64 * 1024;
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Accept, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID",
+  "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID",
   "Access-Control-Max-Age": "86400",
 };
 
@@ -31,8 +31,9 @@ const json = (body: unknown, status = 200): Response =>
 const rpcError = (code: number, message: string, status: number): Response =>
   json({ jsonrpc: "2.0", id: null, error: { code, message } }, status);
 
+import { CONNECT_URL } from "../core/links";
 /** The connector's page on the website: setup steps for each assistant. */
-export const CONNECT_PAGE = "https://atlas-explain.web.app/connect";
+export const CONNECT_PAGE = CONNECT_URL;
 
 const ABOUT = [
   "ATLAS Explain MCP server",

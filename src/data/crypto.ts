@@ -31,7 +31,7 @@ export const CRYPTO_COINS: readonly CryptoCoin[] = [
 ];
 
 export const CRYPTO_SCHEMA = "atlas-explain-crypto-v1";
-export const CRYPTO_DATA_URL = "https://atlas-explain-data.web.app/data/v1/crypto.json";
+export { CRYPTO_DATA_URL } from "../core/links.ts";
 export const KRAKEN_PUBLIC_API = "https://api.kraken.com/0/public";
 export const COINGECKO_PUBLIC_API = "https://api.coingecko.com/api/v3";
 export const CRYPTO_CREDIT = {

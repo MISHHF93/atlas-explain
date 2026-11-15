@@ -6,7 +6,8 @@ import { detectPageKind, type PageKindView } from "./page-kind";
 import { SAMPLE_MOVES, type SampleMove } from "./samples";
 import { TWO_SIDED_INSTRUCTION } from "./two-sided";
 
-export const EXTENSION_DISCLAIMER = "Educational information, not investment advice.";
+import { EDUCATION_SHORT } from "./links";
+export const EXTENSION_DISCLAIMER = EDUCATION_SHORT;
 
 export const EXTENSION_PRIVACY_NOTE =
   "ATLAS Explain sends only the text you highlight, the page title, and the site name. It does not read form fields, balances, or account numbers. Nothing runs until you click.";

@@ -8,7 +8,7 @@
  * src/core/links.ts), every primary button opens the web app; setting the listing turns them all
  * into "Add to Chrome" at the next build.
  */
-import { CHROME_STORE_URL, MCP_URL } from "../core/links";
+import { CHROME_STORE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
 
 export type SitePage = "home" | "connect" | "support" | "privacy" | "terms" | "welcome" | "how-its-built" | "404";
 
@@ -54,7 +54,7 @@ export function siteFooter(): string {
   const links = FOOTER_LINKS.map((l) => `<a href="${l.href}">${l.label}</a>`).join("");
   return [
     `<footer class="site-foot">`,
-    `      <p class="foot-edu">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>`,
+    `      <p class="foot-edu">${EDUCATION_LINE}</p>`,
     `      <nav aria-label="Footer">${links}<a href="${SOURCE_URL}" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>`,
     `      <p class="fine">© 2026 ATLAS Explain · <a href="/how-its-built">How it's built</a></p>`,
     `    </footer>`,
