@@ -90,10 +90,11 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
    - Optionally sync text-explanation history to the account.
 4. **Store submission support:**
    - When the owner sends the store item id, add it to `ALLOWED_EXTENSION_IDS` in `src/bridge/protocol.ts` and to `frame-ancestors` in `firebase.json`, then redeploy.
-   - When the listing is live, set `CHROME_STORE_URL` in `src/core/popup-copy.ts` and point every "Add to Chrome" button at it.
+   - When the listing is live, set `CHROME_STORE_URL` in `src/core/links.ts`, then redeploy hosting. Home then shows the real "Add to Chrome" button instead of the "not in the store yet" note, and every install link uses it.
 5. **Optional:** replace the store screenshots that show the popup's built-in sample answer with a real on-device answer captured in the owner's own Chrome.
-6. **Platform scan (`feat/platform-scan`, 15 Nov 2026):** Today shows GDELT headlines with "Explain" (they show an honest "nothing recent enough" note until the hourly data job runs again); Learn links to the practice page; crypto charts have 24H/7D/30D ranges and a price readout; spread, stop-limit and yield-curve terms have diagrams; and a read-only MCP server for AI assistants (`src/mcp/server.ts`, built by `npm run build:mcp` into `mcp/atlas-explain-mcp.mjs`, setup in `docs/MCP.md`). Publishing the MCP server to npm or an MCP directory would be an owner step.
-7. **Hackathon:** before 30 Nov, re-check `docs/SUBMISSION.md` and `docs/DEMO.md` against the current app. The demo shortcuts are Alt+Shift+E to open the popup and Alt+Shift+X to explain the highlight.
+6. **Platform scan (`feat/platform-scan`, 15 Nov 2026):** Today shows GDELT headlines with "Explain" (they show an honest "nothing recent enough" note until the hourly data job runs again); Learn links to the practice page; crypto charts have 24H/7D/30D ranges and a price readout; spread, stop-limit and yield-curve terms have diagrams; and a read-only MCP server for AI assistants.
+7. **Online only (15 Nov 2026, owner decision):** people never download anything. The website no longer offers the extension zip (`/download/**` redirects to `/#install`) or build steps. Until the store listing is live, Home says "The extension is not in the Chrome Web Store yet" and points to the web app. The MCP server is hosted on Cloudflare Workers free plan (`src/mcp/http.ts`, `src/mcp/worker.ts`, `wrangler.toml`); there is no download-and-run version. Until the owner deploys it (`docs/MCP.md`, "Owner steps"), Support says "Not online yet". Then set `MCP_URL` in `src/core/links.ts` and redeploy hosting. The repository stays public with one footer "Source" link, because the hackathon needs it. Developer docs (README, DEMO) still describe loading the unpacked build for testing.
+8. **Hackathon:** before 30 Nov, re-check `docs/SUBMISSION.md` and `docs/DEMO.md` against the current app. The demo shortcuts are Alt+Shift+E to open the popup and Alt+Shift+X to explain the highlight.
 
 ## Owner-only steps (list them, never attempt them)
 
@@ -104,6 +105,7 @@ The full list is in `docs/LAUNCH_CHECKLIST.md`:
 - Firebase console switches (Blaze plan, Remote Config flags such as `billing_enabled` and `analytics_enabled`, reCAPTCHA domains)
 - any paid data plan
 - the support email
+- the free Cloudflare account for the hosted MCP server: `npx wrangler@4 login`, then `npm run deploy:mcp` (`docs/MCP.md`)
 - legal review of `privacy.html` and `terms.html` (see `docs/legal/REVIEW_NOTES.md`)
 - GitHub Actions secrets, and unlocking the GitHub account's billing so Actions can run
 - submitting the sitemap in Google Search Console

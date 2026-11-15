@@ -31,11 +31,8 @@ export interface SignalCopy {
 }
 
 export const ATLAS_DESK_URL = "http://localhost:3000/markets";
-export const EXPLAIN_WEB_URL = "https://atlas-explain.web.app";
-/** Chrome Web Store listing. Null until the listing is published (owner step); then every install link uses it. */
-export const CHROME_STORE_URL: string | null = null;
-/** Where every "Add to Chrome" link points. */
-export const INSTALL_URL = CHROME_STORE_URL ?? `${EXPLAIN_WEB_URL}/#install`;
+import { EXPLAIN_WEB_URL } from "./links";
+export { CHROME_STORE_URL, EXPLAIN_WEB_URL, INSTALL_URL } from "./links";
 
 export function signalCopy(view: SignalView): SignalCopy {
   if (!view.connected || view.reason === CONNECT_ATLAS) {

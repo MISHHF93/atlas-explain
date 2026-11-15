@@ -1,0 +1,15 @@
+/**
+ * Public addresses of ATLAS Explain. Everything people use is online: the website, the web app,
+ * the Chrome extension from the Chrome Web Store, and the hosted MCP address for AI assistants.
+ * Nobody has to download files or build anything.
+ *
+ * The two nulls are owner steps. While one is null the site says it is not available yet and never shows
+ * a link that doesn't work; setting it switches every button on.
+ */
+export const EXPLAIN_WEB_URL = "https://atlas-explain.web.app";
+/** Chrome Web Store listing, e.g. "https://chromewebstore.google.com/detail/atlas-explain/<id>". */
+export const CHROME_STORE_URL: string | null = null;
+/** Hosted MCP endpoint (Cloudflare Workers free plan), e.g. "https://atlas-explain-mcp.<account>.workers.dev/mcp". */
+export const MCP_URL: string | null = null;
+/** Where every "Add to Chrome" link points. */
+export const INSTALL_URL = CHROME_STORE_URL ?? `${EXPLAIN_WEB_URL}/#install`;

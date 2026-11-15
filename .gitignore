@@ -13,3 +13,5 @@ ui-debug.log
 coverage/
 release/
 data-out/
+mcp-dist/
+.wrangler/

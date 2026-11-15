@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { CHROME_STORE_URL, MCP_URL } from "../src/core/links";
+import { handleHttp, MCP_PATH } from "../src/mcp/http";
 import { EDUCATION_LINE, TOOLS, explainTerm, handle, todaysHeadlines, type Fetcher } from "../src/mcp/server";
 
 const reply = (body: unknown, ok = true): Fetcher => async () => ({ ok, json: async () => body });
@@ -38,13 +40,70 @@ describe("ATLAS Explain MCP server", () => {
     expect(down.isError).toBe(true);
   });
 
-  it("is built into one dependency-free file and documented", () => {
+  it("is hosted online, never downloaded, and documented", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
     expect(pkg.scripts["build:mcp"]).toBe("vite build --config vite.mcp.config.ts");
-    expect(readFileSync("vite.mcp.config.ts", "utf8")).toContain("publicDir: false");
+    expect(pkg.scripts["deploy:mcp"]).toBe("npx wrangler@4 deploy");
+    expect(readFileSync("wrangler.toml", "utf8")).toContain('main = "src/mcp/worker.ts"');
+    expect(existsSync("mcp/atlas-explain-mcp.mjs")).toBe(false);
     expect(existsSync("docs/MCP.md")).toBe(true);
-    // The server only reads ATLAS Explain's own public data files.
-    const src = readFileSync("src/mcp/server.ts", "utf8");
-    expect(src).not.toMatch(/firebase|generateContent|apiKey/i);
+    // The server only reads ATLAS Explain's own public data files, and never touches Node or stdio.
+    for (const file of ["src/mcp/server.ts", "src/mcp/http.ts", "src/mcp/worker.ts"]) {
+      expect(readFileSync(file, "utf8")).not.toMatch(/firebase|generateContent|apiKey|process\.|node:/i);
+    }
+  });
+});
+
+describe("hosted MCP over HTTP", () => {
+  const post = (body: unknown, headers: Record<string, string> = {}) =>
+    new Request(`https://mcp.example${MCP_PATH}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...headers },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+
+  it("answers a request with JSON and a notification with 202 and no body", async () => {
+    const res = await handleHttp(post({ jsonrpc: "2.0", id: 1, method: "tools/list" }), never);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/json");
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    const body = (await res.json()) as { result: { tools: { name: string }[] } };
+    expect(body.result.tools).toHaveLength(3);
+    const note = await handleHttp(post({ jsonrpc: "2.0", method: "notifications/initialized" }), never);
+    expect(note.status).toBe(202);
+    expect(await note.text()).toBe("");
+  });
+
+  it("runs a tool end to end", async () => {
+    const res = await handleHttp(post({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "explain_term", arguments: { term: "spread" } } }), never);
+    const body = (await res.json()) as { result: { content: { text: string }[] } };
+    expect(body.result.content[0]!.text).toContain("Bid-ask spread");
+  });
+
+  it("rejects what it does not support, plainly", async () => {
+    expect((await handleHttp(new Request(`https://mcp.example${MCP_PATH}`), never)).status).toBe(405);
+    expect((await handleHttp(post("{not json"), never)).status).toBe(400);
+    expect((await handleHttp(post([{ jsonrpc: "2.0", id: 1, method: "ping" }]), never)).status).toBe(400);
+    expect((await handleHttp(post({ jsonrpc: "2.0", id: 1, method: "ping" }, { "MCP-Protocol-Version": "1999-01-01" }), never)).status).toBe(400);
+    expect((await handleHttp(post("x".repeat(70_000)), never)).status).toBe(413);
+    expect((await handleHttp(new Request("https://mcp.example/other"), never)).status).toBe(404);
+    expect((await handleHttp(new Request(`https://mcp.example${MCP_PATH}`, { method: "OPTIONS" }), never)).status).toBe(204);
+  });
+
+  it("explains itself at the root address, with the education line", async () => {
+    const text = await (await handleHttp(new Request("https://mcp.example/"), never)).text();
+    expect(text).toContain(`https://mcp.example${MCP_PATH}`);
+    expect(text).toContain(EDUCATION_LINE);
+  });
+});
+
+describe("online-only links", () => {
+  it("shows coming-soon text until the owner sets each address, and never a dead link", () => {
+    expect(CHROME_STORE_URL === null || CHROME_STORE_URL.startsWith("https://chromewebstore.google.com/")).toBe(true);
+    expect(MCP_URL === null || /^https:\/\/.+\/mcp$/.test(MCP_URL)).toBe(true);
+    const support = readFileSync("support.html", "utf8");
+    expect(support).toContain('id="ai-assistants"');
+    expect(support).toMatch(/<div data-when-mcp hidden>[\s\S]*data-mcp-url/);
+    expect(readFileSync("src/site/site.ts", "utf8")).toContain('switchOn("data-when-mcp", "data-before-mcp", MCP_URL, "data-mcp-url")');
   });
 });

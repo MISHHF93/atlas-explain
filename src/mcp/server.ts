@@ -2,15 +2,15 @@
  * ATLAS Explain MCP server: lets AI assistants (Claude Desktop, Claude Code and others that
  * speak the Model Context Protocol) look things up in ATLAS Explain.
  *
- * Read-only and free. It runs on the person's own computer over standard input and output,
- * needs no API key, and only reads the public files ATLAS Explain already publishes:
+ * Read-only and free. It is hosted online (src/mcp/http.ts on Cloudflare Workers), so people add
+ * a web address to their assistant and download nothing. It needs no API key, and only reads the public files ATLAS Explain already publishes:
  *   - the plain-language glossary (built into the server),
  *   - official market figures (US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR) from the data site,
  *   - today's headlines (GDELT) from the data site.
  * It never calls a model, never reads accounts, and never gives trade advice. Every result
  * names its source and time, and ends with the education-only line.
  *
- * Built into one file by `npm run build:mcp` (mcp/atlas-explain-mcp.mjs).
+ * The HTTP transport is in src/mcp/http.ts; this file holds the tools and the JSON-RPC handler.
  */
 import { formatValue, MARKET_DATA_URL, NEWS_DATA_URL, readMarketFile } from "../core/catalog";
 import type { Asset } from "../core/asset-schema";
@@ -123,7 +123,7 @@ export async function todaysHeadlines(about: string | undefined, fetcher: Fetche
     "\n\nHeadlines found by the GDELT Project. They link to their publishers; ATLAS Explain does not write or check them.");
 }
 
-/* ---------- JSON-RPC over standard input and output (MCP stdio transport) ---------- */
+/* ---------- JSON-RPC (the HTTP transport is in src/mcp/http.ts) ---------- */
 
 type Message = { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> };
 type Reply = { jsonrpc: "2.0"; id: string | number | null; result?: unknown; error?: { code: number; message: string } };
@@ -163,36 +163,4 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
     default:
       return fail(-32601, `Method not found: ${message.method}`);
   }
-}
-
-/** Reads newline-delimited JSON-RPC messages from stdin and writes replies to stdout. Logs go to stderr only. */
-export function serveStdio(fetcher: Fetcher = fetch as unknown as Fetcher): void {
-  let buffer = "";
-  const pending = new Set<Promise<void>>();
-  process.stdin.setEncoding("utf8");
-  process.stdin.on("data", (chunk: string) => {
-    buffer += chunk;
-    let newline: number;
-    while ((newline = buffer.indexOf("\n")) >= 0) {
-      const line = buffer.slice(0, newline).trim();
-      buffer = buffer.slice(newline + 1);
-      if (!line) continue;
-      let message: Message;
-      try {
-        message = JSON.parse(line) as Message;
-      } catch {
-        process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }) + "\n");
-        continue;
-      }
-      const job: Promise<void> = handle(message, fetcher).then((reply) => {
-        if (reply) process.stdout.write(JSON.stringify(reply) + "\n");
-      }).catch((error: unknown) => {
-        process.stderr.write(`atlas-explain-mcp: ${error instanceof Error ? error.message : String(error)}\n`);
-      }).finally(() => pending.delete(job));
-      pending.add(job);
-    }
-  });
-  // When the client closes stdin, finish answering what was already asked; Node then exits by
-  // itself (forcing process.exit while fetch closes its sockets crashes libuv on Windows).
-  process.stdin.on("end", () => void Promise.allSettled([...pending]).then(() => process.stdin.pause()));
 }

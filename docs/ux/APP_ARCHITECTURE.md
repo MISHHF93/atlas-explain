@@ -26,7 +26,7 @@ The rules do not change: education only (no buy/sell wording), selected text onl
 | `/how-it-works` | redirect to `/` | Folded into Home on 14 Nov 2026. Home now has the `#how-it-works` and `#install` sections (zip download and Load unpacked steps). A 301 with no fragment keeps the visitor's `#install`, so old links and old extension builds still reach the install steps |
 | `/support` | `support.html` | Support channels (GitHub issues, privacy requests), full FAQ (`#faq`), troubleshooting |
 | `/privacy`, `/terms` | static | Full legal drafts, marked **Draft · not final** |
-| `/download/atlas-explain-chrome.zip` | build output | The same zip as the store upload, until the listing is live |
+| `/download/**` | redirect to `/#install` | The website no longer offers a zip (15 Nov 2026). People install from the Chrome Web Store; until the listing is live, Home says the extension is not in the store yet and points to the web app |
 | `/app` | `app.html` (one lazy app bundle) | **The one-page app (since 14 Nov 2026).** Sections in order: Explain, Today, Learn, Assets. `/app` is the top (Explain); `/app/explain` still works |
 | `/app/today` | app | Scrolls to Today: live crypto movers (and the ATLAS blocks for the owner) |
 | `/app/learn` | app | Scrolls to Learn: six terms, then "Show all" |
