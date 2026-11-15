@@ -1,6 +1,6 @@
 // Images for the Claude connectors directory listing (docs/CONNECTOR_SUBMISSION.md):
 //   - four carousel screenshots of the MCP App chart, 1200px wide PNG, cropped to the app response
-//   - the 512×512 icon, rendered from public/logo.svg
+//   - the 512×512 icon, rendered from public/app-icon.svg
 // It renders the real chart page (src/mcp/chart-app.ts, read from the live server) and feeds it real
 // price_history results from the live server, the way Claude does. Needs the internet; nothing is made up.
 //   node store/src/capture-connector.mjs        (writes store/connector/*.png)
@@ -59,7 +59,7 @@ try {
     await tab.close();
   }
   // The icon: the ATLAS Explain mark at 512×512.
-  const svg = readFileSync(join(here, "..", "..", "public", "logo.svg"), "utf8");
+  const svg = readFileSync(join(here, "..", "..", "public", "app-icon.svg"), "utf8");
   const icon = await chrome.open(512, 512, 1);
   await icon.goto(`data:text/html;base64,${Buffer.from(`<!doctype html><html><body style="margin:0;background:#fff"><img src="data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}" width="512" height="512" style="display:block"></body></html>`).toString("base64")}`, 600);
   writeFileSync(join(out, "icon-512.png"), await icon.png());
