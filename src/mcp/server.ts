@@ -1,15 +1,16 @@
 /**
  * ATLAS Explain MCP server: lets AI assistants (Claude and others that speak the Model Context
  * Protocol) use what the ATLAS Explain app shows: the plain-language glossary and learning path,
- * the asset catalog, official figures, live crypto prices and charts, and today's headlines.
+ * the asset catalog, official figures, crypto prices and charts, and today's headlines.
  *
  * Read-only and free. It is hosted online (src/mcp/http.ts on Cloudflare Workers), so people add
  * a web address to their assistant and download nothing. It needs no API key, and only reads
  * public sources the app already uses:
  *   - the glossary and learning path (built in),
- *   - official figures (US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR) and headlines (GDELT)
- *     from ATLAS Explain's data site,
- *   - crypto prices and charts from CoinGecko's free public API.
+ *   - official figures (US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR), headlines (GDELT) and
+ *     crypto prices with 30 days of hourly closes (collected from Kraken, CoinGecko as backup),
+ *     all from ATLAS Explain's own data site, which the scheduled data job publishes.
+ * It calls no third-party API itself.
  * It never calls a model, never reads accounts, and never gives trade advice. Every result
  * names its source and time, says plainly when something is missing, and ends with the
  * education-only line. Each tool reuses the app's own readers, so the rules match the app.
@@ -18,10 +19,10 @@
  */
 import { CLASS_INFO, findAsset, formatChange as assetChange, formatValue, MARKET_DATA_URL, NEWS_DATA_URL, readMarketFile, searchAssets } from "../core/catalog";
 import type { Asset } from "../core/asset-schema";
-import { formatChange, formatPrice, type Fetcher as WebFetcher } from "../core/assets";
-import { COINGECKO_API, COINGECKO_CITATION, COINGECKO_COINS, getCoinGeckoJson, loadCoinGeckoChart, readCoinGeckoMarkets, thinEvenly } from "../core/coingecko";
+import { formatChange, formatPrice } from "../core/assets";
+import { thinEvenly } from "../core/coingecko";
 import { EDUCATION_ASSETS } from "../core/education-assets";
-import { KRAKEN_API, KRAKEN_CITATION, KRAKEN_PAIRS, readKrakenOhlc, readKrakenTicker } from "../core/kraken";
+import { CRYPTO_COINS, CRYPTO_CREDIT, CRYPTO_DATA_URL, readCryptoFile, type CryptoFile, type CryptoSource } from "../data/crypto";
 import { LEARN_PATH, learnTerms } from "../core/learn";
 import { readNewsFile, type NewsItem } from "../core/news";
 import { CHART_APP_HTML, CHART_APP_URI, MCP_APP_MIME } from "./chart-app";
@@ -94,7 +95,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "asset_details",
     title: "What an asset is",
-    description: "Everything ATLAS Explain shows about one asset: what it is, where and when it trades, its latest official figure or live price (with source and time), or why no price is shown. Covers crypto, US stocks and ETFs, currencies, interest rates, energy, indices, futures and options.",
+    description: "Everything ATLAS Explain shows about one asset: what it is, where and when it trades, its latest official figure or price (with source and time), or why no price is shown. Covers crypto, US stocks and ETFs, currencies, interest rates, energy, indices, futures and options.",
     inputSchema: { type: "object", properties: { asset: str("Name or symbol, for example 'Bitcoin', 'AAPL', 'EUR/USD', '10-year', 'S&P 500'.") }, required: ["asset"], additionalProperties: false },
     annotations: annotations("What an asset is", true),
     icons: ICONS,
@@ -111,17 +112,17 @@ export const TOOLS: readonly Tool[] = [
   },
   {
     name: "crypto_prices",
-    title: "Live crypto prices",
-    description: "Live prices for the ten major coins ATLAS Explain follows (Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink, Avalanche), with the change over the last 24 hours, biggest moves first. From CoinGecko's public API.",
+    title: "Crypto prices",
+    description: "Recent prices for the ten major coins ATLAS Explain follows (Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink, Avalanche), biggest moves first. Collected hourly by ATLAS Explain's data job from Kraken's public market data (CoinGecko as backup) and served from ATLAS Explain's own data site; each answer says when they were collected.",
     inputSchema: { type: "object", properties: { coin: str("Optional coin name or symbol, for example 'BTC' or 'Ethereum'.") }, additionalProperties: false },
-    annotations: annotations("Live crypto prices", true),
+    annotations: annotations("Crypto prices", true),
     icons: ICONS,
     outputSchema: obj({ source: { type: "string" }, coins: { type: "array", items: { type: "object", properties: { name: { type: "string" }, symbol: { type: "string" }, priceUsd: { type: "number" }, changePct: nullable("number"), changeWindow: { type: "string" }, asOf: nullable("string") }, required: ["name", "symbol", "priceUsd"] } } }, ["source", "coins"]),
   },
   {
     name: "price_history",
     title: "Crypto price history",
-    description: "How a coin's price moved over the last 24 hours, 7 days or 30 days: start, end, change, high and low with their times. From CoinGecko's public API. Describes the past only; never a forecast.",
+    description: "How a coin's price moved over the last 24 hours, 7 days or 30 days: start, end, change, high and low with their times, from the hourly closes on ATLAS Explain's own data site (refreshed hourly). Describes the past only; never a forecast.",
     inputSchema: {
       type: "object",
       properties: { coin: str("Coin name or symbol, for example 'BTC'."), range: { type: "string", enum: ["24h", "7d", "30d"], description: "Time range. Default 7d." } },
@@ -159,7 +160,7 @@ export const PROMPTS = [
     title: "Explain an asset",
     description: "What an asset is, its latest figures or price, how it moved recently, and the terms to know.",
     arguments: [{ name: "asset", description: "Name or symbol, for example 'Bitcoin', 'AAPL' or 'EUR/USD'.", required: true }],
-    text: (a: Record<string, string>) => `Using ATLAS Explain, explain ${a.asset || "this asset"} to a beginner: what it is and where it trades (asset_details), its latest official figures or live price, and, if it is a coin, how it moved over the last 7 days (price_history). Define any market term with explain_term. Show both sides where it matters and don't suggest any trade.`,
+    text: (a: Record<string, string>) => `Using ATLAS Explain, explain ${a.asset || "this asset"} to a beginner: what it is and where it trades (asset_details), its latest official figures or price, and, if it is a coin, how it moved over the last 7 days (price_history). Define any market term with explain_term. Show both sides where it matters and don't suggest any trade.`,
   },
   {
     name: "learn_next",
@@ -277,55 +278,52 @@ export async function officialFigures(query: string | undefined, fetcher: Fetche
 
 const coinFor = (key: string) => {
   const k = key.trim().toLowerCase();
-  return COINGECKO_COINS.find((c) => c.symbol.toLowerCase() === k || c.name.toLowerCase() === k || c.id === k);
+  return CRYPTO_COINS.find((c) => c.symbol.toLowerCase() === k || c.name.toLowerCase() === k || c.coingeckoId === k);
 };
+const COIN_NAMES = CRYPTO_COINS.map((c) => c.name).join(", ");
+/** Older than this, an answer says plainly that the hourly refresh hasn't run since. */
+export const CRYPTO_STALE_MS = 3 * 3_600_000;
 
-type LiveCrypto = { rows: { name: string; symbol: string; price: number; changePct: number | null; window: string; asOf: string | null }[]; citation: string };
-
-/**
- * Live prices for the ten coins: CoinGecko first, then Kraken's public API. CoinGecko's keyless
- * API often rate-limits shared cloud addresses (Cloudflare Workers among them); Kraken doesn't
- * need a key either. Each answer names the source it actually used and that source's own window.
- */
-async function liveCrypto(fetcher: Fetcher, now: number): Promise<LiveCrypto | null> {
-  const toRows = (view: { assets: { name: string; symbol: string; quote: { price: number | null; changePct: number | null; changeWindow: string; asOf: string | null } }[] }) =>
-    view.assets.flatMap((a) => (a.quote.price == null ? [] : [{ name: a.name, symbol: a.symbol, price: a.quote.price, changePct: a.quote.changePct, window: a.quote.changeWindow, asOf: a.quote.asOf }]));
-  const ids = COINGECKO_COINS.map((c) => c.id).join(",");
-  const url = `${COINGECKO_API}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=${COINGECKO_COINS.length}&page=1&sparkline=false&price_change_percentage=24h`;
-  try {
-    const view = readCoinGeckoMarkets(await getCoinGeckoJson(url, fetcher as unknown as WebFetcher, 10_000), now);
-    if (view) return { rows: toRows(view), citation: COINGECKO_CITATION };
-  } catch (error) {
-    // Logged for the operator (wrangler tail); Kraken is tried next.
-    console.error("coingecko markets:", error instanceof Error ? error.message : String(error));
-  }
-  const body = await getJson(`${KRAKEN_API}/Ticker?pair=${KRAKEN_PAIRS.map((k) => k.pair).join(",")}`, fetcher);
-  const view = body == null ? null : readKrakenTicker(body, now);
-  return view ? { rows: toRows(view), citation: KRAKEN_CITATION } : null;
+async function loadCrypto(fetcher: Fetcher): Promise<CryptoFile | null> {
+  const body = await getJson(CRYPTO_DATA_URL, fetcher);
+  return body == null ? null : readCryptoFile(body);
 }
+
+/** When and where the prices came from, and how old they are if the refresh has stopped. */
+function cryptoCredit(source: CryptoSource, asOf: string, now: number): string {
+  const age = now - Date.parse(asOf);
+  const hours = Math.round(age / 3_600_000);
+  const old = age > CRYPTO_STALE_MS ? ` These are ${hours >= 48 ? `${Math.round(hours / 24)} days` : `${hours} hours`} old: the hourly refresh hasn't run since.` : "";
+  return `Collected ${utc(asOf)} by ATLAS Explain's data job and served from its own data site. ${CRYPTO_CREDIT[source]}${old}`;
+}
+
+/** The app's crypto intro says its prices are live; the connector's are hourly, so it says only this. */
+const CRYPTO_ABOUT = "Cryptocurrencies trade around the clock, every day, on many exchanges at once.";
+const NO_CRYPTO = "ATLAS Explain's crypto data couldn't be loaded right now. Nothing is shown in its place; try again in a few minutes.";
 
 export async function assetDetails(key: string, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
   const q = key.trim();
   if (!q) return text("Give an asset name or symbol, for example 'Bitcoin' or 'AAPL'.", true);
   const coin = coinFor(q);
   if (coin) {
-    const live = await liveCrypto(fetcher, now);
-    const row = live?.rows.find((a) => a.symbol === coin.symbol);
-    const price = row && live
-      ? `Price: ${formatPrice(row.price)}, ${formatChange(row.changePct).text} ${row.window}, as of ${utc(row.asOf)}. ${live.citation}`
-      : "No live price right now: neither CoinGecko nor Kraken answered. Nothing is shown in its place.";
-    return data(`${coin.name} (${coin.symbol}), a cryptocurrency.\n${CLASS_INFO.crypto.intro}\n${price}\nIn the app: ${APP_URL}/assets/${coin.symbol}`, {
+    const file = await loadCrypto(fetcher);
+    const row = file?.prices.coins.find((a) => a.symbol === coin.symbol);
+    const credit = file ? cryptoCredit(file.prices.source, file.prices.asOf, now) : null;
+    const price = row && file
+      ? `Price: ${formatPrice(row.priceUsd)}, ${formatChange(row.changePct).text} ${row.changeWindow}. ${credit}`
+      : `No price right now. ${NO_CRYPTO}`;
+    return data(`${coin.name} (${coin.symbol}), a cryptocurrency.\n${CRYPTO_ABOUT}\n${price}\nIn the app: ${APP_URL}/assets/${coin.symbol}`, {
       found: true,
       name: coin.name,
       symbol: coin.symbol,
       assetClass: "crypto",
-      about: CLASS_INFO.crypto.intro,
+      about: CRYPTO_ABOUT,
       tradingHours: "24/7",
-      priceUsd: row?.price ?? null,
+      priceUsd: row?.priceUsd ?? null,
       changePct: row?.changePct ?? null,
-      changeWindow: row?.window ?? null,
-      asOf: row?.asOf ?? null,
-      source: row && live ? live.citation : null,
+      changeWindow: row?.changeWindow ?? null,
+      asOf: row && file ? file.prices.asOf : null,
+      source: row && credit ? credit : null,
       appUrl: `${APP_URL}/assets/${coin.symbol}`,
     });
   }
@@ -355,50 +353,43 @@ export async function assetDetails(key: string, fetcher: Fetcher, now = Date.now
   });
 }
 
-/* ---------- live crypto ---------- */
+/* ---------- crypto (from ATLAS Explain's own data site) ---------- */
 
 export async function cryptoPrices(coinKey: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
-  const live = await liveCrypto(fetcher, now);
-  if (!live) return text("Live crypto prices couldn't be loaded: neither CoinGecko nor Kraken answered. Try again in a minute.", true);
+  const file = await loadCrypto(fetcher);
+  if (!file) return text(NO_CRYPTO, true);
   const want = coinKey?.trim() ? coinFor(coinKey) : undefined;
-  if (coinKey?.trim() && !want) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COINGECKO_COINS.map((c) => c.name).join(", ")}.`, true);
-  const rows = live.rows
+  if (coinKey?.trim() && !want) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COIN_NAMES}.`, true);
+  const credit = cryptoCredit(file.prices.source, file.prices.asOf, now);
+  const rows = file.prices.coins
     .filter((a) => !want || a.symbol === want.symbol)
     .sort((a, b) => Math.abs(b.changePct ?? 0) - Math.abs(a.changePct ?? 0));
-  const lines = rows.map((a) => `${a.name} (${a.symbol}): ${formatPrice(a.price)}, ${formatChange(a.changePct).text} ${a.window} (as of ${utc(a.asOf)})`);
-  return data(`${want ? "" : "Biggest moves first.\n"}${lines.join("\n")}\n\n${live.citation}`, {
-    source: live.citation,
-    coins: rows.map((a) => ({ name: a.name, symbol: a.symbol, priceUsd: a.price, changePct: a.changePct, changeWindow: a.window, asOf: a.asOf })),
+  const lines = rows.map((a) => `${a.name} (${a.symbol}): ${formatPrice(a.priceUsd)}, ${formatChange(a.changePct).text} ${a.changeWindow}`);
+  return data(`${want ? "" : "Biggest moves first.\n"}${lines.join("\n")}\n\n${credit}`, {
+    source: credit,
+    coins: rows.map((a) => ({ name: a.name, symbol: a.symbol, priceUsd: a.priceUsd, changePct: a.changePct, changeWindow: a.changeWindow, asOf: file.prices.asOf })),
   });
 }
 
-/** Kraken OHLC intervals (minutes) that cover each range within its 720-bar limit. */
 const RANGES = {
-  "24h": { days: 1, label: "the last 24 hours", krakenInterval: 15 },
-  "7d": { days: 7, label: "the last 7 days", krakenInterval: 60 },
-  "30d": { days: 30, label: "the last 30 days", krakenInterval: 240 },
+  "24h": { days: 1, label: "the last 24 hours" },
+  "7d": { days: 7, label: "the last 7 days" },
+  "30d": { days: 30, label: "the last 30 days" },
 } as const;
 
-export async function priceHistory(coinKey: string, range: string | undefined, fetcher: Fetcher): Promise<ToolResult> {
+export async function priceHistory(coinKey: string, range: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
   const rangeId = (range && range in RANGES ? range : "7d") as keyof typeof RANGES;
   const coin = coinFor(coinKey);
-  if (!coin) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COINGECKO_COINS.map((c) => c.name).join(", ")}. Price history is only available for these.`, true);
+  if (!coin) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COIN_NAMES}. Price history is only available for these.`, true);
   const r = RANGES[rangeId];
-  let points: { t: string; c: number }[] = [];
-  let citation = COINGECKO_CITATION;
-  try {
-    points = await loadCoinGeckoChart(coin.id, fetcher as unknown as WebFetcher, 10_000, undefined, r.days);
-  } catch (error) {
-    console.error("coingecko chart:", error instanceof Error ? error.message : String(error));
-  }
-  if (points.length < 2) {
-    const pair = KRAKEN_PAIRS.find((k) => k.symbol === coin.symbol);
-    const body = pair ? await getJson(`${KRAKEN_API}/OHLC?pair=${pair.pair}&interval=${r.krakenInterval}`, fetcher) : null;
-    const since = Date.now() - r.days * 86_400_000;
-    points = thinEvenly(body == null ? [] : readKrakenOhlc(body, 720).filter((p) => Date.parse(p.t) >= since), 120);
-    citation = KRAKEN_CITATION;
-  }
-  if (points.length < 2) return text(`${coin.name}'s price history couldn't be loaded right now: neither CoinGecko nor Kraken answered. Try again in a minute.`, true);
+  const file = await loadCrypto(fetcher);
+  if (!file) return text(NO_CRYPTO, true);
+  const series = file.history.series[coin.symbol] ?? [];
+  // The range ends at the latest hourly close, so it means the same thing even if the refresh is late.
+  const end = series.length ? series[series.length - 1]![0] : 0;
+  const points = thinEvenly(series.filter(([t]) => t >= end - r.days * 86_400), 120).map(([t, c]) => ({ t: new Date(t * 1000).toISOString(), c }));
+  if (points.length < 2) return text(`ATLAS Explain's data site has no recent hourly prices for ${coin.name} right now, so its history isn't shown.`, true);
+  const citation = cryptoCredit(file.history.source, file.history.asOf, now);
   const first = points[0]!;
   const last = points[points.length - 1]!;
   const hi = points.reduce((m, p) => (p.c > m.c ? p : m));
@@ -475,7 +466,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false } },
         serverInfo: { name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: "https://atlas-explain.web.app", icons: ICONS },
         instructions:
-          "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for live crypto prices and past moves; todays_headlines for recent news. Every result names its source and time. Education only: never present results as trade advice or a forecast.",
+          "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed hourly) and past moves; todays_headlines for recent news. Every result names its source and time. Education only: never present results as trade advice or a forecast.",
       });
     }
     case "ping":

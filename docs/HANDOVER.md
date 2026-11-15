@@ -75,7 +75,7 @@ ATLAS Explain is a Chrome extension (MV3), a website and web app, and a hosted M
   - US Treasury, ECB, Bank of Canada, EIA (optional free key)
   - SEC EDGAR (stocks and ETFs from filings)
   - GDELT ("in the news today")
-- An hourly GitHub Actions job (`.github/workflows/market-data.yml`, `scripts/data/build-data.ts`) publishes `market.json` and `news.json` to the data site. Owner secrets: `FIREBASE_SERVICE_ACCOUNT`, `EIA_API_KEY` (optional), `SEC_USER_AGENT`.
+- An hourly GitHub Actions job (`.github/workflows/market-data.yml`, `scripts/data/build-data.ts`) publishes `market.json`, `news.json` and `crypto.json` (prices and 30 days of hourly closes for the ten coins, from Kraken with CoinGecko as backup; the MCP connector reads crypto only from here, so it calls no third-party API itself) to the data site. Owner secrets: `FIREBASE_SERVICE_ACCOUNT`, `EIA_API_KEY` (optional), `SEC_USER_AGENT`.
 - Index, futures and options pages are education only, with no licensed index levels.
 - Watchlist (max 50; on the device or synced). Real coin icons from CoinGecko. Logo.dev company logos only if the owner adds a `pk_` token. No government or exchange logos.
 - Paid feeds are listed only in a "later, if revenue allows" appendix. **Get the owner's OK before adding any provider that needs a paid plan.**

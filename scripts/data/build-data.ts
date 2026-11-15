@@ -10,6 +10,7 @@
  *   SEC_USER_AGENT   "Name contact@email" for SEC EDGAR's fair-access rule (kept as a secret so the email is not public)
  *   PREVIOUS_URL     the currently published market.json, reused for any source that fails this run
  *   SKIP_NEWS=1      skip the GDELT headlines step
+ *   SKIP_CRYPTO=1    skip the crypto prices step
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { validateAsset, type Asset } from "../../src/core/asset-schema.ts";
@@ -24,6 +25,19 @@ import {
   type MarketFile,
 } from "../../src/data/market-sources.ts";
 import { SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, readTickerMap, stockFromSec } from "../../src/data/sec.ts";
+import {
+  COINGECKO_PUBLIC_API,
+  CRYPTO_COINS,
+  CRYPTO_SCHEMA,
+  KRAKEN_PUBLIC_API,
+  parseCoinGeckoChart,
+  parseCoinGeckoMarkets,
+  parseKrakenOhlc,
+  parseKrakenTicker,
+  readCryptoFile,
+  type CryptoFile,
+  type CryptoSource,
+} from "../../src/data/crypto.ts";
 import { NEWS_GROUPS, NEWS_SCHEMA, NEWS_TARGETS, assignNews, gdeltUrl, isRateLimitNotice, parseGdelt, readNewsFile, type NewsFile, type NewsItem } from "../../src/core/news.ts";
 
 const TIMEOUT_MS = 30_000;
@@ -202,6 +216,70 @@ async function main(): Promise<void> {
   writeFileSync("data-out/index.html", "<!doctype html><title>ATLAS Explain data</title><p>Market data for ATLAS Explain. Sources and licences: https://atlas-explain.web.app/how-its-built</p>\n");
   console.log(`wrote ${unique.length} assets`);
   if (process.env.SKIP_NEWS !== "1") await buildNews();
+  if (process.env.SKIP_CRYPTO !== "1") await buildCrypto();
+}
+
+/** Kraken allows about one public call a second; CoinGecko's keyless API much less. */
+const KRAKEN_GAP_MS = 1_200;
+const COINGECKO_GAP_MS = 6_000;
+/** A coin's last published history is reused for up to two days if both sources fail for it. */
+const HISTORY_REUSE_MS = 2 * 86_400_000;
+
+/**
+ * Crypto prices and 30 days of hourly closes for the ten coins, published as data/v1/crypto.json on
+ * ATLAS Explain's own data site, so the MCP connector reads its own API rather than third parties.
+ * Kraken first, CoinGecko as the backup; a part that fails keeps its last published values with
+ * their own times. Nothing is filled in.
+ */
+async function buildCrypto(): Promise<void> {
+  const prevUrl = process.env.PREVIOUS_URL?.trim().replace(/market.json$/, "crypto.json");
+  let prev: CryptoFile | null = null;
+  if (prevUrl) {
+    try {
+      prev = readCryptoFile(JSON.parse(await text(prevUrl)));
+    } catch {
+      prev = null;
+    }
+  }
+  const at = new Date(now).toISOString();
+  const json = async (url: string): Promise<unknown> => JSON.parse(await textOnce(url, UA));
+
+  let prices: CryptoFile["prices"] | null = null;
+  const kraken = parseKrakenTicker(await json(`${KRAKEN_PUBLIC_API}/Ticker?pair=${CRYPTO_COINS.map((c) => c.krakenPair).join(",")}`).catch(() => null));
+  if (kraken.length >= CRYPTO_COINS.length / 2) prices = { source: "kraken", asOf: at, coins: kraken };
+  else {
+    const ids = CRYPTO_COINS.map((c) => c.coingeckoId).join(",");
+    const cg = parseCoinGeckoMarkets(await json(`${COINGECKO_PUBLIC_API}/coins/markets?vs_currency=usd&ids=${ids}&price_change_percentage=24h`).catch(() => null));
+    if (cg.length) prices = { source: "coingecko", asOf: at, coins: cg };
+  }
+  if (!prices && prev) {
+    prices = prev.prices;
+    console.log(`crypto prices: both sources failed; kept the last ones from ${prev.prices.asOf}`);
+  }
+  if (!prices) {
+    console.log("crypto prices: both sources failed and nothing was published before; crypto.json not written");
+    return;
+  }
+
+  const series: Record<string, [number, number][]> = {};
+  let source: CryptoSource = "kraken";
+  for (const coin of CRYPTO_COINS) {
+    await sleep(KRAKEN_GAP_MS);
+    let rows = parseKrakenOhlc(await json(`${KRAKEN_PUBLIC_API}/OHLC?pair=${coin.krakenPair}&interval=60`).catch(() => null));
+    if (rows.length < 2) {
+      await sleep(COINGECKO_GAP_MS);
+      rows = parseCoinGeckoChart(await json(`${COINGECKO_PUBLIC_API}/coins/${coin.coingeckoId}/market_chart?vs_currency=usd&days=30`).catch(() => null));
+      if (rows.length >= 2) source = "coingecko";
+    }
+    if (rows.length < 2 && prev?.history.series[coin.symbol] && now - Date.parse(prev.history.asOf) < HISTORY_REUSE_MS) rows = prev.history.series[coin.symbol]!;
+    // Keep 30 days of hourly closes.
+    const since = now / 1000 - 30 * 86_400;
+    const kept = rows.filter(([t]) => t >= since);
+    if (kept.length >= 2) series[coin.symbol] = kept;
+  }
+  const file: CryptoFile = { schema: CRYPTO_SCHEMA, generatedAt: at, prices, history: { source, asOf: at, interval: "1h", series } };
+  writeFileSync("data-out/data/v1/crypto.json", JSON.stringify(file));
+  console.log(`crypto: ${prices.coins.length} prices (${prices.source}), history for ${Object.keys(series).length} coins (${source})`);
 }
 
 /** GDELT asks for at most one request every 5 seconds. */
@@ -254,7 +332,9 @@ async function buildNews(): Promise<void> {
   console.log(`news: ${answered}/${NEWS_GROUPS.length} queries answered, ${all.length} headlines, ${Object.keys(fresh).length} assets matched`);
 }
 
-main().catch((error: unknown) => {
+// Exit explicitly once everything is written: open keep-alive connections to the price sources
+// can otherwise keep Node running until the Actions job times out.
+main().then(() => process.exit(0)).catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });

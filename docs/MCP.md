@@ -8,10 +8,10 @@ ATLAS Explain has a small, read-only [Model Context Protocol](https://modelconte
 |---|---|
 | `explain_term` | The plain-language glossary entry for a market term, such as "stop-limit order", "bid-ask spread" or "yield curve". |
 | `browse_glossary` | The learning path in order (topics and their terms), or every term in one glossary group. |
-| `asset_details` | What one asset is: its market, trading hours, latest official figure or live price with source and time, or why no price is shown, plus related terms and its page in the app. |
+| `asset_details` | What one asset is: its market, trading hours, latest official figure or price with source and time, or why no price is shown, plus related terms and its page in the app. |
 | `official_figures` | Official figures from free government and regulator sources: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and the latest SEC-filed figures (revenue, net income, earnings per share, shares outstanding) for about 30 large US companies and ETFs. Each with its source and date. |
-| `crypto_prices` | Live prices for the ten major coins, biggest moves first. From CoinGecko, or Kraken's public API when CoinGecko is busy; each answer names the source it used and that source's change window. |
-| `price_history` | A coin's start, end, change, high and low over 24 hours, 7 days or 30 days. Past moves only, never a forecast. Same two sources. |
+| `crypto_prices` | Prices for the ten major coins, biggest moves first, from `crypto.json` on ATLAS Explain's own data site (refreshed hourly by the data job from Kraken, CoinGecko as backup). Each answer says when they were collected, and how old they are if the refresh has stopped. |
+| `price_history` | A coin's start, end, change, high and low over 24 hours, 7 days or 30 days, from the same file's 30 days of hourly closes. Past moves only, never a forecast. |
 | `todays_headlines` | Recent market headlines from the GDELT Project, each with its publisher, link and time. Headlines older than 36 hours are never returned. |
 
 Every answer names its source and ends with: "Educational information, not investment advice."
@@ -46,7 +46,7 @@ It only reads its built-in glossary and two public files on `atlas-explain-data.
 - **Where:** Cloudflare Workers, free plan: 100,000 requests a day with no card. Over the limit, requests fail for the rest of the day; nothing is ever charged. Firebase can't host it, because the Spark plan has no servers.
 - **Transport:** MCP "Streamable HTTP", stateless. Each `POST /mcp` carries one JSON-RPC message and gets one JSON answer; notifications get `202`. `GET /mcp` is `405` (no server stream). `GET /` is a short plain-text description. CORS is open, because the data is public and read-only. It supports protocol versions 2025-06-18, 2025-03-26 and 2024-11-05.
 - **Caching:** the two data files are cached at Cloudflare's edge for 5 minutes and crypto prices for 1 minute, so heavy use doesn't hit the sources.
-- **Crypto sources:** CoinGecko's keyless API usually answers Cloudflare Workers with 429 (rate-limited shared addresses), so the server falls back to Kraken's public API (`src/core/kraken.ts`, no key). A free CoinGecko Demo key would make CoinGecko the usual source; that would be an owner step (`wrangler secret put`), and isn't needed.
+- **Own API only:** the server reads nothing but ATLAS Explain's own data site (`market.json`, `news.json`, `crypto.json`); its fetch (`src/mcp/worker.ts`, `ownDataFetch`) refuses any other origin, and a test checks it. The data job (`scripts/data/build-data.ts`) collects crypto prices and 30 days of hourly closes from Kraken (CoinGecko as backup) into `crypto.json`; `src/data/crypto.ts` is the one coin list, the source parsers and the file reader. While GitHub Actions is locked, refresh it by hand (see the handover). This is why the directory's "API ownership" answer is "We own the API".
 - **Code:**
   - `src/mcp/server.ts`: the tools and the JSON-RPC handler. They reuse the app's glossary, catalog and headline readers, so the freshness and source rules are the same.
   - `src/mcp/http.ts`: the HTTP transport.

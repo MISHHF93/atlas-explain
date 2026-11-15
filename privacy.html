@@ -55,7 +55,7 @@
 
         <h2 id="connector">If you use the AI-assistant connector</h2>
         <p>The ATLAS Explain connector (atlas-explain-mcp.atlas-explain.workers.dev) is read-only and needs no account. It receives only what your assistant sends to one of its tools: a term, an asset or coin name, a time range or a learning topic. It never receives your conversation, your assistant account or anything on your computer, and it stores none of the requests it answers.</p>
-        <p>It runs on Cloudflare Workers, which processes each request for us as a service provider and may keep short operational logs, such as IP address and time, to run and protect the service. To answer, the connector itself fetches public data from CoinGecko, Kraken and our data site; your IP address is not passed on to them. Your chat with the assistant is covered by your assistant provider's own privacy policy.</p>
+        <p>It runs on Cloudflare Workers, which processes each request for us as a service provider and may keep short operational logs, such as IP address and time, to run and protect the service. To answer, the connector reads only our own data site (atlas-explain-data.web.app), which our scheduled data job fills from public sources, including crypto prices from Kraken and CoinGecko. Your IP address is never passed on to any of them. Your chat with the assistant is covered by your assistant provider's own privacy policy.</p>
 
         <h2 id="analytics">Cookies, storage and analytics</h2>
         <p>ATLAS Explain stores a few items in your browser to work: your theme, history, watchlist, recently viewed assets, and whether you've seen the welcome steps. Firebase stores sign-in information so you stay signed in.</p>
