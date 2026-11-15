@@ -5,12 +5,12 @@ import { sparkSvg } from "../src/core/assets";
 
 describe("one sparkline for every chart", () => {
   it("draws line, area and latest-price dot from numbers only, and nothing for fewer than two prices", () => {
-    const svg = sparkSvg([{ t: 1, c: 10 }, { t: 2, c: 12 }, { t: 3, c: 11 }]);
+    const svg = sparkSvg([{ t: "2026-11-15T00:00:00Z", c: 10 }, { t: "2026-11-15T01:00:00Z", c: 12 }, { t: "2026-11-15T02:00:00Z", c: 11 }]);
     expect(svg).toContain('class="spark-line"');
     expect(svg).toContain('class="spark-area"');
     expect(svg).toContain('class="spark-end"');
     expect(svg).not.toMatch(/NaN|undefined/);
-    expect(sparkSvg([{ t: 1, c: 10 }])).toBe("");
+    expect(sparkSvg([{ t: "2026-11-15T00:00:00Z", c: 10 }])).toBe("");
     for (const f of ["src/wallet/assets.ts", "src/wallet/catalog-view.ts"]) {
       expect(readFileSync(f, "utf8"), f).toContain("sparkSvg(");
       expect(readFileSync(f, "utf8"), f).not.toContain("<svg viewBox");
