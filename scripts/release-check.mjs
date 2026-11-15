@@ -30,6 +30,7 @@ const steps = [
   ["test", "npm", ["test"]],
   ["build (web)", "npm", ["run", "build"]],
   ["build:extension", "npm", ["run", "build:extension"]],
+  ["build:mcp", "npm", ["run", "build:mcp"]],
   ["manifest least-privilege", "node", ["scripts/check-manifest.mjs"]],
   ["bundle budget", "node", ["scripts/bundle-budget.mjs"]],
   ["npm audit", "npm", ["audit", "--audit-level=low"]],
