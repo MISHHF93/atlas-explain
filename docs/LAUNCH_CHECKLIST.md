@@ -48,7 +48,7 @@ Education only: no buy/sell wording, never reads balances or account details.
 - [ ] **Analytics (optional)**: link Google Analytics to the Firebase project, set data retention to 2 months, then set Remote Config `analytics_enabled` = `true`. The web app then asks each visitor once; nothing loads before that.
 - [ ] **Legal**: add the operator's legal name and a privacy/support email to `/privacy` and `/terms`, then go through docs/legal/REVIEW_NOTES.md with a lawyer.
 - [ ] **Chrome Web Store**: developer account (US$5), listing, screenshots retaken after these PRs, and set `CHROME_STORE_URL` in `src/core/links.ts` once the listing is live.
-- [ ] **Hosted MCP server** (free Cloudflare account, no card): `npx wrangler@4 login`, `npm run deploy:mcp`, then set `MCP_URL` in `src/core/links.ts` (`docs/MCP.md`).
+- [x] **Hosted MCP server** (live 15 Nov 2026 at https://atlas-explain-mcp.atlas-explain.workers.dev/mcp) (free Cloudflare account, no card): `npx wrangler@4 login`, `npm run deploy:mcp`, then set `MCP_URL` in `src/core/links.ts` (`docs/MCP.md`).
 - [x] **Blaze plan**: decided against on 14 Nov 2026 (no card on file). Paid plans run without it; see `docs/MONETIZATION.md`.
 - [ ] **Gemini free tier and Europe**: decide how to handle the EEA, Switzerland and the UK, where the free tier may not be used for the cloud fallback (`docs/legal/REVIEW_NOTES.md` point 11).
 
