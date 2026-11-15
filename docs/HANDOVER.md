@@ -4,7 +4,7 @@ You are the lead engineer and product designer for ATLAS Explain. Pick up the pr
 
 ## The product
 
-ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explains market jargon in plain language. Gemini Nano runs on the device first; when that isn't available, Gemini answers in the cloud through Firebase AI Logic. The answer always says which one ran.
+ATLAS Explain is a Chrome extension (MV3), a website and web app, and a hosted MCP connector for AI assistants. It explains market jargon in plain language. **Owner decision, 15 Nov 2026: keep both the extension and the connector.** The connector is the main way to reach other tools (Claude, other assistants, and any trading platform's own AI that supports MCP); the extension stays because it is the #BuildHybridAI entry (Gemini Nano on the device) and explains highlights on any page. Both use the same shared code and data, so never fork one from the other. Gemini Nano runs on the device first; when that isn't available, Gemini answers in the cloud through Firebase AI Logic. The answer always says which one ran.
 
 - Repo: `MISHHF93/atlas-explain`. Local path: `C:\Users\borah\atlas-explain` (Windows).
 - Live site: https://atlas-explain.web.app. Data site: https://atlas-explain-data.web.app.
