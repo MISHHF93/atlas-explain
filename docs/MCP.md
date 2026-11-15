@@ -22,7 +22,7 @@ It only reads its built-in glossary and two public files on `atlas-explain-data.
 
 ## For people using it
 
-**Live address:** `https://atlas-explain-mcp.atlas-explain.workers.dev/mcp` (deployed 15 Nov 2026). The setup steps are on the website at https://atlas-explain.web.app/support#ai-assistants. In Claude: Settings, then Connectors, then Add custom connector, then paste the address.
+**Live address:** `https://atlas-explain-mcp.atlas-explain.workers.dev/mcp?v=2` (deployed 15 Nov 2026, and checked in Claude: the connector adds and `explain_term` answers in chat). The setup steps are on the website at https://atlas-explain.web.app/support#ai-assistants. In Claude: Settings, then Connectors, then Add custom connector, then paste the address.
 
 ## How it is hosted ($0)
 
@@ -35,6 +35,17 @@ It only reads its built-in glossary and two public files on `atlas-explain-data.
   - `src/mcp/worker.ts`: the Workers entry.
   - `wrangler.toml`: the deploy settings.
 - **Checks:** `npm run build:mcp` checks that it bundles for Workers with no Node APIs, and release:check runs it.
+
+## If Claude shows "Couldn't register with ATLAS Explain's sign-in service"
+
+The server has no sign-in. Claude first sends a plain request; if that fails, it falls back to an OAuth sign-in and shows this error. Seen twice on 15 Nov 2026:
+
+1. **Protocol version:** the server returned 400 for `MCP-Protocol-Version: 2025-11-25`, the current spec. Fixed: it accepts 2025-11-25 and any later well-formed version (`src/mcp/http.ts`). Keep this lenient.
+2. **Claude kept the old failure:** after the fix, Claude still failed for the plain `/mcp` address without sending a single request (`npx wrangler@4 tail atlas-explain-mcp` showed nothing). The same server under `/mcp?v=2` connected at once. The query is ignored by the server; it only gives Claude a fresh address. If this happens again, delete the connector in Claude and use `?v=3`, then update `MCP_URL`.
+
+Note: `wrangler tail` did not show Claude's requests even when the tool worked in chat, so an empty tail is not proof that nothing arrived. The test that counts is a chat answer with an `explain_term` tool step.
+
+Sources: [Claude connector troubleshooting](https://claude.com/docs/connectors/building/troubleshooting), [anthropics/claude-ai-mcp#457](https://github.com/anthropics/claude-ai-mcp/issues/457).
 
 ## Owner steps (once)
 

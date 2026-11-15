@@ -106,7 +106,7 @@ describe("hosted MCP over HTTP", () => {
 describe("online-only links", () => {
   it("shows coming-soon text until the owner sets each address, and never a dead link", () => {
     expect(CHROME_STORE_URL === null || CHROME_STORE_URL.startsWith("https://chromewebstore.google.com/")).toBe(true);
-    expect(MCP_URL === null || /^https:\/\/.+\/mcp$/.test(MCP_URL)).toBe(true);
+    expect(MCP_URL === null || /^https:\/\/[^/]+\/mcp(\?v=\d+)?$/.test(MCP_URL)).toBe(true);
     const support = readFileSync("support.html", "utf8");
     expect(support).toContain('id="ai-assistants"');
     expect(support).toMatch(/<div data-when-mcp hidden>[\s\S]*data-mcp-url/);
