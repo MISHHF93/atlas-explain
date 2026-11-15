@@ -49,6 +49,7 @@ import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } fro
 import type { TabDef } from "../wallet/shell";
 import { createWatchlist, localKeyValue } from "../core/watchlist";
 import { buildSettings } from "../wallet/settings";
+import { headlinesCard } from "../wallet/headlines";
 import { WEB_LEARN_KEY } from "../core/account-data";
 import { yourDataGroup } from "../wallet/your-data";
 import { tracker } from "../core/analytics";
@@ -367,11 +368,22 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const atlasBlock = el("div", "stack atlas-only");
   atlasBlock.hidden = true;
   atlasBlock.append(marketCard, brief.node, el("h2", "section-label", "Paper signal light"), signal.node);
+  // In the news: real headlines from the free GDELT feed, each one tap from a plain explanation.
+  let headlines: HTMLElement = headlinesCard({ kind: "loading" }, (title) => sendToExplain(title));
   shell.panels.today.append(
     todayHead,
     liveCard,
+    headlines,
     atlasBlock,
   );
+  void import("../core/catalog")
+    .then((mod) => mod.loadHeadlines())
+    .catch(() => ({ kind: "unavailable" as const }))
+    .then((view) => {
+      const next = headlinesCard(view, (title) => sendToExplain(title));
+      headlines.replaceWith(next);
+      headlines = next;
+    });
   // marketCard is replaced in place by refreshToday() whenever the catalog or brief changes.
 
   /* ---------- Assets tab ---------- */
@@ -440,6 +452,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     },
     announce: (text) => shell.announce(text),
     initialCount: 6,
+    onPractice: () => location.assign("/welcome#step-try"),
   }));
 
   /** Assets and Learn ask Explain the same way on both surfaces: go to Explain and answer now. */

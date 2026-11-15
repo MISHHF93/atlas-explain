@@ -92,7 +92,8 @@ ATLAS Explain is a Chrome extension (MV3) plus a website and web app. It explain
    - When the owner sends the store item id, add it to `ALLOWED_EXTENSION_IDS` in `src/bridge/protocol.ts` and to `frame-ancestors` in `firebase.json`, then redeploy.
    - When the listing is live, set `CHROME_STORE_URL` in `src/core/popup-copy.ts` and point every "Add to Chrome" button at it.
 5. **Optional:** replace the store screenshots that show the popup's built-in sample answer with a real on-device answer captured in the owner's own Chrome.
-6. **Hackathon:** before 30 Nov, re-check `docs/SUBMISSION.md` and `docs/DEMO.md` against the current app. The demo shortcuts are Alt+Shift+E to open the popup and Alt+Shift+X to explain the highlight.
+6. **Platform scan (`feat/platform-scan`, 15 Nov 2026):** Today shows GDELT headlines with "Explain" (they show an honest "nothing recent enough" note until the hourly data job runs again); Learn links to the practice page; crypto charts have 24H/7D/30D ranges and a price readout; spread, stop-limit and yield-curve terms have diagrams; and a read-only MCP server for AI assistants (`src/mcp/server.ts`, built by `npm run build:mcp` into `mcp/atlas-explain-mcp.mjs`, setup in `docs/MCP.md`). Publishing the MCP server to npm or an MCP directory would be an owner step.
+7. **Hackathon:** before 30 Nov, re-check `docs/SUBMISSION.md` and `docs/DEMO.md` against the current app. The demo shortcuts are Alt+Shift+E to open the popup and Alt+Shift+X to explain the highlight.
 
 ## Owner-only steps (list them, never attempt them)
 

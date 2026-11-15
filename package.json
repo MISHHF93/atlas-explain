@@ -11,6 +11,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:extension": "vite build --config vite.extension.config.ts && node scripts/zip-extension.mjs",
+    "build:mcp": "vite build --config vite.mcp.config.ts",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.extension.json --noEmit",
     "lint": "eslint .",

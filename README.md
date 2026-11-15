@@ -180,6 +180,10 @@ ATLAS Explain never reads balances, positions, or account ids. When it talks to 
 
 The desk can also open this app with a public move card (`#c=` / `#card=`) or a glossary concept (`#concept=`). Loading a card does not run the model until you click **Explain the move**.
 
+## For AI assistants (MCP)
+
+ATLAS Explain also ships a small, free, read-only MCP server, so assistants such as Claude Desktop and Claude Code can look up glossary terms, official figures (with sources) and today's headlines. It runs locally with `node mcp/atlas-explain-mcp.mjs` and needs no key. Setup steps: [docs/MCP.md](docs/MCP.md).
+
 ## Screenshots
 
 Stills live in [docs/screenshots/](docs/screenshots/). Six were retaken on 15 Nov 2026 from the live site and a local build; `local-header.png` (ATLAS was not running at the time) and `desk-explain-link.png` (a crop of the private desk) are older. They show honest header states, the desk hand-off, today's brief, the grey signal light, and the practice page. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).

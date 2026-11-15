@@ -152,7 +152,28 @@ export function mountAssets(options: {
     catalog?.refreshRecent();
     // Addresses use the slashless symbol (EURUSD), which the router accepts and findAsset resolves.
     options.onOpen?.(a.symbol.replace("/", ""));
+    // A chosen chart range sticks while the page is open; the live refresh then leaves the chart alone.
+    let chosenRange: number | null = null;
+    const feed = options.priceFeed ?? DEFAULT_PRICE_FEED;
+    const liveCrypto = a.class === "crypto" && last.kind === "ready" && isLivePriceSource(last.catalog.source);
+    const prices = liveCrypto ? await import("../core/price-provider") : null;
     const page = view.assetPage(a, {
+      ...(prices && prices.supportsChartRanges(feed)
+        ? {
+            chartRanges: {
+              ranges: prices.CHART_RANGES,
+              onRange: async (days: number) => {
+                const range = prices.CHART_RANGES.find((r) => r.days === days);
+                if (!range) return;
+                chosenRange = days;
+                const points = await prices.loadLiveChart(a.symbol, range.days, feed, options.fetcher);
+                if (openKey !== a.id || chosenRange !== days) return;
+                if (points.length >= 2) page.setSpark(points, `${range.caption}, from CoinGecko`);
+                page.markRange(days);
+              },
+            },
+          }
+        : {}),
       onExplain: (x) => {
         shell.closeSheet();
         options.onExplain(view.explainAssetPrompt(x));
@@ -179,7 +200,7 @@ export function mountAssets(options: {
       if (d) {
         const fresh = view.assetFromLiveRow(d, source);
         if (fresh) page.update(fresh);
-        page.setSpark(d.spark.points, sparkSpan(d.spark.points.length, d.spark.interval));
+        if (chosenRange === null) page.setSpark(d.spark.points, sparkSpan(d.spark.points.length, d.spark.interval));
       }
       window.clearTimeout(detailTimer);
       if (visible()) detailTimer = window.setTimeout(() => void tick(), POLL_CRYPTO_MS);

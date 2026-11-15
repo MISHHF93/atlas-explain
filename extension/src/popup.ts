@@ -207,6 +207,7 @@ async function ensureLearn(): Promise<void> {
     storedLearned,
     onAsk: askTerm,
     save: (ids) => void store.set({ [LEARN_KEY]: ids }),
+    onPractice: () => openUrl(`${EXPLAIN_WEB_URL}/welcome#step-try`),
     announce: (text) => shell.announce(text),
   });
 }
