@@ -11,6 +11,8 @@ export function historyCard(options: {
   /** Remove one entry. The row gets a small remove button when this is given. */
   onRemove?: (entry: HistoryEntry) => void;
   limit?: number;
+  /** Where Recent is kept, in one line. Defaults to this device only. */
+  note?: string;
 }): HTMLElement {
   const card = el("section", "card history");
   card.setAttribute("aria-label", "Recent explanations");
@@ -48,6 +50,6 @@ export function historyCard(options: {
     }
     list.append(item);
   }
-  card.append(list, el("p", "fine", "Stored on this device only. Never uploaded."));
+  card.append(list, el("p", "fine", options.note ?? "Stored on this device only. Never uploaded."));
   return card;
 }

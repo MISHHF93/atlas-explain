@@ -70,7 +70,7 @@ describe("popup Explain tab layout", () => {
 
   it("limits recent explanations to three", () => {
     expect(popup).toContain("limit: 3 },");
-    expect(web).toContain("limit: 8 },");
+    expect(web).toContain("limit: 8,");
   });
 
   it("styles with tokens and keeps fonts at 11px or more", () => {

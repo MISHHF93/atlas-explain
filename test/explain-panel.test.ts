@@ -40,7 +40,33 @@ describe("Explain is built once for both surfaces", () => {
   it("says where each answer ran, and always adds the education line", () => {
     expect(panel).toContain("Answered on your device with Gemini Nano. Nothing was sent.");
     expect(panel).toContain("Answered in the cloud with Gemini.");
-    expect(panel).toContain("notes: [...(outcome.notes ?? []), WHERE_IT_RAN[outcome.source], ...(carriesDisclaimer ? [] : [EXTENSION_DISCLAIMER])]");
+    expect(panel).toMatch(/\.\.\.\(outcome\.notes \?\? \[\]\),\s*WHERE_IT_RAN\[outcome\.source\],\s*\.\.\.\(carriesDisclaimer \? \[\] : \[EXTENSION_DISCLAIMER\]\)/);
+  });
+
+  it("shows a saved answer at once for a repeated question, says so, and offers Ask again", () => {
+    // Plain text first asks only: a follow-up, a page highlight or a market move is always asked fresh.
+    expect(panel).toContain("const saved = !followUp && !fromPage && !runOptions.fresh && ask === options.ask ? savedAnswer(text) : undefined;");
+    expect(panel).toContain("Date.now() - entry.at < SAVED_FOR_MS");
+    expect(panel).toContain("Nothing was sent. Ask again for a new one.");
+    expect(panel).toContain('{ label: "Ask again", run: () => void run({ subject, fresh: true }) }');
+  });
+
+  it("lets the reader stop waiting, and never shows a stopped answer late", () => {
+    expect(panel).toContain('labelledButton("close", "Stop", "secondary small")');
+    expect(panel).toContain("runId += 1;");
+    expect(panel).toContain("if (id !== runId) return;");
+  });
+
+  it("says it is reading a highlight only when there is one, and Recent says honestly where it is kept", () => {
+    expect(panel).toContain('[fromPage ? STEP_READ : "Reading your question", STEP_DEVICE, STEP_CLOUD]');
+    expect(app).toContain("Market-move answers are also saved to your account");
+  });
+
+  it("loads Gemini Nano when the popup opens, uses that session once, and never starts a download", () => {
+    const onDevice = readFileSync("extension/src/on-device.ts", "utf8");
+    expect(popup).toContain("void warmOnDevice();");
+    expect(onDevice).toContain("if (!shouldUseOnDevice(await model.availability())) return;");
+    expect(onDevice).toMatch(/const warm = spare;\s*spare = null;/);
   });
 
   it("keeps only the first ask in Recent, not each follow-up", () => {

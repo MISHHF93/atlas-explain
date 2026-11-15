@@ -24,9 +24,38 @@ export function shouldUseOnDevice(availability: string): boolean {
   return availability === "available" || availability === "readily";
 }
 
+const SESSION_OPTIONS = {
+  expectedInputs: [{ type: "text" as const, languages: ["en"] }],
+  expectedOutputs: [{ type: "text" as const, languages: ["en"] }],
+};
+
+/**
+ * One session made ahead of time, used once by the next question, then destroyed. Starting
+ * Gemini Nano when the popup opens (Chrome's guidance: create the session as soon as intent is
+ * clear) means the first answer does not wait for the model to load. A session keeps the context
+ * of earlier prompts, so it is never reused for a second question.
+ */
+let spare: Promise<PromptSession | null> | null = null;
+
+function languageModel(): LanguageModelGlobal | undefined {
+  return (globalThis as { LanguageModel?: LanguageModelGlobal }).LanguageModel;
+}
+
+/** Load Gemini Nano now if it is already on this computer. Never starts a download. */
+export async function warmOnDevice(): Promise<void> {
+  const model = languageModel();
+  if (!model || spare) return;
+  try {
+    if (!shouldUseOnDevice(await model.availability())) return;
+  } catch {
+    return;
+  }
+  spare = model.create(SESSION_OPTIONS).catch(() => null);
+}
+
 /** Chrome Prompt API (Gemini Nano). Returns null when the model is not ready right now. */
 export async function explainOnDevice(prompt: string, responseConstraint?: object): Promise<string | null> {
-  const model = (globalThis as { LanguageModel?: LanguageModelGlobal }).LanguageModel;
+  const model = languageModel();
   if (!model) return null;
   let availability: string;
   try {
@@ -37,10 +66,10 @@ export async function explainOnDevice(prompt: string, responseConstraint?: objec
   if (!shouldUseOnDevice(availability)) return null;
   let session: PromptSession | null = null;
   try {
-    session = await model.create({
-      expectedInputs: [{ type: "text", languages: ["en"] }],
-      expectedOutputs: [{ type: "text", languages: ["en"] }],
-    });
+    // Take the warmed-up session if there is one; otherwise make one now.
+    const warm = spare;
+    spare = null;
+    session = (warm ? await warm : null) ?? (await model.create(SESSION_OPTIONS));
     let text: string;
     try {
       // Structured output keeps Nano's answer in the two-sided shape; older Chrome ignores or rejects it.
