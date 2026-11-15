@@ -1,11 +1,6 @@
-import { initializeApp } from "firebase/app";
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
-import { getAuth, signInAnonymously } from "firebase/auth";
 import type { AccountView, SignInOutcome } from "../../core/account";
-import { fetchAndActivate, getRemoteConfig, getValue } from "firebase/remote-config";
 import {
   WatchlistAllowance,
-  allowCloudCall,
   billingSnapshot,
   resolveEntitlements,
   watchlistFits,
@@ -15,16 +10,16 @@ import {
 } from "../../core/billing";
 import { publicMoveCard } from "../../core/move-card";
 import { runExplanation } from "../../core/run-explanation";
-import { SETTINGS_FETCH_TIMEOUT_MS } from "../../core/timeouts";
-import { CloudRateLimited, localRateStore, peekCloudSlot, recordCloudCall } from "../../core/rate-limit";
+import { CloudRateLimited } from "../../core/rate-limit";
 import { CloudAllowanceUsed } from "../../core/billing";
 import { type PriceFeedOptions, priceFeedFromRemoteValues } from "../../core/price-feed";
-import { REMOTE_CONFIG_KEYS, parseRemoteSettings, remoteConfigDefaults } from "../../core/settings";
+import { parseRemoteSettings } from "../../core/settings";
 import type { AnalyticsSink } from "../../core/analytics";
 import type { AppSettings, ExplanationRun, InferenceSourceName, MoveCard } from "../../core/types";
-import { EXTENSION_SYSTEM, buildExtensionPrompt, toPageContext } from "../../core/extension-prompt";
+import { buildExtensionPrompt, toPageContext } from "../../core/extension-prompt";
 import { parseTwoSided, type TwoSided } from "../../core/two-sided";
 import type { PublicEnvConfig } from "./env";
+import { createExplainService, createUserId, readRemoteValues, startFirebase } from "./explain-service";
 import { lazyExplainer } from "./lazy";
 import type { WebStore } from "./store";
 
@@ -96,60 +91,20 @@ export interface WebBackend {
 }
 
 export function startWebBackend(env: PublicEnvConfig): WebBackend {
-  if (!env.firebaseOptions || !env.recaptchaEnterpriseSiteKey) {
-    throw new Error("Firebase config is incomplete.");
-  }
-
-  if (env.appCheckDebugToken != null) {
-    // Firebase reads this on `self` before App Check initializes.
-    // Dev builds set it; production builds leave it unset.
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = env.appCheckDebugToken;
-  }
-
-  const app = initializeApp(env.firebaseOptions);
-
-  // App Check is required before AI Logic, Firestore, and Remote Config calls.
-  initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider(env.recaptchaEnterpriseSiteKey),
-    isTokenAutoRefreshEnabled: true,
-  });
-
-  const auth = getAuth(app);
+  // One back end: Firebase, settings, limits and the model call live in explain-service.ts,
+  // which the Chrome extension's bridge page uses too.
+  const { app, auth, remoteConfig } = startFirebase(env, { minimumFetchIntervalMillis: import.meta.env.DEV ? 0 : 60_000 });
   let storePromise: Promise<WebStore> | null = null;
   const store = () => (storePromise ??= import("./store").then((mod) => mod.openStore(app)));
-  const remoteConfig = getRemoteConfig(app);
-  remoteConfig.settings.minimumFetchIntervalMillis = import.meta.env.DEV ? 0 : 60_000;
-  // A slow network must not hold the first explanation hostage; defaults stay active.
-  remoteConfig.settings.fetchTimeoutMillis = SETTINGS_FETCH_TIMEOUT_MS;
-  remoteConfig.defaultConfig = { ...remoteConfigDefaults() };
 
   const explainer = lazyExplainer(app);
-
   // Signed-out visitors get an anonymous id; a signed-in account is never replaced by one.
-  let anonymous: Promise<string | null> | null = null;
-  const currentUserId = async (): Promise<string | null> => {
-    await auth.authStateReady();
-    if (auth.currentUser) return auth.currentUser.uid;
-    anonymous ??= signInAnonymously(auth)
-      .then((credential) => credential.user.uid)
-      .catch(() => null)
-      .finally(() => {
-        anonymous = null;
-      });
-    return anonymous;
-  };
+  const currentUserId = createUserId(auth);
+  const service = createExplainService({ explainer, db: async () => (await store()).db, userId: currentUserId });
   const accountFlows = () => import("./account");
 
   const loadSettings = async () => {
-    try {
-      await fetchAndActivate(remoteConfig);
-    } catch {
-      // In-app defaults remain active when Remote Config cannot be fetched.
-    }
-    const values: Record<string, string> = {};
-    for (const key of REMOTE_CONFIG_KEYS) {
-      values[key] = getValue(remoteConfig, key).asString();
-    }
+    const values = await readRemoteValues(remoteConfig);
     const parsed = parseRemoteSettings(values);
     return { ...parsed, priceFeed: priceFeedFromRemoteValues(values) };
   };
@@ -269,57 +224,42 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const context = toPageContext({ selection: text, title: "ATLAS Explain web app", url: window.location.origin });
       if (!context.selection) throw new Error("Paste or type something to explain first.");
       const built = buildExtensionPrompt({ context, question });
-      const uid = await currentUserId();
-      const plan = await loadPlan(settings, uid);
-      const cloudCallsToday = uid && settings.billingEnabled ? await store().then((s) => s.cloudCallsToday(uid)).catch(() => 0) : 0;
-      const allowByPlan = allowCloudCall({ billingEnabled: settings.billingEnabled, plan, freeCloudDailyLimit: settings.freeCloudDailyLimit, proCloudDailyLimit: settings.proCloudDailyLimit, cloudCallsToday });
-      const rate = peekCloudSlot(localRateStore());
-      const cloudBlocked = !(allowByPlan && rate.ok);
-      const mode = cloudBlocked ? "only_on_device" : settings.inferenceMode;
+      const gate = await service.cloudGate(settings);
+      // With the cloud off limits, only the device is tried, so a limit can never spend a cloud call.
+      const mode = gate.allowed ? settings.inferenceMode : "only_on_device";
       hooks?.onProgress?.(mode === "only_in_cloud" ? "Asking the cloud…" : "Trying your device first…");
       let result;
       try {
-        result = await explainer.explain(
-          {
-            mode,
-            prompt: built.prompt,
-            cloudModel: settings.cloudModel,
-            maxOutputTokens: settings.maxOutputTokens,
-            topics: settings.topics.map((topic) => topic.id),
-            systemInstruction: EXTENSION_SYSTEM,
-            shape: "two_sided",
-          },
-          {
+        result = await service.answerText(settings, {
+          prompt: built.prompt,
+          mode,
+          gate,
+          hooks: {
             onDeviceDownloadProgress(ratio) {
               hooks?.onProgress?.(`Downloading the on-device model… ${Math.round(ratio * 100)}%`);
             },
           },
-        );
+        });
       } catch (error) {
-        if (cloudBlocked && !rate.ok) throw new CloudRateLimited(rate.reason);
-        if (cloudBlocked) throw new CloudAllowanceUsed();
+        if (!gate.allowed && gate.allowByPlan) throw new CloudRateLimited(service.blockedMessage(gate));
+        if (!gate.allowed) throw new CloudAllowanceUsed();
         throw error;
-      }
-      if (result.inferenceSource === "in_cloud") {
-        recordCloudCall(localRateStore());
-        if (uid && settings.billingEnabled) await (await store()).addCloudCall(uid).catch(() => undefined);
       }
       return {
         answer: parseTwoSided(result.rawText),
         plain: result.rawText.trim(),
         inferenceSource: result.inferenceSource,
         cloudModel: settings.cloudModel,
-        cloudBlocked,
+        cloudBlocked: !gate.allowed,
         refusedRecommendation: built.refusedRecommendation,
       };
     },
     async explain(card, question, hooks) {
       const { settings } = await loadSettings();
-      const uid = await currentUserId();
-      const plan = await loadPlan(settings, uid);
+      const gate = await service.cloudGate(settings);
       const entitlements = resolveEntitlements({
         billingEnabled: settings.billingEnabled,
-        plan,
+        plan: gate.plan,
         freeCloudDailyLimit: settings.freeCloudDailyLimit,
         proCloudDailyLimit: settings.proCloudDailyLimit,
       });
@@ -327,18 +267,6 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
         const limit = entitlements.watchlistSize;
         throw new WatchlistAllowance(typeof limit === "number" ? limit : 0);
       }
-      const cloudCallsToday = uid ? await store().then((s) => s.cloudCallsToday(uid)).catch(() => 0) : 0;
-      const rate = peekCloudSlot(localRateStore());
-      const allowByPlan = uid
-        ? allowCloudCall({
-            billingEnabled: settings.billingEnabled,
-            plan,
-            freeCloudDailyLimit: settings.freeCloudDailyLimit,
-            proCloudDailyLimit: settings.proCloudDailyLimit,
-            cloudCallsToday,
-          })
-        : !settings.billingEnabled;
-      const allowCloud = allowByPlan && rate.ok;
       hooks?.onProgress?.("Working on it…");
       try {
         return await runExplanation({
@@ -347,11 +275,8 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
           settings,
           explainer,
           meter: {
-            allowCloud,
-            onCloudInference: async () => {
-              recordCloudCall(localRateStore());
-              if (uid) await (await store()).addCloudCall(uid);
-            },
+            allowCloud: gate.allowed,
+            onCloudInference: () => service.recordCloudAnswer(settings, gate),
           },
           hooks: {
             onDeviceDownloadProgress(ratio) {
@@ -362,7 +287,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
         });
       } catch (error) {
         // A blocked cloud path caused by the browser safety limit gets its own message, not the plan one.
-        if (error instanceof CloudAllowanceUsed && allowByPlan && !rate.ok) throw new CloudRateLimited(rate.reason);
+        if (error instanceof CloudAllowanceUsed && !gate.allowed && gate.allowByPlan) throw new CloudRateLimited(service.blockedMessage(gate));
         throw error;
       }
     },

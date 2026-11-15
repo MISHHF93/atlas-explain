@@ -40,6 +40,7 @@ Both go away if the project ever moves to the paid Gemini tier (Blaze).
 ## What is in the repo
 
 - Plan math, Stripe link checks and the plan-document reader: `src/core/billing.ts` (no Firebase).
+- The limit check and the usage count for every cloud answer, web app and extension alike: `src/platform/web/explain-service.ts` (`cloudGate`, `recordCloudAnswer`).
 - Stripe records to plans, and the write/remove diff: `src/core/billing-sync.ts` (pure, tested in `test/billing-sync.test.ts`).
 - The job that does the network calls: `scripts/billing/sync-plans.ts`. It needs only Node, no `npm install`.
 - Remote Config keys: `billing_enabled`, `free_cloud_daily_limit` (10), `pro_cloud_daily_limit` (100), `pro_monthly_link`, `pro_yearly_link`, `billing_portal_link`. The three links are public URLs, not secrets. A value that is not a Stripe link is ignored and its button stays hidden.
