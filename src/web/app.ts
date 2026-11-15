@@ -25,7 +25,6 @@ import {
   signalCard,
 } from "../wallet/cards";
 import { el, labelledButton, prefersReducedMotion } from "../wallet/dom";
-import { glossaryPanel } from "../wallet/glossary-panel";
 import { icon } from "../wallet/icons";
 import { extensionNodes, privacyNodes, termsNodes } from "../wallet/legal";
 import { canReachLocalAtlas } from "../core/assets";
@@ -56,6 +55,7 @@ import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } fro
 import type { TabDef } from "../wallet/shell";
 import { createWatchlist, localKeyValue } from "../core/watchlist";
 import { buildSettings } from "../wallet/settings";
+import { WEB_LEARN_KEY } from "../core/account-data";
 import { yourDataGroup } from "../wallet/your-data";
 import { tracker } from "../core/analytics";
 import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
@@ -71,6 +71,16 @@ export const APP_TABS: readonly TabDef[] = [
 ];
 
 const THEME_KEY = "atlas-explain-theme";
+/** Learn path progress in this browser (the extension keeps it in chrome.storage). */
+const LEARN_STORE_KEY = WEB_LEARN_KEY;
+
+function readLearned(): unknown {
+  try {
+    return JSON.parse(localStorage.getItem(LEARN_STORE_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
 const ONBOARDED_KEY = "atlas-explain-onboarded";
 const QUESTION_PLACEHOLDER = "What might different traders read into this move?";
 const STEP_LABELS: [string, string, string] = ["Checking the card", "Running hybrid inference", "Saving to your history"];
@@ -297,13 +307,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const brief = digestCard();
   // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
   let marketCatalog: CatalogView | null = null;
-  let marketCard: HTMLElement = marketDigestCard(buildMarketDigest(marketCatalog));
   // Connection facts. Declared before the first Today render, which reads them.
   // ATLAS on this computer is present if either check found it: the connectors probe, or the asset
   // list loading from ATLAS. Each check keeps its own answer, so one cannot overwrite the other.
   let atlasProbed = false;
   let atlasCatalog = false;
   let atlasLocal = false;
+  let marketCard: HTMLElement = marketDigestCard(buildMarketDigest(marketCatalog, { atlasPresent: atlasLocal }));
   let livePrices = false;
   let liveStatus: "loading" | "ready" | "error" = "loading";
   // Public live prices (Kraken or CoinGecko) when ATLAS is away: breadth and moves only, never leans.
@@ -311,7 +321,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   let liveCard: HTMLElement = liveSnapshotCard(liveCatalog);
   const refreshToday = (): void => {
     // The Today screen shows the market digest inline; swap in the fresh card when ATLAS answers.
-    const next = marketDigestCard(buildMarketDigest(marketCatalog));
+    const next = marketDigestCard(buildMarketDigest(marketCatalog, { atlasPresent: atlasLocal }));
     marketCard.replaceWith(next);
     marketCard = next;
     const nextLive = liveSnapshotCard(liveCatalog);
@@ -411,11 +421,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         refreshToday();
         updateConnection();
       },
-      onExplain: (text) => {
-        panel.setText(text, "Added to Explain. Press Explain when ready. Nothing was sent.");
-        shell.select("explain");
-        panel.input.focus();
-      },
+      onExplain: (text) => sendToExplain(text),
       onOpen: (symbol) => {
         if (!following && !(route.kind === "asset" && route.symbol === symbol)) {
           route = { kind: "asset", symbol };
@@ -434,18 +440,29 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   const glossaryHead = el("div", "panel-title");
   glossaryHead.append(el("h1", undefined, "Learn"), el("span", "fine", "Plain language"));
-  shell.panels.glossary.append(
-    glossaryHead,
-    glossaryPanel({
-      askLabel: "Ask about this in my explanation",
-      initialCount: 6,
-      onAsk: (term) => {
-        panel.setText(term.title, `${term.title} added. Press Explain when ready. Nothing was sent.`);
-        shell.select("explain");
-        panel.input.focus();
-      },
-    }),
-  );
+  // The same Learn section as the popup (learn path, then the glossary), loaded on demand.
+  const learnSlot = el("div");
+  learnSlot.append(el("p", "fine", "Loading the glossary…"));
+  shell.panels.glossary.append(glossaryHead, learnSlot);
+  void import("../wallet/learn-section").then((mod) => mod.mountLearn(learnSlot, {
+    storedLearned: readLearned(),
+    onAsk: (term) => sendToExplain(term.title),
+    save: (ids) => {
+      try {
+        localStorage.setItem(LEARN_STORE_KEY, JSON.stringify(ids));
+      } catch {
+        // Private mode: progress lasts for this visit only.
+      }
+    },
+    announce: (text) => shell.announce(text),
+    initialCount: 6,
+  }));
+
+  /** Assets and Learn ask Explain the same way on both surfaces: go to Explain and answer now. */
+  function sendToExplain(text: string): void {
+    shell.select("explain");
+    panel.explain(text);
+  }
 
   /* ---------- Settings tab ---------- */
 
@@ -503,6 +520,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         savedExplanations: remote?.savedExplanations ?? [],
         browserHistory: loadTextHistory(),
         recentlyViewed: recent,
+        learnProgress: Array.isArray(readLearned()) ? (readLearned() as unknown[]).filter((id): id is string => typeof id === "string") : [],
       };
     },
     deleteAccount: async () => {
@@ -564,6 +582,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const link = await probeAtlasLocal({ allowed: !hosted });
     atlasProbed = link.state === "local";
     atlasLocal = atlasProbed || atlasCatalog;
+    // The digest card's wording depends on whether ATLAS answered, not only on its markets.
+    refreshToday();
     updateConnection();
   }
 
