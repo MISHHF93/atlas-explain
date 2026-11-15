@@ -9,7 +9,8 @@
 import { composerAction } from "../core/composer";
 import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
 import { FOLLOW_UPS, followUpQuestion } from "../core/follow-ups";
-import { makeEntry, addToHistory, type HistoryEntry } from "../core/history";
+import { makeEntry, addToHistory, relativeTime, type HistoryEntry } from "../core/history";
+import { STEP_CLOUD, STEP_DEVICE, STEP_READ } from "../core/popup-copy";
 import { parseTwoSided, twoSidedCopyText } from "../core/two-sided";
 import { emptyCard, explanationCard, limitCard, loadingCard, messageCard, offlineCard } from "./cards";
 import { el, labelledButton, prefersReducedMotion } from "./dom";
@@ -36,7 +37,7 @@ export interface ExplainRequest {
 }
 
 export type ExplainOutcome =
-  | { kind: "answer"; rawText: string; source: AnswerSource; subject: string; contextLine?: string; notes?: string[] }
+  | { kind: "answer"; rawText: string; source: AnswerSource; subject: string; contextLine?: string; notes?: string[]; /** Shown from Recent, not newly written: when it was written. */ savedAt?: number }
   /** Nothing to explain, for example no highlight on the page. */
   | { kind: "nothing"; message: string }
   | { kind: "limit"; message: string }
@@ -58,7 +59,13 @@ export interface ExplainPanelOptions {
   steps?: [string, string, string];
   /** Hide the "Explain" title visually (the popup's tab already says it). */
   headHidden?: boolean;
-  history: { initial: HistoryEntry[]; save: (list: HistoryEntry[]) => void; limit: number };
+  history: {
+    initial: HistoryEntry[];
+    save: (list: HistoryEntry[]) => void;
+    limit: number;
+    /** One honest line under Recent about where it is kept. */
+    note?: string;
+  };
   relatedTerms: (text: string, topic: string) => { title: string }[];
   announce: (text: string) => void;
   onAnswered?: (info: { source: AnswerSource; followUp: boolean }) => void;
@@ -77,6 +84,8 @@ export interface ExplainRunOptions {
   /** Explain this instead of what is in the box (follow-ups). */
   subject?: string;
   question?: string;
+  /** Write a new answer even when Recent already has one for this question ("Ask again"). */
+  fresh?: boolean;
 }
 
 export interface ExplainPanelHandle {
@@ -153,6 +162,10 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
   let last: ExplainRunOptions = {};
   /** The way the answer on screen was asked, reused by its follow-ups. */
   let lastAsk: ExplainAsk = options.ask;
+  /** Each run gets a number; Stop moves it on, so a late answer to a stopped question is never shown. */
+  let runId = 0;
+  /** A saved answer is reused for this long; after that the question is asked again. */
+  const SAVED_FOR_MS = 24 * 60 * 60 * 1000;
 
   function sync(): void {
     const action = options.readsPage ? composerAction(input.value) : { mode: "typed" as const, label: "Explain", icon: "sparkle" as const };
@@ -179,13 +192,41 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
     button.classList.toggle("loading", next);
   }
 
+  /** The progress card, with a way to stop waiting. */
+  function progressCard(step: 0 | 1 | 2, fromPage: boolean): HTMLElement {
+    // The first step reads the page only when there is a highlight to read.
+    const steps = options.steps ?? [fromPage ? STEP_READ : "Reading your question", STEP_DEVICE, STEP_CLOUD];
+    const card = loadingCard(step, steps);
+    const stop = labelledButton("close", "Stop", "secondary small");
+    stop.addEventListener("click", () => {
+      runId += 1;
+      setBusy(false);
+      showCard(hintLine());
+      status.textContent = "Stopped. That answer won't be shown.";
+      input.focus();
+    });
+    card.append(stop);
+    return card;
+  }
+
+  /** A recent answer to the same first question, if it is fresh enough to reuse. */
+  function savedAnswer(subject: string): HistoryEntry | undefined {
+    const key = subject.trim().toLowerCase();
+    return entries.find((entry) => entry.selection.trim().toLowerCase() === key && Date.now() - entry.at < SAVED_FOR_MS);
+  }
+
+  function savedOutcome(entry: HistoryEntry): Extract<ExplainOutcome, { kind: "answer" }> {
+    return { kind: "answer", rawText: entry.text, source: entry.source, subject: entry.selection, contextLine: entry.contextLine, savedAt: entry.at };
+  }
+
   function renderHistory(): void {
     historySlot.replaceChildren(historyCard({
       entries,
       limit: options.history.limit,
+      note: options.history.note,
       onOpen: (entry) => {
         setText(entry.selection);
-        show({ kind: "answer", rawText: entry.text, source: entry.source, subject: entry.selection, contextLine: entry.contextLine });
+        show(savedOutcome(entry));
       },
       onRemove: (entry) => {
         entries = entries.filter((item) => item.id !== entry.id);
@@ -220,7 +261,12 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
       contextLine: outcome.contextLine,
       ...(twoSided ? { body: twoSidedNodes(twoSided) } : { text: plain }),
       copyText: twoSided ? twoSidedCopyText(twoSided, EXTENSION_DISCLAIMER) : carriesDisclaimer ? plain : `${plain}\n\n${EXTENSION_DISCLAIMER}`,
-      notes: [...(outcome.notes ?? []), WHERE_IT_RAN[outcome.source], ...(carriesDisclaimer ? [] : [EXTENSION_DISCLAIMER])],
+      notes: [
+        ...(outcome.savedAt !== undefined ? [`Saved answer (${relativeTime(outcome.savedAt)}). Nothing was sent. Ask again for a new one.`] : []),
+        ...(outcome.notes ?? []),
+        WHERE_IT_RAN[outcome.source],
+        ...(carriesDisclaimer ? [] : [EXTENSION_DISCLAIMER]),
+      ],
       onClear: () => {
         showCard(hintLine());
         button.focus();
@@ -228,7 +274,11 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
       // Follow-ups re-ask about the same topic; related chips explain a glossary term found in the answer.
       ...(subject
         ? {
-            followUps: FOLLOW_UPS.map((item) => ({ label: item.label, run: () => void run({ subject, question: followUpQuestion(item.kind, subject), ask: lastAsk }) })),
+            followUps: [
+              // A saved answer can be written again, fresh.
+              ...(outcome.savedAt !== undefined ? [{ label: "Ask again", run: () => void run({ subject, fresh: true }) }] : []),
+              ...FOLLOW_UPS.map((item) => ({ label: item.label, run: () => void run({ subject, question: followUpQuestion(item.kind, subject), ask: lastAsk }) })),
+            ],
             related: options.relatedTerms(`${subject}\n${plain}`, subject).map((term) => ({ title: term.title, run: () => explain(term.title) })),
           }
         : {}),
@@ -266,9 +316,18 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
     const ask = runOptions.ask ?? options.ask;
     lastAsk = ask;
     const followUp = Boolean(runOptions.question);
+    // Asking the same first question again shows the answer already written, at once and for
+    // free. Only for the plain text path; a market move or a page highlight is always asked fresh.
+    const saved = !followUp && !fromPage && !runOptions.fresh && ask === options.ask ? savedAnswer(text) : undefined;
+    if (saved) {
+      status.textContent = "";
+      show(savedOutcome(saved));
+      return;
+    }
+    const id = ++runId;
     setBusy(true);
     status.textContent = "";
-    showCard(loadingCard(0, options.steps));
+    showCard(progressCard(0, fromPage));
     let outcome: ExplainOutcome;
     try {
       outcome = await ask({
@@ -277,7 +336,8 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
         fromPage,
         page: runOptions.page,
         progress: (step, message) => {
-          showCard(loadingCard(step, options.steps));
+          if (id !== runId) return;
+          showCard(progressCard(step, fromPage));
           status.textContent = message ?? "";
         },
         setSubject: (subject) => setText(subject),
@@ -285,6 +345,8 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
     } catch (error) {
       outcome = { kind: "error", message: error instanceof Error && error.message ? error.message : "That did not finish. Try again.", retry: true };
     }
+    // Stopped while waiting: drop the answer quietly.
+    if (id !== runId) return;
     setBusy(false);
     status.textContent = "";
     if (outcome.kind === "answer") {
@@ -336,7 +398,7 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
       renderHistory();
     },
     show,
-    showLoading: (step) => showCard(loadingCard(step, options.steps)),
+    showLoading: (step) => showCard(progressCard(step, false)),
     disable: (card) => {
       disabled = true;
       button.disabled = true;

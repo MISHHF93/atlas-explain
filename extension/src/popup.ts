@@ -48,7 +48,7 @@ import type { CatalogView } from "../../src/core/assets";
 import type { DigestView } from "../../src/core/digest";
 import { COMPOSER_PLACEHOLDER, composerHint } from "../../src/core/composer";
 import { isEngineState } from "../../src/core/hybrid-engine";
-import { explainOnDevice } from "./on-device";
+import { explainOnDevice, warmOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
 
 interface PendingExplain {
@@ -263,6 +263,8 @@ function refreshEngine(): void {
 void boot();
 
 async function boot(): Promise<void> {
+  // Opening the popup is the intent to ask: load Gemini Nano now if it is on this computer.
+  void warmOnDevice();
   refreshEngine();
   applySignal(previewSignal());
   const stored = await store.get();

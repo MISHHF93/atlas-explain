@@ -278,7 +278,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     maxLength: 2000,
     examples: ["Stop-limit order", "Implied volatility", "Bid-ask spread", "Short interest"],
     steps: ["Reading your text", "Writing the answer", "Saving to history"],
-    history: { initial: loadHistoryEntries(), save: saveHistoryEntries, limit: 8 },
+    history: {
+      initial: loadHistoryEntries(),
+      save: saveHistoryEntries,
+      limit: 8,
+      // True on the web: Recent is this browser's list, but market-move answers are also saved to the account.
+      note: "Kept in this browser. Market-move answers are also saved to your account, never with private notes.",
+    },
     relatedTerms,
     announce: (text) => shell.announce(text),
   });

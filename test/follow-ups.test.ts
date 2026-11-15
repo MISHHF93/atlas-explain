@@ -49,7 +49,7 @@ describe("keep-going follow-ups", () => {
     // Every answer on both surfaces (typed text, highlights and market moves) gets its follow-ups
     // from the shared panel, and a move's follow-ups keep asking about that move.
     const panel = readFileSync("src/wallet/explain-panel.ts", "utf8");
-    expect(panel).toContain("followUps: FOLLOW_UPS.map(");
+    expect(panel).toContain("...FOLLOW_UPS.map((item) =>");
     expect(panel).toContain("ask: lastAsk");
     for (const file of ["extension/src/popup.ts", "src/web/app.ts"]) expect(readFileSync(file, "utf8"), file).not.toContain("FOLLOW_UPS");
   });
