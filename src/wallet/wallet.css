@@ -1188,3 +1188,27 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .consent-bar p { margin: 0; flex: 1 1 18rem; }
 .consent-actions { display: flex; gap: var(--atlas-space-2); }
 @media (min-width: 900px) { .consent-bar { bottom: var(--atlas-space-6); } }
+
+/* ---------- coin chart: ranges and a price under your finger ---------- */
+
+.spark-plot { position: relative; touch-action: pan-y; cursor: crosshair; }
+.spark-cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: currentColor; opacity: 0.5; pointer-events: none; }
+.spark-readout { min-height: 1.2em; margin-top: 0.2rem; color: var(--atlas-ink); font-variant-numeric: tabular-nums; }
+.chart-ranges { margin-top: 0.4rem; max-width: 14rem; }
+.spark[aria-busy="true"] { opacity: 0.6; }
+
+/* ---------- glossary diagrams (labels only, no figures) ---------- */
+
+.term-diagram { margin: 0.4rem 0 0.2rem; padding: 0.5rem 0.6rem; border-radius: var(--atlas-radius); background: var(--atlas-surface-2); color: var(--atlas-ink); }
+.term-diagram svg { display: block; overflow: visible; }
+.term-diagram .dg-axis { stroke: var(--atlas-line); stroke-width: 1.5; }
+.term-diagram .dg-line, .term-diagram .dg-curve { fill: none; stroke: currentColor; stroke-width: 2; }
+.term-diagram .dg-up { fill: var(--atlas-signal-up); stroke: var(--atlas-signal-up); }
+.term-diagram .dg-down { fill: var(--atlas-signal-down); stroke: var(--atlas-signal-down); }
+.term-diagram .dg-curve.dg-up, .term-diagram .dg-curve.dg-down { fill: none; }
+.term-diagram .dg-brace { fill: none; stroke: var(--atlas-accent); stroke-width: 2; }
+.term-diagram .dg-stop { stroke: var(--atlas-accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.term-diagram .dg-limit { stroke: var(--atlas-signal-down); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.term-diagram text { fill: currentColor; font-family: inherit; }
+.term-diagram .dg-label { font-size: var(--atlas-text-xs); font-weight: 700; }
+.term-diagram .dg-note { font-size: var(--atlas-text-2xs); opacity: 0.75; }

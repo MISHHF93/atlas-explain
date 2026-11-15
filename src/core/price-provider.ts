@@ -135,6 +135,40 @@ export async function loadLiveCatalog(
   return last ? last.state : state;
 }
 
+export type ChartRange = 1 | 7 | 30;
+export const CHART_RANGES: readonly { days: ChartRange; label: string; caption: string }[] = [
+  { days: 1, label: "24H", caption: "last 24 hours" },
+  { days: 7, label: "7D", caption: "last 7 days" },
+  { days: 30, label: "30D", caption: "last 30 days" },
+];
+/** A chosen range is reused for five minutes, so switching back and forth never hammers the free API. */
+export const CHART_CACHE_MS = 5 * 60_000;
+const chartCache = new Map<string, { at: number; points: SparkPoint[] }>();
+
+/** Whether the live feed can draw a chosen range: CoinGecko only (Kraken's free bars are hourly only). */
+export function supportsChartRanges(feed: PriceFeedOptions): boolean {
+  return feed.provider === "coingecko";
+}
+
+/** A coin's price over a chosen range, from CoinGecko. Empty when it can't be read right now. */
+export async function loadLiveChart(
+  symbol: string,
+  days: ChartRange,
+  feed: PriceFeedOptions = DEFAULT_PRICE_FEED,
+  fetcher: Fetcher = fetch,
+  now: number = Date.now(),
+): Promise<SparkPoint[]> {
+  if (!supportsChartRanges(feed)) return [];
+  const coin = COINGECKO_COINS.find((item) => item.symbol === symbol);
+  if (!coin) return [];
+  const key = `${coin.id}:${days}`;
+  const hit = chartCache.get(key);
+  if (hit && now - hit.at < CHART_CACHE_MS) return hit.points;
+  const points = await loadCoinGeckoChart(coin.id, fetcher, PRICE_FETCH_TIMEOUT_MS, feed.coinGeckoDemoKey, days).catch(() => []);
+  if (points.length >= 2) chartCache.set(key, { at: now, points });
+  return points;
+}
+
 export async function loadLiveDetail(
   symbol: string,
   feed: PriceFeedOptions = DEFAULT_PRICE_FEED,

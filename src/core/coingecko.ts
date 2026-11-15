@@ -159,9 +159,9 @@ export async function loadCoinGeckoCatalog(
 }
 
 /** Recent prices from /coins/{id}/market_chart, used for the sparkline. */
-export function readCoinGeckoChart(body: unknown, maxPoints = 48): SparkPoint[] {
+export function readCoinGeckoChart(body: unknown, maxPoints = 48, thin = false): SparkPoint[] {
   if (!isRec(body) || !Array.isArray(body.prices)) return [];
-  return body.prices
+  const points = body.prices
     .map((row) => {
       if (!Array.isArray(row) || row.length < 2) return null;
       const t = finite(row[0]);
@@ -169,8 +169,15 @@ export function readCoinGeckoChart(body: unknown, maxPoints = 48): SparkPoint[] 
       if (t == null || c == null) return null;
       return { t: new Date(t).toISOString(), c };
     })
-    .filter((point): point is SparkPoint => point != null)
-    .slice(-maxPoints);
+    .filter((point): point is SparkPoint => point != null);
+  return thin ? thinEvenly(points, maxPoints) : points.slice(-maxPoints);
+}
+
+/** Keeps the shape of a long series in at most `max` points: evenly spaced, first and last kept. */
+export function thinEvenly<T>(points: readonly T[], max: number): T[] {
+  if (points.length <= max || max < 2) return [...points];
+  const step = (points.length - 1) / (max - 1);
+  return Array.from({ length: max }, (_, i) => points[Math.round(i * step)]!);
 }
 
 export async function loadCoinGeckoChart(
@@ -178,9 +185,12 @@ export async function loadCoinGeckoChart(
   fetcher: Fetcher = fetch,
   timeoutMs = 8000,
   demoKey?: string,
+  days: 1 | 2 | 7 | 30 = 2,
 ): Promise<SparkPoint[]> {
-  const url = `${COINGECKO_API}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=2`;
-  return readCoinGeckoChart(await getCoinGeckoJson(url, fetcher, timeoutMs, demoKey));
+  const url = `${COINGECKO_API}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=${days}`;
+  const body = await getCoinGeckoJson(url, fetcher, timeoutMs, demoKey);
+  // The default 48-hour sparkline keeps its newest points; a chosen range keeps its whole shape.
+  return days === 2 ? readCoinGeckoChart(body) : readCoinGeckoChart(body, 96, true);
 }
 
 export async function loadCoinGeckoDetail(

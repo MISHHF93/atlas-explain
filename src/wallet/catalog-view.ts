@@ -312,6 +312,21 @@ export interface AssetPageHandle {
   update(a: Asset): void;
   /** Draws the chart when a licensed, batched history exists; null keeps it hidden. */
   setSpark(points: readonly SparkPoint[] | null, caption: string): void;
+  /** Marks the chosen chart range. */
+  markRange(days: number | null): void;
+}
+
+/** A chart point in US dollars (the live charts are crypto priced in USD), with the same precision as the quote. */
+function formatPrice(value: number): string {
+  const digits = value >= 1 ? 2 : value >= 0.01 ? 4 : 6;
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+}
+
+/** The chart's range buttons: the range shown, and how to load another. */
+export interface ChartRangeOptions {
+  ranges: readonly { days: number; label: string }[];
+  /** Load and draw this range. Resolves when it is drawn (or could not be). */
+  onRange: (days: number) => Promise<void>;
 }
 
 export function assetPage(start: Asset, options: {
@@ -322,10 +337,38 @@ export function assetPage(start: Asset, options: {
   news?: (a: Asset) => Promise<NewsItem[] | null>;
   /** Sends a prepared question to Explain (used to summarise the headlines). */
   onAsk?: (question: string) => void;
+  /** Range buttons under the chart (live crypto on CoinGecko). */
+  chartRanges?: ChartRangeOptions;
 }): AssetPageHandle {
   const hero = el("section", "card asset-hero");
   const spark = el("div", "spark");
   spark.hidden = true;
+  // Range buttons: a segmented control, shown with the chart.
+  const rangeBar = el("div", "segmented chart-ranges");
+  rangeBar.setAttribute("role", "group");
+  rangeBar.setAttribute("aria-label", "Chart range");
+  rangeBar.hidden = true;
+  if (options.chartRanges) {
+    const ranges = options.chartRanges;
+    for (const range of ranges.ranges) {
+      const b = el("button", "seg", range.label);
+      b.type = "button";
+      b.dataset.days = String(range.days);
+      b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => {
+        for (const other of rangeBar.querySelectorAll("button")) {
+          other.setAttribute("aria-pressed", other === b ? "true" : "false");
+          other.disabled = true;
+        }
+        spark.setAttribute("aria-busy", "true");
+        void ranges.onRange(range.days).finally(() => {
+          for (const other of rangeBar.querySelectorAll("button")) other.disabled = false;
+          spark.removeAttribute("aria-busy");
+        });
+      });
+      rangeBar.append(b);
+    }
+  }
   const about = el("section", "card group");
   const facts = el("section", "card group");
   const filings = el("section", "card group");
@@ -433,7 +476,7 @@ export function assetPage(start: Asset, options: {
     } else {
       hero.append(el("p", "no-price-reason", a.noQuoteReason ?? "Price not shown."));
     }
-    hero.append(spark);
+    hero.append(spark, rangeBar);
 
     about.replaceChildren(el("h3", undefined, `About ${CLASS_INFO[a.class].label.toLowerCase()}`), el("p", "fine", CLASS_INFO[a.class].intro), ...classLines(a));
     const figures = a.facts.filter((f) => f.kind !== "filing");
@@ -466,26 +509,59 @@ export function assetPage(start: Asset, options: {
   function setSpark(points: readonly SparkPoint[] | null, caption: string): void {
     if (!points || points.length < 2) {
       spark.hidden = true;
+      rangeBar.hidden = true;
       return;
     }
     const w = 312;
     const h = 64;
     const first = points[0]!.c;
     const last = points[points.length - 1]!.c;
+    const change = ((last - first) / first) * 100;
     const holder = document.createElement("span");
     const d = sparkPath(points, w, h);
     holder.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="spark-line" d="${d}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
     spark.dataset.tone = last > first ? "up" : last < first ? "down" : "flat";
-    spark.replaceChildren(holder.firstElementChild as Element, el("p", "fine spark-cap", `Chart: ${caption}`));
+    // Touch or hover the chart to read the price at that moment; the caption says the change over the range.
+    const plot = el("div", "spark-plot");
+    const cursor = el("span", "spark-cursor");
+    cursor.hidden = true;
+    const readout = el("p", "fine spark-readout");
+    readout.setAttribute("aria-live", "polite");
+    plot.append(holder.firstElementChild as Element, cursor);
+    const summary = `${caption}: ${change >= 0 ? "+" : ""}${change.toFixed(2)}%, from ${formatPrice(first)} to ${formatPrice(last)}`;
+    const point = (event: PointerEvent): void => {
+      const box = plot.getBoundingClientRect();
+      if (box.width <= 0) return;
+      const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+      const i = Math.round(ratio * (points.length - 1));
+      const p = points[i]!;
+      cursor.hidden = false;
+      cursor.style.left = `${(i / (points.length - 1)) * 100}%`;
+      readout.textContent = `${formatPrice(p.c)} · ${new Date(p.t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
+    };
+    plot.addEventListener("pointermove", point);
+    plot.addEventListener("pointerdown", point);
+    plot.addEventListener("pointerleave", () => {
+      cursor.hidden = true;
+      readout.textContent = "";
+    });
+    spark.replaceChildren(plot, readout, el("p", "fine spark-cap", `Chart: ${summary}`));
     spark.setAttribute("role", "img");
-    spark.setAttribute("aria-label", `Price chart, ${caption}`);
+    spark.setAttribute("aria-label", `Price chart, ${summary}`);
     spark.hidden = false;
+    rangeBar.hidden = !options.chartRanges;
+  }
+
+  /** Sets which range button shows as chosen (the default chart is none of them until one is picked). */
+  function markRange(days: number | null): void {
+    for (const b of rangeBar.querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.days === String(days) ? "true" : "false");
   }
 
   return {
     nodes: [hero, status, explain, watchRow, newsBox, terms, facts, filings, about],
     update: (a) => paint(a),
     setSpark,
+    markRange,
   };
 }
 

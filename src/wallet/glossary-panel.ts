@@ -1,6 +1,7 @@
 import { ALL_TERMS, TERM_GROUP_LABEL, searchTerms, type TermEntry } from "../core/terms";
 import { el, labelledButton } from "./dom";
 import { icon } from "./icons";
+import { termDiagram } from "./term-diagrams";
 
 /* ---------- glossary ---------- */
 
@@ -79,7 +80,8 @@ export function glossaryPanel(options: {
     const body = el("p", "term-body", term.summary);
     const ask = labelledButton("sparkle", options.askLabel, "link-btn");
     ask.addEventListener("click", () => options.onAsk(term));
-    details.append(summary, body, ask);
+    const diagram = termDiagram(term.id);
+    details.append(summary, body, ...(diagram ? [diagram] : []), ask);
     item.append(details);
     return item;
   }
