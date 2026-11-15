@@ -54,7 +54,12 @@ interface Tool {
 const str = (description: string) => ({ type: "string", description });
 const nullable = (type: string) => ({ type: [type, "null"] });
 /** The ATLAS Explain mark, shown next to the server and its tools in clients that support icons (MCP 2025-11-25). */
-export const ICONS = [{ src: "https://atlas-explain.web.app/logo.svg", mimeType: "image/svg+xml", sizes: ["any"] }] as const;
+// Served by this server from its own address (src/mcp/http.ts): a PNG every client supports, and the SVG.
+export const MCP_ORIGIN = "https://atlas-explain-mcp.atlas-explain.workers.dev";
+export const ICONS = [
+  { src: `${MCP_ORIGIN}/icon.png`, mimeType: "image/png", sizes: ["512x512"] },
+  { src: `${MCP_ORIGIN}/icon.svg`, mimeType: "image/svg+xml", sizes: ["any"] },
+] as const;
 const notice = { notice: { type: "string" } };
 const obj = (properties: Schema, required: string[] = []): Schema => ({ type: "object", properties: { ...properties, ...notice }, required: [...required, "notice"] });
 const FIGURE: Schema = {

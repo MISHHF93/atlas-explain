@@ -152,7 +152,7 @@ describe("structured output, prompts, icons and the chart app", () => {
   it("annotates every tool as read-only with a title and an icon, and links price_history to the chart", () => {
     for (const t of TOOLS) {
       expect(t.annotations).toMatchObject({ title: t.title, readOnlyHint: true, destructiveHint: false });
-      expect(t.icons[0]!.src).toBe("https://atlas-explain.web.app/logo.svg");
+      expect(t.icons[0]).toEqual({ src: "https://atlas-explain-mcp.atlas-explain.workers.dev/icon.png", mimeType: "image/png", sizes: ["512x512"] });
     }
     expect(TOOLS.find((t) => t.name === "price_history")!._meta).toEqual({ ui: { resourceUri: "ui://atlas-explain/price-chart.html" } });
   });
@@ -184,7 +184,7 @@ describe("structured output, prompts, icons and the chart app", () => {
   it("announces tools, resources and prompts, with its icon", async () => {
     const init = (await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25" } }, full))?.result as { capabilities: Record<string, unknown>; serverInfo: { icons: unknown[] } };
     expect(Object.keys(init.capabilities).sort()).toEqual(["prompts", "resources", "tools"]);
-    expect(init.serverInfo.icons).toHaveLength(1);
+    expect(init.serverInfo.icons).toHaveLength(2);
   });
 });
 
@@ -197,5 +197,24 @@ describe("ready to list in the MCP Registry", () => {
     expect(manifest.description.length).toBeLessThanOrEqual(100);
     expect(manifest.version).toBe(SERVER_VERSION);
     expect(manifest.remotes).toEqual([{ type: "streamable-http", url: "https://atlas-explain-mcp.atlas-explain.workers.dev/mcp" }]);
+  });
+});
+
+describe("the server's own icons", () => {
+  it("serves a real PNG favicon and icon, and the SVG, from its own address", async () => {
+    const { handleHttp } = await import("../src/mcp/http");
+    const { ICONS, MCP_ORIGIN } = await import("../src/mcp/server");
+    const never: Fetcher = async () => { throw new Error("no network"); };
+    const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    for (const [path, type] of [["/favicon.ico", "image/png"], ["/icon.png", "image/png"], ["/icon.svg", "image/svg+xml"]] as const) {
+      const res = await handleHttp(new Request(`${MCP_ORIGIN}${path}`), never);
+      expect(res.status, path).toBe(200);
+      expect(res.headers.get("Content-Type"), path).toBe(type);
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if (type === "image/png") expect([...bytes.slice(0, 8)], path).toEqual(PNG);
+      else expect(new TextDecoder().decode(bytes), path).toMatch(/^<svg/);
+    }
+    // Every icon the server announces is one it serves itself.
+    for (const icon of ICONS) expect(icon.src.startsWith(`${MCP_ORIGIN}/`)).toBe(true);
   });
 });

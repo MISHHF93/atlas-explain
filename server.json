@@ -11,9 +11,18 @@
   "version": "1.2.0",
   "icons": [
     {
-      "src": "https://atlas-explain.web.app/logo.svg",
+      "src": "https://atlas-explain-mcp.atlas-explain.workers.dev/icon.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "512x512"
+      ]
+    },
+    {
+      "src": "https://atlas-explain-mcp.atlas-explain.workers.dev/icon.svg",
       "mimeType": "image/svg+xml",
-      "sizes": ["any"]
+      "sizes": [
+        "any"
+      ]
     }
   ],
   "remotes": [
