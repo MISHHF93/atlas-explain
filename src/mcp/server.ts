@@ -24,10 +24,11 @@ import { EDUCATION_ASSETS } from "../core/education-assets";
 import { KRAKEN_API, KRAKEN_CITATION, KRAKEN_PAIRS, readKrakenOhlc, readKrakenTicker } from "../core/kraken";
 import { LEARN_PATH, learnTerms } from "../core/learn";
 import { readNewsFile, type NewsItem } from "../core/news";
+import { CHART_APP_HTML, CHART_APP_URI, MCP_APP_MIME } from "./chart-app";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.1.0";
+export const SERVER_VERSION = "1.2.0";
 /** Newest first. A client asking for a version not listed gets the newest, as the spec allows. */
 export const SUPPORTED_PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"] as const;
 export const EDUCATION_LINE = "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.";
@@ -36,15 +37,37 @@ const APP_URL = "https://atlas-explain.web.app/app";
 /** The platform fetch (Cloudflare Workers, Node or a test double). */
 export type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
+type Schema = Record<string, unknown>;
+
 interface Tool {
   name: string;
   title: string;
   description: string;
   inputSchema: { type: "object"; properties: Record<string, unknown>; required?: string[]; additionalProperties: false };
-  annotations: { readOnlyHint: true; openWorldHint: boolean };
+  /** The typed JSON every successful answer also carries (structuredContent). */
+  outputSchema?: Schema;
+  annotations: { title: string; readOnlyHint: true; destructiveHint: false; idempotentHint: true; openWorldHint: boolean };
+  icons: typeof ICONS;
+  _meta?: { ui: { resourceUri: string } };
 }
 
 const str = (description: string) => ({ type: "string", description });
+const nullable = (type: string) => ({ type: [type, "null"] });
+/** The ATLAS Explain mark, shown next to the server and its tools in clients that support icons (MCP 2025-11-25). */
+export const ICONS = [{ src: "https://atlas-explain.web.app/logo.svg", mimeType: "image/svg+xml", sizes: ["any"] }] as const;
+const notice = { notice: { type: "string" } };
+const obj = (properties: Schema, required: string[] = []): Schema => ({ type: "object", properties: { ...properties, ...notice }, required: [...required, "notice"] });
+const FIGURE: Schema = {
+  type: "object",
+  properties: {
+    name: { type: "string" }, symbol: { type: "string" }, assetClass: { type: "string" },
+    value: nullable("number"), currency: { type: "string" }, changePct: nullable("number"), changeWindow: nullable("string"), asOf: nullable("string"),
+    facts: { type: "array", items: { type: "object", properties: { label: { type: "string" }, value: { type: "string" }, period: nullable("string") }, required: ["label", "value"] } },
+    source: nullable("string"), sourceUrl: nullable("string"), noPriceReason: nullable("string"),
+  },
+  required: ["name", "symbol", "assetClass"],
+};
+const annotations = (title: string, openWorldHint: boolean) => ({ title, readOnlyHint: true as const, destructiveHint: false as const, idempotentHint: true as const, openWorldHint });
 
 export const TOOLS: readonly Tool[] = [
   {
@@ -52,35 +75,43 @@ export const TOOLS: readonly Tool[] = [
     title: "Explain a market term",
     description: "Look up a trading or market term (for example 'stop-limit order', 'bid-ask spread', 'yield curve') in ATLAS Explain's plain-language glossary. Education only.",
     inputSchema: { type: "object", properties: { term: str("The term or phrase to look up.") }, required: ["term"], additionalProperties: false },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    annotations: annotations("Explain a market term", false),
+    icons: ICONS,
   },
   {
     name: "browse_glossary",
     title: "Browse the glossary and learning path",
     description: "List ATLAS Explain's learning path (topics in order, each with its terms) or every glossary term in one group. Use it to suggest what to learn next, or to find the right term to explain.",
     inputSchema: { type: "object", properties: { topic: str("Optional learning-path topic or glossary group, for example 'orders', 'risk', 'rates', 'futures'. Leave empty for the whole path.") }, additionalProperties: false },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    annotations: annotations("Browse the glossary and learning path", false),
+    icons: ICONS,
   },
   {
     name: "asset_details",
     title: "What an asset is",
     description: "Everything ATLAS Explain shows about one asset: what it is, where and when it trades, its latest official figure or live price (with source and time), or why no price is shown. Covers crypto, US stocks and ETFs, currencies, interest rates, energy, indices, futures and options.",
     inputSchema: { type: "object", properties: { asset: str("Name or symbol, for example 'Bitcoin', 'AAPL', 'EUR/USD', '10-year', 'S&P 500'.") }, required: ["asset"], additionalProperties: false },
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: annotations("What an asset is", true),
+    icons: ICONS,
+    outputSchema: obj({ found: { type: "boolean" }, ...((FIGURE.properties as Schema)), venue: nullable("string"), about: { type: "string" }, tradingHours: nullable("string"), priceUsd: nullable("number"), relatedTerms: { type: "array", items: { type: "string" } }, appUrl: { type: "string" } }, ["found"]),
   },
   {
     name: "official_figures",
     title: "Official market figures",
     description: "Official figures ATLAS Explain publishes from free government and regulator sources: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and the latest SEC-filed figures (revenue, net income and more) for large US companies and ETFs. Each has its source and date. Optional search by name or symbol.",
     inputSchema: { type: "object", properties: { query: str("Optional name or symbol, for example '10-year', 'EUR', 'AAPL'.") }, additionalProperties: false },
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: annotations("Official market figures", true),
+    icons: ICONS,
+    outputSchema: obj({ figures: { type: "array", items: FIGURE } }, ["figures"]),
   },
   {
     name: "crypto_prices",
     title: "Live crypto prices",
     description: "Live prices for the ten major coins ATLAS Explain follows (Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink, Avalanche), with the change over the last 24 hours, biggest moves first. From CoinGecko's public API.",
     inputSchema: { type: "object", properties: { coin: str("Optional coin name or symbol, for example 'BTC' or 'Ethereum'.") }, additionalProperties: false },
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: annotations("Live crypto prices", true),
+    icons: ICONS,
+    outputSchema: obj({ source: { type: "string" }, coins: { type: "array", items: { type: "object", properties: { name: { type: "string" }, symbol: { type: "string" }, priceUsd: { type: "number" }, changePct: nullable("number"), changeWindow: { type: "string" }, asOf: nullable("string") }, required: ["name", "symbol", "priceUsd"] } } }, ["source", "coins"]),
   },
   {
     name: "price_history",
@@ -92,20 +123,54 @@ export const TOOLS: readonly Tool[] = [
       required: ["coin"],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: annotations("Crypto price history", true),
+    icons: ICONS,
+    outputSchema: obj({ name: { type: "string" }, symbol: { type: "string" }, range: { type: "string", enum: ["24h", "7d", "30d"] }, rangeLabel: { type: "string" }, startUsd: { type: "number" }, endUsd: { type: "number" }, changePct: { type: "number" }, high: { type: "object", properties: { priceUsd: { type: "number" }, at: { type: "string" } } }, low: { type: "object", properties: { priceUsd: { type: "number" }, at: { type: "string" } } }, points: { type: "array", items: { type: "object", properties: { t: { type: "string" }, c: { type: "number" } }, required: ["t", "c"] } }, source: { type: "string" } }, ["symbol", "range", "points", "source"]),
+    // Clients that support MCP Apps draw this as an interactive chart (src/mcp/chart-app.ts).
+    _meta: { ui: { resourceUri: CHART_APP_URI } },
   },
   {
     name: "todays_headlines",
     title: "Today's market headlines",
     description: "Recent market headlines ATLAS Explain collected from the GDELT Project, each with its publisher, link and time. Headlines older than 36 hours are never returned. Optional filter by company or coin.",
     inputSchema: { type: "object", properties: { about: str("Optional company, coin or word, for example 'Nvidia' or 'Bitcoin'.") }, additionalProperties: false },
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: annotations("Today's market headlines", true),
+    icons: ICONS,
+    outputSchema: obj({ refreshedAt: { type: "string" }, headlines: { type: "array", items: { type: "object", properties: { title: { type: "string" }, publisher: { type: "string" }, url: { type: "string" }, seenAt: { type: "string" } }, required: ["title", "url"] } } }, ["headlines"]),
   },
 ];
 
-type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
+/** One-click starters (MCP prompts). Each asks the assistant to use the tools, education only. */
+export const PROMPTS = [
+  {
+    name: "market_brief",
+    title: "Today's market brief",
+    description: "A plain-language brief of today's crypto moves, headlines and official rates, with sources.",
+    arguments: [],
+    text: () => "Using ATLAS Explain, give me a short, plain-language market brief for today: the biggest crypto moves (crypto_prices), today's headlines (todays_headlines) and the latest official rates (official_figures for '10-year' and 'EUR'). Name each source and time, explain any term a beginner might not know, and don't suggest any trade.",
+  },
+  {
+    name: "explain_asset",
+    title: "Explain an asset",
+    description: "What an asset is, its latest figures or price, how it moved recently, and the terms to know.",
+    arguments: [{ name: "asset", description: "Name or symbol, for example 'Bitcoin', 'AAPL' or 'EUR/USD'.", required: true }],
+    text: (a: Record<string, string>) => `Using ATLAS Explain, explain ${a.asset || "this asset"} to a beginner: what it is and where it trades (asset_details), its latest official figures or live price, and, if it is a coin, how it moved over the last 7 days (price_history). Define any market term with explain_term. Show both sides where it matters and don't suggest any trade.`,
+  },
+  {
+    name: "learn_next",
+    title: "Learn the next topic",
+    description: "Walk through one topic of the ATLAS Explain learning path, term by term, with a short check at the end.",
+    arguments: [{ name: "topic", description: "Optional topic, for example 'orders', 'risk' or 'rates'. Leave empty to start at the beginning.", required: false }],
+    text: (a: Record<string, string>) => `Using ATLAS Explain, teach me ${a.topic ? `the "${a.topic}" topic` : "the first topic"} of the learning path (browse_glossary). Explain each term in plain language with a simple example, then ask me one short question to check I understood. Education only.`,
+  },
+] as const;
 
+type ToolResult = { content: { type: "text"; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean };
+
+/** The readable answer, always ending with the education line. */
 const text = (body: string, isError = false): ToolResult => ({ content: [{ type: "text", text: `${body}\n\n${EDUCATION_LINE}` }], ...(isError ? { isError } : {}) });
+/** The readable answer plus the same facts as typed JSON (matching the tool's outputSchema), for agents and apps. */
+const data = (body: string, structured: Record<string, unknown>): ToolResult => ({ ...text(body), structuredContent: { ...structured, notice: EDUCATION_LINE } });
 const utc = (iso: string | null): string => (iso ? `${iso.slice(0, 16).replace("T", " ")} UTC` : "time not given");
 
 async function getJson(url: string, fetcher: Fetcher): Promise<unknown | null> {
@@ -169,6 +234,25 @@ function figureLines(a: Asset): string[] {
   return [`${a.name} (${a.symbol}): no figure shown. ${a.noQuoteReason ?? ""}`.trim()];
 }
 
+/** One asset's official numbers as typed JSON. */
+function figureRecord(a: Asset): Record<string, unknown> {
+  const source = a.quote?.source ?? a.facts[0]?.source;
+  return {
+    name: a.name,
+    symbol: a.symbol,
+    assetClass: a.class,
+    value: a.quote ? a.quote.value : null,
+    currency: a.currency,
+    changePct: a.quote?.changePct ?? null,
+    changeWindow: a.quote?.changeWindow ?? null,
+    asOf: a.quote?.asOf ?? a.facts[0]?.asOf ?? null,
+    facts: a.facts.filter((f) => f.kind !== "filing").slice(0, 6).map((f) => ({ label: f.label, value: f.value, period: f.period })),
+    source: source ? source.attribution.text.replace(/^source:\s*/i, "") : null,
+    sourceUrl: source?.attribution.href ?? null,
+    noPriceReason: a.quote ? null : a.noQuoteReason,
+  };
+}
+
 async function loadOfficial(fetcher: Fetcher, now: number): Promise<Asset[] | null> {
   const body = await getJson(MARKET_DATA_URL, fetcher);
   return body == null ? null : readMarketFile(body, now);
@@ -180,8 +264,10 @@ export async function officialFigures(query: string | undefined, fetcher: Fetche
   const q = query?.trim() ?? "";
   const withData = assets.filter((a) => a.quote || a.facts.length);
   const matches = (q ? searchAssets(withData, q, { klass: "all" }) : withData).slice(0, 20);
-  if (!matches.length) return text(q ? `No official figure matches "${q}". Try asset_details for what ATLAS Explain covers.` : "No official figure is available right now.");
-  return text(matches.flatMap(figureLines).join("\n"));
+  const body = matches.length
+    ? matches.flatMap(figureLines).join("\n")
+    : q ? `No official figure matches "${q}". Try asset_details for what ATLAS Explain covers.` : "No official figure is available right now.";
+  return data(body, { figures: matches.map(figureRecord) });
 }
 
 const coinFor = (key: string) => {
@@ -223,13 +309,26 @@ export async function assetDetails(key: string, fetcher: Fetcher, now = Date.now
     const price = row && live
       ? `Price: ${formatPrice(row.price)}, ${formatChange(row.changePct).text} ${row.window}, as of ${utc(row.asOf)}. ${live.citation}`
       : "No live price right now: neither CoinGecko nor Kraken answered. Nothing is shown in its place.";
-    return text(`${coin.name} (${coin.symbol}), a cryptocurrency.\n${CLASS_INFO.crypto.intro}\n${price}\nIn the app: ${APP_URL}/assets/${coin.symbol}`);
+    return data(`${coin.name} (${coin.symbol}), a cryptocurrency.\n${CLASS_INFO.crypto.intro}\n${price}\nIn the app: ${APP_URL}/assets/${coin.symbol}`, {
+      found: true,
+      name: coin.name,
+      symbol: coin.symbol,
+      assetClass: "crypto",
+      about: CLASS_INFO.crypto.intro,
+      tradingHours: "24/7",
+      priceUsd: row?.price ?? null,
+      changePct: row?.changePct ?? null,
+      changeWindow: row?.window ?? null,
+      asOf: row?.asOf ?? null,
+      source: row && live ? live.citation : null,
+      appUrl: `${APP_URL}/assets/${coin.symbol}`,
+    });
   }
   const official = (await loadOfficial(fetcher, now)) ?? [];
   const all = [...official, ...EDUCATION_ASSETS];
   const asset = findAsset(all, q) ?? searchAssets(all, q, { klass: "all" })[0];
   if (!asset) {
-    return text(`"${q}" isn't in the ATLAS Explain catalog. It covers the ten major coins, about 30 large US companies and ETFs, major currencies, Treasury and government bond yields, energy prices, and explainers for indices, futures and options.`);
+    return data(`"${q}" isn't in the ATLAS Explain catalog. It covers the ten major coins, about 30 large US companies and ETFs, major currencies, Treasury and government bond yields, energy prices, and explainers for indices, futures and options.`, { found: false });
   }
   const info = CLASS_INFO[asset.class];
   const lines = [
@@ -240,7 +339,15 @@ export async function assetDetails(key: string, fetcher: Fetcher, now = Date.now
     asset.relatedTerms.length ? `Related terms: ${asset.relatedTerms.map((id) => ALL_TERMS.find((t) => t.id === id)?.title ?? id).join(", ")}.` : null,
     `In the app: ${APP_URL}/assets/${encodeURIComponent(asset.symbol)}`,
   ].filter((l): l is string => Boolean(l));
-  return text(lines.join("\n"));
+  return data(lines.join("\n"), {
+    found: true,
+    ...figureRecord(asset),
+    venue: asset.venue,
+    about: info.intro,
+    tradingHours: asset.session.hours,
+    relatedTerms: asset.relatedTerms.map((id) => ALL_TERMS.find((t) => t.id === id)?.title ?? id),
+    appUrl: `${APP_URL}/assets/${encodeURIComponent(asset.symbol)}`,
+  });
 }
 
 /* ---------- live crypto ---------- */
@@ -249,12 +356,15 @@ export async function cryptoPrices(coinKey: string | undefined, fetcher: Fetcher
   const live = await liveCrypto(fetcher, now);
   if (!live) return text("Live crypto prices couldn't be loaded: neither CoinGecko nor Kraken answered. Try again in a minute.", true);
   const want = coinKey?.trim() ? coinFor(coinKey) : undefined;
-  if (coinKey?.trim() && !want) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COINGECKO_COINS.map((c) => c.name).join(", ")}.`);
+  if (coinKey?.trim() && !want) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COINGECKO_COINS.map((c) => c.name).join(", ")}.`, true);
   const rows = live.rows
     .filter((a) => !want || a.symbol === want.symbol)
     .sort((a, b) => Math.abs(b.changePct ?? 0) - Math.abs(a.changePct ?? 0));
   const lines = rows.map((a) => `${a.name} (${a.symbol}): ${formatPrice(a.price)}, ${formatChange(a.changePct).text} ${a.window} (as of ${utc(a.asOf)})`);
-  return text(`${want ? "" : "Biggest moves first.\n"}${lines.join("\n")}\n\n${live.citation}`);
+  return data(`${want ? "" : "Biggest moves first.\n"}${lines.join("\n")}\n\n${live.citation}`, {
+    source: live.citation,
+    coins: rows.map((a) => ({ name: a.name, symbol: a.symbol, priceUsd: a.price, changePct: a.changePct, changeWindow: a.window, asOf: a.asOf })),
+  });
 }
 
 /** Kraken OHLC intervals (minutes) that cover each range within its 720-bar limit. */
@@ -265,9 +375,10 @@ const RANGES = {
 } as const;
 
 export async function priceHistory(coinKey: string, range: string | undefined, fetcher: Fetcher): Promise<ToolResult> {
+  const rangeId = (range && range in RANGES ? range : "7d") as keyof typeof RANGES;
   const coin = coinFor(coinKey);
   if (!coin) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COINGECKO_COINS.map((c) => c.name).join(", ")}. Price history is only available for these.`, true);
-  const r = RANGES[(range ?? "7d") as keyof typeof RANGES] ?? RANGES["7d"];
+  const r = RANGES[rangeId];
   let points: { t: string; c: number }[] = [];
   let citation = COINGECKO_CITATION;
   try {
@@ -288,7 +399,7 @@ export async function priceHistory(coinKey: string, range: string | undefined, f
   const hi = points.reduce((m, p) => (p.c > m.c ? p : m));
   const lo = points.reduce((m, p) => (p.c < m.c ? p : m));
   const pct = ((last.c - first.c) / first.c) * 100;
-  return text([
+  return data([
     `${coin.name} (${coin.symbol}) over ${r.label}:`,
     `Start: ${formatPrice(first.c)} (${utc(first.t)})`,
     `End: ${formatPrice(last.c)} (${utc(last.t)})`,
@@ -296,7 +407,19 @@ export async function priceHistory(coinKey: string, range: string | undefined, f
     `High: ${formatPrice(hi.c)} (${utc(hi.t)}); low: ${formatPrice(lo.c)} (${utc(lo.t)})`,
     `${points.length} price points. This describes the past only.`,
     citation,
-  ].join("\n"));
+  ].join("\n"), {
+    name: coin.name,
+    symbol: coin.symbol,
+    range: rangeId,
+    rangeLabel: r.label,
+    startUsd: first.c,
+    endUsd: last.c,
+    changePct: Number(pct.toFixed(2)),
+    high: { priceUsd: hi.c, at: hi.t },
+    low: { priceUsd: lo.c, at: lo.t },
+    points: points.map((p) => ({ t: p.t, c: p.c })),
+    source: citation,
+  });
 }
 
 /* ---------- headlines ---------- */
@@ -314,12 +437,15 @@ export async function todaysHeadlines(about: string | undefined, fetcher: Fetche
     .sort((a, b) => b.seenAt.localeCompare(a.seenAt))
     .slice(0, 10);
   if (!items.length) {
-    return text(q
+    return data(q
       ? `No recent headline mentions "${about}".`
-      : `No headline is recent enough to call today's news (the list was last refreshed ${utc(file.generatedAt)}). Older headlines are not returned.`);
+      : `No headline is recent enough to call today's news (the list was last refreshed ${utc(file.generatedAt)}). Older headlines are not returned.`, { refreshedAt: file.generatedAt, headlines: [] });
   }
-  return text(items.map((n) => `${n.title}\n${n.domain}, ${utc(n.seenAt)}: ${n.url}`).join("\n\n") +
-    "\n\nHeadlines found by the GDELT Project. They link to their publishers; ATLAS Explain does not write or check them.");
+  return data(items.map((n) => `${n.title}\n${n.domain}, ${utc(n.seenAt)}: ${n.url}`).join("\n\n") +
+    "\n\nHeadlines found by the GDELT Project. They link to their publishers; ATLAS Explain does not write or check them.", {
+    refreshedAt: file.generatedAt,
+    headlines: items.map((n) => ({ title: n.title, publisher: n.domain, url: n.url, seenAt: n.seenAt })),
+  });
 }
 
 /* ---------- JSON-RPC (the HTTP transport is in src/mcp/http.ts) ---------- */
@@ -341,8 +467,8 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
       const protocolVersion = (SUPPORTED_PROTOCOLS as readonly string[]).includes(asked) ? asked : SUPPORTED_PROTOCOLS[0];
       return ok({
         protocolVersion,
-        capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: "https://atlas-explain.web.app" },
+        capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false } },
+        serverInfo: { name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: "https://atlas-explain.web.app", icons: ICONS },
         instructions:
           "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for live crypto prices and past moves; todays_headlines for recent news. Every result names its source and time. Education only: never present results as trade advice or a forecast.",
       });
@@ -351,6 +477,22 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
       return ok({});
     case "tools/list":
       return ok({ tools: TOOLS });
+    case "resources/list":
+      return ok({ resources: [{ uri: CHART_APP_URI, name: "price-chart", title: "Interactive price chart", description: "The chart price_history draws in clients that support MCP Apps.", mimeType: MCP_APP_MIME }] });
+    case "resources/templates/list":
+      return ok({ resourceTemplates: [] });
+    case "resources/read": {
+      if (message.params?.uri !== CHART_APP_URI) return fail(-32002, `Resource not found: ${String(message.params?.uri)}`);
+      return ok({ contents: [{ uri: CHART_APP_URI, mimeType: MCP_APP_MIME, text: CHART_APP_HTML, _meta: { ui: { prefersBorder: true } } }] });
+    }
+    case "prompts/list":
+      return ok({ prompts: PROMPTS.map(({ text: _t, ...p }) => ({ ...p, icons: ICONS })) });
+    case "prompts/get": {
+      const prompt = PROMPTS.find((p) => p.name === message.params?.name);
+      if (!prompt) return fail(-32602, `Unknown prompt: ${String(message.params?.name)}`);
+      const args = Object.fromEntries(Object.entries((message.params?.arguments ?? {}) as Record<string, unknown>).map(([k, v]) => [k, typeof v === "string" ? v.slice(0, 200) : ""]));
+      return ok({ description: prompt.description, messages: [{ role: "user", content: { type: "text", text: prompt.text(args) } }] });
+    }
     case "tools/call": {
       const name = message.params?.name;
       const args = (message.params?.arguments ?? {}) as Record<string, unknown>;
