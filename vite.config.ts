@@ -1,7 +1,15 @@
 import { defineConfig } from "vitest/config";
 import { firebaseChunkGroups } from "./chunking.config";
+import { applySiteFrame } from "./src/site/frame";
+
+/** The public pages share one header and footer (src/site/frame.ts); each page only holds markers. */
+const siteFrame = {
+  name: "atlas-site-frame",
+  transformIndexHtml: (html: string) => (/<!--\s*site:header/.test(html) ? applySiteFrame(html) : html),
+};
 
 export default defineConfig({
+  plugins: [siteFrame],
   build: {
     chunkSizeWarningLimit: 500,
     rolldownOptions: {

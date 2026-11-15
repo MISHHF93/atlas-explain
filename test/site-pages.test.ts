@@ -1,9 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
+import { SITE_PAGES, sitePage } from "./site-page";
 import { describe, expect, it } from "vitest";
-import { INSTALL_URL } from "../src/core/popup-copy";
+import { CHROME_STORE_URL } from "../src/core/links";
 
 const PAGES = ["index.html", "support.html", "privacy.html", "terms.html", "welcome.html", "how-its-built.html", "404.html", "app.html"];
-const home = readFileSync("index.html", "utf8");
+const home = sitePage("index.html");
 const hosting = JSON.parse(readFileSync("firebase.json", "utf8")).hosting as {
   rewrites: { source: string }[];
   redirects: { source: string; destination: string; type: number }[];
@@ -33,10 +34,42 @@ describe("the public site is four pages", () => {
     // A redirect with no fragment of its own keeps the visitor's #install.
     expect(hosting.redirects).toContainEqual({ source: "/how-it-works", destination: "/", type: 301 });
     expect(hosting.rewrites.map((r) => r.source)).not.toContain("/how-it-works");
-    expect(INSTALL_URL).toMatch(/\/#install$|^https:\/\/chromewebstore\.google\.com\//);
+    expect(CHROME_STORE_URL === null || CHROME_STORE_URL.startsWith("https://chromewebstore.google.com/")).toBe(true);
   });
 
   it("has no link to the removed page anywhere", () => {
     for (const page of PAGES) expect(readFileSync(page, "utf8"), page).not.toContain('"/how-it-works');
+  });
+});
+
+describe("one header and one footer for every site page", () => {
+  it("keeps each page to markers, so no page carries its own copy", () => {
+    for (const f of SITE_PAGES) {
+      const raw = readFileSync(f, "utf8");
+      expect(raw, f).toMatch(/<!-- site:header [\w-]+ -->/);
+      expect(raw, f).toContain("<!-- site:footer -->");
+      expect(raw, f).not.toMatch(/<header class="site-head"|<footer class="site-foot"/);
+    }
+  });
+
+  it("links every destination once in the footer, with nothing that leads nowhere", () => {
+    const footer = /<nav aria-label="Footer">(.*?)<\/nav>/.exec(sitePage("index.html"))?.[1] ?? "";
+    const hrefs = [...footer.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+    expect(hrefs).toEqual(expect.arrayContaining(["/app", "/welcome#step-try", "/support#ai-assistants", "/support", "/privacy", "/terms"]));
+    expect(hrefs).not.toContain("/support#faq");
+  });
+
+  it("only says Add to Chrome when there is a store listing to add from", () => {
+    for (const f of SITE_PAGES) {
+      const page = sitePage(f);
+      if (CHROME_STORE_URL) expect(page, f).toContain(CHROME_STORE_URL);
+      else expect(page.replace(/<!--[\s\S]*?-->/g, ""), f).not.toMatch(/>Add to Chrome</);
+    }
+  });
+
+  it("does not repeat the Support FAQ on Home", () => {
+    expect(home).not.toContain('class="faq"');
+    expect(home).toContain('href="/support#ai-assistants"');
   });
 });

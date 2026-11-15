@@ -32,7 +32,6 @@ export interface SignalCopy {
 
 export const ATLAS_DESK_URL = "http://localhost:3000/markets";
 import { EXPLAIN_WEB_URL } from "./links";
-export { CHROME_STORE_URL, EXPLAIN_WEB_URL, INSTALL_URL } from "./links";
 
 export function signalCopy(view: SignalView): SignalCopy {
   if (!view.connected || view.reason === CONNECT_ATLAS) {

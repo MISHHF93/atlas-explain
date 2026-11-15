@@ -1,4 +1,4 @@
-import { INSTALL_URL } from "../core/popup-copy";
+import { CHROME_STORE_URL } from "../core/links";
 import { el } from "./dom";
 
 /** Short, plain summaries shown in the app sheet. The full text lives at /terms and /privacy. */
@@ -23,8 +23,13 @@ export function privacyNodes(): HTMLElement[] {
 }
 
 export function extensionNodes(): HTMLElement[] {
+  const intro = el("p", undefined, "The extension explains anything you highlight, on any page, without leaving it. It works on desktop Chrome.");
+  // No store listing yet: say so plainly instead of a button that leads nowhere.
+  if (!CHROME_STORE_URL) {
+    return [intro, el("p", undefined, "It is not in the Chrome Web Store yet. Until it is listed, this web app has the same Explain, Learn and Assets.")];
+  }
   const add = el("a", "primary", "Add ATLAS Explain to Chrome") as HTMLAnchorElement;
-  add.href = INSTALL_URL;
+  add.href = CHROME_STORE_URL;
   add.target = "_blank";
   add.rel = "noopener";
   const steps = el("ol");
@@ -34,7 +39,7 @@ export function extensionNodes(): HTMLElement[] {
     "Click the ATLAS Explain icon, or right-click and choose Explain with ATLAS.",
   ]) steps.append(el("li", undefined, text));
   return [
-    el("p", undefined, "The extension explains anything you highlight, on any page, without leaving it. It works on desktop Chrome."),
+    intro,
     steps,
     add,
   ];

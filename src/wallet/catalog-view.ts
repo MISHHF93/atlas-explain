@@ -4,7 +4,7 @@
  * Loaded on demand, so the popup's first paint does not pay for it.
  */
 import type { Asset, AssetClass } from "../core/asset-schema";
-import { sparkPath, type SparkPoint } from "../core/assets";
+import { formatPrice, sparkPath, type SparkPoint } from "../core/assets";
 import {
   CLASS_INFO,
   MODE_HELP,
@@ -314,12 +314,6 @@ export interface AssetPageHandle {
   setSpark(points: readonly SparkPoint[] | null, caption: string): void;
   /** Marks the chosen chart range. */
   markRange(days: number | null): void;
-}
-
-/** A chart point in US dollars (the live charts are crypto priced in USD), with the same precision as the quote. */
-function formatPrice(value: number): string {
-  const digits = value >= 1 ? 2 : value >= 0.01 ? 4 : 6;
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
 }
 
 /** The chart's range buttons: the range shown, and how to load another. */

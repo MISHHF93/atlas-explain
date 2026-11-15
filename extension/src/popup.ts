@@ -8,13 +8,13 @@ import {
 } from "../../src/core/extension-prompt";
 import {
   ATLAS_DESK_URL,
-  EXPLAIN_WEB_URL,
   SAMPLE_EXPLANATION,
   SAMPLE_TERM,
   SHORTCUT_HINT,
   connectionFor,
   whyQuestion,
 } from "../../src/core/popup-copy";
+import { EXPLAIN_WEB_URL } from "../../src/core/links";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../../src/core/price-feed";
 import { DEFAULT_SETTINGS } from "../../src/core/settings";
 import { mapSignal, readPublicSignal, type SignalView } from "../../src/core/signal";
@@ -91,6 +91,7 @@ const shell = createWalletShell({
     { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
     { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => openUrl(ATLAS_DESK_URL) },
     { label: "Open the web app", icon: "external", run: () => openUrl(`${EXPLAIN_WEB_URL}/app`) },
+    { label: "Help and support", icon: "info", run: () => openUrl(`${EXPLAIN_WEB_URL}/support`) },
     { label: "Privacy", icon: "shield", run: () => shell.openSheet("Privacy", [el("p", undefined, EXTENSION_PRIVACY_NOTE), el("p", undefined, LOCAL_ATLAS_PERMISSION_NOTE), privacyLink(), el("p", "fine", EXTENSION_DISCLAIMER)]) },
     { label: "Settings", icon: "gear", run: () => openSettings() },
   ],
@@ -244,7 +245,7 @@ const settings = buildSettings({
       void change.then(() => location.reload()).catch(() => undefined);
     },
   },
-  about: { version, hint: SHORTCUT_HINT, action: { icon: "external", label: "Open the web app", run: () => openUrl(EXPLAIN_WEB_URL) } },
+  about: { version, hint: SHORTCUT_HINT, action: { icon: "external", label: "Open the web app", run: () => openUrl(`${EXPLAIN_WEB_URL}/app`) } },
 });
 function openSettings(): void {
   shell.openSheet("Settings", settings.nodes);

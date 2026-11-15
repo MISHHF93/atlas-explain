@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { sitePage } from "./site-page";
 import { describe, expect, it } from "vitest";
 import { CHROME_STORE_URL, MCP_URL } from "../src/core/links";
 import { handleHttp, MCP_PATH } from "../src/mcp/http";
@@ -107,9 +108,15 @@ describe("online-only links", () => {
   it("shows coming-soon text until the owner sets each address, and never a dead link", () => {
     expect(CHROME_STORE_URL === null || CHROME_STORE_URL.startsWith("https://chromewebstore.google.com/")).toBe(true);
     expect(MCP_URL === null || /^https:\/\/[^/]+\/mcp(\?v=\d+)?$/.test(MCP_URL)).toBe(true);
-    const support = readFileSync("support.html", "utf8");
+    const support = sitePage("support.html");
     expect(support).toContain('id="ai-assistants"');
-    expect(support).toMatch(/<div data-when-mcp hidden>[\s\S]*data-mcp-url/);
-    expect(readFileSync("src/site/site.ts", "utf8")).toContain('switchOn("data-when-mcp", "data-before-mcp", MCP_URL, "data-mcp-url")');
+    // Filled at build time: with the address set, the steps show it and the "not online yet" note is hidden.
+    if (MCP_URL) {
+      expect(support).toContain(`<code data-mcp-url>${MCP_URL}</code>`);
+      expect(support).toMatch(/data-before-mcp hidden>/);
+      expect(support).not.toMatch(/data-when-mcp hidden>/);
+    } else {
+      expect(support).toMatch(/<div data-when-mcp hidden>/);
+    }
   });
 });

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { SITE_PAGES, sitePage } from "./site-page";
 import { describe, expect, it } from "vitest";
 
 const app = readFileSync("src/web/app.ts", "utf8");
@@ -43,9 +44,9 @@ describe("web wallet", () => {
 });
 
 describe("public site", () => {
-  const page = readFileSync("index.html", "utf8");
+  const page = sitePage("index.html");
   const css = readFileSync("src/site/site.css", "utf8");
-  const pages = ["index.html", "how-its-built.html", "welcome.html", "privacy.html", "terms.html", "support.html", "404.html"].map((f) => [f, readFileSync(f, "utf8")] as const);
+  const pages = SITE_PAGES.map((f) => [f, sitePage(f)] as const);
   it("is a landing page led by the Chrome extension, with the hybrid story in static HTML", () => {
     expect(page).toContain('class="hero"');
     expect(page).toMatch(/Add to Chrome/);
@@ -77,7 +78,7 @@ describe("public site", () => {
   });
   it("publishes production legal pages: dated, no draft markers or placeholders, with the key commitments", () => {
     for (const f of ["privacy.html", "terms.html"]) {
-      const text = readFileSync(f, "utf8");
+      const text = sitePage(f);
       expect(text, f).toMatch(/Last updated \d{1,2} [A-Z][a-z]+ 20\d\d/);
       expect(text, f).not.toMatch(/draft|\[TODO|TODO\]|not final/i);
     }
