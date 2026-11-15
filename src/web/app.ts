@@ -23,7 +23,6 @@ import {
   planCard,
   row,
   signalCard,
-  themePicker,
 } from "../wallet/cards";
 import { el, labelledButton, prefersReducedMotion } from "../wallet/dom";
 import { glossaryPanel } from "../wallet/glossary-panel";
@@ -57,6 +56,7 @@ import type { TextRun } from "../platform/web/backend";
 import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } from "../app/routes";
 import type { TabDef } from "../wallet/shell";
 import { createWatchlist, localKeyValue } from "../core/watchlist";
+import { buildSettings } from "../wallet/settings";
 import { yourDataGroup } from "../wallet/your-data";
 import { tracker } from "../core/analytics";
 import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
@@ -553,28 +553,22 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     closeSheet: () => shell.closeSheet(),
   });
   // Shown under the sign-in panel in the account sheet (header account button, /app/account, /signin).
-  const settingsNodes: Node[] = [
-    planSlot,
-    group("Appearance", [themePicker(themeChoice, (choice) => {
-      applyTheme(choice);
+  const settingsNodes: Node[] = buildSettings({
+    plan: planSlot,
+    theme: themeChoice,
+    onTheme: (choice) => {
       try {
         localStorage.setItem(THEME_KEY, choice);
       } catch {
         // Private mode: theme lasts for this visit.
       }
       void backend?.savePrefs({ theme: choice }).catch(() => undefined);
-    })]),
-    yourData.node,
-    statsGroup,
-    group("How answers are made", [
-      el("p", "fine", "When your browser supports it, Gemini Nano answers on your device and nothing is sent. Otherwise Gemini answers in the cloud. Every answer is labelled."),
-    ]),
-    group("Legal", [row("doc", "Terms", () => openLegal("terms")), row("shield", "Privacy", () => openLegal("privacy"))]),
-    group("About", [
-      el("p", "fine", "ATLAS Explain is open source under the Apache-2.0 licence. Education only, never investment advice."),
-      row("panel", "Get the Chrome extension", () => shell.openSheet("Chrome extension", extensionNodes())),
-    ]),
-  ];
+    },
+    yourData: yourData.node,
+    stats: statsGroup,
+    legal: { onTerms: () => openLegal("terms"), onPrivacy: () => openLegal("privacy") },
+    about: { action: { icon: "panel", label: "Get the Chrome extension", run: () => shell.openSheet("Chrome extension", extensionNodes()) } },
+  }).nodes;
   // One page has one top-level heading (Explain); the other section titles sit a level below it.
   for (const id of ["today", "glossary", "assets"] as const) {
     shell.panels[id].querySelector(".panel-title h1")?.setAttribute("aria-level", "2");
