@@ -10,6 +10,6 @@ export const EXPLAIN_WEB_URL = "https://atlas-explain.web.app";
 /** Chrome Web Store listing, e.g. "https://chromewebstore.google.com/detail/atlas-explain/<id>". */
 export const CHROME_STORE_URL: string | null = null;
 /** Hosted MCP endpoint (Cloudflare Workers free plan), e.g. "https://atlas-explain-mcp.<account>.workers.dev/mcp". */
-export const MCP_URL: string | null = null;
+export const MCP_URL: string | null = "https://atlas-explain-mcp.atlas-explain.workers.dev/mcp";
 /** Where every "Add to Chrome" link points. */
 export const INSTALL_URL = CHROME_STORE_URL ?? `${EXPLAIN_WEB_URL}/#install`;

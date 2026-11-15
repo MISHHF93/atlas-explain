@@ -22,7 +22,7 @@ It only reads its built-in glossary and two public files on `atlas-explain-data.
 
 ## For people using it
 
-The setup steps are on the website at https://atlas-explain.web.app/support#ai-assistants. Until the address is online, that section says "Not online yet". In Claude: Settings, then Connectors, then Add custom connector, then paste the address.
+**Live address:** `https://atlas-explain-mcp.atlas-explain.workers.dev/mcp` (deployed 15 Nov 2026). The setup steps are on the website at https://atlas-explain.web.app/support#ai-assistants. In Claude: Settings, then Connectors, then Add custom connector, then paste the address.
 
 ## How it is hosted ($0)
 
