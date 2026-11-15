@@ -18,14 +18,14 @@ describe("the extension popup has three tabs", () => {
   it("opens Settings from the menu as a sheet, not a tab", () => {
     expect(ids).not.toContain("settings");
     expect(popup).toContain('{ label: "Settings", icon: "gear", run: () => openSettings() }');
-    expect(popup).toContain('shell.openSheet("Settings", settingsNodes);');
+    expect(popup).toContain('shell.openSheet("Settings", settings.nodes);');
     expect(popup).not.toContain("shell.panels.settings");
     expect(popup).not.toContain('shell.select("settings"');
   });
 
-  it("keeps every settings group reachable", () => {
-    for (const title of ["Appearance", "On this page", "How answers are made", "Account", "Privacy", "Your data", "For ATLAS users", "About"]) {
-      expect(popup).toContain(`group("${title}"`);
-    }
+  it("builds its settings with the shared builder, with every extension-only part switched on", () => {
+    expect(popup).toContain("const settings = buildSettings({");
+    for (const part of ["pageTools:", "onAccount:", "yourData:", "legal:", "atlas:", "about:"]) expect(popup).toContain(part);
+    expect(popup).not.toMatch(/\bgroup\(/);
   });
 });

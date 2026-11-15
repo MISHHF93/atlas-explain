@@ -21,16 +21,13 @@ import { mapSignal, readPublicSignal, type SignalView } from "../../src/core/sig
 import {
   emptyCard,
   explanationCard,
-  group,
   limitCard,
   loadingCard,
   messageCard,
   offlineCard,
   onboarding,
   planCard,
-  row,
   signalCard,
-  themePicker,
 } from "../../src/wallet/cards";
 import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../../src/core/timeouts";
 import { addMonitorSink, classifyCloudError, consoleSink, report } from "../../src/core/monitor";
@@ -44,6 +41,7 @@ import { canReachLocalAtlas } from "../../src/core/assets";
 import { el, labelledButton, prefersReducedMotion } from "../../src/wallet/dom";
 import { installErrorBoundary } from "../../src/wallet/error-boundary";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../src/wallet/shell";
+import { buildSettings } from "../../src/wallet/settings";
 import { HISTORY_KEY, addToHistory, makeEntry, parseHistory, type HistoryEntry } from "../../src/core/history";
 import { LEARN_KEY } from "../../src/core/learn-key";
 import { pageKindLine } from "../../src/core/page-kind";
@@ -279,45 +277,32 @@ shell.panels.glossary.append(glossaryHead, learnSlot);
 /* ---------- Settings (a sheet from the menu, not a tab) ---------- */
 
 const toolsStatus = el("p", "fine");
-// Asks for the optional localhost permission in the click itself (Chrome requires a user gesture).
-const atlasRow = row("plug", "Connect ATLAS on this computer", () => {
-  if (!hasChrome) return;
-  const change = atlasAllowed
-    ? chrome.permissions.remove({ origins: ATLAS_ORIGINS })
-    : chrome.permissions.request({ origins: ATLAS_ORIGINS });
-  void change.then(() => location.reload()).catch(() => undefined);
-});
 toolsStatus.setAttribute("role", "status");
-const themeSlot = el("div");
 const version = hasChrome ? chrome.runtime.getManifest().version : "preview";
-const settingsNodes: Node[] = [
-  planCard(pricingView({ billingEnabled: false, plan: "free", freeCloudDailyLimit: DEFAULT_SETTINGS.freeCloudDailyLimit })),
-  group("Appearance", [themeSlot]),
-  group("On this page", [
-    row("pin", "Show Explain button on this page", () => void pin()),
-    row("panel", "Open in side panel", () => void openSidePanel()),
-    toolsStatus,
-  ]),
-  group("How answers are made", [
-    el("p", "fine", "When Chrome supports it, Gemini Nano answers on your device and nothing is sent. Otherwise Gemini answers in the cloud. Every answer is labelled. No setup needed."),
-  ]),
-  group("Account", [
-    el("p", "fine", "Sign in on the ATLAS Explain website in this Chrome profile, and the extension uses the same account. Signing in is optional."),
-    row("user", "Account and sign-in", () => void openAccount()),
-  ]),
-  group("Privacy", [el("p", "fine", EXTENSION_PRIVACY_NOTE), privacyLink()]),
-  group("Your data", [
-    el("p", "fine", "Download your data or delete your account on the ATLAS Explain website. Recent explanations in the extension stay in this browser; clear them from Recent."),
-    row("external", "Download or delete your data", () => openUrl(`${EXPLAIN_WEB_URL}/app/account`)),
-  ]),
-  group("For ATLAS users", [
-    el("p", "fine", "If you run ATLAS research software on this computer, ATLAS Explain can read its prices and research figures. Most people don't need this."),
-    atlasRow,
-  ]),
-  group("About", [el("p", "fine", `ATLAS Explain ${version} · Apache-2.0 · ${SHORTCUT_HINT}`), row("external", "Open the web app", () => openUrl(EXPLAIN_WEB_URL))]),
-];
+const settings = buildSettings({
+  plan: planCard(pricingView({ billingEnabled: false, plan: "free", freeCloudDailyLimit: DEFAULT_SETTINGS.freeCloudDailyLimit })),
+  theme: "system",
+  onTheme: (choice) => void store.set({ theme: choice }),
+  pageTools: { onPin: () => void pin(), onSidePanel: () => void openSidePanel(), status: toolsStatus },
+  onAccount: () => void openAccount(),
+  yourData: { onOpenWebsite: () => openUrl(`${EXPLAIN_WEB_URL}/app/account`) },
+  legal: { note: EXTENSION_PRIVACY_NOTE, onPrivacy: () => openUrl(`${EXPLAIN_WEB_URL}/privacy`) },
+  atlas: {
+    icon: "plug",
+    label: "Connect ATLAS on this computer",
+    // Asks for the optional localhost permission in the click itself (Chrome requires a user gesture).
+    run: () => {
+      if (!hasChrome) return;
+      const change = atlasAllowed
+        ? chrome.permissions.remove({ origins: ATLAS_ORIGINS })
+        : chrome.permissions.request({ origins: ATLAS_ORIGINS });
+      void change.then(() => location.reload()).catch(() => undefined);
+    },
+  },
+  about: { version, hint: SHORTCUT_HINT, action: { icon: "external", label: "Open the web app", run: () => openUrl(EXPLAIN_WEB_URL) } },
+});
 function openSettings(): void {
-  shell.openSheet("Settings", settingsNodes);
+  shell.openSheet("Settings", settings.nodes);
 }
 
 /* ---------- events ---------- */
@@ -353,10 +338,7 @@ async function boot(): Promise<void> {
   const stored = await store.get();
   const theme: ThemeChoice = isTheme(stored.theme) ? stored.theme : hasChrome ? "system" : readPreviewTheme();
   applyTheme(theme);
-  themeSlot.replaceChildren(themePicker(theme, (choice) => {
-    applyTheme(choice);
-    void store.set({ theme: choice });
-  }));
+  settings.setTheme(theme);
   history = parseHistory(stored.history);
   storedLearned = stored[LEARN_KEY as "learned"] ?? [];
   if (import.meta.env.DEV && !hasChrome) {
@@ -375,8 +357,7 @@ async function boot(): Promise<void> {
     return;
   }
   atlasAllowed = await chrome.permissions.contains({ origins: ATLAS_ORIGINS }).catch(() => false);
-  const atlasLabel = atlasRow.querySelector("span");
-  if (atlasLabel && atlasAllowed) atlasLabel.textContent = "Disconnect ATLAS on this computer";
+  if (atlasAllowed) settings.setAtlasLabel("Disconnect ATLAS on this computer");
   const priceFeed: PriceFeedOptions = { ...DEFAULT_PRICE_FEED };
   startAssets(priceFeed);
   void import("./cloud").then(async (cloud) => {
