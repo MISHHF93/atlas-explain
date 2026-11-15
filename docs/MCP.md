@@ -16,6 +16,19 @@ ATLAS Explain has a small, read-only [Model Context Protocol](https://modelconte
 
 Every answer names its source and ends with: "Educational information, not investment advice."
 
+## What else it offers (MCP 2025-11-25 and MCP Apps)
+
+- **Structured output:** every data tool declares an `outputSchema` and returns the same facts as typed JSON in `structuredContent` (for example `priceUsd`, `changePct`, `points`, `sourceUrl`), next to the readable text. Agents and trading-platform assistants can use the fields directly. A test checks every answer against its schema.
+- **Interactive chart (MCP App):** `price_history` points at `ui://atlas-explain/price-chart.html` (`src/mcp/chart-app.ts`, MIME `text/html;profile=mcp-app`). Claude (web and desktop), ChatGPT and VS Code draw it in a sandboxed frame: the price line, a readout under the pointer, high and low, the source, and 24H/7D/30D buttons that call `price_history` again through the host. It loads nothing from outside, so the default MCP Apps security policy is enough. Clients without MCP Apps show the text answer.
+- **Prompts:** `market_brief`, `explain_asset` (asset) and `learn_next` (topic), shown as ready-made starters in clients that support prompts. Each asks for sources and says not to suggest a trade.
+- **Icons and annotations:** the server and every tool carry the ATLAS Explain icon, a title, and `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, as Anthropic's directory review requires.
+
+## Getting listed (owner steps, free)
+
+- **MCP Registry** (the official public catalogue other directories read from): `server.json` is ready at the repo root. Install `mcp-publisher` (https://modelcontextprotocol.io/registry/quickstart), run `mcp-publisher login github` as the MISHHF93 account, then `mcp-publisher publish` from the repo root. A test keeps `server.json`'s version in step with `SERVER_VERSION`.
+- **Claude connectors directory:** submit from claude.ai's developer portal (organization admin settings, Directory). It asks for the server URL, public docs (https://atlas-explain.web.app/support#ai-assistants) and a privacy policy (https://atlas-explain.web.app/privacy#connector). Anthropic's review checklist: https://claude.com/docs/connectors/building/review-criteria
+- **ChatGPT:** works as a custom connector in developer mode (Settings, Apps and connectors) with the same URL; plan availability varies.
+
 ## What it never does
 
 - It never calls an AI model; the assistant does the talking.

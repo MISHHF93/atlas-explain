@@ -108,3 +108,94 @@ describe("the connector covers what the app shows", () => {
     }
   });
 });
+
+/** Enough of JSON Schema for our output schemas: type (incl. nullable arrays), properties, required, items, enum. */
+function conforms(value: unknown, schema: Record<string, unknown>, path = "$"): string[] {
+  const errs: string[] = [];
+  const types = ([] as string[]).concat((schema.type as string | string[] | undefined) ?? []);
+  const actual = value === null ? "null" : Array.isArray(value) ? "array" : Number.isInteger(value) ? "integer" : typeof value;
+  if (types.length && !types.includes(actual) && !(actual === "integer" && types.includes("number"))) return [`${path}: ${actual} is not ${types.join("|")}`];
+  if (schema.enum && !(schema.enum as unknown[]).includes(value)) errs.push(`${path}: ${String(value)} not in enum`);
+  if (actual === "object") {
+    const obj = value as Record<string, unknown>;
+    for (const key of (schema.required as string[] | undefined) ?? []) if (!(key in obj)) errs.push(`${path}.${key}: missing`);
+    for (const [key, sub] of Object.entries((schema.properties as Record<string, Record<string, unknown>> | undefined) ?? {})) {
+      if (key in obj) errs.push(...conforms(obj[key], sub, `${path}.${key}`));
+    }
+  }
+  if (actual === "array" && schema.items) (value as unknown[]).forEach((v, i) => errs.push(...conforms(v, schema.items as Record<string, unknown>, `${path}[${i}]`)));
+  return errs;
+}
+
+describe("structured output, prompts, icons and the chart app", () => {
+  const news = { schema: "atlas-explain-news-v1", generatedAt: "2026-11-15T10:00:00Z", items: { "crypto:BTC": [{ title: "Bitcoin steadies", url: "https://a.example/1", domain: "a.example", seenAt: "2026-11-15T09:00:00Z" }] } };
+  const full: Fetcher = async (url, init) => (url.includes("news.json") ? new Response(JSON.stringify(news), { status: 200 }) : net()(url, init));
+  const call = async (name: string, args: Record<string, unknown>) =>
+    (await handle({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }, full))?.result as { structuredContent?: Record<string, unknown>; isError?: boolean };
+
+  it("gives every data tool an output schema, and every answer matches it", async () => {
+    const cases: [string, Record<string, unknown>][] = [
+      ["asset_details", { asset: "AAPL" }], ["asset_details", { asset: "BTC" }], ["asset_details", { asset: "nothing-here" }],
+      ["official_figures", { query: "Apple" }], ["official_figures", { query: "zzz" }], ["crypto_prices", {}],
+      ["price_history", { coin: "BTC", range: "24h" }], ["todays_headlines", {}], ["todays_headlines", { about: "zzz" }],
+    ];
+    for (const [name, args] of cases) {
+      const tool = TOOLS.find((t) => t.name === name)!;
+      const result = await call(name, args);
+      expect(tool.outputSchema, name).toBeTruthy();
+      expect(result.structuredContent, `${name} ${JSON.stringify(args)}`).toBeTruthy();
+      expect(conforms(result.structuredContent, tool.outputSchema!), `${name} ${JSON.stringify(args)}`).toEqual([]);
+      expect(result.structuredContent!.notice).toBe(EDUCATION_LINE);
+    }
+  });
+
+  it("annotates every tool as read-only with a title and an icon, and links price_history to the chart", () => {
+    for (const t of TOOLS) {
+      expect(t.annotations).toMatchObject({ title: t.title, readOnlyHint: true, destructiveHint: false });
+      expect(t.icons[0]!.src).toBe("https://atlas-explain.web.app/logo.svg");
+    }
+    expect(TOOLS.find((t) => t.name === "price_history")!._meta).toEqual({ ui: { resourceUri: "ui://atlas-explain/price-chart.html" } });
+  });
+
+  it("serves the chart as a self-contained MCP App page", async () => {
+    const list = (await handle({ jsonrpc: "2.0", id: 1, method: "resources/list" }, full))?.result as { resources: { uri: string; mimeType: string }[] };
+    expect(list.resources).toEqual([expect.objectContaining({ uri: "ui://atlas-explain/price-chart.html", mimeType: "text/html;profile=mcp-app" })]);
+    const read = (await handle({ jsonrpc: "2.0", id: 2, method: "resources/read", params: { uri: "ui://atlas-explain/price-chart.html" } }, full))?.result as { contents: { text: string; mimeType: string }[] };
+    const html = read.contents[0]!.text;
+    expect(read.contents[0]!.mimeType).toBe("text/html;profile=mcp-app");
+    expect(html).toContain('"ui/initialize"');
+    expect(html).toContain("ui/notifications/tool-result");
+    expect(html).toContain("Past prices only, never a forecast.");
+    // Nothing loads from outside: the host's default CSP blocks it anyway.
+    expect(html).not.toMatch(/<script[^>]+src=|<link[^>]+href=|fetch\(|XMLHttpRequest|@import/);
+    expect((await handle({ jsonrpc: "2.0", id: 3, method: "resources/read", params: { uri: "ui://nope" } }, full))?.error?.code).toBe(-32002);
+  });
+
+  it("offers three education-only prompts that fill in their arguments", async () => {
+    const list = (await handle({ jsonrpc: "2.0", id: 1, method: "prompts/list" }, full))?.result as { prompts: { name: string }[] };
+    expect(list.prompts.map((p) => p.name)).toEqual(["market_brief", "explain_asset", "learn_next"]);
+    const got = (await handle({ jsonrpc: "2.0", id: 2, method: "prompts/get", params: { name: "explain_asset", arguments: { asset: "Solana" } } }, full))?.result as { messages: { content: { text: string } }[] };
+    const text = got.messages[0]!.content.text;
+    expect(text).toContain("explain Solana");
+    expect(text).toMatch(/don't suggest any trade/);
+    expect((await handle({ jsonrpc: "2.0", id: 3, method: "prompts/get", params: { name: "nope" } }, full))?.error?.code).toBe(-32602);
+  });
+
+  it("announces tools, resources and prompts, with its icon", async () => {
+    const init = (await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25" } }, full))?.result as { capabilities: Record<string, unknown>; serverInfo: { icons: unknown[] } };
+    expect(Object.keys(init.capabilities).sort()).toEqual(["prompts", "resources", "tools"]);
+    expect(init.serverInfo.icons).toHaveLength(1);
+  });
+});
+
+describe("ready to list in the MCP Registry", () => {
+  it("keeps server.json in step with the server", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { SERVER_VERSION } = await import("../src/mcp/server");
+    const manifest = JSON.parse(readFileSync("server.json", "utf8")) as { name: string; description: string; version: string; remotes: { type: string; url: string }[] };
+    expect(manifest.name).toMatch(/^io\.github\.MISHHF93\//);
+    expect(manifest.description.length).toBeLessThanOrEqual(100);
+    expect(manifest.version).toBe(SERVER_VERSION);
+    expect(manifest.remotes).toEqual([{ type: "streamable-http", url: "https://atlas-explain-mcp.atlas-explain.workers.dev/mcp" }]);
+  });
+});

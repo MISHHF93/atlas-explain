@@ -26,7 +26,7 @@
     <main id="main" tabindex="-1">
       <article class="doc legal">
         <h1>Privacy policy</h1>
-        <p class="fine">Last updated 14 November 2026</p>
+        <p class="fine">Last updated 15 November 2026</p>
         <p class="lede">ATLAS Explain explains finance terms and market news in plain language. It is built to use as little of your data as possible: only the text you choose to explain, and only when you ask.</p>
 
         <h2 id="who">Who we are</h2>
@@ -52,6 +52,10 @@
         <h2 id="where">Where your data is processed</h2>
         <p>We use Google Firebase (hosting, sign-in, database, Remote Config, App Check and AI Logic with Gemini) and, if you allow it, Google Analytics. Google processes this data for us as a service provider, and it may be processed outside Canada, including in the United States.</p>
         <p>To show prices, images and official figures, your browser also loads content directly from: CoinGecko (crypto prices and coin images), Logo.dev (company logos, when shown), and our own data site, atlas-explain-data.web.app (official rates and figures). These providers see your IP address when your browser loads from them, as with any website. We send them no other information about you.</p>
+
+        <h2 id="connector">If you use the AI-assistant connector</h2>
+        <p>The ATLAS Explain connector (atlas-explain-mcp.atlas-explain.workers.dev) is read-only and needs no account. It receives only what your assistant sends to one of its tools: a term, an asset or coin name, a time range or a learning topic. It never receives your conversation, your assistant account or anything on your computer, and it stores none of the requests it answers.</p>
+        <p>It runs on Cloudflare Workers, which processes each request for us as a service provider and may keep short operational logs, such as IP address and time, to run and protect the service. To answer, the connector itself fetches public data from CoinGecko, Kraken and our data site; your IP address is not passed on to them. Your chat with the assistant is covered by your assistant provider's own privacy policy.</p>
 
         <h2 id="analytics">Cookies, storage and analytics</h2>
         <p>ATLAS Explain stores a few items in your browser to work: your theme, history, watchlist, recently viewed assets, and whether you've seen the welcome steps. Firebase stores sign-in information so you stay signed in.</p>
