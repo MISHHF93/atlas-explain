@@ -71,16 +71,16 @@ https://atlas-explain.web.app opens with the extension-first home page: select a
 
 ## Still frames for the README
 
-Captured stills already in `docs/screenshots/` (these predate the one-page web app and the three-tab popup; the store images in `store/` and the popup shots in `public/shots/` were regenerated on 15 Nov 2026):
+Stills in `docs/screenshots/`. Six were retaken on 15 Nov 2026; `local-header.png` and `desk-explain-link.png` are older:
 
-- `hosted-header.png` — hosted web app, pill **Live prices** (retake: it predates the one-page layout and the header links)
-- `local-header.png` — local loopback build, pill **ATLAS connected**, after dismissing onboarding (retake: it predates the one-page layout and shows "ATLAS local")
+- `hosted-header.png` — hosted web app, pill **Live prices**, header links Today, Learn and Assets
+- `local-header.png` — local loopback build, pill **ATLAS connected** (retake with ATLAS running: it predates the one-page layout and shows "ATLAS local"; load the app at `http://localhost:5173`, not `[::1]`, since the app looks for ATLAS only on `localhost` and `127.0.0.1`)
 - `desk-explain-link.png` — Markets desk with **Explain this move** and **Concepts**
-- `local-full.png` — Explain a move plus today's brief on a local build
-- `hosted-full.png` — hosted app, today's digest not ready
+- `local-full.png` — Today on a local build with ATLAS: today's brief and the paper signal light
+- `hosted-full.png` — hosted app, Today: the biggest crypto moves with source and time
 - `glossary-shadow.png` — `#concept=shadow` educational question, nothing sent yet
 - `highlight-practice.png` — practice page (static, no account fields)
-- `signal-grey.png` — Signal tab, grey light, "Why this colour?"
+- `signal-grey.png` — the paper signal light, grey, with "Why this colour?"
 
 Still waiting on a real take on the presenter's laptop with Gemini Nano:
 
