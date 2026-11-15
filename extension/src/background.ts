@@ -11,6 +11,15 @@ interface PendingExplain {
   auto: boolean;
 }
 
+/** Only the site (scheme and host) is kept: the full address can hold account ids. */
+function siteOf(url: string | undefined): string {
+  try {
+    return url ? new URL(url).origin : "";
+  } catch {
+    return "";
+  }
+}
+
 /** Kept as a literal so the background script stays tiny; equals WELCOME_URL in src/core/popup-copy.ts. */
 const WELCOME_URL = "https://atlas-explain.web.app/welcome?installed=1";
 
@@ -29,8 +38,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   // Chrome passes only the highlighted text here. Nothing else on the page is read.
   void deliver({
     selection: (info.selectionText ?? "").slice(0, 4_000),
-    title: tab.title ?? "",
-    url: tab.url ?? "",
+    title: (tab.title ?? "").slice(0, 180),
+    url: siteOf(tab.url),
     auto: true,
   });
 });
@@ -43,12 +52,12 @@ chrome.commands.onCommand.addListener((command, tab) => {
     .then(([injected]) =>
       deliver({
         selection: injected?.result?.selection ?? "",
-        title: injected?.result?.title || tab.title || "",
-        url: tab.url ?? "",
+        title: (injected?.result?.title || tab.title || "").slice(0, 180),
+        url: siteOf(tab.url),
         auto: Boolean(injected?.result?.selection?.trim()),
       }),
     )
-    .catch(() => deliver({ selection: "", title: tab.title ?? "", url: tab.url ?? "", auto: false }));
+    .catch(() => deliver({ selection: "", title: (tab.title ?? "").slice(0, 180), url: siteOf(tab.url), auto: false }));
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -56,8 +65,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tab = sender.tab;
   void deliver({
     selection: typeof message.selection === "string" ? message.selection.slice(0, 4_000) : "",
-    title: typeof message.title === "string" ? message.title : tab?.title ?? "",
-    url: tab?.url ?? "",
+    title: (typeof message.title === "string" ? message.title : tab?.title ?? "").slice(0, 180),
+    url: siteOf(tab?.url),
     auto: true,
   }).then((opened) => sendResponse({ ok: opened }));
   return true;

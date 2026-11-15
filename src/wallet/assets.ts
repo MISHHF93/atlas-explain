@@ -9,7 +9,7 @@ import {
   formatPrice,
   hitLabel,
   sampleLabel,
-  sparkPath,
+  sparkSvg,
   type AssetDetailView,
   type AssetView,
   type AssetsState,
@@ -249,17 +249,6 @@ export function sparkSpan(points: number, interval: string): string {
 }
 
 /** Last point of an M/L path, for the end dot and the area fill. */
-function sparkEnd(path: string): { x: number; y: number } | null {
-  const nums = path.match(/-?\d+(?:\.\d+)?/g);
-  if (!nums || nums.length < 2) return null;
-  return { x: Number(nums[nums.length - 2]), y: Number(nums[nums.length - 1]) };
-}
-
-function sparkStartX(path: string): number {
-  const first = path.match(/-?\d+(?:\.\d+)?/);
-  return first ? Number(first[0]) : 0;
-}
-
 /* ---------- detail sheet ---------- */
 
 export interface AssetDetailHandle {
@@ -344,21 +333,17 @@ export function assetDetail(a: AssetView, options: { onExplain: (a: AssetView) =
       spark.setAttribute("aria-label", "Loading recent prices");
       return;
     }
-    if (!d.spark.points.length) {
-      spark.replaceChildren(el("p", "fine", d.spark.reason ?? "No recent bars to draw."));
+    // A line needs two prices; with fewer, say why instead of drawing an empty chart.
+    if (d.spark.points.length < 2) {
+      spark.replaceChildren(el("p", "fine", d.spark.reason ?? "Not enough recent prices to draw a chart."));
       spark.removeAttribute("aria-label");
       return;
     }
-    const w = 312;
-    const h = 64;
     const first = d.spark.points[0]?.c ?? 0;
     const last = d.spark.points[d.spark.points.length - 1]?.c ?? 0;
     const tone = last > first ? "up" : last < first ? "down" : "flat";
     const holder = document.createElement("span");
-    const line = sparkPath(d.spark.points, w, h);
-    const end = sparkEnd(line);
-    const area = end ? `${line} L${end.x} ${h} L${sparkStartX(line)} ${h} Z` : "";
-    holder.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true" focusable="false">${area ? `<path class="spark-area" d="${area}"/>` : ""}<path class="spark-line" d="${line}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>${end ? `<circle class="spark-end" cx="${end.x}" cy="${end.y}" r="3" vector-effect="non-scaling-stroke"/>` : ""}</svg>`;
+    holder.innerHTML = sparkSvg(d.spark.points);
     spark.dataset.tone = tone;
     const span = sparkSpan(d.spark.points.length, d.spark.interval);
     spark.replaceChildren(holder.firstElementChild as Element, el("p", "fine spark-cap", `Chart: ${span}`));

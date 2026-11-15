@@ -54,8 +54,22 @@ service cloud.firestore {
     match /users/{userId}/explanations/{explanationId} {
       allow read, delete: if request.auth != null && request.auth.uid == userId;
 
-      allow create, update: if request.auth != null
+      // Saved once, never edited. Only the fields the app writes (backend.ts save()), with size
+      // caps, so an account can't use its documents as free storage for anything else.
+      allow create: if request.auth != null
         && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          "createdAt", "symbol", "asOf", "movePct", "question", "inferenceSource", "requestedMode",
+          "pathReason", "privateContextUsed", "fellBackToCloud", "cloudModel", "summary",
+          "buyerReasons", "sellerReasons", "whatWouldChange", "headlineTopics", "cardJson"
+        ])
+        && (!("createdAt" in request.resource.data) || request.resource.data.createdAt == request.time)
+        && request.resource.data.buyerReasons.size() <= 12
+        && request.resource.data.sellerReasons.size() <= 12
+        && request.resource.data.whatWouldChange.size() < 4000
+        && (!("question" in request.resource.data) || (request.resource.data.question is string && request.resource.data.question.size() < 4000))
+        && (!("cardJson" in request.resource.data) || (request.resource.data.cardJson is string && request.resource.data.cardJson.size() < 100000))
+        && (!("headlineTopics" in request.resource.data) || (request.resource.data.headlineTopics is list && request.resource.data.headlineTopics.size() <= 40))
         && request.resource.data.keys().hasAll([
           "symbol",
           "movePct",

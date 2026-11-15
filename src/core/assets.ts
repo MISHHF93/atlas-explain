@@ -348,6 +348,28 @@ export function sparkPath(points: readonly SparkPoint[], w: number, h: number, p
     .join(" ");
 }
 
+/**
+ * The one price sparkline: a line, the shaded area under it and a dot on the latest price.
+ * Built from numbers only (sparkPath), so it is safe to set as markup. Used by the ATLAS asset
+ * sheet and the public catalog chart, so both draw the same chart.
+ */
+export function sparkSvg(points: readonly SparkPoint[], w = 312, h = 64): string {
+  const pad = 2;
+  const line = sparkPath(points, w, h, pad);
+  if (!line) return "";
+  const last = points[points.length - 1]!;
+  const ys = points.map((p) => p.c);
+  const lo = Math.min(...ys);
+  const span = Math.max(...ys) - lo || 1;
+  const endX = (w - pad).toFixed(1);
+  const endY = (pad + (1 - (last.c - lo) / span) * (h - 2 * pad)).toFixed(1);
+  const area = `${line} L${endX} ${h} L${pad.toFixed(1)} ${h} Z`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true" focusable="false">` +
+    `<path class="spark-area" d="${area}"/>` +
+    `<path class="spark-line" d="${line}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
+    `<circle class="spark-end" cx="${endX}" cy="${endY}" r="3" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
 /* ---------- explain hand-off ---------- */
 
 /** The question sent to the Explain tab. Context only: price, freshness, lean and why. */

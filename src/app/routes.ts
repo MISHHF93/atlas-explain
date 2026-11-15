@@ -1,7 +1,8 @@
 /**
  * Route map for atlas-explain.web.app. Pure functions, no DOM, so they are unit tested.
  *
- * Public site (static HTML, no app JavaScript):  /  /support  /privacy  /terms  (404.html for the rest)
+ * Public site (static HTML, no app JavaScript):  /  /support  /privacy  /terms  /welcome  /how-its-built
+ *   (404.html for the rest; the shared header and footer come from src/site/frame.ts)
  * App (one lazy-loaded bundle, app.html), one scrolling page with a section per address:
  *   /app (Explain)  /app/today  /app/learn  /app/assets  /app/assets/:symbol (sheet)
  *   /app/account and /signin (the account sheet)
