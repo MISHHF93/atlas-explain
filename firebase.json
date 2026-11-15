@@ -67,15 +67,6 @@
             "value": "no-cache"
           }
         ]
-      },
-      {
-        "source": "/download/**",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache"
-          }
-        ]
       }
     ],
     "rewrites": [
@@ -121,6 +112,11 @@
       {
         "source": "/demo/trading-terms.html",
         "destination": "/welcome",
+        "type": 301
+      },
+      {
+        "source": "/download/**",
+        "destination": "/#install",
         "type": 301
       }
     ]

@@ -20,8 +20,12 @@ describe("the public site is four pages", () => {
   it("keeps how it works and the install steps on Home", () => {
     expect(home).toContain('id="how-it-works"');
     expect(home).toContain('id="install"');
-    expect(home).toContain('href="/download/atlas-explain-chrome.zip"');
-    expect(home).toContain("Load unpacked");
+    // Installed online only: no zip, no Developer mode, no build steps for visitors.
+    expect(home).not.toMatch(/\.zip|Load unpacked|Developer mode|npm /);
+    expect(home).toContain("not in the Chrome Web Store yet");
+    expect(home).toMatch(/<div data-when-store hidden>[\s\S]*data-store-link/);
+    expect(readFileSync("how-its-built.html", "utf8")).not.toMatch(/npm |unpacked/);
+    expect(hosting.redirects).toContainEqual({ source: "/download/**", destination: "/#install", type: 301 });
     expect(home).toContain("No predictions.");
   });
 

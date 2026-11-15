@@ -1,0 +1,6 @@
+# Hosted ATLAS Explain MCP server on Cloudflare Workers (free plan). See docs/MCP.md.
+# Owner, once: `npx wrangler@4 login` (free Cloudflare account, no card), then `npm run deploy:mcp`.
+name = "atlas-explain-mcp"
+main = "src/mcp/worker.ts"
+compatibility_date = "2025-09-01"
+workers_dev = true

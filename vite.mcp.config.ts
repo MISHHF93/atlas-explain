@@ -2,20 +2,22 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
 /**
- * Builds the ATLAS Explain MCP server into one Node file, mcp/atlas-explain-mcp.mjs, so it can
- * reuse the app's own glossary, catalog and headline readers. No dependencies at runtime.
+ * Checks that the hosted MCP server (src/mcp/worker.ts) bundles for Cloudflare Workers: one
+ * file, no Node built-ins, no runtime dependencies. release:check runs it; the output in
+ * mcp-dist/ is not committed or published (wrangler bundles the same source on deploy).
  */
 export default defineConfig({
-  // The website's public files (images, sitemap) don't belong in the server's folder.
+  // The website's public files (images, sitemap) don't belong in the server's bundle.
   publicDir: false,
+  ssr: { target: "webworker", noExternal: true },
   build: {
-    ssr: resolve("src/mcp/main.ts"),
-    outDir: "mcp",
-    emptyOutDir: false,
-    target: "node22",
+    ssr: resolve("src/mcp/worker.ts"),
+    outDir: "mcp-dist",
+    emptyOutDir: true,
+    target: "es2022",
     minify: false,
     rolldownOptions: {
-      output: { entryFileNames: "atlas-explain-mcp.mjs", format: "es" },
+      output: { entryFileNames: "worker.js", format: "es" },
     },
   },
 });

@@ -1,8 +1,6 @@
 # ATLAS Explain for AI assistants (MCP)
 
-ATLAS Explain ships a small, read-only [Model Context Protocol](https://modelcontextprotocol.io) server. With it, an AI assistant that speaks MCP (Claude Desktop, Claude Code and others) can look things up in ATLAS Explain while you talk to it.
-
-It is free and runs on your own computer. It needs no account and no API key.
+ATLAS Explain has a small, read-only [Model Context Protocol](https://modelcontextprotocol.io) server that is hosted online. People add one web address to an AI assistant that supports MCP connectors (Claude, and others), and the assistant can look things up in ATLAS Explain while they chat. Nothing is downloaded or installed, and it needs no account or key.
 
 ## What it can do
 
@@ -16,42 +14,32 @@ Every answer names its source and ends with: "Educational information, not inves
 
 ## What it never does
 
-- It never calls an AI model; your assistant does the talking.
-- It never reads accounts, balances or anything on your computer.
+- It never calls an AI model; the assistant does the talking.
+- It never reads accounts, balances or anything on the person's computer.
 - It never gives trade advice.
 
-It only reads three things: its own built-in glossary, and two public files on `atlas-explain-data.web.app` (`market.json` and `news.json`).
+It only reads its built-in glossary and two public files on `atlas-explain-data.web.app` (`market.json` and `news.json`).
 
-## Set it up
+## For people using it
 
-You need Node.js 22 or newer.
+The setup steps are on the website at https://atlas-explain.web.app/support#ai-assistants. Until the address is online, that section says "Not online yet". In Claude: Settings, then Connectors, then Add custom connector, then paste the address.
 
-1. Get the server file. Either clone this repository and run `npm install` then `npm run build:mcp`, or download `mcp/atlas-explain-mcp.mjs` from the repository.
-2. Add it to your assistant's MCP settings.
+## How it is hosted ($0)
 
-   **Claude Desktop:** open Settings, then Developer, then Edit Config. Add the server to `claude_desktop_config.json`, using the full path to the file:
+- **Where:** Cloudflare Workers, free plan: 100,000 requests a day with no card. Over the limit, requests fail for the rest of the day; nothing is ever charged. Firebase can't host it, because the Spark plan has no servers.
+- **Transport:** MCP "Streamable HTTP", stateless. Each `POST /mcp` carries one JSON-RPC message and gets one JSON answer; notifications get `202`. `GET /mcp` is `405` (no server stream). `GET /` is a short plain-text description. CORS is open, because the data is public and read-only. It supports protocol versions 2025-06-18, 2025-03-26 and 2024-11-05.
+- **Caching:** the two data files are cached at Cloudflare's edge for 5 minutes, so heavy use doesn't hit the data site.
+- **Code:**
+  - `src/mcp/server.ts`: the tools and the JSON-RPC handler. They reuse the app's glossary, catalog and headline readers, so the freshness and source rules are the same.
+  - `src/mcp/http.ts`: the HTTP transport.
+  - `src/mcp/worker.ts`: the Workers entry.
+  - `wrangler.toml`: the deploy settings.
+- **Checks:** `npm run build:mcp` checks that it bundles for Workers with no Node APIs, and release:check runs it.
 
-   ```json
-   {
-     "mcpServers": {
-       "atlas-explain": {
-         "command": "node",
-         "args": ["C:/path/to/atlas-explain/mcp/atlas-explain-mcp.mjs"]
-       }
-     }
-   }
-   ```
+## Owner steps (once)
 
-   **Claude Code:**
+1. Create a free Cloudflare account (no card) and sign in from this repo: `npx wrangler@4 login`.
+2. Deploy: `npm run deploy:mcp`. Wrangler prints the address, for example `https://atlas-explain-mcp.<your-subdomain>.workers.dev`.
+3. Send that address to the developer, or set `MCP_URL` in `src/core/links.ts` to it with `/mcp` on the end, then redeploy hosting. The Support page then shows the address and the steps instead of "Not online yet".
 
-   ```bash
-   claude mcp add atlas-explain -- node /path/to/atlas-explain/mcp/atlas-explain-mcp.mjs
-   ```
-
-3. Restart the assistant. Try asking it: "Using ATLAS Explain, what is a stop-limit order?"
-
-## How it is built
-
-The server's source is `src/mcp/server.ts`. It reuses the same glossary, catalog and headline readers as the app, so the freshness and source rules are the same. `npm run build:mcp` bundles it into the one dependency-free file `mcp/atlas-explain-mcp.mjs`. It speaks MCP over standard input and output (newline-delimited JSON-RPC 2.0) and supports protocol versions 2025-06-18, 2025-03-26 and 2024-11-05.
-
-The two data files are refreshed hourly by a GitHub Actions job. If that job stops running, `todays_headlines` says that nothing is recent enough instead of returning old news.
+After code changes, run `npm run deploy:mcp` again. It can't run from GitHub Actions while the account's billing lock is on.

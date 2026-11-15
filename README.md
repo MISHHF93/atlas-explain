@@ -182,7 +182,7 @@ The desk can also open this app with a public move card (`#c=` / `#card=`) or a 
 
 ## For AI assistants (MCP)
 
-ATLAS Explain also ships a small, free, read-only MCP server, so assistants such as Claude Desktop and Claude Code can look up glossary terms, official figures (with sources) and today's headlines. It runs locally with `node mcp/atlas-explain-mcp.mjs` and needs no key. Setup steps: [docs/MCP.md](docs/MCP.md).
+ATLAS Explain also has a free, read-only MCP server hosted online (Cloudflare Workers free plan). Assistants such as Claude add its web address as a connector, and can then look up glossary terms, official figures (with sources) and today's headlines. Nothing is downloaded. Hosting and owner steps: [docs/MCP.md](docs/MCP.md).
 
 ## Screenshots
 
