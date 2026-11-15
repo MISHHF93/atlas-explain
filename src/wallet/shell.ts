@@ -13,12 +13,16 @@ export type ThemeChoice = "system" | "light" | "dark";
 
 export interface TabDef { id: TabId; label: string; icon: IconName }
 
+/**
+ * The extension popup's tabs. Three for everyone: Explain, Learn, Assets. Signal is a fourth
+ * that the popup shows only while ATLAS research software is running. Settings is not a tab;
+ * it opens from the menu as a sheet.
+ */
 export const TABS: readonly TabDef[] = [
   { id: "explain", label: "Explain", icon: "sparkle" },
+  { id: "glossary", label: "Learn", icon: "book" },
   { id: "assets", label: "Assets", icon: "coins" },
   { id: "signal", label: "Signal", icon: "signal" },
-  { id: "glossary", label: "Learn", icon: "book" },
-  { id: "settings", label: "Settings", icon: "gear" },
 ];
 
 export interface MenuItem {
@@ -60,7 +64,7 @@ export function createWalletShell(options: {
   menu: MenuItem[];
   onSelect?: (tab: TabId) => void;
   onAccount?: () => void;
-  /** Tabs shown in the navigation, in order. Defaults to the extension's five. */
+  /** Tabs shown in the navigation, in order. Defaults to the extension's (TABS). */
   tabs?: readonly TabDef[];
   /** First tab shown. Defaults to the first tab. */
   initialTab?: TabId;

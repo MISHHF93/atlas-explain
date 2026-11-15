@@ -54,7 +54,7 @@ Times are a guide. Keep the total near three minutes. If a shot fails, retake th
 | 12 | 2:20-2:32 | Hosted app tab | Show the header pill. | Pill text **Live prices**. | "The hosted web app never calls localhost. That is an honest header, not a failed connection." |
 | 13 | 2:32-2:45 | Extension or local preview with ATLAS running | Show the header pill after a real probe. | Pill text **ATLAS connected** (or **ATLAS desk** if this tab is Markets). | "On this computer, the connectors library talks to ATLAS over public MCP, with a REST fallback, and the header says ATLAS local only when a probe answers." |
 | 14 | 2:45-2:52 | Signal tab | Open **Why this colour?** | Grey light unless a model has cleared the evidence gate. Today that is usually grey. | "The light stays grey until a model clears the evidence gate. Grey is the honest answer." |
-| 15 | 2:52-3:00 | Settings and disclaimer | Show the plan card and the footer line. | "Free during the hackathon. Billing is built in and switched off." Educational disclaimer visible. | "Educational information, not investment advice." |
+| 15 | 2:52-3:00 | Menu → Settings, and the disclaimer | Open the menu (top right), choose Settings, and show the plan card and the footer line. | "Free during the hackathon. Billing is built in and switched off." Educational disclaimer visible. | "Educational information, not investment advice." |
 
 ## Desktop opening frame
 

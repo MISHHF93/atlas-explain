@@ -18,8 +18,8 @@ describe("web wallet", () => {
     expect(main).toContain('import "./app/app.css"');
   });
 
-  it("keeps the same four tabs as the extension", () => {
-    for (const tab of ["explain", "signal", "glossary", "settings"]) {
+  it("uses the same section ids as the extension's tabs", () => {
+    for (const tab of ["explain", "glossary", "assets"]) {
       expect(app).toContain(`"${tab}"`);
     }
   });
