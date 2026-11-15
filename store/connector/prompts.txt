@@ -1,0 +1,4 @@
+chart-btc-7d.png: "Show me Bitcoin's price over the last 7 days with ATLAS Explain." (Prices: Kraken public market data (api.kraken.com).)
+chart-eth-30d.png: "How has Ethereum moved over the last 30 days? Use ATLAS Explain." (Prices: Kraken public market data (api.kraken.com).)
+chart-sol-24h.png: "Using ATLAS Explain, chart Solana over the last 24 hours." (Prices by CoinGecko (www.coingecko.com).)
+chart-xrp-7d.png: "What did XRP do this week? Show it with ATLAS Explain." (Prices by CoinGecko (www.coingecko.com).)
