@@ -46,7 +46,9 @@ describe("keep-going follow-ups", () => {
   it("is wired into both surfaces and the shared answer card", () => {
     const cards = readFileSync("src/wallet/cards.ts", "utf8");
     expect(cards).toContain("keep-going");
-    expect(readFileSync("extension/src/popup.ts", "utf8")).toContain("keepGoingFor(");
+    // Text and highlight answers on both surfaces get their follow-ups from the shared panel.
+    expect(readFileSync("src/wallet/explain-panel.ts", "utf8")).toContain("followUps: FOLLOW_UPS.map(");
+    expect(readFileSync("extension/src/popup.ts", "utf8")).not.toContain("FOLLOW_UPS");
     expect(readFileSync("src/web/app.ts", "utf8")).toContain("keepGoing(copyText)");
   });
 });

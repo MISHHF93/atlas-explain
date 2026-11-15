@@ -5,7 +5,6 @@ import {
   LOCAL_ATLAS_PERMISSION_NOTE,
   buildExtensionPrompt,
   toPageContext,
-  withDisclaimer,
 } from "../../src/core/extension-prompt";
 import {
   ATLAS_DESK_URL,
@@ -19,12 +18,6 @@ import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "..
 import { DEFAULT_SETTINGS } from "../../src/core/settings";
 import { mapSignal, readPublicSignal, type SignalView } from "../../src/core/signal";
 import {
-  emptyCard,
-  explanationCard,
-  limitCard,
-  loadingCard,
-  messageCard,
-  offlineCard,
   onboarding,
   planCard,
   signalCard,
@@ -38,25 +31,21 @@ import { createWatchlist, localKeyValue } from "../../src/core/watchlist";
 import { loadDigest, todayToronto } from "../../src/core/digest";
 import { digestCard } from "../../src/wallet/digest";
 import { canReachLocalAtlas } from "../../src/core/assets";
-import { el, labelledButton, prefersReducedMotion } from "../../src/wallet/dom";
+import { el, labelledButton } from "../../src/wallet/dom";
 import { installErrorBoundary } from "../../src/wallet/error-boundary";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../../src/wallet/shell";
 import { buildSettings } from "../../src/wallet/settings";
-import { HISTORY_KEY, addToHistory, makeEntry, parseHistory, type HistoryEntry } from "../../src/core/history";
+import { explainPanel, type ExplainOutcome, type ExplainRequest } from "../../src/wallet/explain-panel";
+import { HISTORY_KEY, parseHistory } from "../../src/core/history";
 import { LEARN_KEY } from "../../src/core/learn-key";
 import { pageKindLine } from "../../src/core/page-kind";
-import { TWO_SIDED_SCHEMA, parseTwoSided, twoSidedCopyText } from "../../src/core/two-sided";
-import { twoSidedNodes } from "../../src/wallet/two-sided";
-import { historyCard } from "../../src/wallet/history-learn";
-import { engineStrip } from "../../src/wallet/engine";
+import { TWO_SIDED_SCHEMA } from "../../src/core/two-sided";
 import { todayRow } from "../../src/wallet/today-row";
 import { marketDigestCard } from "../../src/wallet/market-digest";
 import { buildMarketDigest } from "../../src/core/market-digest";
 import type { CatalogView } from "../../src/core/assets";
 import type { DigestView } from "../../src/core/digest";
-import { icon } from "../../src/wallet/icons";
-import { COMPOSER_PLACEHOLDER, composerAction, composerHint } from "../../src/core/composer";
-import { FOLLOW_UPS, followUpQuestion } from "../../src/core/follow-ups";
+import { COMPOSER_PLACEHOLDER, composerHint } from "../../src/core/composer";
 import { isEngineState } from "../../src/core/hybrid-engine";
 import { explainOnDevice } from "./on-device";
 import { pinExplainButton, probeAtlasDesk, readSelectionInPage } from "./read-selection";
@@ -68,7 +57,6 @@ interface PendingExplain {
   auto?: boolean;
 }
 
-type RunOptions = { highlight: boolean; fromPage: boolean; pending?: PendingExplain; followUp?: string };
 
 const hasChrome = typeof chrome !== "undefined" && Boolean(chrome.runtime?.id);
 const preview = new URLSearchParams(location.search);
@@ -109,27 +97,19 @@ const shell = createWalletShell({
 
 /* ---------- Explain tab ---------- */
 
-const question = document.createElement("textarea");
-question.id = "question";
-question.rows = 2;
-question.placeholder = COMPOSER_PLACEHOLDER;
-question.setAttribute("aria-label", "Term or text to explain");
-// One primary action: reads the highlight while the box is empty, explains typed text once you type.
-const explainButton = labelledButton("highlight", "Explain highlight", "primary composer-go");
-const composer = el("section", "composer");
-composer.setAttribute("aria-label", "Ask Explain");
-composer.append(question, explainButton);
-function syncComposer(): void {
-  const action = composerAction(question.value);
-  explainButton.dataset.mode = action.mode;
-  explainButton.replaceChildren(icon(action.icon, 16), el("span", undefined, action.label));
-}
-const result = el("div", "stack result");
-result.setAttribute("aria-live", "polite");
-// The title stays for screen readers; sighted readers already see the Explain tab and the brand.
-const explainHead = el("div", "panel-title sr-only");
-explainHead.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
-const engine = engineStrip({ compact: true });
+// The Explain panel is the same code as the web app's. The popup supplies only how it gets an
+// answer: read the page highlight, try Gemini Nano, then the cloud bridge (askPopup below).
+// Recent explanations live in chrome.storage.local on this device. Never uploaded.
+const panel = explainPanel({
+  ask: askPopup,
+  readsPage: true,
+  placeholder: COMPOSER_PLACEHOLDER,
+  hint: composerHint(SHORTCUT_HINT),
+  headHidden: true,
+  history: { initial: [], save: (list) => void store.set({ [HISTORY_KEY]: list }), limit: 3 },
+  relatedTerms: (text, topic) => relatedTermsFn?.(text, topic) ?? [],
+  announce: (text) => shell.announce(text),
+});
 const brief = digestCard();
 // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
 let marketCatalog: CatalogView | null = null;
@@ -152,38 +132,10 @@ void (canReachLocalAtlas(location, true)
   ? loadDigest()
   : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's ATLAS digest isn't ready yet." })
 ).then((v) => { briefView = v; brief.show(v); refreshToday(); });
-// Recent explanations live in chrome.storage.local on this device. Never uploaded.
-const recentSlot = el("div");
-let history: HistoryEntry[] = [];
 // The ATLAS digest row and the Signal tab exist only for people running ATLAS research software.
 today.node.hidden = true;
 shell.setTabHidden("signal", true);
-shell.panels.explain.append(explainHead, composer, engine.node, today.node, result, recentSlot);
-syncComposer();
-
-function renderHistory(): void {
-  recentSlot.replaceChildren(historyCard({
-    entries: history,
-    limit: 3,
-    onOpen: (entry) => {
-      question.value = entry.selection;
-      syncComposer();
-      showExplanation(entry.text, entry.source, entry.selection, false, entry.contextLine);
-    },
-    onClear: () => {
-      history = [];
-      void store.set({ [HISTORY_KEY]: [] });
-      renderHistory();
-      shell.announce("Recent explanations cleared.");
-    },
-  }));
-}
-
-function remember(text: string, source: "on_device" | "in_cloud", selection: string, contextLine?: string): void {
-  history = addToHistory(history, makeEntry({ selection, text, source, contextLine }));
-  void store.set({ [HISTORY_KEY]: history });
-  renderHistory();
-}
+shell.panels.explain.append(panel.head, panel.composer, panel.engine.node, today.node, panel.status, panel.result, panel.history);
 
 /* ---------- Assets tab ---------- */
 
@@ -213,10 +165,8 @@ function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): void {
       updateConnection();
     },
     onExplain: (text) => {
-      question.value = text;
-      syncComposer();
       shell.select("explain");
-      void run({ highlight: false, fromPage: false });
+      panel.explain(text);
     },
   });
   void assets.refresh();
@@ -228,10 +178,8 @@ let currentSignal: SignalView = mapSignal({ connected: false });
 const signal = signalCard({
   onRefresh: () => refreshSignal(),
   onWhy: () => {
-    question.value = whyQuestion(currentSignal);
-    syncComposer();
     shell.select("explain");
-    void run({ highlight: false, fromPage: false });
+    panel.explain(whyQuestion(currentSignal));
   },
   deskHint: "Open the ATLAS Markets desk in this tab, then reopen ATLAS Explain.",
 });
@@ -267,10 +215,8 @@ async function ensureLearn(): Promise<void> {
 /** Set once the learn chunk has loaded, so answers can show related-term chips. */
 let relatedTermsFn: ((text: string, topic?: string) => { id: string; title: string }[]) | null = null;
 function askTerm(term: { title: string }): void {
-  question.value = `Explain "${term.title}" in plain language with a short example. Do not recommend a trade.`;
-  syncComposer();
   shell.select("explain");
-  void run({ highlight: false, fromPage: false });
+  panel.explain(term.title);
 }
 shell.panels.glossary.append(glossaryHead, learnSlot);
 
@@ -307,45 +253,30 @@ function openSettings(): void {
 
 /* ---------- events ---------- */
 
-let lastRun: RunOptions | null = null;
-question.addEventListener("input", () => {
-  syncComposer();
-});
-question.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && question.value.trim()) {
-    event.preventDefault();
-    void run({ highlight: false, fromPage: false });
-  }
-});
-explainButton.addEventListener("click", () => {
-  void run(composerAction(question.value).mode === "typed" ? { highlight: false, fromPage: false } : { highlight: true, fromPage: true });
-});
 window.addEventListener("online", () => { updateConnection(); refreshEngine(); });
 window.addEventListener("offline", () => { updateConnection(); refreshEngine(); });
 
 function refreshEngine(): void {
   const forced = preview.get("engine");
-  if (!hasChrome && isEngineState(forced)) engine.set(forced);
-  else void engine.refresh();
+  if (!hasChrome && isEngineState(forced)) panel.engine.set(forced);
+  else void panel.engine.refresh();
 }
 
 void boot();
 
 async function boot(): Promise<void> {
-  showResult(composerHintLine());
   refreshEngine();
   applySignal(previewSignal());
   const stored = await store.get();
   const theme: ThemeChoice = isTheme(stored.theme) ? stored.theme : hasChrome ? "system" : readPreviewTheme();
   applyTheme(theme);
   settings.setTheme(theme);
-  history = parseHistory(stored.history);
+  panel.setHistory(parseHistory(stored.history));
   storedLearned = stored[LEARN_KEY as "learned"] ?? [];
   if (import.meta.env.DEV && !hasChrome) {
     const done = preview.get("learned");
     if (done) storedLearned = done.split(",");
   }
-  renderHistory();
   // Load the glossary chunk once the popup is idle, so related-term chips are ready for the first answer.
   const warm = () => void loadLearnModule().then((mod) => { relatedTermsFn = mod.relatedTerms; }).catch(() => undefined);
   if ("requestIdleCallback" in window) requestIdleCallback(warm, { timeout: 2_000 });
@@ -375,9 +306,8 @@ async function boot(): Promise<void> {
   const pending = session.pending as PendingExplain | undefined;
   if (!pending) return;
   await chrome.storage.session.remove("pending");
-  question.value = pending.selection;
-  syncComposer();
-  if (pending.auto) await run({ highlight: true, fromPage: false, pending });
+  panel.setText(pending.selection);
+  if (pending.auto) await panel.run({ page: { title: pending.title, url: pending.url } });
 }
 
 function showOnboarding(): void {
@@ -387,171 +317,72 @@ function showOnboarding(): void {
   };
   shell.overlay(onboarding(() => {
     close();
-    explainButton.focus();
+    panel.focus();
   }, {
     onTry: () => {
       close();
-      question.value = SAMPLE_TERM;
-      syncComposer();
       shell.select("explain");
-      void run({ highlight: false, fromPage: false });
+      panel.explain(SAMPLE_TERM);
     },
   }));
 }
 
 /* ---------- explain flow ---------- */
 
-async function run(options: RunOptions): Promise<void> {
-  lastRun = options;
-  setBusy(true);
-  showResult(loadingCard(0));
-  let raw = { selection: question.value, title: "", url: "" };
-  if (options.pending) {
-    raw = options.pending;
-  } else if (options.fromPage && hasChrome) {
+/** How the popup gets an answer: the page highlight (when asked), Gemini Nano first, then the cloud bridge. */
+async function askPopup(request: ExplainRequest): Promise<ExplainOutcome> {
+  let raw = { selection: request.text, title: request.page?.title ?? "", url: request.page?.url ?? "" };
+  if (request.fromPage && hasChrome) {
     const tab = await activeTab();
-    if (!tab?.id) {
-      fail("Open a normal web page, highlight some text, then try again.", false);
-      return;
-    }
+    if (!tab?.id) return { kind: "error", message: "Open a normal web page, highlight some text, then try again.", retry: false };
     try {
       const [injected] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: readSelectionInPage });
       raw = {
-        selection: injected?.result?.selection || question.value,
+        selection: injected?.result?.selection || request.text,
         title: injected?.result?.title || tab.title || "",
         url: tab.url || "",
       };
-      if (raw.selection) {
-        question.value = raw.selection;
-        syncComposer();
-      }
+      if (raw.selection) request.setSubject(raw.selection);
     } catch {
-      fail("Chrome does not let extensions read this page. Paste the term in the box instead.", false);
-      return;
+      return { kind: "error", message: "Chrome does not let extensions read this page. Paste the term in the box instead.", retry: false };
     }
   }
-  if (!raw.selection.trim() && !question.value.trim()) {
-    setBusy(false);
-    showResult(emptyCard("Nothing is highlighted yet. Select a word or sentence on the page, or type a term above."));
-    question.focus();
-    return;
+  if (!raw.selection.trim()) {
+    return { kind: "nothing", message: "Nothing is highlighted yet. Select a word or sentence on the page, or type a term above." };
   }
 
   const context = toPageContext(raw);
-  const built = buildExtensionPrompt({ context, question: options.followUp ?? (options.highlight ? "" : question.value) });
+  const built = buildExtensionPrompt({ context, question: request.question });
+  const answered = (rawText: string, source: "on_device" | "in_cloud"): ExplainOutcome => ({
+    kind: "answer",
+    rawText,
+    source,
+    subject: context.selection || request.text,
+    contextLine: pageKindLine(context.page, context.host),
+    notes: context.redacted ? ["Account-like numbers were removed before anything was sent."] : [],
+  });
 
   // Firebase loads only now, never when the popup opens. Highlight-to-explain is free on every plan.
   const cloudModule = navigator.onLine ? await import("./cloud").catch(() => null) : null;
 
-  showResult(loadingCard(1));
+  request.progress(1);
   const local = await explainOnDevice(built.prompt, TWO_SIDED_SCHEMA);
-  if (local) {
-    answer(local, "on_device", context.selection, context.redacted, pageKindLine(context.page, context.host));
-    return;
-  }
-  if (!cloudModule || !navigator.onLine) {
-    setBusy(false);
-    showResult(offlineCard());
-    return;
-  }
+  if (local) return answered(local, "on_device");
+  if (!cloudModule || !navigator.onLine) return { kind: "offline" };
 
-  showResult(loadingCard(2));
+  request.progress(2);
   try {
     const cloud = await withDeadline(cloudModule.explainInCloud(built.prompt), EXPLAIN_DEADLINE_MS, "The answer took too long.");
-    if (cloud.blocked) {
-      setBusy(false);
-      showResult(limitCard(cloud.text));
-      return;
-    }
-    answer(cloud.text, "in_cloud", context.selection, context.redacted, pageKindLine(context.page, context.host));
+    return cloud.blocked ? { kind: "limit", message: cloud.text } : answered(cloud.text, "in_cloud");
   } catch (error) {
-    if (error instanceof CloudAllowanceUsed) {
-      setBusy(false);
-      showResult(limitCard(error.message));
-      return;
-    }
-    const message = error instanceof Error && error.message ? error.message : "";
-    fail(friendlyCloudError(message), true);
+    if (error instanceof CloudAllowanceUsed) return { kind: "limit", message: error.message };
+    return { kind: "error", message: friendlyCloudError(error instanceof Error && error.message ? error.message : ""), retry: true };
   }
-}
-
-function answer(text: string, source: "on_device" | "in_cloud", selection: string, redacted: boolean, contextLine?: string): void {
-  engine.markRun(source);
-  remember(text, source, selection || question.value, contextLine);
-  showExplanation(text, source, selection, redacted, contextLine);
-}
-
-function showExplanation(text: string, source: "on_device" | "in_cloud", selection: string, redacted: boolean, contextLine?: string): void {
-  setBusy(false);
-  // Same two-sided layout as the web app when the model kept the shape; plain text otherwise.
-  const twoSided = parseTwoSided(text);
-  const plain = withDisclaimer(text);
-  const notes = redacted ? ["Account-like numbers were removed before anything was sent."] : [];
-  if (twoSided) notes.push(EXTENSION_DISCLAIMER);
-  showResult(explanationCard({
-    source,
-    selection,
-    contextLine,
-    ...(twoSided ? { body: twoSidedNodes(twoSided) } : { text: plain }),
-    copyText: twoSided ? twoSidedCopyText(twoSided, EXTENSION_DISCLAIMER) : plain,
-    notes,
-    ...keepGoingFor(selection || question.value, text),
-    onClear: () => {
-      showResult(composerHintLine());
-      explainButton.focus();
-    },
-  }));
-  shell.announce("Explanation ready.");
-}
-
-/** Follow-ups re-ask about the same topic; related chips explain a glossary term found in the answer. */
-function keepGoingFor(topic: string, answerText: string) {
-  const subject = topic.trim();
-  if (!subject) return {};
-  return {
-    followUps: FOLLOW_UPS.map((item) => ({
-      label: item.label,
-      run: () => void run({
-        highlight: false,
-        fromPage: false,
-        pending: { selection: subject, title: "", url: "" },
-        followUp: followUpQuestion(item.kind, subject),
-      }),
-    })),
-    related: (relatedTermsFn?.(`${subject}\n${answerText}`, subject) ?? []).map((term) => ({
-      title: term.title,
-      run: () => askTerm(term),
-    })),
-  };
-}
-
-function fail(text: string, retry: boolean): void {
-  setBusy(false);
-  const replay = lastRun;
-  showResult(messageCard("error", "That did not work", text, retry && replay ? () => void run(replay) : undefined));
 }
 
 function friendlyCloudError(message: string): string {
   report(classifyCloudError(message), "extension", message.includes("throttl") ? "app_check_throttled" : "cloud_failed");
   return cloudErrorCopy(message, "extension");
-}
-
-function composerHintLine(): HTMLElement {
-  return el("p", "state-empty composer-hint", composerHint(SHORTCUT_HINT));
-}
-
-function setBusy(busy: boolean): void {
-  result.setAttribute("aria-busy", busy ? "true" : "false");
-  explainButton.disabled = busy;
-  explainButton.classList.toggle("loading", busy);
-}
-
-function showResult(card: HTMLElement): void {
-  card.classList.add("enter");
-  result.replaceChildren(card);
-  if (!card.classList.contains("state-empty")) {
-    requestAnimationFrame(() => card.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" }));
-  }
 }
 
 /* ---------- signal ---------- */
@@ -705,18 +536,17 @@ function applyPreviewState(): void {
   if (sheet) void assets?.open(sheet);
   const demo = preview.get("demo");
   if (demo === "answer") {
-    question.value = SAMPLE_EXPLANATION.selection;
-    syncComposer();
-    answer(SAMPLE_EXPLANATION.text, "on_device", SAMPLE_EXPLANATION.selection, false);
+    panel.setText(SAMPLE_EXPLANATION.selection);
+    panel.engine.markRun("on_device");
+    panel.show({ kind: "answer", rawText: SAMPLE_EXPLANATION.text, source: "on_device", subject: SAMPLE_EXPLANATION.selection }, true);
   } else if (demo === "loading") {
-    showResult(loadingCard(1));
+    panel.showLoading(1);
   } else if (demo === "error") {
-    lastRun = { highlight: false, fromPage: false };
-    fail("We couldn't reach the cloud. Check your connection and try again.", true);
+    panel.show({ kind: "error", message: "We couldn't reach the cloud. Check your connection and try again.", retry: true });
   } else if (demo === "offline") {
-    showResult(offlineCard());
+    panel.show({ kind: "offline" });
   } else if (demo === "limit") {
-    showResult(limitCard(new CloudAllowanceUsed().message));
+    panel.show({ kind: "limit", message: new CloudAllowanceUsed().message });
   }
   if (preview.get("why") === "open") signal.setWhyOpen(true);
   if (preview.get("onboarding") === "1") showOnboarding();

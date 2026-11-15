@@ -60,10 +60,11 @@ describe("hybrid engine status", () => {
     const popup = readFileSync("extension/src/popup.ts", "utf8");
     const web = readFileSync("src/web/app.ts", "utf8");
     const css = readFileSync("src/wallet/wallet.css", "utf8");
-    for (const src of [popup, web]) {
-      expect(src).toContain("engineStrip({ compact: true })");
-      expect(src).toContain("engine.markRun(");
-    }
+    // One strip, made by the shared Explain panel that both surfaces mount.
+    const panel = readFileSync("src/wallet/explain-panel.ts", "utf8");
+    expect(panel).toContain("engineStrip({ compact: true })");
+    expect(panel).toContain("engine.markRun(outcome.source)");
+    for (const src of [popup, web]) expect(src).toContain("explainPanel({");
     expect(css).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.engine-pulse \{ animation: none !important; \}/);
   });
 });

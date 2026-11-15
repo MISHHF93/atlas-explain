@@ -11,7 +11,8 @@ export interface HistoryEntry {
   /** The highlight or typed text, redacted and clipped. */
   selection: string;
   text: string;
-  source: "on_device" | "in_cloud";
+  /** "unknown" only when the browser did not report where the answer ran. */
+  source: "on_device" | "in_cloud" | "unknown";
   contextLine?: string;
 }
 
@@ -48,7 +49,7 @@ export function parseHistory(value: unknown): HistoryEntry[] {
     if (!item || typeof item !== "object") continue;
     const e = item as Record<string, unknown>;
     if (typeof e.id !== "string" || typeof e.at !== "number" || typeof e.selection !== "string" || typeof e.text !== "string") continue;
-    if (e.source !== "on_device" && e.source !== "in_cloud") continue;
+    if (e.source !== "on_device" && e.source !== "in_cloud" && e.source !== "unknown") continue;
     const entry: HistoryEntry = { id: e.id, at: e.at, selection: e.selection, text: e.text, source: e.source };
     if (typeof e.contextLine === "string") entry.contextLine = e.contextLine;
     out.push(entry);

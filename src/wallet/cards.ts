@@ -171,8 +171,8 @@ export function messageCard(kind: "error" | "offline" | "limit" | "info", title:
   return card;
 }
 
-export function offlineCard(): HTMLElement {
-  return messageCard("offline", "You are offline", OFFLINE_ANSWER);
+export function offlineCard(retry?: () => void): HTMLElement {
+  return messageCard("offline", "You are offline", OFFLINE_ANSWER, retry);
 }
 
 export function limitCard(text: string): HTMLElement {

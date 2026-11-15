@@ -47,7 +47,9 @@ describe("two-sided extension answers", () => {
     const popup = readFileSync(new URL("../extension/src/popup.ts", import.meta.url), "utf8");
     const web = readFileSync(new URL("../src/web/app.ts", import.meta.url), "utf8");
     expect(popup).toContain("explainOnDevice(built.prompt, TWO_SIDED_SCHEMA)");
-    expect(popup).toContain("twoSidedNodes(");
-    expect(web).toContain("twoSidedNodes(");
+    // The two-sided layout is drawn once, by the panel both surfaces mount.
+    const panel = readFileSync(new URL("../src/wallet/explain-panel.ts", import.meta.url), "utf8");
+    expect(panel).toContain("twoSidedNodes(twoSided)");
+    for (const src of [popup, web]) expect(src).toContain("explainPanel({");
   });
 });
