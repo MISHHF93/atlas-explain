@@ -182,15 +182,15 @@ The desk can also open this app with a public move card (`#c=` / `#card=`) or a 
 
 ## Screenshots
 
-Stills live in [docs/screenshots/](docs/screenshots/). They predate the production copy pass (header labels changed from "Hosted app" and "ATLAS local" to "Live prices" and "ATLAS connected") and are retaken with the store assets. They show honest header states, the desk hand-off, today's brief, the Signal tab's grey default, and the practice page. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
+Stills live in [docs/screenshots/](docs/screenshots/). Six were retaken on 15 Nov 2026 from the live site and a local build; `local-header.png` (ATLAS was not running at the time) and `desk-explain-link.png` (a crop of the private desk) are older. They show honest header states, the desk hand-off, today's brief, the grey signal light, and the practice page. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
 
 ![Hosted app header](docs/screenshots/hosted-header.png)
 
-The hosted web app at https://atlas-explain.web.app shows **Live prices** (earlier builds said "Hosted app") and never calls localhost.
+The hosted web app at https://atlas-explain.web.app/app is one page: Explain at the top, then Today, Learn and Assets, reached from the header. The pill shows **Live prices**; the hosted app never calls localhost.
 
 ![ATLAS local header](docs/screenshots/local-header.png)
 
-A local loopback build shows **ATLAS connected** (earlier builds said "ATLAS local") only when public MCP or the REST catalog on this computer answers.
+A local loopback build shows **ATLAS connected** only when public MCP or the REST catalog on this computer answers. (This still predates the one-page layout and shows the older "ATLAS local" label.)
 
 ![Explain this move on the ATLAS desk](docs/screenshots/desk-explain-link.png)
 
@@ -198,23 +198,23 @@ The private ATLAS desk can open this app with a public move card (`#c=` / `#card
 
 ![Today's brief when ATLAS is local](docs/screenshots/local-full.png)
 
-Today's brief stays in view. Earlier official notes and a prior morning report are labelled as not today, and are not presented as today's brief.
+With ATLAS on this computer, Today adds the brief and the paper signal light. An earlier official note is labelled as not today's, and is not presented as today's brief.
 
-![Hosted app, digest not ready](docs/screenshots/hosted-full.png)
+![Hosted app, Today](docs/screenshots/hosted-full.png)
 
-On the hosted app, today's digest stays not-ready until ATLAS on this computer can load it.
+On the hosted app, Today shows the biggest crypto moves from the public price feed, with the source and time. The ATLAS digest and the signal light appear only when ATLAS runs on the visitor's own computer.
 
 ![Glossary concept question](docs/screenshots/glossary-shadow.png)
 
-A `#concept=shadow` link fills an educational question. Nothing is sent until you click **Explain the move**.
+A `#concept=shadow` link opens "Explain a market move" with an educational question filled in. Nothing is sent until you click **Explain the move**.
 
-![Signal tab, grey default](docs/screenshots/signal-grey.png)
+![Signal light, grey default](docs/screenshots/signal-grey.png)
 
-The Signal tab stays grey unless the desk sends its public signal. This is the honest default when there is not enough evidence, or when this tab is not the desk.
+The paper signal light stays grey unless the desk sends its public signal. This is the honest default when there is not enough evidence, or when this tab is not the desk.
 
 ![Practice page](docs/screenshots/highlight-practice.png)
 
-The practice page uses static, educational language. It has no live prices and no account fields.
+The practice page (https://atlas-explain.web.app/welcome, opened on install) uses static, educational language. It has no live prices and no account fields.
 
 ## On-device model in Chrome
 

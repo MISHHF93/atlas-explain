@@ -299,6 +299,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   let marketCatalog: CatalogView | null = null;
   let marketCard: HTMLElement = marketDigestCard(buildMarketDigest(marketCatalog));
   // Connection facts. Declared before the first Today render, which reads them.
+  // ATLAS on this computer is present if either check found it: the connectors probe, or the asset
+  // list loading from ATLAS. Each check keeps its own answer, so one cannot overwrite the other.
+  let atlasProbed = false;
+  let atlasCatalog = false;
   let atlasLocal = false;
   let livePrices = false;
   let liveStatus: "loading" | "ready" | "error" = "loading";
@@ -397,7 +401,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       watchlist,
       compact: true,
       onState: (state) => {
-        atlasLocal = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
+        // A refresh that is still loading keeps the last answer, as the price and digest lines below do.
+        if (state.kind !== "loading") atlasCatalog = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
+        atlasLocal = atlasProbed || atlasCatalog;
         livePrices = state.kind === "ready" && isLivePriceSource(state.catalog.source);
         liveStatus = state.kind === "loading" ? (liveCatalog ? "ready" : "loading") : state.kind === "ready" ? "ready" : "error";
         if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
@@ -556,7 +562,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   async function refreshLink(): Promise<void> {
     const link = await probeAtlasLocal({ allowed: !hosted });
-    atlasLocal = link.state === "local";
+    atlasProbed = link.state === "local";
+    atlasLocal = atlasProbed || atlasCatalog;
     updateConnection();
   }
 

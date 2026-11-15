@@ -21,6 +21,14 @@ describe("the header status pill", () => {
     expect(connectionFor({ ...base, hosted: true, livePrices: true })).toBe("live");
   });
 
+  it("keeps ATLAS present in the web app when either check found it, so one cannot overwrite the other", () => {
+    const app = readFileSync("src/web/app.ts", "utf8");
+    expect(app.match(/atlasLocal = /g)).toHaveLength(3); // the declaration and the two combined writes
+    expect(app.match(/atlasLocal = atlasProbed \|\| atlasCatalog;/g)).toHaveLength(2);
+    expect(app).toContain('atlasProbed = link.state === "local";');
+    expect(app).toContain('if (state.kind !== "loading") atlasCatalog = ');
+  });
+
   it("is decided in one place for both surfaces", () => {
     for (const file of ["src/web/app.ts", "extension/src/popup.ts"]) {
       const src = readFileSync(file, "utf8");
