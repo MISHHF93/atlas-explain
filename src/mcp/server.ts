@@ -19,7 +19,8 @@ import { searchTerms } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
 export const SERVER_VERSION = "1.0.0";
-export const SUPPORTED_PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"] as const;
+/** Newest first. A client asking for a version not listed gets the newest, as the spec allows. */
+export const SUPPORTED_PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"] as const;
 export const EDUCATION_LINE = "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.";
 const APP_URL = "https://atlas-explain.web.app/app";
 

@@ -4,7 +4,7 @@
  * carries one JSON-RPC message and gets one JSON answer; there is no session and no stream.
  * Hosted on Cloudflare Workers' free plan (src/mcp/worker.ts); see docs/MCP.md.
  */
-import { EDUCATION_LINE, handle, SUPPORTED_PROTOCOLS, type Fetcher } from "./server";
+import { EDUCATION_LINE, handle, type Fetcher } from "./server";
 
 export const MCP_PATH = "/mcp";
 const MAX_BODY_BYTES = 64 * 1024;
@@ -46,9 +46,12 @@ export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Re
   // No server-to-client stream is offered, so GET (and DELETE of a session) is not allowed.
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { ...CORS, Allow: "POST, OPTIONS" } });
 
+  // Only reject a header that is not a version at all. A newer, well-formed version is answered
+  // anyway: these tools are plain request/response, and a 400 here makes clients such as Claude
+  // fall back to an OAuth sign-in this server doesn't have ("Couldn't register").
   const version = request.headers.get("MCP-Protocol-Version");
-  if (version && !(SUPPORTED_PROTOCOLS as readonly string[]).includes(version)) {
-    return rpcError(-32600, `Unsupported MCP-Protocol-Version: ${version}`, 400);
+  if (version && !/^\d{4}-\d{2}-\d{2}$/.test(version.trim())) {
+    return rpcError(-32600, `Invalid MCP-Protocol-Version: ${version}`, 400);
   }
 
   const raw = await request.text();

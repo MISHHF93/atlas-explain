@@ -14,7 +14,9 @@ describe("ATLAS Explain MCP server", () => {
     const init = await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }, never);
     expect(init?.result).toMatchObject({ protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "atlas-explain" } });
     const old = await handle({ jsonrpc: "2.0", id: 2, method: "initialize", params: { protocolVersion: "1999-01-01" } }, never);
-    expect((old?.result as { protocolVersion: string }).protocolVersion).toBe("2025-06-18");
+    expect((old?.result as { protocolVersion: string }).protocolVersion).toBe("2025-11-25");
+    const current = await handle({ jsonrpc: "2.0", id: 5, method: "initialize", params: { protocolVersion: "2025-11-25" } }, never);
+    expect((current?.result as { protocolVersion: string }).protocolVersion).toBe("2025-11-25");
     expect(TOOLS.map((t) => t.name)).toEqual(["explain_term", "official_figures", "todays_headlines"]);
     expect(TOOLS.every((t) => t.annotations.readOnlyHint)).toBe(true);
   });
@@ -84,7 +86,11 @@ describe("hosted MCP over HTTP", () => {
     expect((await handleHttp(new Request(`https://mcp.example${MCP_PATH}`), never)).status).toBe(405);
     expect((await handleHttp(post("{not json"), never)).status).toBe(400);
     expect((await handleHttp(post([{ jsonrpc: "2.0", id: 1, method: "ping" }]), never)).status).toBe(400);
-    expect((await handleHttp(post({ jsonrpc: "2.0", id: 1, method: "ping" }, { "MCP-Protocol-Version": "1999-01-01" }), never)).status).toBe(400);
+    expect((await handleHttp(post({ jsonrpc: "2.0", id: 1, method: "ping" }, { "MCP-Protocol-Version": "not-a-version" }), never)).status).toBe(400);
+    // A newer or unknown well-formed version is still answered: a 400 sent Claude into a sign-in this server lacks.
+    for (const v of ["2025-11-25", "2030-01-01"]) {
+      expect((await handleHttp(post({ jsonrpc: "2.0", id: 1, method: "ping" }, { "MCP-Protocol-Version": v }), never)).status).toBe(200);
+    }
     expect((await handleHttp(post("x".repeat(70_000)), never)).status).toBe(413);
     expect((await handleHttp(new Request("https://mcp.example/other"), never)).status).toBe(404);
     expect((await handleHttp(new Request(`https://mcp.example${MCP_PATH}`, { method: "OPTIONS" }), never)).status).toBe(204);
