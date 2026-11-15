@@ -36,7 +36,7 @@ Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `a
 - **Documentation URL:** https://atlas-explain.web.app/support#ai-assistants
 - **Privacy policy URL:** https://atlas-explain.web.app/privacy#connector
 - **Support contact:** owner to choose. Today the Support page sends people to GitHub issues (https://github.com/MISHHF93/atlas-explain/issues); a support email is listed as an owner step in docs/HANDOVER.md.
-- **Icon:** `store/connector/icon-512.png` (512×512, from public/logo.svg).
+- **Icon:** leave it at the default. The server serves its own favicon and icons from its own address (`/favicon.ico`, `/icon.png` 512×512, `/icon.svg`, generated from public/logo.svg by `node scripts/write-mcp-icons.mjs`), and announces the PNG and SVG in its MCP `icons`. `store/connector/icon-512.png` is the same image if the portal asks for an upload anyway.
 - **Slug** (permanent): `atlas-explain`
 
 ### Carousel screenshots (MCP App)
