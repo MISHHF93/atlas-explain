@@ -5,7 +5,7 @@
  * Hosted on Cloudflare Workers' free plan (src/mcp/worker.ts); see docs/MCP.md.
  */
 import { ICON_PNG_512_BASE64, ICON_PNG_64_BASE64, ICON_SVG } from "./icon-data";
-import { EDUCATION_LINE, handle, type Fetcher } from "./server";
+import { EDUCATION_LINE, handle, modernVersion, type Fetcher } from "./server";
 
 export const MCP_PATH = "/mcp";
 
@@ -21,7 +21,7 @@ const MAX_BODY_BYTES = 64 * 1024;
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID",
+  "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id, Last-Event-ID",
   "Access-Control-Max-Age": "86400",
 };
 
@@ -45,9 +45,48 @@ const ABOUT = [
   EDUCATION_LINE,
 ].join("\n");
 
+/**
+ * Origin check against DNS rebinding (required by the transport spec). The server is public and
+ * read-only, so any https site (or an app with no web origin) may call it; a plain-http page that
+ * isn't this computer is the rebinding pattern, and gets 403.
+ */
+export function originAllowed(origin: string | null): boolean {
+  if (!origin || origin === "null") return true;
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== "http:") return true;
+    return ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** Mcp-Name may carry a Base64 sentinel: =?base64?...?= (MCP 2026-07-28, Value Encoding). */
+function headerValue(v: string | null): string | null {
+  if (v == null) return null;
+  const m = /^=\?base64\?(.*)\?=$/.exec(v);
+  if (!m) return v;
+  try {
+    return new TextDecoder().decode(Uint8Array.from(atob(m[1]!), (c) => c.charCodeAt(0)));
+  } catch {
+    return null;
+  }
+}
+
+/** Header checks for modern (2026-07-28) requests: the mirrored headers must be present and match the body. */
+function headerMismatch(request: Request, message: { method?: string; params?: Record<string, unknown> }, version: string): string | null {
+  const h = request.headers;
+  if (h.get("MCP-Protocol-Version") !== version) return `MCP-Protocol-Version header must be "${version}", as in _meta`;
+  if (h.get("Mcp-Method") !== message.method) return `Mcp-Method header must be "${String(message.method)}"`;
+  const named = message.method === "tools/call" || message.method === "prompts/get" ? message.params?.name : message.method === "resources/read" ? message.params?.uri : undefined;
+  if (named !== undefined && headerValue(h.get("Mcp-Name")) !== String(named)) return `Mcp-Name header must match "${String(named)}"`;
+  return null;
+}
+
 export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Response> {
   const url = new URL(request.url);
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (!originAllowed(request.headers.get("Origin"))) return rpcError(-32600, "Forbidden origin", 403);
 
   // The server's own icons, so directories and clients that read a favicon from this address find one.
   const icon = ICON_FILES[url.pathname];
@@ -75,9 +114,9 @@ export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Re
   // Only reject a header that is not a version at all. A newer, well-formed version is answered
   // anyway: these tools are plain request/response, and a 400 here makes clients such as Claude
   // fall back to an OAuth sign-in this server doesn't have ("Couldn't register").
-  const version = request.headers.get("MCP-Protocol-Version");
-  if (version && !/^\d{4}-\d{2}-\d{2}$/.test(version.trim())) {
-    return rpcError(-32600, `Invalid MCP-Protocol-Version: ${version}`, 400);
+  const headerVersion = request.headers.get("MCP-Protocol-Version");
+  if (headerVersion && !/^\d{4}-\d{2}-\d{2}$/.test(headerVersion.trim())) {
+    return rpcError(-32600, `Invalid MCP-Protocol-Version: ${headerVersion}`, 400);
   }
 
   const raw = await request.text();
@@ -92,7 +131,15 @@ export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Re
     return rpcError(-32600, "Send one JSON-RPC message per request", 400);
   }
 
-  const reply = await handle(message as Parameters<typeof handle>[0], fetcher);
+  const msg = message as Parameters<typeof handle>[0];
+  const version = modernVersion(msg);
+  if (version !== null && msg.id !== undefined && msg.id !== null) {
+    const problem = headerMismatch(request, msg, version);
+    if (problem) return json({ jsonrpc: "2.0", id: msg.id, error: { code: -32020, message: `Header mismatch: ${problem}` } }, 400);
+  }
+  const reply = await handle(msg, fetcher);
   // Notifications and responses from the client get 202 with no body.
-  return reply ? json(reply) : new Response(null, { status: 202, headers: CORS });
+  if (!reply) return new Response(null, { status: 202, headers: CORS });
+  const { status, ...body } = reply;
+  return json(body, status ?? 200);
 }

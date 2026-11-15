@@ -181,7 +181,7 @@ describe("structured output, prompts, icons and the chart app", () => {
 
   it("serves the chart as a self-contained MCP App page", async () => {
     const list = (await handle({ jsonrpc: "2.0", id: 1, method: "resources/list" }, full))?.result as { resources: { uri: string; mimeType: string }[] };
-    expect(list.resources).toEqual([expect.objectContaining({ uri: "ui://atlas-explain/price-chart.html", mimeType: "text/html;profile=mcp-app" })]);
+    expect(list.resources).toEqual(expect.arrayContaining([expect.objectContaining({ uri: "ui://atlas-explain/price-chart.html", mimeType: "text/html;profile=mcp-app" })]));
     const read = (await handle({ jsonrpc: "2.0", id: 2, method: "resources/read", params: { uri: "ui://atlas-explain/price-chart.html" } }, full))?.result as { contents: { text: string; mimeType: string }[] };
     const html = read.contents[0]!.text;
     expect(read.contents[0]!.mimeType).toBe("text/html;profile=mcp-app");
@@ -205,7 +205,7 @@ describe("structured output, prompts, icons and the chart app", () => {
 
   it("announces tools, resources and prompts, with its icon", async () => {
     const init = (await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25" } }, full))?.result as { capabilities: Record<string, unknown>; serverInfo: { icons: unknown[] } };
-    expect(Object.keys(init.capabilities).sort()).toEqual(["completions", "prompts", "resources", "tools"]);
+    expect(Object.keys(init.capabilities).sort()).toEqual(["completions", "extensions", "prompts", "resources", "tools"]);
     expect(init.serverInfo.icons).toHaveLength(2);
   });
 });

@@ -29,9 +29,23 @@ import { CHART_APP_HTML, CHART_APP_URI, MCP_APP_MIME } from "./chart-app";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.3.0";
-/** Newest first. A client asking for a version not listed gets the newest, as the spec allows. */
+export const SERVER_VERSION = "1.4.0";
+/**
+ * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
+ * version and capabilities in every request's _meta and need no handshake; legacy clients open with
+ * initialize. Legacy versions are listed newest first; an initialize asking for a version not
+ * listed gets the newest legacy one, as those revisions allow.
+ */
+export const MODERN_PROTOCOLS = ["2026-07-28"] as const;
 export const SUPPORTED_PROTOCOLS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"] as const;
+export const ALL_PROTOCOLS: readonly string[] = [...MODERN_PROTOCOLS, ...SUPPORTED_PROTOCOLS];
+export const META = {
+  protocolVersion: "io.modelcontextprotocol/protocolVersion",
+  clientCapabilities: "io.modelcontextprotocol/clientCapabilities",
+  serverInfo: "io.modelcontextprotocol/serverInfo",
+} as const;
+/** How long clients and caches may reuse list and read results (MCP 2026-07-28 CacheableResult). */
+const CACHE = { ttlMs: 3_600_000, cacheScope: "public" } as const;
 import { APP_URL, CRYPTO_DATA_URL, EDUCATION_LINE, EXPLAIN_WEB_URL, MARKET_DATA_URL, MCP_ORIGIN, NEWS_DATA_URL } from "../core/links";
 export { EDUCATION_LINE, MCP_ORIGIN };
 
@@ -145,6 +159,33 @@ export const TOOLS: readonly Tool[] = [
   },
 ];
 
+const INSTRUCTIONS =
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed hourly) and past moves; todays_headlines for recent news. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+const CAPABILITIES = {
+  tools: { listChanged: false },
+  resources: { listChanged: false },
+  prompts: { listChanged: false },
+  completions: {},
+  // The interactive chart (price_history) is an MCP App; hosts without it get the text answer.
+  extensions: { "io.modelcontextprotocol/ui": { mimeTypes: [MCP_APP_MIME] } },
+};
+const SERVER_INFO = () => ({ name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: ICONS });
+
+/* ---------- glossary as resources (attachable as context in clients that support resources) ---------- */
+
+export const GLOSSARY_URI = "atlas-explain://glossary/";
+export const LEARNING_PATH_URI = "atlas-explain://learning-path";
+const termResource = (t: (typeof ALL_TERMS)[number]) => ({ uri: `${GLOSSARY_URI}${t.id}`, name: t.id, title: t.title, description: t.summary.length > 120 ? `${t.summary.slice(0, 117)}…` : t.summary, mimeType: "text/markdown", icons: ICONS });
+function readGlossaryResource(uri: string): { uri: string; mimeType: string; text: string } | null {
+  if (uri === LEARNING_PATH_URI) {
+    const body = LEARN_PATH.map((step, i) => `## ${i + 1}. ${step.title}\n` + learnTerms(step).map((t) => `- **${t.title}**: ${t.summary}`).join("\n")).join("\n\n");
+    return { uri, mimeType: "text/markdown", text: `# The ATLAS Explain learning path\n\n${body}\n\nSource: ATLAS Explain glossary. ${APP_URL}/learn\n\n${EDUCATION_LINE}` };
+  }
+  if (!uri.startsWith(GLOSSARY_URI)) return null;
+  const term = ALL_TERMS.find((t) => t.id === decodeURIComponent(uri.slice(GLOSSARY_URI.length)));
+  return term ? { uri, mimeType: "text/markdown", text: `# ${term.title}\n\n${term.summary}\n\nSource: ATLAS Explain glossary. ${APP_URL}/learn\n\n${EDUCATION_LINE}` } : null;
+}
+
 /** One-click starters (MCP prompts). Each asks the assistant to use the tools, education only. */
 export const PROMPTS = [
   {
@@ -174,7 +215,9 @@ export const PROMPTS = [
 export function completePromptArgument(prompt: string, argument: string, typed: string): string[] {
   const q = typed.trim().toLowerCase();
   const pool =
-    prompt === "explain_asset" && argument === "asset"
+    prompt === `${GLOSSARY_URI}{term}` && argument === "term"
+      ? ALL_TERMS.map((t) => t.id)
+      : prompt === "explain_asset" && argument === "asset"
       ? [...CRYPTO_COINS.flatMap((c) => [c.name, c.symbol]), ...EDUCATION_ASSETS.map((a) => a.name)]
       : prompt === "learn_next" && argument === "topic"
         ? LEARN_PATH.flatMap((s) => [s.id, s.title])
@@ -459,46 +502,77 @@ export async function todaysHeadlines(about: string | undefined, fetcher: Fetche
 /* ---------- JSON-RPC (the HTTP transport is in src/mcp/http.ts) ---------- */
 
 type Message = { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> };
-type Reply = { jsonrpc: "2.0"; id: string | number | null; result?: unknown; error?: { code: number; message: string } };
+/** status: the HTTP status the transport should use (2026-07-28 asks for 400/404 on some errors). */
+type Reply = { jsonrpc: "2.0"; id: string | number | null; result?: unknown; error?: { code: number; message: string; data?: unknown }; status?: number };
+
+const isRec = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+/** The modern protocol version a request declares in _meta, or null for a legacy request. */
+export function modernVersion(message: Message): string | null {
+  const meta = isRec(message.params?._meta) ? message.params._meta : null;
+  return meta && typeof meta[META.protocolVersion] === "string" ? (meta[META.protocolVersion] as string) : null;
+}
 
 /** Answers one message; null for notifications, which get no reply. */
 export async function handle(message: Message, fetcher: Fetcher): Promise<Reply | null> {
   const id = message.id ?? null;
   const isRequest = message.id !== undefined && message.id !== null;
-  const ok = (result: unknown): Reply => ({ jsonrpc: "2.0", id, result });
-  const fail = (code: number, msg: string): Reply => ({ jsonrpc: "2.0", id, error: { code, message: msg } });
-  if (message.jsonrpc !== "2.0" || typeof message.method !== "string") return isRequest ? fail(-32600, "Invalid request") : null;
+  const version = modernVersion(message);
+  const modern = version !== null;
+  // Every result says it is complete and who answered (2026-07-28; harmless extra fields for legacy clients).
+  const ok = (result: Record<string, unknown>, cacheable = false): Reply => ({
+    jsonrpc: "2.0",
+    id,
+    result: { ...result, ...(cacheable ? CACHE : {}), resultType: "complete", _meta: { ...(isRec(result._meta) ? result._meta : {}), [META.serverInfo]: { name: SERVER_NAME, version: SERVER_VERSION } } },
+  });
+  const fail = (code: number, msg: string, data?: unknown, status?: number): Reply => ({ jsonrpc: "2.0", id, error: { code, message: msg, ...(data === undefined ? {} : { data }) }, ...(status ? { status } : {}) });
+  if (message.jsonrpc !== "2.0" || typeof message.method !== "string") return isRequest ? fail(-32600, "Invalid request", undefined, 400) : null;
   if (!isRequest) return null;
+  if (modern) {
+    if (!(MODERN_PROTOCOLS as readonly string[]).includes(version)) return fail(-32022, "Unsupported protocol version", { supported: ALL_PROTOCOLS, requested: version }, 400);
+    const meta = message.params!._meta as Record<string, unknown>;
+    if (!isRec(meta[META.clientCapabilities])) return fail(-32602, `Missing ${META.clientCapabilities} in _meta`, undefined, 400);
+  }
   switch (message.method) {
+    case "server/discover":
+      return ok({ supportedVersions: ALL_PROTOCOLS, capabilities: CAPABILITIES, instructions: INSTRUCTIONS, _meta: { [META.serverInfo]: SERVER_INFO() } }, true);
     case "initialize": {
       const asked = typeof message.params?.protocolVersion === "string" ? message.params.protocolVersion : "";
       const protocolVersion = (SUPPORTED_PROTOCOLS as readonly string[]).includes(asked) ? asked : SUPPORTED_PROTOCOLS[0];
-      return ok({
-        protocolVersion,
-        capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, prompts: { listChanged: false }, completions: {} },
-        serverInfo: { name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: ICONS },
-        instructions:
-          "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed hourly) and past moves; todays_headlines for recent news. Every result names its source and time. Education only: never present results as trade advice or a forecast.",
-      });
+      return ok({ protocolVersion, capabilities: CAPABILITIES, serverInfo: SERVER_INFO(), instructions: INSTRUCTIONS });
     }
     case "ping":
+      // Removed in 2026-07-28; still answered for legacy clients.
       return ok({});
     case "tools/list":
-      return ok({ tools: TOOLS });
+      return ok({ tools: TOOLS }, true);
     case "resources/list":
-      return ok({ resources: [{ uri: CHART_APP_URI, name: "price-chart", title: "Interactive price chart", description: "The chart price_history draws in clients that support MCP Apps.", mimeType: MCP_APP_MIME }] });
+      return ok({
+        resources: [
+          { uri: CHART_APP_URI, name: "price-chart", title: "Interactive price chart", description: "The chart price_history draws in clients that support MCP Apps.", mimeType: MCP_APP_MIME, icons: ICONS },
+          { uri: LEARNING_PATH_URI, name: "learning-path", title: "The ATLAS Explain learning path", description: "Every topic in order, with its terms explained in plain language.", mimeType: "text/markdown", icons: ICONS },
+          ...ALL_TERMS.map(termResource),
+        ],
+      }, true);
     case "resources/templates/list":
-      return ok({ resourceTemplates: [] });
+      return ok({ resourceTemplates: [{ uriTemplate: `${GLOSSARY_URI}{term}`, name: "glossary-term", title: "Glossary term", description: "A market term from the ATLAS Explain glossary, in plain language.", mimeType: "text/markdown", icons: ICONS }] }, true);
     case "resources/read": {
-      if (message.params?.uri !== CHART_APP_URI) return fail(-32002, `Resource not found: ${String(message.params?.uri)}`);
-      return ok({ contents: [{ uri: CHART_APP_URI, mimeType: MCP_APP_MIME, text: CHART_APP_HTML, _meta: { ui: { prefersBorder: true } } }] });
+      const uri = String(message.params?.uri);
+      if (uri === CHART_APP_URI) return ok({ contents: [{ uri: CHART_APP_URI, mimeType: MCP_APP_MIME, text: CHART_APP_HTML, _meta: { ui: { prefersBorder: true } } }] }, true);
+      const doc = readGlossaryResource(uri);
+      // Resource not found: -32602 from 2026-07-28 on, -32002 before.
+      return doc ? ok({ contents: [doc] }, true) : fail(modern ? -32602 : -32002, `Resource not found: ${uri}`, { uri });
     }
     case "prompts/list":
-      return ok({ prompts: PROMPTS.map(({ text: _t, ...p }) => ({ ...p, icons: ICONS })) });
+      return ok({ prompts: PROMPTS.map(({ text: _t, ...p }) => ({ ...p, icons: ICONS })) }, true);
     case "completion/complete": {
-      const ref = message.params?.ref as { type?: string; name?: string } | undefined;
+      const ref = message.params?.ref as { type?: string; name?: string; uri?: string } | undefined;
       const arg = message.params?.argument as { name?: string; value?: string } | undefined;
-      const values = ref?.type === "ref/prompt" ? completePromptArgument(String(ref.name), String(arg?.name), typeof arg?.value === "string" ? arg.value : "") : [];
+      const typed = typeof arg?.value === "string" ? arg.value : "";
+      const values =
+        ref?.type === "ref/prompt" ? completePromptArgument(String(ref.name), String(arg?.name), typed)
+        : ref?.type === "ref/resource" ? completePromptArgument(String(ref.uri), String(arg?.name), typed)
+        : [];
       return ok({ completion: { values: values.slice(0, 20), total: values.length, hasMore: values.length > 20 } });
     }
     case "prompts/get": {
@@ -523,6 +597,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
       }
     }
     default:
-      return fail(-32601, `Method not found: ${message.method}`);
+      // 2026-07-28: an unknown method is HTTP 404 with -32601, so clients can tell it from a missing endpoint.
+      return fail(-32601, `Method not found: ${message.method}`, undefined, modern ? 404 : undefined);
   }
 }
