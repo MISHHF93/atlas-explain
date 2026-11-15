@@ -12,6 +12,7 @@ import {
   SAMPLE_EXPLANATION,
   SAMPLE_TERM,
   SHORTCUT_HINT,
+  connectionFor,
   whyQuestion,
 } from "../../src/core/popup-copy";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../../src/core/price-feed";
@@ -441,7 +442,7 @@ function updateConnection(): void {
   today.node.hidden = !atlasPresent;
   shell.setTabHidden("signal", !atlasPresent);
   shell.setMenuItemHidden("desk", !atlasPresent);
-  shell.setConnection(!navigator.onLine ? "offline" : currentSignal.connected ? "desk" : atlasLocal ? "local" : livePrices ? "live" : "none");
+  shell.setConnection(connectionFor({ online: navigator.onLine, deskConnected: currentSignal.connected, atlasLocal, livePrices }));
   shell.setSignal(currentSignal);
 }
 

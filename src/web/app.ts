@@ -4,7 +4,7 @@ import { conceptQuestion, getConcept, isGlossaryId } from "../core/glossary";
 import { EXPLAIN_LOAD_MESSAGE, inboundReply, readInboundMessage } from "../core/inbound";
 import { applyPrivateFields, parseMoveCardJson, publicMoveCard } from "../core/move-card";
 import { ExplanationParseError } from "../core/parse-explanation";
-import { ATLAS_DESK_URL, SAMPLE_TERM } from "../core/popup-copy";
+import { ATLAS_DESK_URL, SAMPLE_TERM, connectionFor } from "../core/popup-copy";
 import { OnDeviceUnavailableError } from "../core/run-explanation";
 import { SAMPLE_MOVES, type SampleMove } from "../core/samples";
 import { DEFAULT_SETTINGS } from "../core/settings";
@@ -541,7 +541,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   window.addEventListener("hashchange", () => applyHash(location.hash));
   window.addEventListener("message", onInboundMessage);
   window.addEventListener("online", () => { void refreshLink(); refreshEngine(); });
-  window.addEventListener("offline", () => { shell.setConnection("offline"); refreshEngine(); });
+  window.addEventListener("offline", () => { updateConnection(); refreshEngine(); });
 
   let currentSignal: SignalView = mapSignal({ connected: false });
   const hosted = !mayCallLocalAtlas(location, false);
@@ -551,19 +551,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const atlasPresent = atlasLocal || currentSignal.connected;
     atlasBlock.hidden = !atlasPresent;
     shell.setMenuItemHidden("desk", !atlasPresent);
-    if (!navigator.onLine) {
-      shell.setConnection("offline");
-      return;
-    }
-    if (currentSignal.connected) {
-      shell.setConnection("desk");
-      return;
-    }
-    if (hosted) {
-      shell.setConnection(livePrices ? "live" : "hosted");
-      return;
-    }
-    shell.setConnection(atlasLocal ? "local" : livePrices ? "live" : "none");
+    shell.setConnection(connectionFor({ online: navigator.onLine, deskConnected: currentSignal.connected, atlasLocal, livePrices, hosted }));
   }
 
   async function refreshLink(): Promise<void> {

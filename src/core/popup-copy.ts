@@ -11,6 +11,18 @@ import {
 
 export type ConnectionState = "desk" | "local" | "live" | "hosted" | "none" | "offline";
 
+/**
+ * Which status the header pill shows. One rule for the web app and the popup:
+ * offline beats everything; the ATLAS desk beats the rest; then ATLAS on this computer,
+ * then live public prices. `hosted` is the public website, which never looks for ATLAS.
+ */
+export function connectionFor(input: { online: boolean; deskConnected: boolean; atlasLocal: boolean; livePrices: boolean; hosted?: boolean }): ConnectionState {
+  if (!input.online) return "offline";
+  if (input.deskConnected) return "desk";
+  if (input.hosted) return input.livePrices ? "live" : "hosted";
+  return input.atlasLocal ? "local" : input.livePrices ? "live" : "none";
+}
+
 export interface SignalCopy {
   headline: string;
   detail: string;
