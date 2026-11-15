@@ -8,6 +8,8 @@ export function historyCard(options: {
   entries: readonly HistoryEntry[];
   onOpen: (entry: HistoryEntry) => void;
   onClear: () => void;
+  /** Remove one entry. The row gets a small remove button when this is given. */
+  onRemove?: (entry: HistoryEntry) => void;
   limit?: number;
 }): HTMLElement {
   const card = el("section", "card history");
@@ -37,6 +39,13 @@ export function historyCard(options: {
     open.append(el("span", "history-text", entry.selection || "Typed question"), meta);
     open.addEventListener("click", () => options.onOpen(entry));
     item.append(open);
+    if (options.onRemove) {
+      const onRemove = options.onRemove;
+      item.className = "history-row";
+      const remove = iconButton("close", `Remove the explanation of ${entry.selection || "this question"}`, "icon-btn ghost");
+      remove.addEventListener("click", () => onRemove(entry));
+      item.append(remove);
+    }
     list.append(item);
   }
   card.append(list, el("p", "fine", "Stored on this device only. Never uploaded."));

@@ -86,7 +86,7 @@ describe("wallet popup design rules", () => {
   });
 
   it("announces results and state changes to screen readers", () => {
-    expect(popup).toContain('result.setAttribute("aria-live", "polite")');
+    expect(readFileSync("src/wallet/explain-panel.ts", "utf8")).toContain('result.setAttribute("aria-live", "polite")');
     expect(shellSrc).toContain('live.setAttribute("aria-live", "polite")');
     expect(shellSrc).toContain('sheet.setAttribute("role", "dialog")');
     expect(shellSrc).toContain('list.setAttribute("role", "tablist")');

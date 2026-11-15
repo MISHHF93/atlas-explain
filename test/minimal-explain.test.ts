@@ -6,6 +6,7 @@ import { digestRowStatus } from "../src/core/digest";
 const popup = readFileSync("extension/src/popup.ts", "utf8");
 const web = readFileSync("src/web/app.ts", "utf8");
 const css = readFileSync("src/wallet/wallet.css", "utf8");
+const panel = readFileSync("src/wallet/explain-panel.ts", "utf8");
 
 describe("minimal Explain composer", () => {
   it("reads the highlight while the box is empty", () => {
@@ -43,20 +44,23 @@ describe("popup Explain tab layout", () => {
   it("has one primary button instead of two", () => {
     expect(popup).not.toContain("explainTyped");
     expect(popup).not.toContain('"Explain text"');
-    expect(popup).toContain("composerAction(question.value)");
+    expect(panel).toContain("composerAction(input.value)");
+    expect(popup).toContain("readsPage: true");
   });
 
   it("stacks only the minimal blocks, in order", () => {
-    expect(popup).toContain("shell.panels.explain.append(explainHead, composer, engine.node, today.node, result, recentSlot);");
+    expect(popup).toContain("shell.panels.explain.append(panel.head, panel.composer, panel.engine.node, today.node, panel.status, panel.result, panel.history);");
     expect(EXPLAIN_TAB_BLOCKS).toEqual(["composer", "engine", "today", "result", "recent"]);
   });
 
   it("keeps the title for screen readers only", () => {
-    expect(popup).toContain('el("div", "panel-title sr-only")');
+    expect(popup).toContain("headHidden: true");
+    expect(panel).toContain('"panel-title sr-only"');
   });
 
   it("uses the compact engine line on both surfaces and the digest row in the popup", () => {
-    for (const src of [popup, web]) expect(src).toContain("engineStrip({ compact: true })");
+    expect(panel).toContain("engineStrip({ compact: true })");
+    for (const src of [popup, web]) expect(src).toContain("explainPanel({");
     expect(popup).toContain("todayRow(");
     expect(popup).not.toMatch(/append\([^)]*brief\.node,/);
     // The web app gives the digest its own Today screen instead of a row on Explain.
@@ -65,7 +69,8 @@ describe("popup Explain tab layout", () => {
   });
 
   it("limits recent explanations to three", () => {
-    expect(popup).toMatch(/historyCard\(\{\s*entries: history,\s*limit: 3,/);
+    expect(popup).toContain("limit: 3 },");
+    expect(web).toContain("limit: 8 },");
   });
 
   it("styles with tokens and keeps fonts at 11px or more", () => {
