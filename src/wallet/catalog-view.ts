@@ -4,7 +4,7 @@
  * Loaded on demand, so the popup's first paint does not pay for it.
  */
 import type { Asset, AssetClass } from "../core/asset-schema";
-import { formatPrice, sparkPath, type SparkPoint } from "../core/assets";
+import { formatPrice, sparkSvg, type SparkPoint } from "../core/assets";
 import {
   CLASS_INFO,
   MODE_HELP,
@@ -506,14 +506,11 @@ export function assetPage(start: Asset, options: {
       rangeBar.hidden = true;
       return;
     }
-    const w = 312;
-    const h = 64;
     const first = points[0]!.c;
     const last = points[points.length - 1]!.c;
     const change = ((last - first) / first) * 100;
     const holder = document.createElement("span");
-    const d = sparkPath(points, w, h);
-    holder.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="spark-line" d="${d}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
+    holder.innerHTML = sparkSvg(points);
     spark.dataset.tone = last > first ? "up" : last < first ? "down" : "flat";
     // Touch or hover the chart to read the price at that moment; the caption says the change over the range.
     const plot = el("div", "spark-plot");

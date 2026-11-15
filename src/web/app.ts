@@ -138,6 +138,11 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     ],
   });
   document.title = titleFor(route);
+  // One address per page: old aliases (/app/glossary, /app/settings), a trailing slash or a
+  // lower-case symbol become the canonical path. The query (sign-in links) and hash are kept.
+  if (route.kind !== "not_found" && location.pathname !== pathFor(route)) {
+    history.replaceState(null, "", pathFor(route) + location.search + location.hash);
+  }
 
   /** A link to a lower section (/app/learn, /app/assets, an asset page) lands on that section. */
   function jumpToRouteSection(): void {

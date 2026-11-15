@@ -91,6 +91,15 @@ describe("saved explanations", () => {
     await assertFails(setDoc(doc(as("bob"), "users/alice/explanations/e4"), valid));
   });
 
+  it("stores only the fields the app writes, within size caps, and is never edited", async () => {
+    await assertFails(setDoc(doc(as("alice"), "users/alice/explanations/e5"), { ...valid, anything: "x".repeat(500_000) }));
+    await assertFails(setDoc(doc(as("alice"), "users/alice/explanations/e6"), { ...valid, buyerReasons: Array(13).fill("a") }));
+    await assertFails(setDoc(doc(as("alice"), "users/alice/explanations/e7"), { ...valid, cardJson: "x".repeat(100_000) }));
+    await assertSucceeds(setDoc(doc(as("alice"), "users/alice/explanations/e8"), { ...valid, question: "What moved?", cardJson: "{}", headlineTopics: [] }));
+    await seed("users/alice/explanations/e9", valid);
+    await assertFails(updateDoc(doc(as("alice"), "users/alice/explanations/e9"), { summary: "Edited." }));
+  });
+
   it("lets only the owner read and delete them", async () => {
     await seed("users/alice/explanations/e1", valid);
     await assertFails(getDoc(doc(as("bob"), "users/alice/explanations/e1")));

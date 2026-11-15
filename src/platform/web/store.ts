@@ -93,22 +93,23 @@ export function openStore(app: FirebaseApp): WebStore {
         await batch.commit();
       }
       deleted += explanations.size;
+      // Settings: count only documents that exist, so "N items deleted" is exact.
       for (const pref of ["app", "watchlist"]) {
-        await deleteDoc(doc(db, "users", uid, "prefs", pref));
+        const ref = doc(db, "users", uid, "prefs", pref);
+        if (!(await getDoc(ref)).exists()) continue;
+        await deleteDoc(ref);
         deleted += 1;
       }
-      // Usage counters: every past day. Today's stays (the rules refuse it on purpose).
+      // Usage counters: every past day, in batches. Today's stays (the rules refuse it on purpose).
       const usage = await getDocs(collection(db, "users", uid, "usage"));
-      let keptToday = false;
-      for (const d of usage.docs) {
-        if (usageDeleteAllowed(d.id, nowMs)) {
-          await deleteDoc(d.ref);
-          deleted += 1;
-        } else {
-          keptToday = true;
-        }
+      const past = usage.docs.filter((d) => usageDeleteAllowed(d.id, nowMs));
+      for (let i = 0; i < past.length; i += 400) {
+        const batch = writeBatch(db);
+        for (const d of past.slice(i, i + 400)) batch.delete(d.ref);
+        await batch.commit();
       }
-      return { deleted, keptToday };
+      deleted += past.length;
+      return { deleted, keptToday: past.length < usage.size };
     },
   };
 }
