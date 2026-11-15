@@ -60,6 +60,11 @@ export async function launchChrome(port = 9333) {
           const res = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
           return res.result?.result?.value;
         },
+        /** Changes the viewport, for example to crop a capture to the page's own height. */
+        async resize(w, h) {
+          await send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: scale, mobile: false });
+          await sleep(150);
+        },
         /** An opaque PNG: the store wants 24-bit images without alpha. */
         async png() {
           await send("Emulation.setDefaultBackgroundColorOverride", { color: { r: 255, g: 255, b: 255, a: 1 } });

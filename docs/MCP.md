@@ -26,7 +26,7 @@ Every answer names its source and ends with: "Educational information, not inves
 ## Getting listed (owner steps, free)
 
 - **MCP Registry** (the official public catalogue other directories read from): `server.json` is ready at the repo root. Install `mcp-publisher` (https://modelcontextprotocol.io/registry/quickstart), run `mcp-publisher login github` as the MISHHF93 account, then `mcp-publisher publish` from the repo root. A test keeps `server.json`'s version in step with `SERVER_VERSION`.
-- **Claude connectors directory:** submit from claude.ai's developer portal (organization admin settings, Directory). It asks for the server URL, public docs (https://atlas-explain.web.app/support#ai-assistants) and a privacy policy (https://atlas-explain.web.app/privacy#connector). Anthropic's review checklist: https://claude.com/docs/connectors/building/review-criteria
+- **Claude connectors directory:** every answer, the icon and the screenshots are ready in `docs/CONNECTOR_SUBMISSION.md` and `store/connector/`. Submit at https://claude.ai/directory/manage (any paid Claude plan). It asks for the server URL, public docs (https://atlas-explain.web.app/support#ai-assistants) and a privacy policy (https://atlas-explain.web.app/privacy#connector). Anthropic's review checklist: https://claude.com/docs/connectors/building/review-criteria
 - **ChatGPT:** works as a custom connector in developer mode (Settings, Apps and connectors) with the same URL; plan availability varies.
 
 ## What it never does
