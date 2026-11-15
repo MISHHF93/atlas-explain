@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { EXPORT_SCHEMA, LOCAL_DATA_KEYS, buildExport, exportFileName, usageDeleteAllowed, utcDayId } from "../src/core/account-data";
+import { EXPORT_SCHEMA, LOCAL_DATA_KEYS, WEB_LEARN_KEY, buildExport, exportFileName, usageDeleteAllowed, utcDayId } from "../src/core/account-data";
 import { RECENT_KEY } from "../src/core/catalog";
 import { TEXT_HISTORY_KEY } from "../src/core/text-history";
 import { WATCHLIST_KEY, createWatchlist } from "../src/core/watchlist";
@@ -46,7 +46,7 @@ describe("delete my account", () => {
   });
 
   it("clears exactly the keys the app keeps in the browser", () => {
-    expect([...LOCAL_DATA_KEYS].sort()).toEqual([TEXT_HISTORY_KEY, WATCHLIST_KEY, RECENT_KEY].sort());
+    expect([...LOCAL_DATA_KEYS].sort()).toEqual([TEXT_HISTORY_KEY, WATCHLIST_KEY, RECENT_KEY, WEB_LEARN_KEY].sort());
   });
 
   it("drops the in-memory watchlist after this browser's copy is cleared", () => {

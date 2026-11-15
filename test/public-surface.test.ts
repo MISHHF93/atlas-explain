@@ -41,7 +41,7 @@ describe("popup size", () => {
     for (const banned of ["/core/terms", "/core/learn", "/core/related-terms", "/core/glossary", "/wallet/glossary-panel", "/wallet/learn-card"]) {
       expect(staticImports.filter((p) => p.endsWith(banned)), banned).toEqual([]);
     }
-    expect(popup).toContain('import("./learn-tab")');
+    expect(popup).toContain('import("../../src/wallet/learn-section")');
   });
 });
 

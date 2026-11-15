@@ -63,6 +63,8 @@ export type MarketDigestView =
 
 export const MARKET_NOT_CONNECTED =
   "Connect ATLAS on this computer to see today's grounded digest. Nothing is estimated while it is away.";
+/** ATLAS answered the connection check but has not sent its markets yet. */
+export const MARKET_WAITING = "ATLAS is connected. Waiting for it to send today's markets; nothing is estimated meanwhile.";
 export const MARKET_EMPTY = "ATLAS answered, but no market has a fresh quote right now. Nothing is filled in.";
 export const HOW_WE_KNOW =
   "Each line names its source and time from ATLAS on this computer. Grey means not enough evidence yet, not a forecast. Education only.";
@@ -166,8 +168,8 @@ function classLabel(k: AssetClass): string {
   return k === "crypto" ? "Crypto" : "Stocks";
 }
 
-export function buildMarketDigest(catalog: CatalogView | null, opts: { moversPerClass?: number } = {}): MarketDigestView {
-  if (!catalog) return { kind: "not_connected", reason: MARKET_NOT_CONNECTED };
+export function buildMarketDigest(catalog: CatalogView | null, opts: { moversPerClass?: number; atlasPresent?: boolean } = {}): MarketDigestView {
+  if (!catalog) return { kind: "not_connected", reason: opts.atlasPresent ? MARKET_WAITING : MARKET_NOT_CONNECTED };
   const per = opts.moversPerClass ?? 3;
   const classes: ClassSummary[] = [];
   const movers: Mover[] = [];

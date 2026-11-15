@@ -18,6 +18,8 @@ export interface ExportInput {
   savedExplanations: Array<Record<string, unknown>>;
   browserHistory: unknown[];
   recentlyViewed: string[];
+  /** Learn path progress in this browser: glossary term ids. */
+  learnProgress?: string[];
 }
 
 /** Account-shaped keys never belong in an export (they are never stored, but this keeps it that way). */
@@ -37,13 +39,14 @@ export function buildExport(input: ExportInput): Record<string, unknown> {
   return scrub({
     schema: EXPORT_SCHEMA,
     exportedAt: input.exportedAt.toISOString(),
-    about: "Everything ATLAS Explain keeps for you. Saved explanations, settings and the watchlist come from your account (when signed in); history and recently viewed come from this browser.",
+    about: "Everything ATLAS Explain keeps for you. Saved explanations, settings and the watchlist come from your account (when signed in); history, recently viewed and Learn progress come from this browser.",
     account: input.account,
     settings: input.settings,
     watchlist: input.watchlist,
     savedExplanations: input.savedExplanations,
     browserHistory: input.browserHistory,
     recentlyViewed: input.recentlyViewed,
+    learnProgress: input.learnProgress ?? [],
   }) as Record<string, unknown>;
 }
 
@@ -71,4 +74,8 @@ export const LOCAL_DATA_KEYS = [
   "atlas-explain-text-history",
   "atlas-explain-watchlist",
   "atlas-explain-recent-assets",
+  "atlas-explain-learned",
 ] as const;
+
+/** Learn path progress in the web app: a list of glossary term ids, nothing personal. */
+export const WEB_LEARN_KEY = "atlas-explain-learned";

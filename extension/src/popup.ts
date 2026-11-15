@@ -117,14 +117,14 @@ let marketCatalog: CatalogView | null = null;
 let briefView: DigestView = { kind: "loading" };
 let marketCard: HTMLElement | null = null;
 const today = todayRow(() => {
-  marketCard = marketDigestCard(buildMarketDigest(marketCatalog));
+  marketCard = marketDigestCard(buildMarketDigest(marketCatalog, { atlasPresent: atlasLocal }));
   shell.openSheet("Today's digest", [marketCard, brief.node]);
 });
 function refreshToday(): void {
   today.show(briefView, marketCatalog != null);
   // If the digest sheet is open when ATLAS answers, swap in the fresh card.
   if (marketCard?.isConnected) {
-    const next = marketDigestCard(buildMarketDigest(marketCatalog));
+    const next = marketDigestCard(buildMarketDigest(marketCatalog, { atlasPresent: atlasLocal }));
     marketCard.replaceWith(next);
     marketCard = next;
   }
@@ -165,10 +165,7 @@ function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): void {
       refreshToday();
       updateConnection();
     },
-    onExplain: (text) => {
-      shell.select("explain");
-      panel.explain(text);
-    },
+    onExplain: (text) => askTerm({ title: text }),
   });
   void assets.refresh();
 }
@@ -196,10 +193,10 @@ glossaryHead.append(el("h1", undefined, "Learn"), el("span", "fine", "Plain lang
 const learnSlot = el("div");
 learnSlot.append(el("p", "fine", "Loading the glossary…"));
 let storedLearned: unknown = [];
-let learnModule: Promise<typeof import("./learn-tab")> | null = null;
+let learnModule: Promise<typeof import("../../src/wallet/learn-section")> | null = null;
 let learnMounted = false;
-function loadLearnModule(): Promise<typeof import("./learn-tab")> {
-  learnModule ??= import("./learn-tab");
+function loadLearnModule(): Promise<typeof import("../../src/wallet/learn-section")> {
+  learnModule ??= import("../../src/wallet/learn-section");
   return learnModule;
 }
 async function ensureLearn(): Promise<void> {
@@ -209,7 +206,7 @@ async function ensureLearn(): Promise<void> {
   mod.mountLearn(learnSlot, {
     storedLearned,
     onAsk: askTerm,
-    save: (patch) => void store.set(patch),
+    save: (ids) => void store.set({ [LEARN_KEY]: ids }),
     announce: (text) => shell.announce(text),
   });
 }

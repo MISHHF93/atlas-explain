@@ -4,6 +4,7 @@ import { ASSETS_SCHEMA, readCatalog, readGate } from "../src/core/assets";
 import {
   MARKET_EMPTY,
   MARKET_NOT_CONNECTED,
+  MARKET_WAITING,
   NOT_CONNECTED_YET,
   asOfLine,
   breadthLine,
@@ -54,6 +55,8 @@ describe("plain gate words", () => {
 describe("buildMarketDigest", () => {
   it("is honestly not connected without a live catalog", () => {
     expect(buildMarketDigest(null)).toEqual({ kind: "not_connected", reason: MARKET_NOT_CONNECTED });
+    // ATLAS answered but its markets have not arrived: say so, never "Connect ATLAS".
+    expect(buildMarketDigest(null, { atlasPresent: true })).toEqual({ kind: "not_connected", reason: MARKET_WAITING });
   });
 
   it("is empty, not filled in, when no quote is fresh", () => {
@@ -128,7 +131,7 @@ describe("digest row with markets", () => {
       const src = readFileSync(path, "utf8");
       expect(src).not.toContain("box-preview");
       expect(src).toMatch(/marketCatalog = state\.kind === "ready" && !isLivePriceSource\(state\.catalog\.source\) \? state\.catalog : null/);
-      expect(src).toContain("marketDigestCard(buildMarketDigest(marketCatalog))");
+      expect(src).toContain("marketDigestCard(buildMarketDigest(marketCatalog, { atlasPresent: atlasLocal }))");
       expect(src).toContain("marketCard.replaceWith(next)");
     }
   });
