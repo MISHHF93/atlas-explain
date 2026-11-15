@@ -26,7 +26,7 @@ Every answer names its source and ends with: "Educational information, not inves
 ## Getting listed (owner steps, free)
 
 - **MCP Registry** (the official public catalogue other directories read from): `server.json` is ready at the repo root. Install `mcp-publisher` (https://modelcontextprotocol.io/registry/quickstart), run `mcp-publisher login github` as the MISHHF93 account, then `mcp-publisher publish` from the repo root. A test keeps `server.json`'s version in step with `SERVER_VERSION`.
-- **Claude connectors directory:** every answer, the icon and the screenshots are ready in `docs/CONNECTOR_SUBMISSION.md` and `store/connector/`. Submit at https://claude.ai/directory/manage (any paid Claude plan). It asks for the server URL, public docs (https://atlas-explain.web.app/support#ai-assistants) and a privacy policy (https://atlas-explain.web.app/privacy#connector). Anthropic's review checklist: https://claude.com/docs/connectors/building/review-criteria
+- **Claude connectors directory:** every answer, the icon and the screenshots are ready in `docs/CONNECTOR_SUBMISSION.md` and `store/connector/`. Submit at https://claude.ai/directory/manage (any paid Claude plan). It asks for the server URL, public docs (https://atlas-explain.web.app/connect) and a privacy policy (https://atlas-explain.web.app/privacy#connector). Anthropic's review checklist: https://claude.com/docs/connectors/building/review-criteria
 - **ChatGPT:** works as a custom connector in developer mode (Settings, Apps and connectors) with the same URL; plan availability varies.
 
 ## What it never does
@@ -39,7 +39,7 @@ It only reads its built-in glossary and two public files on `atlas-explain-data.
 
 ## For people using it
 
-**Live address:** `https://atlas-explain-mcp.atlas-explain.workers.dev/mcp?v=2` (deployed 15 Nov 2026, and checked in Claude: the connector adds and `explain_term` answers in chat). The setup steps are on the website at https://atlas-explain.web.app/support#ai-assistants. In Claude: Settings, then Connectors, then Add custom connector, then paste the address.
+**Live address:** `https://atlas-explain-mcp.atlas-explain.workers.dev/mcp` (deployed 15 Nov 2026, and checked in Claude). Setup steps for Claude, Claude Code, ChatGPT, Cursor and VS Code are on the website at https://atlas-explain.web.app/connect, the one place for them (Support and Home link there). Opening the address in a browser redirects to that page. An account that added the connector before the protocol fix may need `?v=2` on the end (see below).
 
 ## How it is hosted ($0)
 

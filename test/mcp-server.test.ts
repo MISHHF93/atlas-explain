@@ -108,15 +108,35 @@ describe("online-only links", () => {
   it("shows coming-soon text until the owner sets each address, and never a dead link", () => {
     expect(CHROME_STORE_URL === null || CHROME_STORE_URL.startsWith("https://chromewebstore.google.com/")).toBe(true);
     expect(MCP_URL === null || /^https:\/\/[^/]+\/mcp(\?v=\d+)?$/.test(MCP_URL)).toBe(true);
+    // Support keeps its old anchor but sends people to the one setup page.
     const support = sitePage("support.html");
     expect(support).toContain('id="ai-assistants"');
-    // Filled at build time: with the address set, the steps show it and the "not online yet" note is hidden.
+    expect(support).toContain('href="/connect"');
+    // /connect: the address is filled in at build time everywhere the page uses it, never typed by hand.
+    const raw = readFileSync("connect.html", "utf8");
+    expect(raw).not.toContain("workers.dev");
+    const page = sitePage("connect.html");
+    expect(page).not.toContain("%MCP_URL%");
     if (MCP_URL) {
-      expect(support).toContain(`<code data-mcp-url>${MCP_URL}</code>`);
-      expect(support).toMatch(/data-before-mcp hidden>/);
-      expect(support).not.toMatch(/data-when-mcp hidden>/);
-    } else {
-      expect(support).toMatch(/<div data-when-mcp hidden>/);
+      expect(page).toContain(`<code id="mcp-url" data-mcp-url>${MCP_URL}</code>`);
+      expect(page).toContain(`claude mcp add --transport http atlas-explain ${MCP_URL}`);
+      expect(page.split(MCP_URL).length - 1).toBe(4);
     }
+  });
+});
+
+describe("the connector address in a browser", () => {
+  it("sends people to the setup page, and leaves MCP clients alone", async () => {
+    const browser = { Accept: "text/html,application/xhtml+xml,*/*;q=0.8" };
+    for (const path of ["/", MCP_PATH]) {
+      const res = await handleHttp(new Request(`https://mcp.example${path}`, { headers: browser }), never);
+      expect(res.status, path).toBe(302);
+      expect(res.headers.get("Location")).toBe("https://atlas-explain.web.app/connect");
+    }
+    // A client opening a stream with GET still gets the protocol's 405, and POSTs are answered as before.
+    const stream = await handleHttp(new Request(`https://mcp.example${MCP_PATH}`, { headers: { Accept: "text/event-stream" } }), never);
+    expect(stream.status).toBe(405);
+    const post = await handleHttp(new Request(`https://mcp.example${MCP_PATH}`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" }) }), never);
+    expect(post.status).toBe(200);
   });
 });

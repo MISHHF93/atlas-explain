@@ -15,7 +15,7 @@ const cachedFetch: Fetcher = (url, init = {}) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { cache, credentials, ...rest } = init;
   const headers = new Headers(rest.headers);
-  headers.set("User-Agent", "ATLAS Explain MCP (+https://atlas-explain.web.app/support#ai-assistants)");
+  headers.set("User-Agent", "ATLAS Explain MCP (+https://atlas-explain.web.app/connect)");
   return fetch(url, { ...rest, headers, cf: { cacheTtl: url.includes("coingecko.com") ? 60 : 300, cacheEverything: true } } as RequestInit);
 };
 

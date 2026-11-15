@@ -3,7 +3,7 @@ import { SITE_PAGES, sitePage } from "./site-page";
 import { describe, expect, it } from "vitest";
 import { CHROME_STORE_URL } from "../src/core/links";
 
-const PAGES = ["index.html", "support.html", "privacy.html", "terms.html", "welcome.html", "how-its-built.html", "404.html", "app.html"];
+const PAGES = ["index.html", "connect.html", "support.html", "privacy.html", "terms.html", "welcome.html", "how-its-built.html", "404.html", "app.html"];
 const home = sitePage("index.html");
 const hosting = JSON.parse(readFileSync("firebase.json", "utf8")).hosting as {
   rewrites: { source: string }[];
@@ -14,7 +14,7 @@ describe("the public site is four pages", () => {
   it("has Home, Support, Privacy and Terms in the navigation, and no separate How it works page", () => {
     expect(existsSync("how-it-works.html")).toBe(false);
     const nav = /<nav class="site-nav"[^>]*>(.*?)<\/nav>/.exec(home)?.[1] ?? "";
-    expect([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual(["/#how-it-works", "/app", "/support"]);
+    expect([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual(["/#how-it-works", "/app", "/connect", "/support"]);
     expect(readFileSync("public/sitemap.xml", "utf8")).not.toContain("how-it-works");
   });
 
@@ -56,7 +56,7 @@ describe("one header and one footer for every site page", () => {
     const footer = /<nav aria-label="Footer">(.*?)<\/nav>/.exec(sitePage("index.html"))?.[1] ?? "";
     const hrefs = [...footer.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(hrefs).size).toBe(hrefs.length);
-    expect(hrefs).toEqual(expect.arrayContaining(["/app", "/welcome#step-try", "/support#ai-assistants", "/support", "/privacy", "/terms"]));
+    expect(hrefs).toEqual(expect.arrayContaining(["/app", "/welcome#step-try", "/connect", "/support", "/privacy", "/terms"]));
     expect(hrefs).not.toContain("/support#faq");
   });
 
@@ -70,6 +70,6 @@ describe("one header and one footer for every site page", () => {
 
   it("does not repeat the Support FAQ on Home", () => {
     expect(home).not.toContain('class="faq"');
-    expect(home).toContain('href="/support#ai-assistants"');
+    expect(home).toContain('href="/connect"');
   });
 });

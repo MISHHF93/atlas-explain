@@ -6,4 +6,4 @@ export function sitePage(file: string): string {
   return applySiteFrame(readFileSync(file, "utf8"));
 }
 
-export const SITE_PAGES = ["index.html", "how-its-built.html", "welcome.html", "privacy.html", "terms.html", "support.html", "404.html"] as const;
+export const SITE_PAGES = ["index.html", "connect.html", "how-its-built.html", "welcome.html", "privacy.html", "terms.html", "support.html", "404.html"] as const;

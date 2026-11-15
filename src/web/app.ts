@@ -129,7 +129,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     menu: [
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
       { label: "Get the Chrome extension", icon: "panel", run: () => shell.openSheet("Chrome extension", extensionNodes()) },
-      { label: "Use it in your AI assistant", icon: "plug", run: () => location.assign("/support#ai-assistants") },
+      { label: "Use it in your AI assistant", icon: "plug", run: () => location.assign("/connect") },
       { label: "Help and support", icon: "info", run: () => location.assign("/support") },
       { label: "ATLAS Explain home page", icon: "external", run: () => location.assign("/") },
       { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },

@@ -10,7 +10,6 @@ export const EXPLAIN_WEB_URL = "https://atlas-explain.web.app";
 /** Chrome Web Store listing, e.g. "https://chromewebstore.google.com/detail/atlas-explain/<id>". */
 export const CHROME_STORE_URL: string | null = null;
 /** Hosted MCP endpoint (Cloudflare Workers free plan), e.g. "https://atlas-explain-mcp.<account>.workers.dev/mcp". */
-// "?v=2": Claude saved a failed sign-in attempt for the plain /mcp address (made before the
-// protocol fix) and kept reusing it. The server ignores the query; this is the address verified
-// end to end in Claude on 15 Nov 2026. Bump it again if Claude ever caches a failure for it.
-export const MCP_URL: string | null = "https://atlas-explain-mcp.atlas-explain.workers.dev/mcp?v=2";
+// The public address (the directory and registry use it too). One account that had added it before
+// the protocol fix kept a saved failure for it and used "?v=2" instead; the server ignores the query.
+export const MCP_URL: string | null = "https://atlas-explain-mcp.atlas-explain.workers.dev/mcp";

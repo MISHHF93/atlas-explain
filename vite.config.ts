@@ -22,6 +22,7 @@ export default defineConfig({
         privacy: "privacy.html",
         terms: "terms.html",
         support: "support.html",
+        connect: "connect.html",
         notFound: "404.html",
         app: "app.html",
         bridge: "bridge.html",

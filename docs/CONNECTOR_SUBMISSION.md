@@ -33,7 +33,7 @@ Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `a
   Every answer names its source and time, says plainly when data is missing instead of filling the gap, and ends with "Educational information, not investment advice." It never recommends a trade and never forecasts prices. The connector is free, read-only, needs no account, and stores none of the requests it answers.
 
 - **Categories** (1–5): Finance; Education; Research (pick the closest the portal offers).
-- **Documentation URL:** https://atlas-explain.web.app/support#ai-assistants
+- **Documentation URL:** https://atlas-explain.web.app/connect
 - **Privacy policy URL:** https://atlas-explain.web.app/privacy#connector
 - **Support contact:** owner to choose. Today the Support page sends people to GitHub issues (https://github.com/MISHHF93/atlas-explain/issues); a support email is listed as an owner step in docs/HANDOVER.md.
 - **Icon:** leave it at the default. The server serves its own favicon and icons from its own address (`/favicon.ico`, `/icon.png` 512×512, `/icon.svg`, generated from public/logo.svg by `node scripts/write-mcp-icons.mjs`), and announces the PNG and SVG in its MCP `icons`. `store/connector/icon-512.png` is the same image if the portal asks for an upload anyway.

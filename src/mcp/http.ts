@@ -31,12 +31,15 @@ const json = (body: unknown, status = 200): Response =>
 const rpcError = (code: number, message: string, status: number): Response =>
   json({ jsonrpc: "2.0", id: null, error: { code, message } }, status);
 
+/** The connector's page on the website: setup steps for each assistant. */
+export const CONNECT_PAGE = "https://atlas-explain.web.app/connect";
+
 const ABOUT = [
   "ATLAS Explain MCP server",
   "",
   `Add this address to an AI assistant that supports MCP connectors: <this host>${MCP_PATH}`,
-  "Tools: explain_term, official_figures, todays_headlines. Read-only, free, no sign-in.",
-  "Setup: https://atlas-explain.web.app/support#ai-assistants",
+  "Tools: explain_term, browse_glossary, asset_details, official_figures, crypto_prices, price_history, todays_headlines. Read-only, free, no sign-in.",
+  `Setup: ${CONNECT_PAGE}`,
   "",
   EDUCATION_LINE,
 ].join("\n");
@@ -49,6 +52,13 @@ export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Re
   const icon = ICON_FILES[url.pathname];
   if (icon && (request.method === "GET" || request.method === "HEAD")) {
     return new Response(request.method === "HEAD" ? null : icon.body(), { headers: { ...CORS, "Content-Type": icon.type, "Cache-Control": "public, max-age=86400" } });
+  }
+
+  // A person opening the address in a browser gets the setup page, not protocol text. MCP clients
+  // never ask for text/html (they send application/json or text/event-stream), so they are unaffected.
+  const accept = request.headers.get("Accept") ?? "";
+  if (request.method === "GET" && (url.pathname === "/" || url.pathname === MCP_PATH) && accept.includes("text/html") && !accept.includes("text/event-stream")) {
+    return new Response(null, { status: 302, headers: { ...CORS, Location: CONNECT_PAGE } });
   }
 
   if (url.pathname !== MCP_PATH) {
