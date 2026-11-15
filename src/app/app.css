@@ -110,3 +110,13 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 @media (min-width: 900px) {
   .live-snapshot .md-movers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* ---------- today: in the news ---------- */
+
+.headlines { display: grid; gap: 0.6rem; }
+.headline-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.news-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.6rem; padding: 0.55rem 0.7rem; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius-lg); background: var(--atlas-card); }
+.headline-text { display: grid; gap: 0.15rem; min-width: 0; }
+.headline-title { color: var(--atlas-ink); font-size: var(--atlas-text-sm); font-weight: 650; line-height: 1.35; text-decoration: none; overflow-wrap: anywhere; }
+.headline-title:hover { text-decoration: underline; }
+.headline-title:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 2px; border-radius: var(--atlas-radius-sm); }

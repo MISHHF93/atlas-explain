@@ -122,12 +122,7 @@ export async function loadMarketData(
 export const NEWS_DATA_URL = "https://atlas-explain-data.web.app/data/v1/news.json";
 let newsCache: { at: number; file: NewsFile | null } | null = null;
 
-/** Headlines for one asset, or null when the news file can't be read right now. */
-export async function loadNews(
-  assetId: string,
-  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
-  now: number = Date.now(),
-): Promise<NewsItem[] | null> {
+async function readNewsCache(fetcher: (url: string, init: RequestInit) => Promise<Response>, now: number): Promise<NewsFile | null> {
   if (!newsCache || now - newsCache.at > MARKET_CACHE_MS) {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 8_000);
@@ -140,7 +135,44 @@ export async function loadNews(
       clearTimeout(timer);
     }
   }
-  return newsCache.file ? newsCache.file.items[assetId] ?? [] : null;
+  return newsCache.file;
+}
+
+/** Headlines for one asset, or null when the news file can't be read right now. */
+export async function loadNews(
+  assetId: string,
+  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
+  now: number = Date.now(),
+): Promise<NewsItem[] | null> {
+  const file = await readNewsCache(fetcher, now);
+  return file ? file.items[assetId] ?? [] : null;
+}
+
+export type HeadlinesView =
+  | { kind: "ready"; items: NewsItem[] }
+  /** The file loaded, but nothing in it is recent enough to call today's news. */
+  | { kind: "none"; generatedAt: string }
+  | { kind: "unavailable" };
+
+/** Today's headlines across every asset: newest first, each once, at most `max`. Stale ones are never shown. */
+export async function loadHeadlines(
+  max = 6,
+  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
+  now: number = Date.now(),
+): Promise<HeadlinesView> {
+  const file = await readNewsCache(fetcher, now);
+  if (!file) return { kind: "unavailable" };
+  return headlinesFrom(file, max);
+}
+
+export function headlinesFrom(file: NewsFile, max = 6): HeadlinesView {
+  const seen = new Set<string>();
+  const items = Object.values(file.items)
+    .flat()
+    .sort((a, b) => b.seenAt.localeCompare(a.seenAt))
+    .filter((n) => (seen.has(n.url) ? false : (seen.add(n.url), true)))
+    .slice(0, max);
+  return items.length ? { kind: "ready", items } : { kind: "none", generatedAt: file.generatedAt };
 }
 
 /** SEC filings in an asset's facts made in the last two days, as one-line labels. */
