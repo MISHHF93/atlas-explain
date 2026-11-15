@@ -5,7 +5,7 @@ import { CHROME_STORE_URL, MCP_URL } from "../src/core/links";
 import { handleHttp, MCP_PATH } from "../src/mcp/http";
 import { EDUCATION_LINE, TOOLS, explainTerm, handle, todaysHeadlines, type Fetcher } from "../src/mcp/server";
 
-const reply = (body: unknown, ok = true): Fetcher => async () => ({ ok, json: async () => body });
+const reply = (body: unknown, ok = true): Fetcher => async () => new Response(JSON.stringify(body), { status: ok ? 200 : 503 });
 const never: Fetcher = async () => {
   throw new Error("no network in this test");
 };
@@ -18,7 +18,7 @@ describe("ATLAS Explain MCP server", () => {
     expect((old?.result as { protocolVersion: string }).protocolVersion).toBe("2025-11-25");
     const current = await handle({ jsonrpc: "2.0", id: 5, method: "initialize", params: { protocolVersion: "2025-11-25" } }, never);
     expect((current?.result as { protocolVersion: string }).protocolVersion).toBe("2025-11-25");
-    expect(TOOLS.map((t) => t.name)).toEqual(["explain_term", "official_figures", "todays_headlines"]);
+    expect(TOOLS.map((t) => t.name)).toEqual(["explain_term", "browse_glossary", "asset_details", "official_figures", "crypto_prices", "price_history", "todays_headlines"]);
     expect(TOOLS.every((t) => t.annotations.readOnlyHint)).toBe(true);
   });
 
@@ -71,7 +71,7 @@ describe("hosted MCP over HTTP", () => {
     expect(res.headers.get("Content-Type")).toBe("application/json");
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     const body = (await res.json()) as { result: { tools: { name: string }[] } };
-    expect(body.result.tools).toHaveLength(3);
+    expect(body.result.tools).toHaveLength(TOOLS.length);
     const note = await handleHttp(post({ jsonrpc: "2.0", method: "notifications/initialized" }), never);
     expect(note.status).toBe(202);
     expect(await note.text()).toBe("");
