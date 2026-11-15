@@ -36,8 +36,10 @@ describe("glossary diagrams", () => {
   it("draw the spread, a stop-limit order and the yield curve, with labels only and a text description", () => {
     for (const id of ["spread", "stop_limit", "yield_curve"]) expect(hasDiagram(id)).toBe(true);
     const src = readFileSync("src/wallet/term-diagrams.ts", "utf8");
-    // No prices or figures inside a diagram: nothing in it can be read as market data.
-    expect(src).not.toMatch(/\$\d|\d+(\.\d+)?%/);
+    // No prices or figures in any label: nothing in a diagram can be read as market data.
+    const labels = [...src.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]!);
+    expect(labels.length).toBeGreaterThan(10);
+    for (const label of labels) expect(label, label).not.toMatch(/\d/);
     expect(src).toContain('figure.setAttribute("aria-label", d.alt)');
   });
 });
