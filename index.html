@@ -22,11 +22,7 @@
   </head>
   <body class="site">
     <a class="skip" href="#main">Skip to content</a>
-    <header class="site-head">
-      <a class="brand" href="/" aria-label="ATLAS Explain home"><img src="/logo.svg" alt="" width="28" height="28" /><span><b>ATLAS</b> Explain</span></a>
-      <nav class="site-nav" aria-label="Site"><a href="/#how-it-works">How it works</a><a href="/app">Web app</a><a href="/support">Support</a></nav>
-      <a class="btn btn-primary btn-sm" href="/#install">Add to Chrome</a>
-    </header>
+    <!-- site:header home -->
     <main id="main" tabindex="-1">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
@@ -34,10 +30,10 @@
           <h1 id="hero-title" class="hero-title">Select any market term. <span>Get it in plain language.</span></h1>
           <p class="hero-lede">ATLAS Explain lives in your Chrome toolbar. Highlight jargon on any page, a news story, a chart, a filing, and get a calm, two-sided explanation. It runs on your device first, and it never reads your balances or accounts.</p>
           <div class="hero-cta">
-            <a class="btn btn-primary btn-lg" href="/#install">Add to Chrome</a>
-            <a class="btn" href="/app">Try it in your browser</a>
+            <!-- site:cta "btn btn-primary btn-lg" -->
+            <a class="btn" href="/#how-it-works">See how it works</a>
           </div>
-          <p class="fine">Free. Installs in about two minutes. Educational information, not investment advice.</p>
+          <p class="fine">Free, with no account needed. Educational information, not investment advice.</p>
         </div>
         <figure class="hero-shot">
           <img src="/shots/popup-answer.png" width="360" height="600" alt="The ATLAS Explain popup showing a plain-language, two-sided explanation of a market move, labelled as run on this device." />
@@ -88,7 +84,7 @@
       </section>
 
       <section class="band" id="install" aria-labelledby="install-title">
-        <h2 id="install-title" class="band-title">Add to Chrome</h2>
+        <h2 id="install-title" class="band-title">The Chrome extension</h2>
         <p class="band-lede">ATLAS Explain installs from the Chrome Web Store in one click and keeps itself up to date. Nothing to download or set up.</p>
         <div data-before-store>
           <p class="store-soon"><b>The extension is not in the Chrome Web Store yet.</b> Until it is listed, the web app has the same Explain, Learn and Assets, and works now.</p>
@@ -105,26 +101,17 @@
         <p id="extension" class="fine">The extension needs desktop Chrome. On a phone, use the <a href="/app">web app</a>; its answers come from the cloud model and say so.</p>
       </section>
 
-      <section class="band" aria-labelledby="faq-title">
-        <h2 id="faq-title" class="band-title">Questions</h2>
-        <div class="faq">
-          <details class="qa"><summary>Is it free?</summary><p>Yes. Explaining, learning and live prices are free. A Pro plan with more cloud answers may be offered later, and you will always see the price before paying anything.</p></details>
-          <details class="qa"><summary>Does it give trading advice?</summary><p>No. It is education only. Every answer shows two sides and what would change the picture. It never tells anyone to trade.</p></details>
-          <details class="qa"><summary>What does it read on a page?</summary><p>Only the text you highlight, the page title and the site name, and only when you ask for an explanation. It never reads balances, account numbers, positions or form fields.</p></details>
-          <details class="qa"><summary>Where does the AI run?</summary><p>On your device first, with Gemini Nano in desktop Chrome when your computer supports it. Otherwise Gemini answers in the cloud. Every answer says which one ran.</p></details>
-        </div>
-        <p><a href="/support#faq">All questions and support</a></p>
+      <section class="band" id="ai-assistants" aria-labelledby="ai-title">
+        <h2 id="ai-title" class="band-title">Also in your AI assistant</h2>
+        <p class="band-lede">Add ATLAS Explain as a connector in Claude or another assistant that supports MCP. It can then look up plain-language terms, official figures with their sources, and today's headlines while you chat. Free, read-only, no account.</p>
+        <p><a class="btn" href="/support#ai-assistants">Set up the connector</a></p>
       </section>
 
       <section class="band cta-band" aria-labelledby="cta-title">
         <h2 id="cta-title" class="band-title">Make market jargon readable</h2>
-        <div class="hero-cta"><a class="btn btn-primary btn-lg" href="/#install">Add to Chrome</a><a class="btn" href="/app">Open the web app</a></div>
+        <div class="hero-cta"><!-- site:cta "btn btn-primary btn-lg" --><a class="btn" href="/support">Questions and support</a></div>
       </section>
     </main>
-    <footer class="site-foot">
-      <p class="foot-edu">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>
-      <nav aria-label="Footer"><a href="/#install">Add to Chrome</a><a href="/#how-it-works">How it works</a><a href="/app">Web app</a><a href="/welcome#step-try">Practice page</a><a href="/support">Support</a><a href="/support#faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>
-      <p class="fine">© 2026 ATLAS Explain · <a href="/how-its-built">How it's built</a></p>
-    </footer>
+    <!-- site:footer -->
   </body>
 </html>

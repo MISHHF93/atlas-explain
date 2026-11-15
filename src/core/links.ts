@@ -14,5 +14,3 @@ export const CHROME_STORE_URL: string | null = null;
 // protocol fix) and kept reusing it. The server ignores the query; this is the address verified
 // end to end in Claude on 15 Nov 2026. Bump it again if Claude ever caches a failure for it.
 export const MCP_URL: string | null = "https://atlas-explain-mcp.atlas-explain.workers.dev/mcp?v=2";
-/** Where every "Add to Chrome" link points. */
-export const INSTALL_URL = CHROME_STORE_URL ?? `${EXPLAIN_WEB_URL}/#install`;

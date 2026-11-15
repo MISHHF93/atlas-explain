@@ -4,7 +4,7 @@
  * See docs/ux/MULTI_ASSET_CATALOG.md §5.
  */
 import { assetFromLiveRow, validateAsset, type Asset, type AssetClass } from "./asset-schema";
-import type { CatalogView } from "./assets";
+import { formatChange as formatPctChange, type CatalogView } from "./assets";
 import { readNewsFile, type NewsFile, type NewsItem } from "./news";
 
 export interface ClassInfo {
@@ -237,9 +237,7 @@ export function formatChange(a: Asset): { text: string; tone: "up" | "down" | "f
     const v = q.change;
     return { text: `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)} pt`, tone: v > 0 ? "up" : v < 0 ? "down" : "flat" };
   }
-  if (q.changePct == null) return null;
-  const v = q.changePct;
-  return { text: `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)}%`, tone: v > 0 ? "up" : v < 0 ? "down" : "flat" };
+  return q.changePct == null ? null : formatPctChange(q.changePct);
 }
 
 export const MODE_LABEL: Record<"live" | "delayed" | "daily" | "reference", string> = {
