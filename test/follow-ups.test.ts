@@ -46,9 +46,11 @@ describe("keep-going follow-ups", () => {
   it("is wired into both surfaces and the shared answer card", () => {
     const cards = readFileSync("src/wallet/cards.ts", "utf8");
     expect(cards).toContain("keep-going");
-    // Text and highlight answers on both surfaces get their follow-ups from the shared panel.
-    expect(readFileSync("src/wallet/explain-panel.ts", "utf8")).toContain("followUps: FOLLOW_UPS.map(");
-    expect(readFileSync("extension/src/popup.ts", "utf8")).not.toContain("FOLLOW_UPS");
-    expect(readFileSync("src/web/app.ts", "utf8")).toContain("keepGoing(copyText)");
+    // Every answer on both surfaces (typed text, highlights and market moves) gets its follow-ups
+    // from the shared panel, and a move's follow-ups keep asking about that move.
+    const panel = readFileSync("src/wallet/explain-panel.ts", "utf8");
+    expect(panel).toContain("followUps: FOLLOW_UPS.map(");
+    expect(panel).toContain("ask: lastAsk");
+    for (const file of ["extension/src/popup.ts", "src/web/app.ts"]) expect(readFileSync(file, "utf8"), file).not.toContain("FOLLOW_UPS");
   });
 });

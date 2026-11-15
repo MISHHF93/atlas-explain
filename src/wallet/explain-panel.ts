@@ -64,7 +64,14 @@ export interface ExplainPanelOptions {
   onAnswered?: (info: { source: AnswerSource; followUp: boolean }) => void;
 }
 
+export type ExplainAsk = (request: ExplainRequest) => Promise<ExplainOutcome>;
+
 export interface ExplainRunOptions {
+  /**
+   * Get this answer another way (the web app's market-move card). Follow-ups and Try again
+   * keep using it, so a follow-up about a move stays about that move.
+   */
+  ask?: ExplainAsk;
   fromPage?: boolean;
   page?: { title: string; url: string };
   /** Explain this instead of what is in the box (follow-ups). */
@@ -144,6 +151,8 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
   let busy = false;
   let disabled = false;
   let last: ExplainRunOptions = {};
+  /** The way the answer on screen was asked, reused by its follow-ups. */
+  let lastAsk: ExplainAsk = options.ask;
 
   function sync(): void {
     const action = options.readsPage ? composerAction(input.value) : { mode: "typed" as const, label: "Explain", icon: "sparkle" as const };
@@ -219,7 +228,7 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
       // Follow-ups re-ask about the same topic; related chips explain a glossary term found in the answer.
       ...(subject
         ? {
-            followUps: FOLLOW_UPS.map((item) => ({ label: item.label, run: () => void run({ subject, question: followUpQuestion(item.kind, subject) }) })),
+            followUps: FOLLOW_UPS.map((item) => ({ label: item.label, run: () => void run({ subject, question: followUpQuestion(item.kind, subject), ask: lastAsk }) })),
             related: options.relatedTerms(`${subject}\n${plain}`, subject).map((term) => ({ title: term.title, run: () => explain(term.title) })),
           }
         : {}),
@@ -254,13 +263,15 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
       return;
     }
     last = runOptions;
+    const ask = runOptions.ask ?? options.ask;
+    lastAsk = ask;
     const followUp = Boolean(runOptions.question);
     setBusy(true);
     status.textContent = "";
     showCard(loadingCard(0, options.steps));
     let outcome: ExplainOutcome;
     try {
-      outcome = await options.ask({
+      outcome = await ask({
         text,
         question: runOptions.question ?? "",
         fromPage,

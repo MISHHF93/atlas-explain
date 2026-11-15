@@ -1,6 +1,6 @@
 import { CloudAllowanceUsed, PREVIEW_BILLING_LINKS, PRO_PRICE_LABELS, WatchlistAllowance, billingSnapshot, pricingActions, pricingView, type BillingSnapshot, type ProInterval } from "../core/billing";
 import { parseContextHash, type ParsedContextLink } from "../core/context-link";
-import { conceptQuestion, getConcept, isGlossaryId } from "../core/glossary";
+import { conceptQuestion, getConcept } from "../core/glossary";
 import { EXPLAIN_LOAD_MESSAGE, inboundReply, readInboundMessage } from "../core/inbound";
 import { applyPrivateFields, parseMoveCardJson, publicMoveCard } from "../core/move-card";
 import { ExplanationParseError } from "../core/parse-explanation";
@@ -10,21 +10,17 @@ import { SAMPLE_MOVES, type SampleMove } from "../core/samples";
 import { DEFAULT_SETTINGS } from "../core/settings";
 import { mapSignal, readPublicSignal, type SignalView } from "../core/signal";
 import type { ExplanationRun, MoveCard } from "../core/types";
-import type { HistoryEntry, WebBackend } from "../platform/web/backend";
+import type { WebBackend } from "../platform/web/backend";
 import type { PublicEnvConfig } from "../platform/web/env";
 import {
-  emptyCard,
-  explanationCard,
   group,
-  limitCard,
-  loadingCard,
   messageCard,
   onboarding,
   planCard,
   row,
   signalCard,
 } from "../wallet/cards";
-import { el, labelledButton, prefersReducedMotion } from "../wallet/dom";
+import { el, labelledButton } from "../wallet/dom";
 import { icon } from "../wallet/icons";
 import { extensionNodes, privacyNodes, termsNodes } from "../wallet/legal";
 import { canReachLocalAtlas } from "../core/assets";
@@ -39,13 +35,11 @@ import type { AccountView, SignInOutcome } from "../core/account";
 import { accountPanel, emailConfirmPanel } from "../wallet/account";
 import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
-import { twoSidedNodes } from "../wallet/two-sided";
 import { explainPanel, type ExplainOutcome, type ExplainRequest } from "../wallet/explain-panel";
 import type { HistoryEntry as RecentEntry } from "../core/history";
 import { marketDigestCard } from "../wallet/market-digest";
 import { buildMarketDigest } from "../core/market-digest";
 import type { CatalogView } from "../core/assets";
-import { FOLLOW_UPS, followUpQuestion } from "../core/follow-ups";
 import { relatedTerms } from "../core/related-terms";
 import { isEngineState } from "../core/hybrid-engine";
 import { TEXT_HISTORY_KEY, readTextHistory, type TextHistoryEntry } from "../core/text-history";
@@ -83,7 +77,6 @@ function readLearned(): unknown {
 }
 const ONBOARDED_KEY = "atlas-explain-onboarded";
 const QUESTION_PLACEHOLDER = "What might different traders read into this move?";
-const STEP_LABELS: [string, string, string] = ["Checking the card", "Running hybrid inference", "Saving to your history"];
 
 export interface WebWalletOptions {
   env: PublicEnvConfig;
@@ -255,11 +248,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const moveSlot = el("div");
   const sampleNote = el("p", "fine");
   const errors = el("ul", "errors");
-  const status = el("p", "fine");
-  status.setAttribute("role", "status");
-  status.setAttribute("aria-live", "polite");
-  const result = el("div", "stack");
-  result.setAttribute("aria-live", "polite");
 
   const sampleRow = el("div", "samples");
   sampleRow.setAttribute("role", "group");
@@ -277,15 +265,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const actions = el("div", "button-row");
   actions.append(explainButton);
 
-  const historyList = el("ul", "history");
-  const historyNote = el("p", "fine");
-  const recent = el("section", "stack");
-  const recentHead = el("div", "panel-title");
-  const refreshHistory = el("button", "link-btn", "Refresh");
-  refreshHistory.type = "button";
-  refreshHistory.addEventListener("click", () => void loadHistory());
-  recentHead.append(el("h2", "card-title", "Recent explanations"), refreshHistory);
-  recent.append(recentHead, historyNote, historyList);
 
   /* The core loop: paste or type → plain answer → keep going → related terms → history.
      The panel is the same code as the extension popup's; the web app supplies only how it
@@ -304,6 +283,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     announce: (text) => shell.announce(text),
   });
   const engine = panel.engine;
+  // One status line for the whole Explain section (links, sign-in messages, the move card).
+  const status = panel.status;
   const brief = digestCard();
   // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
   let marketCatalog: CatalogView | null = null;
@@ -351,9 +332,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       watchlistInput,
     ]),
     actions,
-    status,
-    result,
-    recent,
   ]);
   moveBox.classList.add("move-box");
   moveBox.hidden = true;
@@ -598,7 +576,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   updateConnection();
   void refreshLink();
   loadSample(SAMPLE_MOVES[0]);
-  showResult(emptyCard("Press Explain the move when you're ready. Nothing is sent until then.", undefined, "Ready when you are"));
 
   void start();
 
@@ -634,7 +611,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       if (changed) void assets?.refresh();
     }).catch(() => undefined);
     void refreshPlan();
-    void loadHistory();
     void startAccount(backend);
     if (new URLSearchParams(location.search).get("checkout") === "done") {
       // Stripe sends people back here after paying. The plan sync job turns Pro on a little later.
@@ -659,7 +635,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         void refreshPlan();
         if (view && view.uid !== lastAccountUid) {
           lastAccountUid = view.uid;
-          void loadHistory();
           void watchlist.sync();
           if (view.signedIn) void b.loadPrefs().then((prefs) => {
             if (prefs) applyTheme(prefs.theme);
@@ -736,8 +711,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (!import.meta.env.DEV) {
       const card = messageCard("error", "Explanations are unavailable right now", "Something on our side isn't working. Reload the page, or try again in a few minutes. The Learn library still works.", () => location.reload());
       panel.disable(card);
-      showResult(card.cloneNode(true) as HTMLElement);
-      historyNote.textContent = "";
       return;
     }
     const missing = options.env.missing;
@@ -758,8 +731,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         : `Explanations need Firebase. Still needed: ${missing.join(", ") || "a working config"}. The glossary and signal tabs work without it.`,
     );
     card.append(disclosure("Setup steps", [steps]));
-    showResult(card);
-    historyNote.textContent = "History appears once Firebase is connected.";
+    panel.disable(card);
   }
 
   function showOnboarding(): void {
@@ -877,14 +849,19 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       if (run.refusedRecommendation) notes.push("Trade decisions are not given. The factors on both sides are explained instead.");
       return { kind: "answer", rawText: run.plain, source, subject: request.text, notes };
     } catch (error) {
-      const limit = error instanceof CloudAllowanceUsed || error instanceof CloudRateLimited;
-      tracker.track("explanation_failed", { reason: limit ? "limit" : !navigator.onLine ? "offline" : "error" });
-      if (error instanceof CloudRateLimited) report("rate_limited", "web", "browser_limit");
-      else if (!(error instanceof CloudAllowanceUsed)) report(classifyCloudError(error instanceof Error ? error.message : ""), "web", error instanceof Error ? error.name : "unknown");
-      if (limit) return { kind: "limit", message: error.message };
-      if (!navigator.onLine) return { kind: "offline" };
-      return { kind: "error", message: friendlyError(error), retry: true };
+      return explainFailure(error);
     }
+  }
+
+  /** How a failed answer is counted and shown, for typed text and market moves alike. */
+  function explainFailure(error: unknown): ExplainOutcome {
+    const limit = error instanceof CloudAllowanceUsed || error instanceof CloudRateLimited || error instanceof WatchlistAllowance;
+    tracker.track("explanation_failed", { reason: limit ? "limit" : !navigator.onLine ? "offline" : "error" });
+    if (error instanceof CloudRateLimited) report("rate_limited", "web", "browser_limit");
+    else if (!limit) report(classifyCloudError(error instanceof Error ? error.message : ""), "web", error instanceof Error ? error.name : "unknown");
+    if (limit) return { kind: "limit", message: (error as Error).message };
+    if (!navigator.onLine) return { kind: "offline" };
+    return { kind: "error", message: friendlyError(error), retry: true };
   }
 
   /* History is kept in this browser under the same key and shape as before (it is part of
@@ -1018,134 +995,62 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     return { ok: true, card: withPrivate.card };
   }
 
+  /**
+   * "Explain the move": the card is checked here, then the shared Explain panel does the rest
+   * (progress, the two-sided answer, follow-ups, errors and Recent), as for typed text.
+   */
   async function onExplain(): Promise<void> {
     if (!backend) return renderSetup();
     const prepared = await prepareCard();
     if (!prepared.ok) return renderErrors(prepared.errors);
     renderErrors([]);
-    setBusy(true);
-    showResult(loadingCard(0, STEP_LABELS));
-    status.textContent = "Working on it…";
+    await panel.run({ subject: moveSubject(prepared.card), ask: askMove });
+  }
+
+  /** How a market move is answered. Follow-ups ask about the same card with their own question. */
+  async function askMove(request: ExplainRequest): Promise<ExplainOutcome> {
+    if (!backend) return { kind: "error", message: "Explanations are unavailable right now. Reload the page.", retry: false };
+    const prepared = await prepareCard();
+    if (!prepared.ok) {
+      renderErrors(prepared.errors);
+      return { kind: "error", title: "Check the move card", message: "The move card has a problem. The list above the question says what to fix.", retry: false };
+    }
+    const question = request.question || questionInput.value;
+    request.progress(1);
     try {
-      showResult(loadingCard(1, STEP_LABELS));
       const run = await withDeadline(
-        backend.explain(prepared.card, questionInput.value, {
-          onProgress(message) {
-            status.textContent = message;
-          },
-        }),
+        backend.explain(prepared.card, question, { onProgress: (message) => request.progress(1, message) }),
         EXPLAIN_DEADLINE_MS,
         "The answer took too long.",
       );
-      showResult(runCard(run));
-      engine.markRun(run.inferenceSource === "on_device" ? "on_device" : run.inferenceSource === "in_cloud" ? "in_cloud" : "unknown");
-      status.textContent = "";
-      shell.announce("Explanation ready.");
-      try {
-        await backend.save(run, prepared.card, questionInput.value);
-        await loadHistory();
-      } catch (error) {
-        historyNote.textContent = error instanceof Error ? error.message : "The explanation was not saved.";
-      }
+      tracker.track("explanation_ready", { source: run.inferenceSource === "in_cloud" ? "cloud" : run.inferenceSource, kind: request.question ? "follow_up" : "move" });
+      // Saved for this account (or this browser's anonymous id): the public card and the answer, never private notes.
+      void backend.save(run, prepared.card, question).catch(() => undefined);
+      return moveOutcome(run, moveSubject(prepared.card));
     } catch (error) {
-      status.textContent = "";
-      if (error instanceof CloudRateLimited) report("rate_limited", "web", "browser_limit");
-      else if (!(error instanceof CloudAllowanceUsed || error instanceof WatchlistAllowance)) report(classifyCloudError(error instanceof Error ? error.message : ""), "web", error instanceof Error ? error.name : "unknown");
-      if (error instanceof CloudAllowanceUsed || error instanceof WatchlistAllowance || error instanceof CloudRateLimited) showResult(limitCard(error.message));
-      else if (!navigator.onLine) showResult(messageCard("offline", "You are offline", "On-device inference was not available and the cloud cannot be reached. Reconnect and try again.", () => void onExplain()));
-      else showResult(messageCard("error", "That did not work", friendlyError(error), () => void onExplain()));
-    } finally {
-      setBusy(false);
+      return explainFailure(error);
     }
   }
 
-  function runCard(run: ExplanationRun): HTMLElement {
+  function moveSubject(card: MoveCard): string {
+    return `${card.symbol} ${formatPct(card.movePct)} move`;
+  }
+
+  /** A move answer in the shared two-sided shape, with what only a move answer has as notes. */
+  function moveOutcome(run: ExplanationRun, subject: string): ExplainOutcome {
     const ex = run.explanation;
-    const body: Node[] = twoSidedNodes(ex);
+    const notes = [moveNote(run)].filter(Boolean);
     if (ex.headlineTopics.length > 0) {
-      const topics = el("div", "chips");
-      for (const item of ex.headlineTopics) {
-        const chip = el("span", "chip", item.coerced ? `${item.topic} (mapped)` : item.topic);
-        chip.title = item.headline;
-        topics.append(chip);
-      }
-      body.push(topics);
+      notes.push(`Headlines read as: ${ex.headlineTopics.map((item) => (item.coerced ? `${item.topic} (mapped)` : item.topic)).join(", ")}.`);
     }
-    const notes = [pathNote(run)];
     if (ex.truncatedReasons) notes.push("The model returned more than three reasons. The first three are shown.");
-    notes.push("Educational information, not investment advice.");
-    const copyText = [ex.summary, "", "Opportunity case:", ...ex.buyerReasons.map((r) => `- ${r}`), "", "Risk case:", ...ex.sellerReasons.map((r) => `- ${r}`), "", `What would change: ${ex.whatWouldChange}`, "", "Educational information, not investment advice."].join("\n");
-    return explanationCard({
-      source: run.inferenceSource === "on_device" ? "on_device" : run.inferenceSource === "in_cloud" ? "in_cloud" : "unknown",
-      body,
-      copyText,
-      notes,
-      onClear: () => showResult(emptyCard("Pick another sample, then explain again.", undefined, "Cleared")),
-      ...keepGoing(copyText),
-    });
-  }
-
-  /** Follow-ups re-run Explain on the same card with a new question; related terms fill the question box only. */
-  function keepGoing(answerText: string) {
-    const parsed = parseMoveCardJson(cardInput.value);
-    const topic = parsed.ok ? `the ${parsed.card.symbol} ${formatPct(parsed.card.movePct)} move` : "this move";
     return {
-      followUps: FOLLOW_UPS.map((item) => ({
-        label: item.label,
-        run: () => {
-          questionInput.value = followUpQuestion(item.kind, topic);
-          void onExplain();
-        },
-      })),
-      related: relatedTerms(answerText).map((term) => ({
-        title: term.title,
-        run: () => {
-          questionInput.value = isGlossaryId(term.id)
-            ? conceptQuestion(term.id)
-            : `In educational terms, what does "${term.title}" add to a reading of this move? Do not give trade advice.`;
-          status.textContent = `${term.title} added to your question. Press Explain the move when ready. Nothing was sent.`;
-          questionInput.focus();
-        },
-      })),
+      kind: "answer",
+      rawText: JSON.stringify({ summary: ex.summary, buyerReasons: ex.buyerReasons, sellerReasons: ex.sellerReasons, whatWouldChange: ex.whatWouldChange }),
+      source: run.inferenceSource === "on_device" ? "on_device" : run.inferenceSource === "in_cloud" ? "in_cloud" : "unknown",
+      subject,
+      notes,
     };
-  }
-
-  async function loadHistory(): Promise<void> {
-    if (!backend) return;
-    try {
-      const entries = await backend.list();
-      if (entries.length === 0) {
-        historyNote.textContent = account?.signedIn ? "No saved explanations yet. They appear here and on every device where you sign in." : "No saved explanations yet. They appear here for this browser. Sign in to keep them across devices.";
-        historyList.replaceChildren();
-        return;
-      }
-      historyNote.textContent = account?.signedIn ? `Saved to ${account.label}. Private notes are never stored.` : "Saved on this browser while signed out. Private notes are never stored.";
-      historyList.replaceChildren(...entries.map(historyItem));
-    } catch (error) {
-      historyNote.textContent = error instanceof Error ? error.message : "History could not be loaded.";
-    }
-  }
-
-  function historyItem(entry: HistoryEntry): HTMLElement {
-    const item = el("li", "card history-item");
-    const load = el("button", "link-btn", "Load");
-    load.type = "button";
-    load.addEventListener("click", () => {
-      if (!entry.cardJson) return;
-      moveBox.hidden = false;
-      moveBox.open = true;
-      cardInput.value = pretty(entry.cardJson);
-      sampleNote.textContent = "Loaded from your saved history. Notes were not stored.";
-      renderMove();
-      shell.panels.explain.scrollIntoView({ behavior: smooth() });
-    });
-    item.append(
-      el("p", "move-name", `${entry.symbol} ${formatPct(entry.movePct)}`),
-      load,
-      el("p", "move-meta", [entry.createdAtLabel, sourceLabel(entry.inferenceSource)].filter(Boolean).join(" · ")),
-      el("p", undefined, entry.summary),
-    );
-    return item;
   }
 
   /* ---------- plan ---------- */
@@ -1214,20 +1119,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     updateConnection();
   }
 
-  function setBusy(busy: boolean): void {
-    explainButton.disabled = busy;
-    explainButton.classList.toggle("loading", busy);
-    result.setAttribute("aria-busy", busy ? "true" : "false");
-  }
-
-  function showResult(card: HTMLElement): void {
-    card.classList.add("enter");
-    result.replaceChildren(card);
-    if (!card.classList.contains("state-empty")) {
-      requestAnimationFrame(() => card.scrollIntoView({ block: "nearest", behavior: smooth() }));
-    }
-  }
-
   function renderErrors(items: { path: string; message: string }[]): void {
     errors.replaceChildren(...items.map((item) => el("li", undefined, `${item.path}: ${item.message}`)));
     if (items.length > 0) {
@@ -1256,9 +1147,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (tab === "settings") openAccount();
     if (tab === "signal") shell.select("today");
     const demo = preview.get("demo");
-    if (demo === "run") showResult(runCard(devSampleRun()));
-    if (demo === "loading") showResult(loadingCard(1, STEP_LABELS));
-    if (demo === "error") showResult(messageCard("error", "That did not work", "The cloud model could not be reached. Check your connection and retry.", () => undefined));
+    if (demo === "run") panel.show(moveOutcome(devSampleRun(), "NVDA -17% move"));
+    if (demo === "loading") panel.showLoading(1);
+    if (demo === "error") panel.show({ kind: "error", message: "The cloud model could not be reached. Check your connection and retry.", retry: false });
     if (preview.get("onboarding") === "1") showOnboarding();
     if (preview.get("sheet") === "terms") openLegal("terms");
     if (preview.get("sheet") === "extension") shell.openSheet("Chrome extension", extensionNodes());
@@ -1288,10 +1179,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (preview.get("sheet") === "today") shell.select("today");
     if (preview.get("menu") === "open") document.querySelector<HTMLButtonElement>(".bar .icon-btn")?.click();
   }
-
-  function smooth(): ScrollBehavior {
-    return prefersReducedMotion() ? "auto" : "smooth";
-  }
 }
 
 /* ---------- pure helpers ---------- */
@@ -1318,21 +1205,11 @@ function editorKeys(key: string, value: unknown): unknown {
   return value;
 }
 
-function pathNote(run: ExplanationRun): string {
-  const where = run.inferenceSource === "on_device"
-    ? "Answered on your device."
-    : run.inferenceSource === "in_cloud"
-      ? "Answered in the cloud."
-      : "Where this answer ran was not reported.";
-  const fallback = run.fellBackToCloud ? " On-device was unavailable, so the cloud ran without private notes." : "";
-  const privacy = run.privateContextUsed ? " Notes stayed on this device and were not saved." : " Private notes were not sent.";
-  return `${where}${fallback}${privacy}`;
-}
-
-function sourceLabel(source: string): string {
-  if (source === "on_device") return "on-device";
-  if (source === "in_cloud") return "cloud";
-  return "source not reported";
+/** What happened to private notes on a move answer. Where it ran is said by the shared panel. */
+function moveNote(run: ExplanationRun): string {
+  const fallback = run.fellBackToCloud ? "On-device was unavailable, so the cloud ran without private notes. " : "";
+  const privacy = run.privateContextUsed ? "Notes stayed on this device and were not saved." : "Private notes were not sent.";
+  return `${fallback}${privacy}`;
 }
 
 export function formatPct(value: number): string {
@@ -1340,13 +1217,6 @@ export function formatPct(value: number): string {
   return value > 0 ? `+${text}%` : `${text}%`;
 }
 
-function pretty(raw: string): string {
-  try {
-    return JSON.stringify(JSON.parse(raw), null, 2);
-  } catch {
-    return raw;
-  }
-}
 
 function readTheme(): ThemeChoice {
   const q = new URLSearchParams(location.search).get("theme");

@@ -21,11 +21,20 @@ describe("Explain is built once for both surfaces", () => {
 
   it("keeps the answer card, progress, errors and history out of both entry files", () => {
     for (const [name, src] of [["web app", app], ["popup", popup]] as const) {
-      // The web app still draws its older move-card answers itself; text and highlight answers do not.
-      expect(src, name).not.toMatch(/function (onExplainText|showTextAnswer|renderTextHistory|showExplanation|keepGoingFor|renderHistory|remember)\(/);
+      expect(src, name).not.toMatch(/function (onExplainText|showTextAnswer|renderTextHistory|showExplanation|keepGoingFor|keepGoing|renderHistory|remember|runCard|loadHistory|historyItem|showResult|setBusy)\(/);
       expect(src, name).not.toContain("historyCard(");
+      for (const card of ["explanationCard(", "loadingCard(", "limitCard(", "offlineCard("]) expect(src, `${name} ${card}`).not.toContain(card);
     }
-    for (const card of ["explanationCard(", "loadingCard(", "limitCard(", "offlineCard(", "messageCard("]) expect(popup, card).not.toContain(card);
+    expect(popup).not.toContain("messageCard(");
+  });
+
+  it("answers a market move through the same panel, so it has the same card, follow-ups and Recent", () => {
+    expect(app).toContain("await panel.run({ subject: moveSubject(prepared.card), ask: askMove });");
+    expect(app).toContain("async function askMove(request: ExplainRequest): Promise<ExplainOutcome>");
+    // Follow-ups about a move ask about the card, with their own question.
+    expect(app).toContain("const question = request.question || questionInput.value;");
+    // A move answer is the shared two-sided shape.
+    expect(app).toMatch(/rawText: JSON\.stringify\(\{ summary: ex\.summary, buyerReasons: ex\.buyerReasons, sellerReasons: ex\.sellerReasons, whatWouldChange: ex\.whatWouldChange \}\)/);
   });
 
   it("says where each answer ran, and always adds the education line", () => {
