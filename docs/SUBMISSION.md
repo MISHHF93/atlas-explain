@@ -19,6 +19,7 @@ The write-up and demo should match the app as it ships today: a public hybrid ex
 
 Keep this list in the Devpost description so the submission matches the tree:
 
+- **One product, two surfaces.** A web app on one page (Explain, Today, Learn, Assets) and a three-tab Chrome extension (Explain, Learn, Assets) share one back end (`src/platform/web/explain-service.ts`: settings, limits, the model call) and one Explain panel (`src/wallet/explain-panel.ts`), so both explain the same way, on the device first.
 - **Hybrid inference.** Chrome tries Gemini Nano on the device first (`PREFER_ON_DEVICE`). The badge is `response.inferenceSource`, not a guessed label.
 - **Connectors library.** `src/connectors/` (documented in [connectors/README.md](connectors/README.md)) is this repo's path, separate from the private ATLAS desk. The ATLAS-local connector prefers `POST /api/mcp/public` and falls back to `GET /api/explain/assets`.
 - **Honest header states.** The pill is one of: `Live prices` (the public price feed answered; https://atlas-explain.web.app never calls localhost), `ATLAS connected` (a loopback or extension probe actually answered), `ATLAS desk` (this tab is the Markets desk) or `Offline`. With nothing to report it is hidden. It does not fake a connection, and ATLAS-only parts stay hidden for everyone without ATLAS.
