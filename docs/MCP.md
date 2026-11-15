@@ -8,25 +8,34 @@ ATLAS Explain has a small, read-only [Model Context Protocol](https://modelconte
 |---|---|
 | `explain_term` | The plain-language glossary entry for a market term, such as "stop-limit order", "bid-ask spread" or "yield curve". |
 | `browse_glossary` | The learning path in order (topics and their terms), or every term in one glossary group. |
-| `asset_details` | What one asset is: its market, trading hours, latest official figure or live price with source and time, or why no price is shown, plus related terms and its page in the app. |
+| `asset_details` | What one asset is: its market, trading hours, latest official figure or price with source and time, or why no price is shown, plus related terms and its page in the app. |
 | `official_figures` | Official figures from free government and regulator sources: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and the latest SEC-filed figures (revenue, net income, earnings per share, shares outstanding) for about 30 large US companies and ETFs. Each with its source and date. |
-| `crypto_prices` | Live prices for the ten major coins, biggest moves first. From CoinGecko, or Kraken's public API when CoinGecko is busy; each answer names the source it used and that source's change window. |
-| `price_history` | A coin's start, end, change, high and low over 24 hours, 7 days or 30 days. Past moves only, never a forecast. Same two sources. |
+| `crypto_prices` | Prices for the ten major coins, biggest moves first, from `crypto.json` on ATLAS Explain's own data site (refreshed hourly by the data job from Kraken, CoinGecko as backup). Each answer says when they were collected, and how old they are if the refresh has stopped. |
+| `price_history` | A coin's start, end, change, high and low over 24 hours, 7 days or 30 days, from the same file's 30 days of hourly closes. Past moves only, never a forecast. |
 | `todays_headlines` | Recent market headlines from the GDELT Project, each with its publisher, link and time. Headlines older than 36 hours are never returned. |
 
 Every answer names its source and ends with: "Educational information, not investment advice."
+
+## Protocol support: dual-era (MCP 2026-07-28 and earlier)
+
+- **2026-07-28 (current, stateless):** no `initialize`; every request carries its version and client capabilities in `_meta`. The server implements the required `server/discover` (supported versions, capabilities, identity, instructions), marks every result `resultType: "complete"` with `io.modelcontextprotocol/serverInfo` in `_meta`, puts `ttlMs`/`cacheScope` on list, read and discover results, and validates the mirrored `MCP-Protocol-Version`, `Mcp-Method` and `Mcp-Name` headers (Base64 sentinel decoded). Errors follow the spec: unsupported version `-32022` with the supported list (HTTP 400), missing client capabilities `-32602` (400), header mismatch `-32020` (400), unknown method `-32601` (HTTP 404), resource not found `-32602`.
+- **2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05:** the `initialize` handshake, `ping`, and `-32002` for a missing resource, as those revisions expect.
+- **Transport security:** requests from a plain-http page that isn't this computer are refused with 403 (DNS rebinding); https sites and apps are allowed, since the server is public and read-only.
+- **Audits:** `test/mcp-modern.test.ts` and `test/mcp-server.test.ts` cover both eras; the live server was checked end to end with a 2026-07-28 client and a legacy client on 15 Nov 2026.
 
 ## What else it offers (MCP 2025-11-25 and MCP Apps)
 
 - **Structured output:** every data tool declares an `outputSchema` and returns the same facts as typed JSON in `structuredContent` (for example `priceUsd`, `changePct`, `points`, `sourceUrl`), next to the readable text. Agents and trading-platform assistants can use the fields directly. A test checks every answer against its schema.
 - **Interactive chart (MCP App):** `price_history` points at `ui://atlas-explain/price-chart.html` (`src/mcp/chart-app.ts`, MIME `text/html;profile=mcp-app`). Claude (web and desktop), ChatGPT and VS Code draw it in a sandboxed frame: the price line, a readout under the pointer, high and low, the source, and 24H/7D/30D buttons that call `price_history` again through the host. It loads nothing from outside, so the default MCP Apps security policy is enough. Clients without MCP Apps show the text answer.
 - **Prompts:** `market_brief`, `explain_asset` (asset) and `learn_next` (topic), shown as ready-made starters in clients that support prompts. Each asks for sources and says not to suggest a trade.
+- **Glossary as resources:** every term is a readable resource (`atlas-explain://glossary/{term}`, Markdown), with a resource template, the learning path (`atlas-explain://learning-path`), and completions for term names, so people can attach a term as context in clients that support resources.
+- **Completions:** prompt arguments (coin and catalog names, learning topics) and the glossary template's term names.
 - **Icons and annotations:** the server and every tool carry the ATLAS Explain icon, a title, and `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, as Anthropic's directory review requires.
 
 ## Getting listed (owner steps, free)
 
 - **MCP Registry** (the official public catalogue other directories read from): `server.json` is ready at the repo root. Install `mcp-publisher` (https://modelcontextprotocol.io/registry/quickstart), run `mcp-publisher login github` as the MISHHF93 account, then `mcp-publisher publish` from the repo root. A test keeps `server.json`'s version in step with `SERVER_VERSION`.
-- **Claude connectors directory:** every answer, the icon and the screenshots are ready in `docs/CONNECTOR_SUBMISSION.md` and `store/connector/`. Submit at https://claude.ai/directory/manage (any paid Claude plan). It asks for the server URL, public docs (https://atlas-explain.web.app/support#ai-assistants) and a privacy policy (https://atlas-explain.web.app/privacy#connector). Anthropic's review checklist: https://claude.com/docs/connectors/building/review-criteria
+- **Claude connectors directory:** every answer, the icon and the screenshots are ready in `docs/CONNECTOR_SUBMISSION.md` and `store/connector/`. Submit at https://claude.ai/directory/manage (any paid Claude plan). It asks for the server URL, public docs (https://atlas-explain.web.app/connect) and a privacy policy (https://atlas-explain.web.app/privacy#connector). Anthropic's review checklist: https://claude.com/docs/connectors/building/review-criteria
 - **ChatGPT:** works as a custom connector in developer mode (Settings, Apps and connectors) with the same URL; plan availability varies.
 
 ## What it never does
@@ -39,14 +48,14 @@ It only reads its built-in glossary and two public files on `atlas-explain-data.
 
 ## For people using it
 
-**Live address:** `https://atlas-explain-mcp.atlas-explain.workers.dev/mcp?v=2` (deployed 15 Nov 2026, and checked in Claude: the connector adds and `explain_term` answers in chat). The setup steps are on the website at https://atlas-explain.web.app/support#ai-assistants. In Claude: Settings, then Connectors, then Add custom connector, then paste the address.
+**Live address:** `https://atlas-explain-mcp.atlas-explain.workers.dev/mcp` (deployed 15 Nov 2026, and checked in Claude). Setup steps for Claude, Claude Code, ChatGPT, Cursor and VS Code are on the website at https://atlas-explain.web.app/connect, the one place for them (Support and Home link there). Opening the address in a browser redirects to that page. An account that added the connector before the protocol fix may need `?v=2` on the end (see below).
 
 ## How it is hosted ($0)
 
 - **Where:** Cloudflare Workers, free plan: 100,000 requests a day with no card. Over the limit, requests fail for the rest of the day; nothing is ever charged. Firebase can't host it, because the Spark plan has no servers.
-- **Transport:** MCP "Streamable HTTP", stateless. Each `POST /mcp` carries one JSON-RPC message and gets one JSON answer; notifications get `202`. `GET /mcp` is `405` (no server stream). `GET /` is a short plain-text description. CORS is open, because the data is public and read-only. It supports protocol versions 2025-06-18, 2025-03-26 and 2024-11-05.
+- **Transport:** MCP "Streamable HTTP", stateless. Each `POST /mcp` carries one JSON-RPC message and gets one JSON answer; notifications get `202`. `GET /mcp` is `405` (no server stream). `GET /` is a short plain-text description. CORS is open, because the data is public and read-only. It supports protocol versions 2026-07-28 (stateless, no handshake) and 2025-11-25, 2025-06-18, 2025-03-26 and 2024-11-05 (with `initialize`).
 - **Caching:** the two data files are cached at Cloudflare's edge for 5 minutes and crypto prices for 1 minute, so heavy use doesn't hit the sources.
-- **Crypto sources:** CoinGecko's keyless API usually answers Cloudflare Workers with 429 (rate-limited shared addresses), so the server falls back to Kraken's public API (`src/core/kraken.ts`, no key). A free CoinGecko Demo key would make CoinGecko the usual source; that would be an owner step (`wrangler secret put`), and isn't needed.
+- **Own API only:** the server reads nothing but ATLAS Explain's own data site (`market.json`, `news.json`, `crypto.json`); its fetch (`src/mcp/worker.ts`, `ownDataFetch`) refuses any other origin, and a test checks it. The data job (`scripts/data/build-data.ts`) collects crypto prices and 30 days of hourly closes from Kraken (CoinGecko as backup) into `crypto.json`; `src/data/crypto.ts` is the one coin list, the source parsers and the file reader. While GitHub Actions is locked, refresh it by hand (see the handover). This is why the directory's "API ownership" answer is "We own the API".
 - **Code:**
   - `src/mcp/server.ts`: the tools and the JSON-RPC handler. They reuse the app's glossary, catalog and headline readers, so the freshness and source rules are the same.
   - `src/mcp/http.ts`: the HTTP transport.

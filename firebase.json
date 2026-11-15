@@ -101,6 +101,10 @@
       {
         "source": "/support",
         "destination": "/support.html"
+      },
+      {
+        "source": "/connect",
+        "destination": "/connect.html"
       }
     ],
     "redirects": [

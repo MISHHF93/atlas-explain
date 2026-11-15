@@ -8,6 +8,8 @@
  * ui/initialize, then it draws each ui/notifications/tool-result, and its range buttons ask the
  * host to call price_history again (tools/call). It shows past prices only, with their source.
  */
+import { EDUCATION_SHORT } from "../core/links";
+
 export const CHART_APP_URI = "ui://atlas-explain/price-chart.html";
 export const MCP_APP_MIME = "text/html;profile=mcp-app";
 
@@ -56,7 +58,7 @@ export const CHART_APP_HTML = `<!doctype html>
   <div class="plot" id="plot"><p class="msg" id="msg">Loading the chart…</p></div>
   <div class="readout" id="readout" aria-live="polite"></div>
   <div class="facts" id="facts"></div>
-  <footer><span id="source"></span> Past prices only, never a forecast. Educational information, not investment advice.</footer>
+  <footer><span id="source"></span> Past prices only, never a forecast. ${EDUCATION_SHORT}</footer>
 </main>
 <script>
 (() => {

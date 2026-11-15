@@ -4,7 +4,7 @@ Everything the developer portal asks for, ready to paste. Submit at https://clau
 
 How listing works: Anthropic scans the submission and lists it as a **Community** connector. There is no application for **Verified**; Anthropic escalates listings it judges highly useful to a Verified review, in which a reviewer tests every tool. Nothing in this document needs credentials, and none should ever be put in the portal.
 
-Checked against Anthropic's checklist (https://claude.com/docs/connectors/building/review-criteria) on 15 Nov 2026: every tool has a title and `readOnlyHint: true`; no tool writes, moves money or generates media; descriptions say what each tool does without instructing Claude; errors are specific ("neither CoinGecko nor Kraken answered…"); answers are short and sourced.
+Checked against Anthropic's checklist (https://claude.com/docs/connectors/building/review-criteria) on 15 Nov 2026: every tool has a title and `readOnlyHint: true`; no tool writes, moves money or generates media; descriptions say what each tool does without instructing Claude; errors are specific ("ATLAS Explain's crypto data couldn't be loaded right now…"); answers are short and sourced.
 
 ## 1. Connection
 
@@ -19,21 +19,21 @@ Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `a
 ## 3. Listing
 
 - **Server name:** ATLAS Explain
-- **One-liner** (≤200): Market jargon in plain language: glossary terms, official figures with sources, live crypto prices and charts, and today's headlines. Education only, never trade advice.
+- **One-liner** (≤200): Market jargon in plain language: glossary terms, official figures with sources, crypto prices and charts, and today's headlines. Education only, never trade advice.
 - **Description** (≤2,000):
 
   ATLAS Explain helps people understand markets without being told what to do. Ask Claude about a term, an asset or a move, and ATLAS Explain answers with plain language and named sources.
 
   - Explain any market term from a curated glossary (stop-limit order, bid-ask spread, yield curve and more), or follow the learning path topic by topic.
-  - Look up what an asset is: its market, trading hours, and its latest official figure or live price, or why no price is shown.
+  - Look up what an asset is: its market, trading hours, and its latest official figure or price, or why no price is shown.
   - Official figures from free government and regulator sources: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and SEC-filed figures for about 30 large US companies and ETFs.
-  - Live prices for ten major coins, and how a coin moved over 24 hours, 7 days or 30 days, drawn as an interactive chart in Claude.
+  - Prices for ten major coins, refreshed hourly, and how a coin moved over 24 hours, 7 days or 30 days, drawn as an interactive chart in Claude.
   - Today's market headlines from the GDELT Project, each linked to its publisher.
 
   Every answer names its source and time, says plainly when data is missing instead of filling the gap, and ends with "Educational information, not investment advice." It never recommends a trade and never forecasts prices. The connector is free, read-only, needs no account, and stores none of the requests it answers.
 
 - **Categories** (1–5): Finance; Education; Research (pick the closest the portal offers).
-- **Documentation URL:** https://atlas-explain.web.app/support#ai-assistants
+- **Documentation URL:** https://atlas-explain.web.app/connect
 - **Privacy policy URL:** https://atlas-explain.web.app/privacy#connector
 - **Support contact:** owner to choose. Today the Support page sends people to GitHub issues (https://github.com/MISHHF93/atlas-explain/issues); a support email is listed as an owner step in docs/HANDOVER.md.
 - **Icon:** leave it at the default. The server serves its own favicon and icons from its own address (`/favicon.ico`, `/icon.png` 512×512, `/icon.svg`, generated from public/logo.svg by `node scripts/write-mcp-icons.mjs`), and announces the PNG and SVG in its MCP `icons`. `store/connector/icon-512.png` is the same image if the portal asks for an upload anyway.
@@ -70,7 +70,7 @@ Re-run the script just before submitting so the prices are current.
 
 ## 7. Data handling
 
-- **Whose API:** ATLAS Explain's own data site (atlas-explain-data.web.app, built from US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR and GDELT public data) plus two third-party public APIs it doesn't control: CoinGecko and Kraken (public market data, credited on every answer).
+- **API ownership: "We own the API".** The connector reads only ATLAS Explain's own data site (atlas-explain-data.web.app), which ATLAS Explain's scheduled data job publishes from public sources: US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR, GDELT, and crypto prices from Kraken (CoinGecko as backup). The server refuses to fetch any other address. Original sources are credited on every answer.
 - **Personal health data:** no. **Sponsored content:** no.
 
 ## 8. Test & launch
@@ -84,4 +84,4 @@ All seven acknowledgments apply cleanly: directory guidelines; first-party API u
 ## Risks a reviewer might raise
 
 - **Domain:** the server runs on `atlas-explain.workers.dev` (Cloudflare's free subdomain), not on `atlas-explain.web.app`. The names match and both are linked from the Support page, but a custom domain would make the ownership plainer. That costs money, so it isn't done.
-- **Third-party prices:** CoinGecko and Kraken are public APIs ATLAS Explain doesn't control. Their terms are on the legal review list (docs/legal/REVIEW_NOTES.md, item 12).
+- **Original data sources:** the data site republishes public data with credit. The terms of Kraken's and CoinGecko's public market data are on the legal review list (docs/legal/REVIEW_NOTES.md, item 12).

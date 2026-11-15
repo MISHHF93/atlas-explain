@@ -4,6 +4,7 @@
  * See docs/ux/MULTI_ASSET_CATALOG.md §5.
  */
 import { assetFromLiveRow, validateAsset, type Asset, type AssetClass } from "./asset-schema";
+import { MARKET_DATA_URL, NEWS_DATA_URL } from "./links";
 import { formatChange as formatPctChange, type CatalogView } from "./assets";
 import { readNewsFile, type NewsFile, type NewsItem } from "./news";
 
@@ -73,7 +74,7 @@ export function findAsset(assets: readonly Asset[], key: string): Asset | undefi
 /* ---------- official data published by the scheduled job ---------- */
 
 /** The free data hosting site the job deploys to (separate from the app, so the app is never redeployed by it). */
-export const MARKET_DATA_URL = "https://atlas-explain-data.web.app/data/v1/market.json";
+export { MARKET_DATA_URL } from "./links";
 const MARKET_SCHEMA = "atlas-explain-market-v1";
 
 /**
@@ -119,7 +120,7 @@ export async function loadMarketData(
 
 /* ---------- headlines published by the scheduled job (core/news.ts) ---------- */
 
-export const NEWS_DATA_URL = "https://atlas-explain-data.web.app/data/v1/news.json";
+export { NEWS_DATA_URL } from "./links";
 let newsCache: { at: number; file: NewsFile | null } | null = null;
 
 async function readNewsCache(fetcher: (url: string, init: RequestInit) => Promise<Response>, now: number): Promise<NewsFile | null> {

@@ -14,6 +14,7 @@ import {
   type Fetcher,
   type SparkPoint,
 } from "./assets";
+import { CRYPTO_COINS } from "../data/crypto";
 
 export const COINGECKO_API = "https://api.coingecko.com/api/v3";
 export const COINGECKO_SITE = "https://www.coingecko.com";
@@ -31,18 +32,8 @@ export interface CoinGeckoCoin {
   id: string;
 }
 
-export const COINGECKO_COINS: readonly CoinGeckoCoin[] = [
-  { symbol: "BTC", name: "Bitcoin", id: "bitcoin" },
-  { symbol: "ETH", name: "Ethereum", id: "ethereum" },
-  { symbol: "SOL", name: "Solana", id: "solana" },
-  { symbol: "XRP", name: "XRP", id: "ripple" },
-  { symbol: "ADA", name: "Cardano", id: "cardano" },
-  { symbol: "DOGE", name: "Dogecoin", id: "dogecoin" },
-  { symbol: "LTC", name: "Litecoin", id: "litecoin" },
-  { symbol: "DOT", name: "Polkadot", id: "polkadot" },
-  { symbol: "LINK", name: "Chainlink", id: "chainlink" },
-  { symbol: "AVAX", name: "Avalanche", id: "avalanche-2" },
-];
+/** The ten coins (src/data/crypto.ts is the one list). */
+export const COINGECKO_COINS: readonly CoinGeckoCoin[] = CRYPTO_COINS.map((c) => ({ symbol: c.symbol, name: c.name, id: c.coingeckoId }));
 
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => !!v && typeof v === "object" && !Array.isArray(v);

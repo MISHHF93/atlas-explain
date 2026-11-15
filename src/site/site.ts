@@ -10,6 +10,18 @@ import "./site.css";
 const target = legacyRedirect(location);
 if (target) location.replace(target);
 
+// Copy buttons on /connect: copy the text of the element they name, then say so for a moment.
+for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+  button.addEventListener("click", () => {
+    const text = document.getElementById(button.dataset.copy ?? "")?.textContent?.trim() ?? "";
+    const label = button.textContent;
+    void navigator.clipboard?.writeText(text).then(
+      () => { button.textContent = "Copied"; },
+      () => { button.textContent = "Select and copy"; },
+    ).finally(() => setTimeout(() => { button.textContent = label; }, 1600));
+  });
+}
+
 // Opened by the extension right after install (/welcome?installed=1): confirm it instead of offering "Add to Chrome".
 if (new URLSearchParams(location.search).get("installed") === "1") {
   const add = document.querySelector<HTMLAnchorElement>(".site-head .btn-primary");

@@ -1,6 +1,6 @@
 /**
- * The one header and footer of the public site pages (/, /support, /privacy, /terms, /welcome,
- * /how-its-built, 404). Each page holds only `<!-- site:header -->` and `<!-- site:footer -->`
+ * The one header and footer of the public site pages (/, /connect, /support, /privacy, /terms,
+ * /welcome, /how-its-built, 404). Each page holds only `<!-- site:header -->` and `<!-- site:footer -->`
  * markers; the build (vite.config.ts) and the tests (applySiteFrame) put this markup in, so the
  * pages can never drift apart again.
  *
@@ -8,15 +8,16 @@
  * src/core/links.ts), every primary button opens the web app; setting the listing turns them all
  * into "Add to Chrome" at the next build.
  */
-import { CHROME_STORE_URL, MCP_URL } from "../core/links";
+import { CHROME_STORE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
 
-export type SitePage = "home" | "support" | "privacy" | "terms" | "welcome" | "how-its-built" | "404";
+export type SitePage = "home" | "connect" | "support" | "privacy" | "terms" | "welcome" | "how-its-built" | "404";
 
 const SOURCE_URL = "https://github.com/MISHHF93/atlas-explain";
 
 const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/app", label: "Web app" },
+  { href: "/connect", label: "AI assistants", page: "connect" },
   { href: "/support", label: "Support", page: "support" },
 ];
 
@@ -25,7 +26,7 @@ const FOOTER_LINKS: readonly { href: string; label: string }[] = [
   { href: "/#install", label: "Chrome extension" },
   { href: "/app", label: "Web app" },
   { href: "/welcome#step-try", label: "Practice page" },
-  { href: "/support#ai-assistants", label: "AI assistants" },
+  { href: "/connect", label: "AI assistants" },
   { href: "/support", label: "Support and FAQ" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
@@ -53,7 +54,7 @@ export function siteFooter(): string {
   const links = FOOTER_LINKS.map((l) => `<a href="${l.href}">${l.label}</a>`).join("");
   return [
     `<footer class="site-foot">`,
-    `      <p class="foot-edu">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>`,
+    `      <p class="foot-edu">${EDUCATION_LINE}</p>`,
     `      <nav aria-label="Footer">${links}<a href="${SOURCE_URL}" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>`,
     `      <p class="fine">© 2026 ATLAS Explain · <a href="/how-its-built">How it's built</a></p>`,
     `    </footer>`,
@@ -65,11 +66,11 @@ const FOOTER_MARK = /<!--\s*site:footer\s*-->/;
 const CTA_MARK = /<!--\s*site:cta\s+"([^"]+)"\s*-->/g;
 
 /**
- * Shows the "live" block and hides the "not yet" block for an address that is set, and puts the
- * address into its links (`data-store-link`) or text (`data-mcp-url`). Done at build time, so the
- * page never flashes the wrong state and needs no script for it.
+ * Shows the "live" block and hides the "not yet" block when the store listing is set, and puts the
+ * address into its links (`data-store-link`). Done at build time, so the page never flashes the
+ * wrong state and needs no script for it.
  */
-function switchOn(html: string, name: "store" | "mcp", url: string | null, fill: (html: string, url: string) => string): string {
+function switchOn(html: string, name: "store", url: string | null, fill: (html: string, url: string) => string): string {
   if (!url) return html;
   return fill(html.replaceAll(`data-before-${name}>`, `data-before-${name} hidden>`).replaceAll(`data-when-${name} hidden>`, `data-when-${name}>`), url);
 }
@@ -83,6 +84,6 @@ export function applySiteFrame(html: string): string {
     .replace(FOOTER_MARK, siteFooter())
     .replace(CTA_MARK, (_m, cls: string) => installCta(cls));
   out = switchOn(out, "store", CHROME_STORE_URL, (h, url) => h.replaceAll(`data-store-link href="/#install"`, `data-store-link href="${url}"`));
-  out = switchOn(out, "mcp", MCP_URL, (h, url) => h.replaceAll("<code data-mcp-url></code>", `<code data-mcp-url>${url}</code>`));
-  return out;
+  // The connector address, written once in src/core/links.ts and filled in wherever a page says %MCP_URL%.
+  return out.replaceAll("%MCP_URL%", MCP_URL ?? "(not online yet)");
 }

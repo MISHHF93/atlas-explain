@@ -14,26 +14,36 @@ const market = {
     status: { state: "none" }, relatedTerms: ["filings"], classData: { class: "stock", cik: "0000320193", exchange: "Nasdaq" },
   }],
 };
-const coins = [
-  { id: "bitcoin", current_price: 65000, price_change_percentage_24h: -1.2, last_updated: "2026-11-15T11:59:00Z" },
-  { id: "ethereum", current_price: 1800, price_change_percentage_24h: 4.5, last_updated: "2026-11-15T11:59:00Z" },
-];
-const chart = { prices: [[Date.parse("2026-11-08T12:00:00Z"), 60000], [Date.parse("2026-11-10T12:00:00Z"), 70000], [Date.parse("2026-11-12T12:00:00Z"), 58000], [Date.parse("2026-11-15T12:00:00Z"), 65000]] };
+const sec = (iso: string) => Date.parse(iso) / 1000;
+/** ATLAS Explain's own crypto.json, as the data job publishes it. */
+const crypto = (asOf = "2026-11-15T11:30:00Z") => ({
+  schema: "atlas-explain-crypto-v1",
+  generatedAt: asOf,
+  prices: {
+    source: "kraken",
+    asOf,
+    coins: [
+      { symbol: "BTC", name: "Bitcoin", priceUsd: 65000, changePct: -1.2, changeWindow: "since 00:00 UTC" },
+      { symbol: "ETH", name: "Ethereum", priceUsd: 1800, changePct: 4.5, changeWindow: "since 00:00 UTC" },
+    ],
+  },
+  history: {
+    source: "kraken",
+    asOf,
+    interval: "1h",
+    series: {
+      BTC: [[sec("2026-11-08T12:00:00Z"), 60000], [sec("2026-11-10T12:00:00Z"), 70000], [sec("2026-11-12T12:00:00Z"), 58000], [sec("2026-11-14T13:00:00Z"), 64000], [sec("2026-11-15T11:00:00Z"), 65000]],
+      ETH: [[sec("2026-10-20T00:00:00Z"), 2400], [sec("2026-11-15T11:00:00Z"), 1800]],
+    },
+  },
+});
 
-/** Answers like the real sources; anything else is a network failure. */
-const krakenTicker = { error: [], result: { XXBTZUSD: { c: ["64000.0", "0.1"], o: "62000.0" }, XETHZUSD: { c: ["1810.5", "1"], o: "1800.0" } } };
-const krakenOhlc = { error: [], result: { XXBTZUSD: [[Date.parse("2026-11-14T12:00:00Z") / 1000, "0", "0", "0", "61000.0"], [Date.now() / 1000 - 3600, "0", "0", "0", "63000.0"], [Date.now() / 1000, "0", "0", "0", "64000.0"]], last: 0 } };
-const net = (opts: { coingeckoDown?: boolean; krakenDown?: boolean } = {}): Fetcher => async (url) => {
+/** Only ATLAS Explain's own data site answers; any other address is a failure, as on the live server. */
+const net = (opts: { cryptoAsOf?: string; cryptoDown?: boolean } = {}): Fetcher => async (url) => {
   const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
-  if (url.includes("/data/v1/market.json")) return ok(market);
-  if (url.includes("coingecko.com")) {
-    if (opts.coingeckoDown) return new Response("busy", { status: 429 });
-    return ok(url.includes("/market_chart") ? chart : coins);
-  }
-  if (url.includes("api.kraken.com")) {
-    if (opts.krakenDown) throw new Error("offline");
-    return ok(url.includes("/OHLC") ? krakenOhlc : krakenTicker);
-  }
+  if (!url.startsWith("https://atlas-explain-data.web.app/")) throw new Error(`not our data site: ${url}`);
+  if (url.endsWith("/data/v1/market.json")) return ok(market);
+  if (url.endsWith("/data/v1/crypto.json")) return opts.cryptoDown ? new Response("down", { status: 503 }) : ok(crypto(opts.cryptoAsOf));
   throw new Error(`unexpected ${url}`);
 };
 const body = (r: { content: { text: string }[] }) => r.content[0]!.text;
@@ -65,24 +75,36 @@ describe("the connector covers what the app shows", () => {
     expect(body(await assetDetails("Unobtainium", net(), NOW))).toContain("isn't in the ATLAS Explain catalog");
   });
 
-  it("lists live crypto prices biggest move first, with CoinGecko credited, and fails honestly", async () => {
+  it("lists crypto prices from ATLAS Explain's own data site, biggest move first, with when and where they came from", async () => {
     const r = body(await cryptoPrices(undefined, net(), NOW));
     expect(r.indexOf("Ethereum")).toBeLessThan(r.indexOf("Bitcoin"));
-    expect(r).toContain("Prices by CoinGecko");
-    // CoinGecko busy: Kraken answers instead, with its own window and credit.
-    const fallback = body(await cryptoPrices(undefined, net({ coingeckoDown: true }), NOW));
-    expect(fallback).toContain("Bitcoin (BTC): $64,000.00, +3.23% since 00:00 UTC");
-    expect(fallback).toContain("Kraken public market data");
-    expect(fallback).not.toContain("CoinGecko");
-    expect(body(await priceHistory("BTC", "24h", net({ coingeckoDown: true })))).toContain("Kraken public market data");
-    const down = await cryptoPrices(undefined, net({ coingeckoDown: true, krakenDown: true }), NOW);
+    expect(r).toContain("Bitcoin (BTC): $65,000.00, −1.20% since 00:00 UTC");
+    expect(r).toContain("Collected 2026-11-15 11:30 UTC by ATLAS Explain's data job and served from its own data site. Prices: Kraken public market data");
+    expect(r).not.toContain("old: the hourly refresh");
+    const down = await cryptoPrices(undefined, net({ cryptoDown: true }), NOW);
     expect(down.isError).toBe(true);
     expect(body(down)).not.toMatch(/\$\d/);
     expect(body(await cryptoPrices("Shiba", net(), NOW))).toContain("isn't one of the ten coins");
   });
 
+  it("says plainly how old the prices are when the hourly refresh has stopped", async () => {
+    expect(body(await cryptoPrices(undefined, net({ cryptoAsOf: "2026-11-15T05:00:00Z" }), NOW))).toContain("These are 7 hours old: the hourly refresh hasn't run since.");
+    expect(body(await cryptoPrices(undefined, net({ cryptoAsOf: "2026-11-12T12:00:00Z" }), NOW))).toContain("These are 3 days old");
+    expect(body(await priceHistory("BTC", "7d", net({ cryptoAsOf: "2026-11-12T12:00:00Z" }), NOW))).toContain("3 days old");
+  });
+
+  it("never calls a third-party API: the server's fetch refuses anything but its own data site", async () => {
+    const { ownDataFetch } = await import("../src/mcp/worker");
+    for (const url of ["https://api.coingecko.com/api/v3/ping", "https://api.kraken.com/0/public/Time", "https://example.com/"]) {
+      await expect(ownDataFetch(url)).rejects.toThrow(/not ATLAS Explain's data site/);
+    }
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("src/mcp/server.ts", "utf8");
+    expect(src).not.toMatch(/api\.coingecko\.com|api\.kraken\.com|COINGECKO_API|KRAKEN_API|loadCoinGecko|readKraken/);
+  });
+
   it("summarises past moves with high and low, and never forecasts", async () => {
-    const r = body(await priceHistory("BTC", "7d", net()));
+    const r = body(await priceHistory("BTC", "7d", net(), NOW));
     expect(r).toContain("over the last 7 days");
     expect(r).toContain("High: $70,000.00");
     expect(r).toContain("low: $58,000.00");
@@ -159,7 +181,7 @@ describe("structured output, prompts, icons and the chart app", () => {
 
   it("serves the chart as a self-contained MCP App page", async () => {
     const list = (await handle({ jsonrpc: "2.0", id: 1, method: "resources/list" }, full))?.result as { resources: { uri: string; mimeType: string }[] };
-    expect(list.resources).toEqual([expect.objectContaining({ uri: "ui://atlas-explain/price-chart.html", mimeType: "text/html;profile=mcp-app" })]);
+    expect(list.resources).toEqual(expect.arrayContaining([expect.objectContaining({ uri: "ui://atlas-explain/price-chart.html", mimeType: "text/html;profile=mcp-app" })]));
     const read = (await handle({ jsonrpc: "2.0", id: 2, method: "resources/read", params: { uri: "ui://atlas-explain/price-chart.html" } }, full))?.result as { contents: { text: string; mimeType: string }[] };
     const html = read.contents[0]!.text;
     expect(read.contents[0]!.mimeType).toBe("text/html;profile=mcp-app");
@@ -183,7 +205,7 @@ describe("structured output, prompts, icons and the chart app", () => {
 
   it("announces tools, resources and prompts, with its icon", async () => {
     const init = (await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25" } }, full))?.result as { capabilities: Record<string, unknown>; serverInfo: { icons: unknown[] } };
-    expect(Object.keys(init.capabilities).sort()).toEqual(["prompts", "resources", "tools"]);
+    expect(Object.keys(init.capabilities).sort()).toEqual(["completions", "extensions", "prompts", "resources", "tools"]);
     expect(init.serverInfo.icons).toHaveLength(2);
   });
 });

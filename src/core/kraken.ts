@@ -17,6 +17,7 @@ import {
   type Fetcher,
   type SparkPoint,
 } from "./assets";
+import { CRYPTO_COINS } from "../data/crypto";
 
 export const KRAKEN_API = "https://api.kraken.com/0/public";
 export const KRAKEN_SOURCE_LABEL = "Kraken public API";
@@ -35,18 +36,8 @@ export interface KrakenPair {
   keys: readonly string[];
 }
 
-export const KRAKEN_PAIRS: readonly KrakenPair[] = [
-  { symbol: "BTC", name: "Bitcoin", pair: "XBTUSD", keys: ["XXBTZUSD", "XBTUSD"] },
-  { symbol: "ETH", name: "Ethereum", pair: "ETHUSD", keys: ["XETHZUSD", "ETHUSD"] },
-  { symbol: "SOL", name: "Solana", pair: "SOLUSD", keys: ["SOLUSD"] },
-  { symbol: "XRP", name: "XRP", pair: "XRPUSD", keys: ["XXRPZUSD", "XRPUSD"] },
-  { symbol: "ADA", name: "Cardano", pair: "ADAUSD", keys: ["ADAUSD"] },
-  { symbol: "DOGE", name: "Dogecoin", pair: "XDGUSD", keys: ["XDGUSD", "XXDGZUSD"] },
-  { symbol: "LTC", name: "Litecoin", pair: "LTCUSD", keys: ["XLTCZUSD", "LTCUSD"] },
-  { symbol: "DOT", name: "Polkadot", pair: "DOTUSD", keys: ["DOTUSD"] },
-  { symbol: "LINK", name: "Chainlink", pair: "LINKUSD", keys: ["LINKUSD"] },
-  { symbol: "AVAX", name: "Avalanche", pair: "AVAXUSD", keys: ["AVAXUSD"] },
-];
+/** The ten coins (src/data/crypto.ts is the one list). */
+export const KRAKEN_PAIRS: readonly KrakenPair[] = CRYPTO_COINS.map((c) => ({ symbol: c.symbol, name: c.name, pair: c.krakenPair, keys: c.krakenKeys }));
 
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => !!v && typeof v === "object" && !Array.isArray(v);
