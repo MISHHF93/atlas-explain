@@ -60,5 +60,5 @@ Hosting: explicit rewrites only (`/app`, `/app/**`, `/signin` → `app.html`; cl
 ## 5. Owner steps (not code)
 
 - Register the Chrome Web Store developer account (one-time US$5) and submit with `docs/CHROME_STORE.md` (phase 2). Then send the listing URL so the **Add to Chrome** buttons can point straight at it.
-- Firebase console: enable Google and Email-link sign-in (see `docs/LAUNCH_CHECKLIST.md`).
+- Firebase console: Google and Email-link sign-in are enabled (16 Nov 2026; see `docs/LAUNCH_CHECKLIST.md`).
 - Pick a support email for the legal pages and the store listing.

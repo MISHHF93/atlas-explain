@@ -16,8 +16,8 @@ Education only: no buy/sell wording, never reads balances or account details.
 
 ## You must do before a public launch (console only)
 ### Needed now for sign-in
-1. **Turn on Google sign-in.** Firebase console → atlas-explain → Authentication → Sign-in method → Add new provider → Google → Enable → pick the support email → Save.
-2. **Turn on email-link sign-in.** Same page → Email/Password → Enable, then turn on **Email link (passwordless sign-in)** → Save.
+1. [x] **Google sign-in is on** (16 Nov 2026). Firebase console → atlas-explain → Authentication → Sign-in method: Google enabled, public-facing name "ATLAS Explain", support email set.
+2. [x] **Email-link sign-in is on** (16 Nov 2026). Email/Password enabled with **Email link (passwordless sign-in)**. Without these two, the Sign in page could not sign anyone in.
 4. **Authorized domains:** Authentication → Settings → Authorized domains already has `atlas-explain.web.app`, `atlas-explain.firebaseapp.com`, `localhost`. Remove `localhost` before launch if you do not develop against production.
 
 ### Protection and quota
