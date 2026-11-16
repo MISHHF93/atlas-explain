@@ -34,7 +34,7 @@ import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile, type I
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.6.0";
+export const SERVER_VERSION = "1.7.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -220,10 +220,30 @@ export const TOOLS: readonly Tool[] = [
     // Clients that support MCP Apps draw the order book as a depth chart (src/mcp/depth-app.ts).
     _meta: { ui: { resourceUri: DEPTH_APP_URI } },
   },
+  {
+    name: "evidence_brief",
+    title: "Evidence brief on one asset",
+    description: "Everything ATLAS Explain knows about one asset on one page, each fact with its source and time: what it is, its latest figures or price, how it moved over 7 days and how easily it trades (coins), the economic backdrop and the next rate decision, headlines that name it, terms to know, what people commonly look at for this kind of asset, and what the brief doesn't tell you. Facts only: it never recommends, rates or forecasts anything.",
+    inputSchema: { type: "object", properties: { asset: str("Name or symbol, for example 'Bitcoin', 'AAPL', 'EUR/USD' or '10-year'.") }, required: ["asset"], additionalProperties: false },
+    annotations: annotations("Evidence brief on one asset", true),
+    icons: ICONS,
+    outputSchema: obj({
+      asset: { type: "object", properties: { name: { type: "string" }, symbol: { type: "string" }, assetClass: { type: "string" }, appUrl: nullable("string") } },
+      facts: { type: "array", items: { type: "object" } },
+      recentMove: { type: ["object", "null"] },
+      liquidity: { type: ["object", "null"] },
+      backdrop: { type: "array", items: { type: "object" } },
+      nextDecision: { type: ["object", "null"] },
+      news: { type: "array", items: { type: "object" } },
+      terms: { type: "array", items: { type: "object" } },
+      weigh: { type: "array", items: { type: "string" } },
+      limits: { type: "array", items: { type: "string" } },
+    }, ["asset", "facts", "limits"]),
+  },
 ];
 
 const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot and market_depth also draw interactive charts. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot and market_depth also draw interactive charts. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
 const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
@@ -736,6 +756,109 @@ export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<To
   });
 }
 
+/* ---------- evidence brief (docs/PLATFORM_PLAN.md, phase A) ---------- */
+
+/** What a brief never tells anyone, by kind of asset. Always shown. */
+const BRIEF_LIMITS = {
+  common: [
+    "It is not a forecast: past moves and today's figures don't say what happens next.",
+    "It doesn't know your situation, goals, time frame or how much risk you can take.",
+    "It never says whether to trade. Decisions are yours, ideally with a licensed adviser.",
+  ],
+  crypto: ["Crypto prices move around the clock and can swing sharply within hours; one exchange's price can differ from another's."],
+  stock: ["No live stock price is shown (free prices aren't licensed for display); the figures are from the company's SEC filings, which are months old by design."],
+  other: ["Official figures are published with a delay and can be revised."],
+};
+
+/** Questions people commonly weigh for this kind of asset: education, not a checklist for a decision. */
+const BRIEF_WEIGH = {
+  crypto: ["How much it has swung recently, up and down", "How deep the order book is (how much moves the price)", "Fees, and where it is held"],
+  stock: ["What the company earns and owes, from its filings", "How it fits with the rest of what someone holds", "Fees and taxes"],
+  other: ["What moves this figure (policy decisions, inflation, demand)", "How it relates to other rates or prices", "When the next official update comes"],
+};
+
+const BRIEF_TERMS: Record<string, string[]> = {
+  crypto: ["spread", "market_order", "drawdown", "volume"],
+  stock: ["filings", "market_hours", "volume", "drawdown"],
+  rate: ["yield", "yield_curve", "basis_point"],
+  forex: ["pip", "reference_rate", "spread"],
+  other: ["index", "volume"],
+};
+
+type Rec = Record<string, unknown>;
+
+export async function evidenceBrief(key: string, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
+  const q = key.trim();
+  if (!q) return text("Give an asset name or symbol, for example 'Bitcoin', 'AAPL', 'EUR/USD' or '10-year'.", true);
+  const details = await assetDetails(q, fetcher, now);
+  const d = (details.structuredContent ?? {}) as Rec;
+  if (details.isError || d.found !== true) return text(`"${q}" isn't in the ATLAS Explain catalog, so there is no brief for it. ${text_of(details)}`.trim(), true);
+
+  const klass = String(d.assetClass ?? "other");
+  const kind: "crypto" | "stock" | "other" = klass === "crypto" ? "crypto" : klass === "stock" || klass === "etf" ? "stock" : "other";
+  const coin = kind === "crypto" ? coinFor(String(d.symbol)) : undefined;
+  const [history, depth, economy, headlines] = await Promise.all([
+    coin ? priceHistory(coin.symbol, "7d", fetcher, now) : Promise.resolve(null),
+    coin ? marketDepth(coin.symbol, fetcher) : Promise.resolve(null),
+    loadEconomy(fetcher),
+    todaysHeadlines(undefined, fetcher, now),
+  ]);
+
+  const lines: string[] = [`Evidence brief: ${d.name} (${d.symbol}). Facts with their sources; never a recommendation.`];
+  const facts: Rec[] = [];
+
+  // 1. The latest figure or price.
+  if (typeof d.priceUsd === "number") facts.push({ label: "Price", value: formatPrice(d.priceUsd), asOf: d.asOf ?? null, source: d.source ?? null });
+  else if (typeof d.value === "number") facts.push({ label: "Latest value", value: `${d.value}${d.currency === "%" ? "%" : ` ${d.currency ?? ""}`}`.trim(), asOf: d.asOf ?? null, source: d.source ?? null });
+  for (const f of (Array.isArray(d.facts) ? d.facts : []) as Rec[]) facts.push({ label: f.label, value: f.value, asOf: f.period ?? d.asOf ?? null, source: d.source ?? null });
+  lines.push("\nWhat it is:", String(d.about ?? ""), ...(d.tradingHours ? [`Trading hours: ${d.tradingHours}.`] : []));
+  lines.push("\nLatest figures:", ...(facts.length ? facts.map((f) => `- ${f.label}: ${f.value}${f.asOf ? ` (${String(f.asOf).slice(0, 10)})` : ""}`) : [`- None shown. ${d.noPriceReason ?? ""}`.trim()]));
+  if (d.source) lines.push(`Source: ${d.source}${d.sourceUrl ? ` (${d.sourceUrl})` : ""}.`);
+
+  // 2. How it moved, and how easily it trades (coins).
+  const h = history && !history.isError ? (history.structuredContent as Rec) : null;
+  const recentMove = h ? { range: h.rangeLabel, startUsd: h.startUsd, endUsd: h.endUsd, changePct: h.changePct, high: h.high, low: h.low, source: h.source } : null;
+  if (recentMove) lines.push(`\nOver ${h!.rangeLabel}: from ${formatPrice(Number(h!.startUsd))} to ${formatPrice(Number(h!.endUsd))} (${formatChange(Number(h!.changePct)).text}); high ${formatPrice(Number((h!.high as Rec).priceUsd))}, low ${formatPrice(Number((h!.low as Rec).priceUsd))}.`);
+  const m = depth && !depth.isError ? (depth.structuredContent as Rec) : null;
+  const liquidity = m ? { bidUsd: m.bidUsd, askUsd: m.askUsd, spreadBps: m.spreadBps, slippage10kPct: ((m.impact as Rec[]) ?? []).find((r) => r.sizeUsd === 10_000 && r.side === "asks")?.slippagePct ?? null, source: m.source } : null;
+  if (liquidity) lines.push(`How easily it trades: spread ${Number(liquidity.spreadBps).toFixed(2)} basis points${liquidity.slippage10kPct != null ? `; filling $10,000 against the asks moved the average price ${Number(liquidity.slippage10kPct).toFixed(4)}%` : ""} (Kraken).`);
+
+  // 3. The economic backdrop.
+  const backdropIds = kind === "other" && /CA|CAD/.test(String(d.symbol)) ? ["ca_policy_rate", "us_fed_funds"] : ["us_fed_funds", "us_cpi"];
+  const backdrop = (economy?.indicators ?? []).filter((i) => backdropIds.includes(i.id)).map((i) => ({ name: i.name, value: fmtIndicator(i), period: i.period, source: i.source }));
+  const next = economy ? upcoming(economy.calendar.events, now, 1)[0] : undefined;
+  if (backdrop.length || next) {
+    lines.push("\nThe backdrop:", ...backdrop.map((b) => `- ${b.name}: ${b.value} for ${b.period} (${b.source})`));
+    if (next) lines.push(`- Next rate decision: ${next.institution}, ${next.date}.`);
+  }
+
+  // 4. In the news (headlines that name it, then official releases).
+  const all = ((headlines.structuredContent?.headlines ?? []) as Rec[]);
+  const words = [String(d.name).toLowerCase(), String(d.symbol).toLowerCase()].filter((w) => w.length > 2);
+  const about = all.filter((n) => words.some((w) => String(n.title).toLowerCase().includes(w))).slice(0, 3);
+  const news = about.length ? about : all.slice(0, 2);
+  if (news.length) lines.push(`\n${about.length ? "In the news" : "Latest official releases (none name it)"}:`, ...news.map((n) => `- ${n.title} (${n.publisher}, ${String(n.seenAt).slice(0, 10)}): ${n.url}`));
+
+  // 5. Terms to know, and the limits.
+  const termIds = BRIEF_TERMS[kind === "other" ? (klass === "rate" || klass === "forex" ? klass : "other") : kind] ?? [];
+  const terms = termIds.map((id) => ALL_TERMS.find((t) => t.id === id)).filter((t): t is (typeof ALL_TERMS)[number] => !!t).map((t) => ({ title: t.title, summary: t.summary }));
+  if (terms.length) lines.push("\nTerms to know:", ...terms.map((t) => `- ${t.title}: ${t.summary}`));
+  const weigh = BRIEF_WEIGH[kind];
+  lines.push("\nThings people commonly look at for this kind of asset:", ...weigh.map((w) => `- ${w}`));
+  const limits = [...BRIEF_LIMITS.common, ...BRIEF_LIMITS[kind === "crypto" ? "crypto" : kind === "stock" ? "stock" : "other"]];
+  lines.push("\nWhat this brief doesn't tell you:", ...limits.map((l) => `- ${l}`));
+
+  return data(lines.join("\n"), {
+    asset: { name: d.name, symbol: d.symbol, assetClass: klass, appUrl: d.appUrl ?? null },
+    facts, recentMove, liquidity, backdrop,
+    nextDecision: next ? { institution: next.institution, date: next.date, sourceUrl: next.sourceUrl } : null,
+    news: news.map((n) => ({ title: n.title, publisher: n.publisher, url: n.url, seenAt: n.seenAt })),
+    terms, weigh, limits,
+  });
+}
+
+const text_of = (r: ToolResult) => r.content[0]?.text.split("\n\n")[0] ?? "";
+
 /* ---------- JSON-RPC (the HTTP transport is in src/mcp/http.ts) ---------- */
 
 type Message = { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> };
@@ -834,6 +957,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "economy_snapshot": return ok(await economySnapshot(s(args.topic), fetcher));
         case "economic_calendar": return ok(await economicCalendar(s(args.bank), fetcher));
         case "market_depth": return ok(await marketDepth(s(args.coin) ?? "", fetcher));
+        case "evidence_brief": return ok(await evidenceBrief(s(args.asset) ?? "", fetcher));
         default: return fail(-32602, `Unknown tool: ${String(name)}`);
       }
     }

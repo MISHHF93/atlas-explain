@@ -50,7 +50,7 @@ describe("MCP 2026-07-28 (stateless, no handshake), alongside earlier versions",
   it("serves tools without any initialize, marks every result complete, and caches lists", async () => {
     const list = await send(modern("tools/list"));
     expect(list.body.result).toMatchObject({ resultType: "complete", ttlMs: 3_600_000, cacheScope: "public" });
-    expect((list.body.result!.tools as unknown[]).length).toBe(10);
+    expect((list.body.result!.tools as unknown[]).length).toBe(11);
     const call = await send(modern("tools/call", { name: "explain_term", arguments: { term: "spread" } }));
     expect(call.body.result).toMatchObject({ resultType: "complete" });
     expect((call.body.result!.content as { text: string }[])[0]!.text.endsWith(EDUCATION_LINE)).toBe(true);

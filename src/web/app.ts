@@ -116,7 +116,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     onAccount: () => navigate(account?.signedIn ? { kind: "tab", tab: "settings" } : { kind: "signin" }),
     // Signed in: the initials open this menu. Signed out: the header shows "Sign in".
     accountMenu: [
-      { label: "Account and settings", icon: "gear", run: () => navigate({ kind: "tab", tab: "settings" }) },
+      { label: "Your account and settings", icon: "gear", run: () => navigate({ kind: "tab", tab: "settings" }) },
       { label: "Your data", icon: "doc", run: () => openYourData() },
       { label: "Sign out", icon: "logout", run: () => void signOutNow() },
     ],
@@ -147,6 +147,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },
       { label: "Terms", icon: "doc", run: () => openLegal("terms") },
       { label: "Privacy", icon: "shield", run: () => openLegal("privacy") },
+      // Signed in only: the same actions as the initials menu, where people look first.
+      { id: "account", hidden: true, label: "Your account", icon: "gear", run: () => navigate({ kind: "tab", tab: "settings" }) },
+      { id: "signout", hidden: true, label: "Sign out", icon: "logout", run: () => void signOutNow() },
     ],
   });
   document.title = titleFor(route);
@@ -730,6 +733,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       await b.watchAccount((view) => {
         account = view;
         shell.setAccount(view);
+        shell.setMenuItemHidden("account", !view?.signedIn);
+        shell.setMenuItemHidden("signout", !view?.signedIn);
         saveAccountHint(view);
         // Not signed in (or only the anonymous id the backend keeps): the web app shows Sign in.
         if (!view?.signedIn && !import.meta.env.DEV) requireSignIn();
@@ -857,10 +862,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   function openAccount(): void {
     if (!backend) {
-      shell.openSheet("Account", [el("p", "fine", "Sign-in isn't available right now. Reload the page to try again."), ...settingsNodes]);
+      shell.openSheet("Your account", [el("p", "fine", "Sign-in isn't available right now. Reload the page to try again."), ...settingsNodes]);
       return;
     }
-    shell.openSheet("Account", [accountPanel(account, accountHandlers(backend)), ...settingsNodes]);
+    shell.openSheet("Your account", [accountPanel(account, accountHandlers(backend)), ...settingsNodes]);
   }
 
   /** Shows the Sign in page when the visitor isn't signed in, keeping where they were in ?next=. */
@@ -1325,7 +1330,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (tab === "signal") shell.select("today");
     // ?account=preview: the signed-in header and account menu, without a real sign-in.
     // Applied after the real (anonymous) account check, which would otherwise reset it.
-    if (preview.get("account") === "preview") window.setTimeout(() => shell.setAccount({ uid: "PreviewUid1", signedIn: true, label: "Preview account", email: "preview@example.com", initials: "PA", provider: "google" }), 2500);
+    if (preview.get("account") === "preview") window.setTimeout(() => { shell.setAccount({ uid: "PreviewUid1", signedIn: true, label: "Preview account", email: "preview@example.com", initials: "PA", provider: "google" }); shell.setMenuItemHidden("account", false); shell.setMenuItemHidden("signout", false); }, 2500);
     const demo = preview.get("demo");
     if (demo === "run") panel.show(moveOutcome(devSampleRun(), "NVDA -17% move"));
     if (demo === "loading") panel.showLoading(1);

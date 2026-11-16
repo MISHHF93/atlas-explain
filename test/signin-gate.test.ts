@@ -58,3 +58,17 @@ describe("signing in is required for the web app", () => {
     for (const colour of ["#EA4335", "#4285F4", "#FBBC05", "#34A853"]) expect(account).toContain(colour);
   });
 });
+
+describe("the account is easy to find", () => {
+  it("/app/profile and /app/account both open the account, and the menu offers it and Sign out once signed in", () => {
+    expect(parseRoute("/app/profile")).toEqual({ kind: "tab", tab: "settings" });
+    expect(parseRoute("/app/account")).toEqual({ kind: "tab", tab: "settings" });
+    const app = readFileSync("src/web/app.ts", "utf8");
+    expect(app).toContain('{ id: "account", hidden: true, label: "Your account"');
+    expect(app).toContain('{ id: "signout", hidden: true, label: "Sign out"');
+    expect(app).toContain('shell.setMenuItemHidden("signout", !view?.signedIn);');
+    expect(app).toContain('shell.openSheet("Your account"');
+    // Signed in, the header button reads "Account" next to the initials.
+    expect(readFileSync("src/wallet/shell.ts", "utf8")).toContain('el("span", "acct-label", "Account")');
+  });
+});

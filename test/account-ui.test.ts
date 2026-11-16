@@ -47,7 +47,7 @@ describe("sign in and account entry points", () => {
 
   it("gives the web app a labelled Sign in button and a signed-in account menu with Sign out", () => {
     const app = readFileSync("src/web/app.ts", "utf8");
-    expect(app).toMatch(/accountMenu: \[[\s\S]*"Account and settings"[\s\S]*"Your data"[\s\S]*"Sign out"/);
+    expect(app).toMatch(/accountMenu: \[[\s\S]*"Your account and settings"[\s\S]*"Your data"[\s\S]*"Sign out"/);
     expect(app).toContain("saveAccountHint(view)");
     const shell = readFileSync("src/wallet/shell.ts", "utf8");
     expect(shell).toContain('el("span", "acct-label", "Sign in")');

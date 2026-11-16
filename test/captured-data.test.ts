@@ -280,3 +280,24 @@ describe("the Worker serves and stores the data", () => {
     }
   });
 });
+
+describe("the data index for people and tools", () => {
+  it("lists every published file with its address, schema, sources, terms and capture time", async () => {
+    const key = "data/v1/crypto.json";
+    const DATA = kv({ [key]: "{}" }, { [key]: { capturedAt: "2026-11-16T12:00:00.000Z" } });
+    const res = await worker.fetch(new Request(`${MCP_ORIGIN}/data/v1/`), { DATA }, waits());
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    const index = (await res.json()) as { schema: string; use: string; files: { file: string; url: string; schema: string; capturedAt: string | null; sources: { licence: string }[] }[] };
+    expect(index.schema).toBe("atlas-explain-data-index-v1");
+    expect(index.use).toContain("Not for transactions or trading decisions");
+    expect(index.files.map((f) => f.file)).toEqual(["market.json", "crypto.json", "news.json", "economy.json"]);
+    const crypto = index.files.find((f) => f.file === "crypto.json")!;
+    expect(crypto.url).toBe(`${MCP_ORIGIN}/data/v1/crypto.json`);
+    expect(crypto.capturedAt).toBe("2026-11-16T12:00:00.000Z");
+    // Market data whose terms are under legal review says so.
+    expect(crypto.sources.every((s) => s.licence === "review")).toBe(true);
+    expect(index.files.find((f) => f.file === "economy.json")!.capturedAt).toBeNull();
+    expect((await worker.fetch(new Request(`${MCP_ORIGIN}/data/v1/index.json`), { DATA }, waits())).status).toBe(200);
+  });
+});

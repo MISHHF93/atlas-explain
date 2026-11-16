@@ -8,6 +8,7 @@
  * - No account-shaped fields, and no trade instructions in any text.
  */
 import type { AssetView, CatalogView, LeanView } from "./assets";
+import { LOCAL_COIN_LOGOS } from "./coin-logos";
 
 export const ASSET_CLASSES = ["crypto", "stock", "etf", "index", "forex", "commodity", "future", "option", "rate"] as const;
 export type AssetClass = (typeof ASSET_CLASSES)[number];
@@ -102,8 +103,11 @@ export interface Asset {
 /** Image hosts allowed for logos: CoinGecko (coin images in its API data) and Logo.dev (company logos, credited). */
 export const LOGO_HOSTS = ["coin-images.coingecko.com", "assets.coingecko.com", "img.logo.dev"] as const;
 
+export { LOCAL_COIN_LOGOS };
+
 export function isAllowedLogo(url: unknown): url is string {
   if (typeof url !== "string" || url.length > 400) return false;
+  if (Object.values(LOCAL_COIN_LOGOS).includes(url)) return true;
   try {
     const u = new URL(url);
     return u.protocol === "https:" && (LOGO_HOSTS as readonly string[]).includes(u.hostname);
@@ -297,7 +301,7 @@ export function assetFromLiveRow(view: AssetView, source: CatalogView["source"])
     status: statusFromLean(view.light),
     relatedTerms: ["spread", "volume", "implied_volatility"],
     classData: { class: "crypto", base, quote: "USD" },
-    logo: isAllowedLogo(view.image) ? view.image : null,
+    logo: LOCAL_COIN_LOGOS[base] ?? (isAllowedLogo(view.image) ? view.image : null),
   };
 }
 

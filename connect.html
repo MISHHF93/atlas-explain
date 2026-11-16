@@ -38,7 +38,11 @@
           <article class="card"><h3>Explain and learn</h3><p>Plain-language meanings for market terms, and the learning path topic by topic, from a curated glossary.</p></article>
           <article class="card"><h3>Look up an asset</h3><p>What it is, where and when it trades, and its latest official figure or price, or why no price is shown.</p></article>
           <article class="card"><h3>Official figures</h3><p>US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and SEC-filed figures for large US companies, each with its source and date.</p></article>
-          <article class="card"><h3>Crypto prices and charts</h3><p>Prices for ten major coins, refreshed hourly, and how a coin moved over 24 hours, 7 days or 30 days, drawn as an interactive chart in Claude and ChatGPT. Every answer says when the prices were collected.</p></article>
+          <article class="card"><h3>Crypto prices and charts</h3><p>Prices for ten major coins, refreshed every few minutes, and how a coin moved over 24 hours, 7 days or 30 days, drawn as interactive charts in Claude and ChatGPT. Every answer says when the prices were collected.</p></article>
+          <article class="card"><h3>The economy</h3><p>US inflation and unemployment, the fed funds rate, euro-area inflation, Canada's policy rate and US public debt, with about a year of history, and the dates of the next Fed, ECB and Bank of Canada rate decisions.</p></article>
+          <article class="card"><h3>How trading works, with real numbers</h3><p>A coin's bid-ask spread, its order book as a depth chart, and how far the average price moves when an order is filled: spreads and slippage, explained with live data.</p></article>
+          <article class="card"><h3>An evidence brief on one asset</h3><p>Everything above on one page for a coin, a company, a currency or a rate, each fact with its source, plus what the brief doesn't tell you. Facts only, never a recommendation.</p></article>
+          <article class="card"><h3>Today's headlines</h3><p>Recent market news and official releases from the Federal Reserve, SEC, CFTC, ECB, Bank of Canada and Bank of England, each linked to its publisher.</p></article>
         </div>
         <figure class="connect-shot">
           <img src="/shots/connector-chart.png" width="1200" height="696" loading="lazy" alt="The ATLAS Explain price chart inside a chat: Bitcoin over the last 7 days, with high, low and the price source." />
@@ -50,8 +54,8 @@
           <details class="qa" open>
             <summary>Claude (web and desktop)</summary>
             <ol class="steps">
-              <li>Open Settings, then Connectors, then <b>Add custom connector</b>.</li>
-              <li>Name it ATLAS Explain and paste the connector address. Leave the OAuth fields empty; no sign-in is needed.</li>
+              <li>Open <b>Customize</b>, then <b>Connectors</b>, then <b>Add connector</b> and <b>Add custom connector</b>.</li>
+              <li>Name it ATLAS Explain and paste the connector address. Claude detects that no sign-in is needed.</li>
               <li>In a chat, turn the connector on and ask, for example: "Using ATLAS Explain, what is a stop-limit order?"</li>
             </ol>
           </details>
@@ -98,7 +102,18 @@
           <li>"What is a bid-ask spread? Explain it with ATLAS Explain."</li>
           <li>"Show me Bitcoin's price over the last 7 days."</li>
           <li>"Using ATLAS Explain, what is the US 10-year Treasury yield, and what are Apple's latest SEC-filed figures?"</li>
+          <li>"Give me an evidence brief on Ethereum with ATLAS Explain."</li>
+          <li>"Show me the economy at a glance, and when the next Fed decision is."</li>
+          <li>"How deep is Bitcoin's order book right now? Explain the spread and slippage."</li>
           <li>Or pick a ready-made prompt from the connector: <b>Today's market brief</b>, <b>Explain an asset</b> or <b>Learn the next topic</b>.</li>
+        </ul>
+
+        <h2 id="together">Use it alongside other connectors</h2>
+        <p>Your assistant can use several connectors in one conversation. ATLAS Explain is the part that explains and brings the sourced facts; other connectors can bring your own tools. For example, with your broker's or exchange's <b>own official connector</b> also turned on, you can ask one question that uses both. Your assistant puts the answers together.</p>
+        <ul class="points">
+          <li><b>ATLAS Explain never sees the other connectors.</b> It doesn't receive your account, balances, orders or credentials, and it never places anything anywhere.</li>
+          <li><b>Each connector answers for itself.</b> Anything you do in another service happens under that service's terms, through its own connector.</li>
+          <li><b>Developers can read the same data.</b> The published files and what each source permits are listed at <a href="%DATA_ORIGIN%/data/v1/">the data index</a>. The data is for information and education, not for transactions.</li>
         </ul>
 
         <h2 id="trust">What it never does</h2>

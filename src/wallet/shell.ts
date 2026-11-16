@@ -452,7 +452,8 @@ export function createWalletShell(options: {
   function setAccount(view: AccountView | null): void {
     accountButton.dataset.signedIn = view?.signedIn ? "true" : "false";
     if (view?.signedIn) {
-      accountButton.replaceChildren(el("span", "acct-initials", view.initials));
+      // Initials and the word "Account", so it reads as a button and not a decoration.
+      accountButton.replaceChildren(el("span", "acct-initials", view.initials), ...(wideAccount ? [el("span", "acct-label", "Account")] : []));
       accountButton.setAttribute("aria-label", wideAccount ? `Account menu: signed in as ${view.label}` : `Account: signed in as ${view.label}. Open account.`);
       accountButton.title = `Signed in as ${view.label}`;
       if (wideAccount) accountButton.setAttribute("aria-haspopup", "menu");

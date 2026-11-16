@@ -18,6 +18,7 @@ import {
   type LeanView,
 } from "../core/assets";
 import { isLivePriceSource, priceAttribution } from "../core/price-feed";
+import { LOCAL_COIN_LOGOS } from "../core/coin-logos";
 import { MIN_HIT_RATE, MIN_SAMPLE_SIZE } from "../core/signal";
 import { el, labelledButton, replay } from "./dom";
 import { icon } from "./icons";
@@ -155,6 +156,22 @@ export function assetIcon(a: Pick<AssetView, "symbol" | "klass">): HTMLElement {
   const badge = el("span", `asset-icon tone-${a.klass}`, base.slice(0, base.length > 4 ? 3 : 4));
   badge.dataset.len = String(Math.min(4, base.length));
   badge.setAttribute("aria-hidden", "true");
+  // The coin's own logo, served from this site (CC0); the letters stay if it can't load.
+  const logo = a.klass === "crypto" ? LOCAL_COIN_LOGOS[base] : undefined;
+  if (logo) {
+    const img = document.createElement("img");
+    img.src = logo;
+    img.alt = "";
+    img.width = 34;
+    img.height = 34;
+    img.decoding = "async";
+    img.addEventListener("error", () => {
+      img.remove();
+      badge.classList.remove("has-logo");
+    });
+    badge.classList.add("has-logo");
+    badge.append(img);
+  }
   return badge;
 }
 

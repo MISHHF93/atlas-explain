@@ -19,7 +19,7 @@ import {
   upcoming,
   type EconomyFile,
 } from "../src/data/economy";
-import { EDUCATION_LINE, economicCalendar, economySnapshot, handle, marketDepth, type Fetcher } from "../src/mcp/server";
+import { EDUCATION_LINE, economicCalendar, economySnapshot, evidenceBrief, handle, marketDepth, type Fetcher } from "../src/mcp/server";
 
 // Real responses saved from each official source on 16 Nov 2026 (test/fixtures/economy).
 const fx = (name: string) => readFileSync(`test/fixtures/economy/${name}`, "utf8");
@@ -174,6 +174,27 @@ describe("market depth", () => {
     expect(t).toContain("The 2 best levels a side reach");
     expect(t).toContain("the book goes further");
     expect(t).toContain("In the order book captured 2026-11-16 21:00 UTC:");
+  });
+
+  it("evidence_brief puts the facts on one page, each with its source, and says what it doesn't tell you", async () => {
+    const news = { schema: "atlas-explain-news-v1", generatedAt: AT, items: { "market:official": [{ title: "Federal Reserve issues FOMC statement on policy", url: "https://www.federalreserve.gov/x", domain: "federalreserve.gov", seenAt: "2026-11-16T19:00:00.000Z" }] } };
+    const route: Fetcher = async (url) => new Response(JSON.stringify(url.includes("crypto") ? cryptoFile() : url.includes("economy") ? economyFile() : url.includes("news") ? news : {}), { status: 200 });
+    const r = await evidenceBrief("Bitcoin", route, NOW);
+    const t = text(r);
+    expect(t).toContain("Evidence brief: Bitcoin (BTC). Facts with their sources; never a recommendation.");
+    expect(t).toContain("How easily it trades: spread 1.54 basis points");
+    expect(t).toContain("Effective federal funds rate: 3.88%");
+    expect(t).toContain("Next rate decision: Bank of Canada, 2026-12-09.");
+    expect(t).toContain("What this brief doesn't tell you:");
+    expect(t).toContain("It never says whether to trade.");
+    expect(t).not.toMatch(/\b(buy|sell)\b/i);
+    expect(t.endsWith(EDUCATION_LINE)).toBe(true);
+    const s = r.structuredContent as { asset: { symbol: string }; liquidity: { spreadBps: number }; limits: string[]; terms: { title: string }[] };
+    expect(s.asset.symbol).toBe("BTC");
+    expect(s.liquidity.spreadBps).toBeCloseTo(1.54, 2);
+    expect(s.limits.length).toBeGreaterThanOrEqual(4);
+    expect(s.terms.map((x) => x.title)).toContain("Bid-ask spread");
+    expect((await evidenceBrief("Unobtainium", route, NOW)).isError).toBe(true);
   });
 
   it("is reachable through the JSON-RPC handler, and refuses an unknown coin", async () => {

@@ -19,6 +19,7 @@ import type { Fetcher } from "./server";
 import { CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureEconomy, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
 import { readEconomyFile } from "../data/economy";
 import { STRIPE_WEBHOOK_PATH, handleStripeWebhook } from "./billing-webhook";
+import { dataIndex } from "./data-index";
 import { readCryptoFile } from "../data/crypto";
 import { MARKET_SCHEMA, type MarketFile } from "../data/market-sources";
 import { readNewsFile } from "../core/news";
@@ -221,10 +222,24 @@ export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(),
   await capture(file, env, now, "cron", sleep);
 }
 
+/** GET /data/v1/: what each published file holds, its sources and their terms, and when it was captured. */
+export async function serveDataIndex(request: Request, env: WorkerEnv): Promise<Response> {
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS" } });
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD, OPTIONS" } });
+  const captured: Record<string, string | null> = {};
+  for (const file of DATA_FILES) {
+    const { metadata } = await env.DATA.getWithMetadata<FileMeta>(KEY(file));
+    captured[file] = metadata?.capturedAt ?? null;
+  }
+  const body = JSON.stringify(dataIndex(new URL(request.url).origin, captured), null, 2);
+  return new Response(request.method === "HEAD" ? null : body, { headers: { ...DATA_HEADERS, "Cache-Control": "public, max-age=60" } });
+}
+
 /** The Worker's request handler: live data at /data/v1, Stripe webhooks, the connector everywhere else. */
 export function handleRequest(request: Request, env: WorkerEnv, ctx?: WaitContext): Promise<Response> {
   const path = new URL(request.url).pathname;
   if (path === STRIPE_WEBHOOK_PATH) return handleStripeWebhook(request, env);
+  if (path === "/data/v1/" || path === "/data/v1" || path === "/data/v1/index.json") return serveDataIndex(request, env);
   const file = fileOf(path);
   if (file) return serveData(request, env, file, ctx);
   return handleHttp(request, ownDataFetch(env, ctx));

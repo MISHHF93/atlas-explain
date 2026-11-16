@@ -34,6 +34,7 @@ const ALIASES: Record<string, AppTab> = {
   "/app/home": "explain",
   "/app/glossary": "glossary",
   "/app/settings": "settings",
+  "/app/profile": "settings",
   "/app/signal": "today",
 };
 

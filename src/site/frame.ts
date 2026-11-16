@@ -11,7 +11,7 @@
  * account (src/site/site.ts). There is no separate "Sign in" or "The app" link: they led to the
  * same place.
  */
-import { EDUCATION_LINE, MCP_URL } from "../core/links";
+import { DATA_SITE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
 
 export type SitePage = "home" | "connect" | "support" | "privacy" | "terms" | "how-its-built" | "404";
 
@@ -78,5 +78,5 @@ export function applySiteFrame(html: string): string {
     .replace(HEADER_MARK, siteHeader(header[1] as SitePage))
     .replace(FOOTER_MARK, siteFooter());
   // The connector address, written once in src/core/links.ts and filled in wherever a page says %MCP_URL%.
-  return out.replaceAll("%MCP_URL%", MCP_URL ?? "(not online yet)");
+  return out.replaceAll("%MCP_URL%", MCP_URL ?? "(not online yet)").replaceAll("%DATA_ORIGIN%", DATA_SITE_URL);
 }

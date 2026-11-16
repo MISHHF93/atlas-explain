@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SOURCES, validateAsset, type Asset } from "../src/core/asset-schema";
 import {
@@ -117,18 +118,23 @@ describe("asset addresses", () => {
 });
 
 describe("logos", () => {
-  it("accepts coin images from CoinGecko's API and no other hosts", async () => {
+  it("uses the site's own coin logos first, accepts CoinGecko and Logo.dev images, and no other hosts", async () => {
     const { isAllowedLogo } = await import("../src/core/asset-schema");
     expect(isAllowedLogo("https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png")).toBe(true);
     expect(isAllowedLogo("https://img.logo.dev/apple.com?token=pk_x")).toBe(true);
     expect(isAllowedLogo("http://coin-images.coingecko.com/x.png")).toBe(false);
     expect(isAllowedLogo("https://evil.example/logo.png")).toBe(false);
+    expect(isAllowedLogo("/coins/btc.svg")).toBe(true);
+    expect(isAllowedLogo("/coins/../app.html")).toBe(false);
+    expect(isAllowedLogo("/coins/shib.svg")).toBe(false);
+    for (const c of ["btc", "eth", "sol", "xrp", "ada", "doge", "ltc", "dot", "link", "avax"]) expect(existsSync(`public/coins/${c}.svg`), c).toBe(true);
     const withImage = readCoinGeckoMarkets([{ id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 1, price_change_percentage_24h: 0, last_updated: "2026-11-13T20:59:00.000Z", image: "https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png" }], NOW)!;
     const asset = assetsFromLiveCatalog(withImage)[0]!;
-    expect(asset.logo).toMatch(/^https:\/\/coin-images\.coingecko\.com\//);
+    expect(asset.logo).toBe("/coins/btc.svg");
     expect(validateAsset(asset, NOW).errors).toEqual([]);
     const spoofed = readCoinGeckoMarkets([{ id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 1, price_change_percentage_24h: 0, last_updated: "2026-11-13T20:59:00.000Z", image: "https://evil.example/b.png" }], NOW)!;
-    expect(assetsFromLiveCatalog(spoofed)[0]!.logo).toBeNull();
+    // A spoofed image never gets through; the coin keeps the site's own logo.
+    expect(assetsFromLiveCatalog(spoofed)[0]!.logo).toBe("/coins/btc.svg");
   });
 
   it("adds company logos only when a Logo.dev key is configured", async () => {
