@@ -7,6 +7,8 @@
  */
 import { CRYPTO_STALE_MS, type AssetDetailView, type AssetsState, type Fetcher, type SparkPoint } from "./assets";
 import { capturedCatalog, capturedChart, capturedCitation, isFresh, loadCapturedFile } from "./captured-prices";
+import { startTicker, withTicks } from "./live-ticker";
+export { onTicks } from "./live-ticker";
 import { COINGECKO_CITATION, COINGECKO_COINS, loadCoinGeckoCatalog, loadCoinGeckoChart } from "./coingecko";
 import { KRAKEN_API, KRAKEN_CITATION, KRAKEN_PAIRS, loadKrakenCatalog, readKrakenOhlc } from "./kraken";
 import { type PriceFeedOptions, DEFAULT_PRICE_FEED } from "./price-feed";
@@ -112,7 +114,12 @@ export async function loadLiveCatalog(
   // The captured file first: one copy of the prices for the app and the connector.
   const captured = await loadCapturedFile(fetcher, now, timeoutMs);
   const fromCapture = captured ? capturedCatalog(captured, now) : null;
-  if (fromCapture) return { kind: "ready", catalog: fromCapture };
+  if (fromCapture) {
+    // Kraken-captured prices go real time: the page streams Kraken's ticks over them while open.
+    if (fromCapture.source !== "kraken") return { kind: "ready", catalog: fromCapture };
+    startTicker();
+    return { kind: "ready", catalog: withTicks(fromCapture, now) };
+  }
 
   const key = catalogCacheKey(feed);
   /** The hit, when it is for this feed and younger than maxAge. */
@@ -198,7 +205,7 @@ export async function loadLiveDetail(
   if (!base) return null;
   // Captured prices come with their own 30 days of hourly closes: the last two days draw the sparkline.
   const captured = await loadCapturedFile(fetcher, now, timeoutMs);
-  if (captured && isFresh(captured, now) && list.catalog.asOf === captured.prices.asOf) {
+  if (captured && isFresh(captured, now) && list.catalog.source === captured.prices.source) {
     const points = capturedChart(captured, symbol, 2, now);
     return {
       ...base,

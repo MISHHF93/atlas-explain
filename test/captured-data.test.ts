@@ -8,7 +8,7 @@ import { captureCrypto, captureMarket, mergeCloses, WORKER_MARKET_PARTS, type Ca
 import { CRYPTO_COINS, CRYPTO_SCHEMA, type CryptoFile } from "../src/data/crypto";
 import { MARKET_SCHEMA, type MarketFile } from "../src/data/market-sources";
 import worker from "../src/mcp/worker";
-import { CRONS, ownDataFetch, runCapture, type WorkerEnv } from "../src/mcp/live-data";
+import { CRONS, REFRESH_AFTER_MS, ownDataFetch, runCapture, serveData, setPauseForTests, type WorkerEnv } from "../src/mcp/live-data";
 
 const NOW = Date.parse("2026-11-16T12:00:00Z");
 const sec = (iso: string) => Date.parse(iso) / 1000;
@@ -22,13 +22,32 @@ const file = (asOf: string, extra: Partial<CryptoFile> = {}): CryptoFile => ({
   ...extra,
 });
 
-/** A Workers KV stand-in. */
-function kv(seed: Record<string, string> = {}): WorkerEnv["DATA"] & { data: Record<string, string> } {
-  const data = { ...seed };
-  return { data, get: async (k) => data[k] ?? null, put: async (k, v) => void (data[k] = v) };
+/** A Workers KV stand-in, with each value's metadata (the capture time). */
+function kv(seed: Record<string, string> = {}, meta: Record<string, unknown> = {}): WorkerEnv["DATA"] & { data: Record<string, string>; meta: Record<string, unknown>; writes: number } {
+  const store = {
+    data: { ...seed } as Record<string, string>,
+    meta: { ...meta } as Record<string, unknown>,
+    writes: 0,
+    get: async (k: string) => store.data[k] ?? null,
+    getWithMetadata: async <M,>(k: string) => ({ value: store.data[k] ?? null, metadata: (store.meta[k] ?? null) as M | null }),
+    put: async (k: string, v: string, o?: { metadata?: unknown }) => {
+      store.writes += 1;
+      store.data[k] = v;
+      store.meta[k] = o?.metadata ?? null;
+    },
+  };
+  return store;
 }
+/** Collects background work, like the Workers runtime's ctx.waitUntil. */
+const waits = () => {
+  const list: Promise<unknown>[] = [];
+  return { list, waitUntil: (p: Promise<unknown>) => void list.push(p) };
+};
 
-beforeEach(() => resetCapturedCache());
+beforeEach(() => {
+  resetCapturedCache();
+  setPauseForTests(async () => undefined);
+});
 
 describe("one address for live data", () => {
   it("serves the data from the connector's own Worker, so the app and the connector read the same file", () => {
@@ -145,14 +164,22 @@ describe("capture", () => {
 
 describe("the Worker serves and stores the data", () => {
   it("serves a stored file with CORS, and says plainly when nothing has been captured yet", async () => {
-    const DATA = kv({ "data/v1/crypto.json": JSON.stringify(file("2026-11-16T11:55:00Z")) });
-    const ok = await worker.fetch(new Request(`${MCP_ORIGIN}/data/v1/crypto.json`), { DATA });
-    expect(ok.status).toBe(200);
-    expect(ok.headers.get("Access-Control-Allow-Origin")).toBe("*");
-    expect(((await ok.json()) as CryptoFile).prices.coins[0]?.priceUsd).toBe(64519.5);
-    const missing = await worker.fetch(new Request(`${MCP_ORIGIN}/data/v1/news.json`), { DATA });
-    expect(missing.status).toBe(503);
-    expect((await worker.fetch(new Request(`${MCP_ORIGIN}/data/v1/secrets.json`), { DATA })).status).toBe(404);
+    const ctx = waits();
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => json({}, 503)) as typeof fetch;
+    try {
+      const DATA = kv({ "data/v1/crypto.json": JSON.stringify(file("2026-11-16T11:55:00Z")) });
+      const ok = await worker.fetch(new Request(`${MCP_ORIGIN}/data/v1/crypto.json`), { DATA }, ctx);
+      expect(ok.status).toBe(200);
+      expect(ok.headers.get("Access-Control-Allow-Origin")).toBe("*");
+      expect(((await ok.json()) as CryptoFile).prices.coins[0]?.priceUsd).toBe(64519.5);
+      const missing = await worker.fetch(new Request(`${MCP_ORIGIN}/data/v1/news.json`), { DATA }, ctx);
+      expect(missing.status).toBe(503);
+      expect((await worker.fetch(new Request(`${MCP_ORIGIN}/data/v1/secrets.json`), { DATA }, ctx)).status).toBe(404);
+      await Promise.all(ctx.list);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   it("gives the connector the stored file straight from KV, and refuses any other address", async () => {
@@ -160,6 +187,44 @@ describe("the Worker serves and stores the data", () => {
     const read = ownDataFetch({ DATA });
     expect(await (await read(`${MCP_ORIGIN}/data/v1/market.json`)).text()).toBe('{"schema":"x"}');
     await expect(read("https://api.kraken.com/0/public/Time")).rejects.toThrow(/not ATLAS Explain's data site/);
+  });
+
+  it("refreshes a stale file in the background on a visit, once, and leaves a fresh one alone", async () => {
+    const key = "data/v1/crypto.json";
+    const body = JSON.stringify(file("2026-11-16T11:55:00Z"));
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => json({}, 503)) as typeof fetch;
+    try {
+      // Captured 1 minute ago: served, nothing started.
+      const fresh = kv({ [key]: body }, { [key]: { capturedAt: new Date(NOW - 60_000).toISOString() } });
+      const ctxA = waits();
+      const res = await serveData(new Request(`${MCP_ORIGIN}/data/v1/crypto.json`), { DATA: fresh }, "crypto.json", ctxA, NOW);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("public, max-age=30");
+      expect(ctxA.list).toHaveLength(0);
+      // Captured 5 minutes ago: the stored copy is served at once, and one capture starts for a burst of visits.
+      const stale = kv({ [key]: body }, { [key]: { capturedAt: new Date(NOW - 5 * 60_000).toISOString() } });
+      const ctxB = waits();
+      await serveData(new Request(`${MCP_ORIGIN}/data/v1/crypto.json`), { DATA: stale }, "crypto.json", ctxB, NOW);
+      await serveData(new Request(`${MCP_ORIGIN}/data/v1/crypto.json`), { DATA: stale }, "crypto.json", ctxB, NOW);
+      expect(ctxB.list).toHaveLength(1);
+      await Promise.all(ctxB.list);
+      expect(REFRESH_AFTER_MS["crypto.json"]).toBe(3 * 60_000);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it("stays inside the free plan's 1,000 KV writes a day, even with constant visits", () => {
+    const perDay = Object.values(REFRESH_AFTER_MS).reduce((sum, gap) => sum + 86_400_000 / gap, 0);
+    expect(perDay).toBeLessThanOrEqual(700);
+  });
+
+  it("skips a cron part that a visit just refreshed", async () => {
+    const key = "data/v1/crypto.json";
+    const DATA = kv({ [key]: "{}" }, { [key]: { capturedAt: new Date(NOW - 60_000).toISOString() } });
+    await runCapture(CRONS.crypto, { DATA }, NOW, async () => undefined);
+    expect(DATA.writes).toBe(0);
   });
 
   it("writes only the part its cron is for", async () => {

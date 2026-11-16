@@ -60,6 +60,7 @@ export function mountAssets(options: {
   let last: AssetsState = { kind: "loading" };
   let fromAtlas = false;
   let busy = false;
+  let stopTicks: (() => void) | undefined;
 
   void showPublic({ kind: "loading" });
 
@@ -120,7 +121,11 @@ export function mountAssets(options: {
       }
     }
     fromAtlas = false;
-    const { loadLiveCatalog } = await import("../core/price-provider");
+    const { loadLiveCatalog, onTicks } = await import("../core/price-provider");
+    // Real time: redraw the list (and Today, through onState) as Kraken's live ticks arrive.
+    stopTicks ??= onTicks(() => {
+      if (visible() && !fromAtlas) void refresh();
+    });
     return loadLiveCatalog(options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher);
   }
 

@@ -4,7 +4,12 @@
  * One Worker, three jobs:
  *   - /mcp: the hosted MCP connector (src/mcp/http.ts, src/mcp/server.ts);
  *   - /data/v1/{market,news,crypto}.json: the live data the web app and the connector both read;
- *   - cron: captures that data on a schedule (src/data/capture.ts) into Workers KV.
+ *   - capture: keeps that data fresh (src/data/capture.ts) in Workers KV.
+ *
+ * Fresh on every visit: whenever the app or the connector reads a file, it gets the stored copy
+ * at once, and if that copy is older than REFRESH_AFTER_MS the Worker captures a new one in the
+ * background. The crons are a backup for quiet hours and skip any part that is already fresh.
+ * The minimum gaps keep KV inside its free 1,000 writes a day and the sources inside their limits.
  * Deployed with `npm run deploy:mcp` (wrangler.toml). See docs/MCP.md.
  */
 import { handleHttp } from "./http";
@@ -18,7 +23,8 @@ import { readNewsFile } from "../core/news";
 /** The parts of Workers KV this Worker uses (no @cloudflare/workers-types dependency). */
 export interface DataStore {
   get(key: string): Promise<string | null>;
-  put(key: string, value: string): Promise<void>;
+  getWithMetadata<M>(key: string): Promise<{ value: string | null; metadata: M | null }>;
+  put(key: string, value: string, options?: { metadata?: unknown }): Promise<void>;
 }
 
 export interface WorkerEnv {
@@ -28,6 +34,9 @@ export interface WorkerEnv {
   EIA_API_KEY?: string;
 }
 
+export interface WaitContext {
+  waitUntil(promise: Promise<unknown>): void;
+}
 
 /** The only place the data comes from: this Worker's own /data/v1 address. */
 export const DATA_ORIGIN = DATA_SITE_URL;
@@ -40,64 +49,103 @@ const fileOf = (pathname: string): DataFile | null => {
 };
 
 /**
- * How the connector reads data: straight from KV for this Worker's own /data/v1 files, so it never
- * calls a third-party API itself. Any other address is refused.
+ * How old a stored file may be before a visit starts a new capture. Also the shortest gap between
+ * two captures of a part: at most 480 + 96 + 24 = 600 KV writes a day, under the free 1,000.
  */
-export function ownDataFetch(env?: WorkerEnv): Fetcher {
-  return async (url) => {
-    const u = new URL(url);
-    const file = u.origin === DATA_ORIGIN ? fileOf(u.pathname) : null;
-    if (!file) throw new Error(`Refused: ${u.origin}${u.pathname} is not ATLAS Explain's data site.`);
-    const body = env ? await env.DATA.get(KEY(file)) : null;
-    return body == null ? new Response("Not captured yet", { status: 404 }) : new Response(body, { headers: { "Content-Type": "application/json" } });
-  };
-}
+export const REFRESH_AFTER_MS: Record<DataFile, number> = {
+  "crypto.json": 3 * 60_000,
+  "news.json": 15 * 60_000,
+  "market.json": 60 * 60_000,
+};
+
+/** Browsers and the edge may keep a copy this long; short, so a refresh shows up quickly. */
+const MAX_AGE_S: Record<DataFile, number> = { "crypto.json": 30, "news.json": 60, "market.json": 120 };
 
 const DATA_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Content-Type": "application/json; charset=utf-8",
-  // Captured hourly at most: browsers and Cloudflare's edge keep a copy for 5 minutes.
-  "Cache-Control": "public, max-age=300",
   "X-Content-Type-Options": "nosniff",
 };
 
-/** GET /data/v1/<file>: the stored file, cached at the edge so most reads never touch KV. */
-export async function serveData(request: Request, env: WorkerEnv, file: DataFile): Promise<Response> {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS" } });
-  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD, OPTIONS" } });
-  const cache = (globalThis as { caches?: { default?: Cache } }).caches?.default;
-  const cacheKey = new Request(new URL(request.url).origin + new URL(request.url).pathname);
-  const hit = cache ? await cache.match(cacheKey) : undefined;
-  if (hit) return request.method === "HEAD" ? new Response(null, hit) : hit;
-  const body = await env.DATA.get(KEY(file));
-  if (body == null) return new Response(JSON.stringify({ error: "Not captured yet. The hourly capture fills this in." }), { status: 503, headers: { ...DATA_HEADERS, "Cache-Control": "no-store" } });
-  // Crypto is captured every 10 minutes, so its copy is kept for 2 minutes rather than 5.
-  const headers = file === "crypto.json" ? { ...DATA_HEADERS, "Cache-Control": "public, max-age=120" } : DATA_HEADERS;
-  const res = new Response(body, { headers });
-  if (cache) await cache.put(cacheKey, res.clone());
-  return request.method === "HEAD" ? new Response(null, { headers }) : res;
+interface FileMeta {
+  /** When this copy was captured (ISO). */
+  capturedAt: string;
+}
+
+/** Captures in flight in this Worker instance, so one burst of visits starts one capture. */
+const inFlight = new Map<DataFile, Promise<void>>();
+
+/** The stored copy and its age. A copy stored before capture times were kept counts as old. */
+async function read(env: WorkerEnv, file: DataFile, now: number): Promise<{ body: string | null; ageMs: number }> {
+  const { value, metadata } = await env.DATA.getWithMetadata<FileMeta>(KEY(file));
+  const at = metadata?.capturedAt ? Date.parse(metadata.capturedAt) : NaN;
+  return { body: value, ageMs: Number.isFinite(at) ? now - at : Infinity };
+}
+
+/** Starts a background capture of `file` when its copy is too old and none is running here. */
+function refreshIfStale(file: DataFile, ageMs: number, env: WorkerEnv, ctx: WaitContext | undefined, now: number): void {
+  if (!ctx || ageMs < REFRESH_AFTER_MS[file] || inFlight.has(file)) return;
+  const run = capture(file, env, now, "visit").finally(() => inFlight.delete(file));
+  inFlight.set(file, run);
+  ctx.waitUntil(run);
 }
 
 /**
- * Each cron runs one part, so every run stays inside the free plan's CPU and subrequest limits.
- * Crypto every 10 minutes (the app calls a price stale after 20); headlines every 3 hours;
- * official figures every 6 hours. Must match [triggers] in wrangler.toml.
+ * How the connector reads data: straight from KV for this Worker's own /data/v1 files, so it never
+ * calls a third-party API itself, and a stale file is refreshed the same way a visit refreshes it.
+ * Any other address is refused.
+ */
+export function ownDataFetch(env?: WorkerEnv, ctx?: WaitContext): Fetcher {
+  return async (url) => {
+    const u = new URL(url);
+    const file = u.origin === DATA_ORIGIN ? fileOf(u.pathname) : null;
+    if (!file) throw new Error(`Refused: ${u.origin}${u.pathname} is not ATLAS Explain's data site.`);
+    if (!env) return new Response("Not captured yet", { status: 404 });
+    const now = Date.now();
+    const { body, ageMs } = await read(env, file, now);
+    refreshIfStale(file, ageMs, env, ctx, now);
+    return body == null ? new Response("Not captured yet", { status: 404 }) : new Response(body, { headers: { "Content-Type": "application/json" } });
+  };
+}
+
+/** GET /data/v1/<file>: the stored copy at once; a background capture when it is too old. */
+export async function serveData(request: Request, env: WorkerEnv, file: DataFile, ctx?: WaitContext, now = Date.now()): Promise<Response> {
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS" } });
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD, OPTIONS" } });
+  const { body, ageMs } = await read(env, file, now);
+  refreshIfStale(file, ageMs, env, ctx, now);
+  if (body == null) return new Response(JSON.stringify({ error: "Not captured yet. A capture has started; try again in a minute." }), { status: 503, headers: { ...DATA_HEADERS, "Cache-Control": "no-store" } });
+  const headers = { ...DATA_HEADERS, "Cache-Control": `public, max-age=${MAX_AGE_S[file]}` };
+  return new Response(request.method === "HEAD" ? null : body, { headers });
+}
+
+/**
+ * The crons: a backup that keeps data fresh when nobody visits. Each runs one part, so every run
+ * stays inside the free plan's CPU and subrequest limits, and skips a part a visit just refreshed.
+ * Must match [triggers] in wrangler.toml.
  */
 export const CRONS = {
   crypto: "*/10 * * * *",
   news: "37 */3 * * *",
   market: "47 */6 * * *",
 } as const;
+const CRON_FILE: Record<string, DataFile> = { [CRONS.crypto]: "crypto.json", [CRONS.news]: "news.json", [CRONS.market]: "market.json" };
+
+/** The pause between polite source requests. Tests swap it for an instant one. */
+let pause = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+export function setPauseForTests(fn: (ms: number) => Promise<void>): void {
+  pause = fn;
+}
 
 function captureEnv(env: WorkerEnv, now: number): CaptureEnv {
   return {
     get: async (url, userAgent = CAPTURE_UA) => {
-      // Every source gets 20 seconds, so one slow source can't hold up a scheduled run.
+      // Every source gets 20 seconds, so one slow source can't hold up a run.
       const res = await fetch(url, { headers: { "User-Agent": userAgent, Accept: "*/*" }, signal: AbortSignal.timeout(20_000) });
       if (!res.ok) throw new Error(`${new URL(url).host} answered ${res.status}`);
       return res.text();
     },
-    sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+    sleep: (ms) => pause(ms),
     now,
     log: (line) => console.log(line),
     eiaKey: env.EIA_API_KEY,
@@ -113,27 +161,48 @@ async function stored(env: WorkerEnv, file: DataFile): Promise<unknown> {
   }
 }
 
-/** Runs the part a cron belongs to and stores the result. Each part keeps its last good values. */
-export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(), sleep?: (ms: number) => Promise<void>): Promise<void> {
+async function save(env: WorkerEnv, file: DataFile, data: unknown, now: number): Promise<void> {
+  const metadata: FileMeta = { capturedAt: new Date(now).toISOString() };
+  await env.DATA.put(KEY(file), JSON.stringify(data), { metadata });
+}
+
+/**
+ * Captures one part and stores it; each part keeps its last good values. A visit has about 30
+ * seconds of background time, so it reads headlines from the official feeds only (GDELT is slow
+ * and often refuses; the 3-hourly cron still asks it).
+ */
+async function capture(file: DataFile, env: WorkerEnv, now: number, why: "visit" | "cron", sleep?: (ms: number) => Promise<void>): Promise<void> {
   const cap = captureEnv(env, now);
   if (sleep) cap.sleep = sleep;
-  if (cron === CRONS.crypto) {
-    const file = await captureCrypto(cap, readCryptoFile(await stored(env, "crypto.json")));
-    if (file) await env.DATA.put(KEY("crypto.json"), JSON.stringify(file));
-  } else if (cron === CRONS.news) {
-    const file = await captureNews(cap, readNewsFile(await stored(env, "news.json"), now));
-    await env.DATA.put(KEY("news.json"), JSON.stringify(file));
-  } else if (cron === CRONS.market) {
-    const prev = (await stored(env, "market.json")) as MarketFile | null;
+  if (file === "crypto.json") {
+    const data = await captureCrypto(cap, readCryptoFile(await stored(env, file)));
+    if (data) await save(env, file, data, now);
+  } else if (file === "news.json") {
+    const data = await captureNews(cap, readNewsFile(await stored(env, file), now), { gdelt: why === "cron" });
+    await save(env, file, data, now);
+  } else {
+    const prev = (await stored(env, file)) as MarketFile | null;
     // SEC filings are kept from the last computer run (npm run data:publish); see src/data/capture.ts.
-    const file = await captureMarket(cap, prev?.schema === MARKET_SCHEMA ? prev : null, WORKER_MARKET_PARTS);
-    if (file) await env.DATA.put(KEY("market.json"), JSON.stringify(file));
+    const data = await captureMarket(cap, prev?.schema === MARKET_SCHEMA ? prev : null, WORKER_MARKET_PARTS);
+    if (data) await save(env, file, data, now);
   }
 }
 
+/** Runs the part a cron belongs to, unless a visit refreshed it moments ago. */
+export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(), sleep?: (ms: number) => Promise<void>): Promise<void> {
+  const file = CRON_FILE[cron];
+  if (!file) return;
+  // News always runs on its cron, because only the cron asks GDELT.
+  if (file !== "news.json") {
+    const { ageMs } = await read(env, file, now);
+    if (ageMs < REFRESH_AFTER_MS[file]) return;
+  }
+  await capture(file, env, now, "cron", sleep);
+}
+
 /** The Worker's request handler: live data at /data/v1, the connector everywhere else. */
-export function handleRequest(request: Request, env: WorkerEnv): Promise<Response> {
+export function handleRequest(request: Request, env: WorkerEnv, ctx?: WaitContext): Promise<Response> {
   const file = fileOf(new URL(request.url).pathname);
-  if (file) return serveData(request, env, file);
-  return handleHttp(request, ownDataFetch(env));
+  if (file) return serveData(request, env, file, ctx);
+  return handleHttp(request, ownDataFetch(env, ctx));
 }

@@ -167,7 +167,7 @@ export async function captureMarket(env: CaptureEnv, prev: MarketFile | null, pa
 export const NEWS_GAP_MS = 6_000;
 
 /** Headlines for each news target. A query that fails keeps that asset's last headlines. */
-export async function captureNews(env: CaptureEnv, prev: NewsFile | null): Promise<NewsFile> {
+export async function captureNews(env: CaptureEnv, prev: NewsFile | null, options: { gdelt?: boolean } = {}): Promise<NewsFile> {
   // Official press releases first: keyless RSS feeds that answer reliably, read in parallel, so
   // a slow or refusing GDELT can never cost a run its headlines.
   const feeds = await Promise.all(OFFICIAL_FEEDS.map((feed) => env.get(feed.url).catch(() => "")));
@@ -176,7 +176,8 @@ export async function captureNews(env: CaptureEnv, prev: NewsFile | null): Promi
 
   const all: NewsItem[] = [];
   let answered = 0;
-  for (const [i, query] of NEWS_GROUPS.entries()) {
+  // GDELT is slow and often refuses; a quick refresh (a visit) skips it and keeps its last stories.
+  for (const [i, query] of (options.gdelt === false ? [] : NEWS_GROUPS).entries()) {
     if (i > 0) await env.sleep(NEWS_GAP_MS);
     let body = await env.get(gdeltUrl(query)).catch(() => "");
     if (isRateLimitNotice(body)) {
