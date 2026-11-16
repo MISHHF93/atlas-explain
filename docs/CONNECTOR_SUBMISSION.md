@@ -70,7 +70,7 @@ Re-run the script just before submitting so the prices are current.
 
 ## 7. Data handling
 
-- **API ownership: "We own the API".** The connector reads only ATLAS Explain's own data, which the same Worker captures on a schedule from public sources and serves at /data/v1/: US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR, GDELT, and crypto prices from Kraken (CoinGecko as backup). The server refuses to fetch any other address. Original sources are credited on every answer.
+- **API ownership: "We own the API".** The connector reads only ATLAS Explain's own data, which the same Worker captures from public sources on a schedule and again when someone asks for stale data, and serves at /data/v1/: US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR, official press releases (Federal Reserve, SEC, CFTC, ECB) with GDELT as an optional extra, and crypto prices from Kraken (CoinGecko as backup). The server refuses to fetch any other address. Original sources are credited on every answer.
 - **Personal health data:** no. **Sponsored content:** no.
 
 ## 8. Test & launch
