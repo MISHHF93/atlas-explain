@@ -56,6 +56,9 @@ main { flex: 1; width: 100%; max-width: 72rem; margin: 0 auto; padding: 1rem max
 .site-nav { display: flex; gap: 1.1rem; margin-left: auto; }
 .site-nav a { color: var(--atlas-muted); text-decoration: none; font-weight: 600; font-size: var(--atlas-text-md); }
 .site-nav a:hover, .site-nav a[aria-current="page"] { color: var(--atlas-ink); }
+.site-signin { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--atlas-ink); text-decoration: none; font-weight: 650; font-size: var(--atlas-text-md); white-space: nowrap; }
+.site-signin:hover { color: var(--atlas-accent); }
+.site-signin-initials { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: var(--atlas-radius-pill); background: var(--atlas-accent); color: var(--atlas-accent-ink); font-size: var(--atlas-text-2xs); font-weight: 700; }
 .site-nav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; text-decoration-color: var(--atlas-accent); }
 
 /* buttons */
@@ -203,7 +206,8 @@ tr:last-child td { border-bottom: 0; }
 }
 @media (max-width: 640px) {
   .site-nav { display: none; }
-  .site-head .btn { margin-left: auto; }
+  .site-head .btn { margin-left: 0; }
+  .site-signin { margin-left: auto; }
   .hero { padding-top: 1.5rem; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -52,6 +52,8 @@ import { buildSettings } from "../wallet/settings";
 import { headlinesCard } from "../wallet/headlines";
 import { WEB_LEARN_KEY } from "../core/account-data";
 import { yourDataGroup } from "../wallet/your-data";
+import { saveAccountHint } from "../core/account-hint";
+import { createSignInPage } from "../wallet/signin-page";
 import { tracker } from "../core/analytics";
 import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
 import { RECENT_KEY, readRecent } from "../core/recent";
@@ -106,7 +108,14 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     tabs: APP_TABS,
     layout: "page",
     initialTab: tabFor(route),
-    onAccount: () => navigate({ kind: "tab", tab: "settings" }),
+    // Signed out: "Sign in" opens the Sign in page. (Signed in, the initials open the menu below.)
+    onAccount: () => navigate(account?.signedIn ? { kind: "tab", tab: "settings" } : { kind: "signin" }),
+    // Signed in: the initials open this menu. Signed out: the header shows "Sign in".
+    accountMenu: [
+      { label: "Account and settings", icon: "gear", run: () => navigate({ kind: "tab", tab: "settings" }) },
+      { label: "Your data", icon: "doc", run: () => openYourData() },
+      { label: "Sign out", icon: "logout", run: () => void signOutNow() },
+    ],
     onStatus: () => shell.select("today", { focus: true }),
     onSelect: (tab) => {
       moved = true;
@@ -138,6 +147,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     ],
   });
   document.title = titleFor(route);
+  // The Sign in page (/signin) sits over the app frame as its own page.
+  const signInPage = createSignInPage({ onContinue: () => afterSignIn() });
+  host.append(signInPage.node);
+  let signInNote: string | undefined;
   // One address per page: old aliases (/app/glossary, /app/settings), a trailing slash or a
   // lower-case symbol become the canonical path. The query (sign-in links) and hash are kept.
   if (route.kind !== "not_found" && location.pathname !== pathFor(route)) {
@@ -176,13 +189,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         following = false;
       }
     }
-    if (isAccountRoute(next)) openAccount();
+    if (next.kind !== "signin") hideSignIn();
+    if (isAccountRoute(next)) openAccountRoute(next);
   }
 
   /** Back and forward buttons: show whatever the address now says. */
   window.addEventListener("popstate", () => {
     route = parseRoute(location.pathname);
     document.title = titleFor(route);
+    if (route.kind !== "signin") hideSignIn();
     following = true;
     try {
       shell.closeSheet();
@@ -209,7 +224,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         ]);
       }
     } else if (isAccountRoute(route)) {
-      openAccount();
+      openAccountRoute(route);
     } else if (route.kind === "not_found") {
       shell.openSheet("Page not found", [
         el("p", undefined, `There is no page at ${route.path}.`),
@@ -657,6 +672,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       await b.watchAccount((view) => {
         account = view;
         shell.setAccount(view);
+        saveAccountHint(view);
         yourData.setSignedIn(Boolean(view?.signedIn));
         void refreshPlan();
         if (view && view.uid !== lastAccountUid) {
@@ -670,7 +686,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       if (new URLSearchParams(location.search).get("account") === "open") openAccount();
       const outcome = await b.completeSignIn();
       if (outcome.state === "need-email") askLinkEmail(b);
-      else reportSignIn(outcome);
+      else {
+        reportSignIn(outcome);
+        if (outcome.state === "signed-in" && route.kind === "signin") window.setTimeout(() => afterSignIn(), 400);
+      }
     } catch {
       // Sign-in is optional. The app keeps working signed out.
     }
@@ -687,7 +706,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   /** Email link opened on another device: ask for the address in the page, not a browser prompt. */
   function askLinkEmail(b: WebBackend): void {
-    shell.openSheet("Finish signing in", [emailConfirmPanel(async (email) => {
+    const confirmPanel = emailConfirmPanel(async (email) => {
       const outcome = await b.completeSignIn(email);
       if (outcome.state === "signed-in") {
         reportSignIn(outcome);
@@ -695,7 +714,73 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         return outcome.message;
       }
       throw new Error(outcome.state === "error" ? outcome.message : "Sign-in did not finish. Try again in a moment.");
-    })]);
+    });
+    // On the Sign in page the form belongs on the page; elsewhere it opens as a sheet.
+    if (route.kind === "signin") signInPage.show(confirmPanel, "Enter the email address your sign-in link was sent to.");
+    else shell.openSheet("Finish signing in", [confirmPanel]);
+  }
+
+  /** The account sheet, scrolled to "Your data" (download or delete). */
+  function openYourData(): void {
+    navigate({ kind: "tab", tab: "settings" });
+    requestAnimationFrame(() => yourData.node.scrollIntoView({ block: "start" }));
+  }
+
+  /** Sign out from the account menu, then show the Sign in page with a note, so the result is clear. */
+  async function signOutNow(): Promise<void> {
+    if (!backend) return;
+    await backend.signOut();
+    account = null;
+    signInNote = "You're signed out. You can sign in again, or keep using ATLAS Explain without an account.";
+    navigate({ kind: "signin" });
+  }
+
+  /* ---------- the Sign in page (/signin) ---------- */
+
+
+  /** /signin opens the Sign in page; /app/account opens the account and settings sheet. */
+  function openAccountRoute(r: AppRoute): void {
+    if (r.kind === "signin") showSignIn();
+    else openAccount();
+  }
+
+  function showSignIn(): void {
+    // Already signed in: there is nothing to do here, so go into the app.
+    if (account?.signedIn) {
+      afterSignIn();
+      return;
+    }
+    shell.closeSheet();
+    shell.frame.inert = true;
+    document.title = titleFor({ kind: "signin" });
+    signInPage.show(signInBody(), signInNote);
+    signInNote = undefined;
+  }
+
+  function hideSignIn(): void {
+    if (!signInPage.open) return;
+    signInPage.hide();
+    shell.frame.inert = false;
+  }
+
+  /** Google or a one-time email link, from the shared account panel; signing in leads into the app. */
+  function signInBody(): HTMLElement {
+    if (!backend) return el("p", "fine", "Sign-in isn't available right now. Reload the page to try again, or continue without an account.");
+    const b = backend;
+    return accountPanel(null, {
+      onGoogle: async () => {
+        const result = await b.signInWithGoogle();
+        if (result === "redirecting") return "Taking you to Google…";
+        tracker.track("login", { method: "google" });
+        window.setTimeout(() => afterSignIn(), 400);
+        return "You are signed in. Taking you to ATLAS Explain…";
+      },
+      onEmail: async (email) => {
+        await b.sendEmailLink(email);
+        return `Check ${email} for a sign-in link. Open it on this device to finish.`;
+      },
+      onSignOut: async () => "",
+    }, { compact: true });
   }
 
   function openAccount(): void {
@@ -726,6 +811,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   /** Back to where sign-in was asked from (?next=/app/...), otherwise the top of the page. */
   function afterSignIn(): void {
+    hideSignIn();
     const next = new URLSearchParams(location.search).get("next");
     const target = next ? parseRoute(next) : null;
     shell.closeSheet();
@@ -1172,6 +1258,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (tab === "assets" || tab === "glossary" || tab === "explain" || tab === "today") window.setTimeout(() => shell.select(tab), 300);
     if (tab === "settings") openAccount();
     if (tab === "signal") shell.select("today");
+    // ?account=preview: the signed-in header and account menu, without a real sign-in.
+    // Applied after the real (anonymous) account check, which would otherwise reset it.
+    if (preview.get("account") === "preview") window.setTimeout(() => shell.setAccount({ uid: "PreviewUid1", signedIn: true, label: "Preview account", email: "preview@example.com", initials: "PA", provider: "google" }), 2500);
     const demo = preview.get("demo");
     if (demo === "run") panel.show(moveOutcome(devSampleRun(), "NVDA -17% move"));
     if (demo === "loading") panel.showLoading(1);

@@ -64,6 +64,12 @@ export function createWalletShell(options: {
   menu: MenuItem[];
   onSelect?: (tab: TabId) => void;
   onAccount?: () => void;
+  /**
+   * Signed-in account menu (the web app). When given, the header shows a "Sign in" button while
+   * signed out, and the initials open this menu (name, email, these actions) while signed in.
+   * Without it (the extension popup) the account button keeps its compact icon and opens onAccount.
+   */
+  accountMenu?: MenuItem[];
   /** Tabs shown in the navigation, in order. Defaults to the extension's (TABS). */
   tabs?: readonly TabDef[];
   /** First tab shown. Defaults to the first tab. */
@@ -161,14 +167,61 @@ export function createWalletShell(options: {
   accountButton.type = "button";
   accountButton.dataset.signedIn = "false";
   accountButton.hidden = !options.onAccount;
-  accountButton.setAttribute("aria-label", "Account: signed out. Open account.");
-  accountButton.title = "Sign in or manage your account";
-  accountButton.append(icon("user", 16));
-  accountButton.addEventListener("click", () => options.onAccount?.());
+  const wideAccount = Boolean(options.accountMenu);
+  if (wideAccount) accountButton.classList.add("acct-wide");
+
+  /* the signed-in account menu (web app only) */
+  const accountMenu = el("div", "menu acct-menu");
+  accountMenu.setAttribute("role", "menu");
+  accountMenu.hidden = true;
+  const accountWho = el("div", "acct-menu-who");
+  const accountName = el("strong", "acct-menu-name");
+  const accountEmail = el("span", "acct-menu-email");
+  accountWho.append(accountName, accountEmail);
+  accountMenu.append(accountWho);
+  for (const item of options.accountMenu ?? []) {
+    const entry = el("button", "menu-item");
+    entry.type = "button";
+    entry.setAttribute("role", "menuitem");
+    entry.append(icon(item.icon, 16), el("span", undefined, item.label));
+    entry.addEventListener("click", () => {
+      toggleAccountMenu(false);
+      item.run();
+    });
+    accountMenu.append(entry);
+  }
+  function toggleAccountMenu(open: boolean): void {
+    accountMenu.hidden = !open;
+    accountButton.setAttribute("aria-expanded", String(open));
+    if (open) {
+      toggleMenu(false);
+      replay(accountMenu, "enter");
+      accountMenu.querySelector<HTMLButtonElement>(".menu-item")?.focus();
+    }
+  }
+  accountMenu.addEventListener("keydown", (event) => {
+    const items = [...accountMenu.querySelectorAll<HTMLButtonElement>(".menu-item")];
+    const index = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      toggleAccountMenu(false);
+      accountButton.focus();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      items[(index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!accountMenu.hidden && !accountMenu.contains(event.target as Node) && !accountButton.contains(event.target as Node)) toggleAccountMenu(false);
+  });
+  accountButton.addEventListener("click", () => {
+    if (wideAccount && accountButton.dataset.signedIn === "true") toggleAccountMenu(accountMenu.hidden === true);
+    else options.onAccount?.();
+  });
 
   const tools = el("div", "bar-tools");
   tools.append(status, accountButton, menuButton);
-  header.append(lockup, tools, menu);
+  header.append(lockup, tools, menu, accountMenu);
 
   /* panels */
   const body = el("main", "wallet-body");
@@ -370,6 +423,7 @@ export function createWalletShell(options: {
     menu.hidden = !open;
     menuButton.setAttribute("aria-expanded", open ? "true" : "false");
     if (open) {
+      if (!accountMenu.hidden) toggleAccountMenu(false);
       replay(menu, "enter");
       menu.querySelector<HTMLButtonElement>(".menu-item:not([hidden])")?.focus();
     }
@@ -398,14 +452,27 @@ export function createWalletShell(options: {
     accountButton.dataset.signedIn = view?.signedIn ? "true" : "false";
     if (view?.signedIn) {
       accountButton.replaceChildren(el("span", "acct-initials", view.initials));
-      accountButton.setAttribute("aria-label", `Account: signed in as ${view.label}. Open account.`);
+      accountButton.setAttribute("aria-label", wideAccount ? `Account menu: signed in as ${view.label}` : `Account: signed in as ${view.label}. Open account.`);
       accountButton.title = `Signed in as ${view.label}`;
+      if (wideAccount) accountButton.setAttribute("aria-haspopup", "menu");
+      accountName.textContent = view.label;
+      accountEmail.textContent = view.email ?? (view.provider === "google" ? "Google account" : "");
+      accountEmail.hidden = !accountEmail.textContent;
     } else {
-      accountButton.replaceChildren(icon("user", 16));
-      accountButton.setAttribute("aria-label", "Account: signed out. Open account.");
-      accountButton.title = "Sign in or manage your account";
+      toggleAccountMenu(false);
+      accountButton.removeAttribute("aria-haspopup");
+      if (wideAccount) {
+        accountButton.replaceChildren(icon("user", 16), el("span", "acct-label", "Sign in"));
+        accountButton.setAttribute("aria-label", "Sign in");
+        accountButton.title = "Sign in to keep your saved explanations across devices";
+      } else {
+        accountButton.replaceChildren(icon("user", 16));
+        accountButton.setAttribute("aria-label", "Account: signed out. Open account.");
+        accountButton.title = "Sign in or manage your account";
+      }
     }
   }
+  setAccount(null);
 
   function openSheet(title: string, nodes: Node[]): void {
     sheetReturn = document.activeElement instanceof HTMLElement ? document.activeElement : null;

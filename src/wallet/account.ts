@@ -12,7 +12,7 @@ export interface AccountHandlers {
  * Account sheet for the web app and the extension: sign in with Google or an email
  * link, or sign out. Signed out still works; it only keeps history on this browser.
  */
-export function accountPanel(view: AccountView | null, handlers: AccountHandlers, options: { emailLink?: boolean } = {}): HTMLElement {
+export function accountPanel(view: AccountView | null, handlers: AccountHandlers, options: { emailLink?: boolean; compact?: boolean } = {}): HTMLElement {
   const wrap = el("div", "stack account");
   const note = el("p", "fine");
   note.setAttribute("role", "status");
@@ -51,11 +51,13 @@ export function accountPanel(view: AccountView | null, handlers: AccountHandlers
 
   const google = labelledButton("user", "Continue with Google", "primary");
   google.addEventListener("click", () => busy(google, handlers.onGoogle, "Opening Google…"));
-  wrap.append(
-    el("p", "card-title", "Sign in to keep your explanations"),
-    el("p", "fine", "Signing in keeps saved explanations and settings across devices. You can keep using ATLAS Explain signed out; history then stays on this browser."),
-    google,
-  );
+  if (!options.compact) {
+    wrap.append(
+      el("p", "card-title", "Sign in to keep your explanations"),
+      el("p", "fine", "Signing in keeps saved explanations and settings across devices. You can keep using ATLAS Explain signed out; history then stays on this browser."),
+    );
+  }
+  wrap.append(google);
 
   if (options.emailLink !== false) {
     const form = el("form", "account-form");
