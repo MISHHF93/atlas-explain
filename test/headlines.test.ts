@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { SITE_PAGES, sitePage } from "./site-page";
 import { describe, expect, it } from "vitest";
 import { headlinesFrom } from "../src/core/catalog";
 import type { NewsFile, NewsItem } from "../src/core/news";
@@ -37,10 +36,3 @@ describe("today's headlines", () => {
   });
 });
 
-describe("the practice page is reachable", () => {
-  it("is linked from Learn on both surfaces and from the home page", () => {
-    expect(readFileSync("src/web/app.ts", "utf8")).toContain('onPractice: () => location.assign("/welcome#step-try")');
-    expect(readFileSync("extension/src/popup.ts", "utf8")).toContain("onPractice: () => openUrl(`${EXPLAIN_WEB_URL}/welcome#step-try`)");
-    for (const f of SITE_PAGES) expect(sitePage(f), f).toContain('<a href="/welcome#step-try">Practice page</a>');
-  });
-});

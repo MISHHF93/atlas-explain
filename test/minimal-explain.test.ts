@@ -1,12 +1,7 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { COMPOSER_PLACEHOLDER, EXPLAIN_TAB_BLOCKS, composerAction, composerHint } from "../src/core/composer";
+import { COMPOSER_PLACEHOLDER, composerAction, composerHint } from "../src/core/composer";
 import { digestRowStatus } from "../src/core/digest";
 
-const popup = readFileSync("extension/src/popup.ts", "utf8");
-const web = readFileSync("src/web/app.ts", "utf8");
-const css = readFileSync("src/wallet/wallet.css", "utf8");
-const panel = readFileSync("src/wallet/explain-panel.ts", "utf8");
 
 describe("minimal Explain composer", () => {
   it("reads the highlight while the box is empty", () => {
@@ -40,42 +35,3 @@ describe("Today's digest row", () => {
   });
 });
 
-describe("popup Explain tab layout", () => {
-  it("has one primary button instead of two", () => {
-    expect(popup).not.toContain("explainTyped");
-    expect(popup).not.toContain('"Explain text"');
-    expect(panel).toContain("composerAction(input.value)");
-    expect(popup).toContain("readsPage: true");
-  });
-
-  it("stacks only the minimal blocks, in order", () => {
-    expect(popup).toContain("shell.panels.explain.append(panel.head, panel.composer, panel.engine.node, today.node, panel.status, panel.result, panel.history);");
-    expect(EXPLAIN_TAB_BLOCKS).toEqual(["composer", "engine", "today", "result", "recent"]);
-  });
-
-  it("keeps the title for screen readers only", () => {
-    expect(popup).toContain("headHidden: true");
-    expect(panel).toContain('"panel-title sr-only"');
-  });
-
-  it("uses the compact engine line on both surfaces and the digest row in the popup", () => {
-    expect(panel).toContain("engineStrip({ compact: true })");
-    for (const src of [popup, web]) expect(src).toContain("explainPanel({");
-    expect(popup).toContain("todayRow(");
-    expect(popup).not.toMatch(/append\([^)]*brief\.node,/);
-    // The web app gives the digest its own Today screen instead of a row on Explain.
-    expect(web).toContain("shell.panels.today.append(");
-    expect(web).not.toContain("todayRow(");
-  });
-
-  it("limits recent explanations to three", () => {
-    expect(popup).toContain("limit: 3 },");
-    expect(web).toContain("limit: 8,");
-  });
-
-  it("styles with tokens and keeps fonts at 11px or more", () => {
-    const block = css.slice(css.indexOf("/* minimal Explain"));
-    expect(block).not.toMatch(/font-size:\s*(\d+(\.\d+)?)px/);
-    expect(block).not.toMatch(/#[0-9a-f]{3,6}\b/i);
-  });
-});

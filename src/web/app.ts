@@ -22,7 +22,7 @@ import {
 } from "../wallet/cards";
 import { el, labelledButton } from "../wallet/dom";
 import { icon } from "../wallet/icons";
-import { extensionNodes, privacyNodes, termsNodes } from "../wallet/legal";
+import { privacyNodes, termsNodes } from "../wallet/legal";
 import { canReachLocalAtlas } from "../core/assets";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../core/price-feed";
 import { mayCallLocalAtlas, probeAtlasLocal } from "../connectors";
@@ -138,7 +138,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     menu: [
       { label: "ATLAS Explain website", icon: "back", run: () => location.assign("/") },
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
-      { label: "Get the Chrome extension", icon: "panel", run: () => shell.openSheet("Chrome extension", extensionNodes()) },
       { label: "Use it in your AI assistant", icon: "plug", run: () => location.assign("/connect") },
       { label: "Help and support", icon: "info", run: () => location.assign("/support") },
       { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },
@@ -380,7 +379,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   const signal = signalCard({
     onWhy: () => openLegal("signal"),
-    deskHint: "The live light is read by the Chrome extension on the ATLAS desk. Here it stays grey unless the desk sends its public signal.",
+    deskHint: "The live light stays grey unless the ATLAS desk sends its public signal.",
   });
   /* ---------- Today tab: digest first, then the paper light, then the next step ---------- */
 
@@ -474,7 +473,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     },
     announce: (text) => shell.announce(text),
     initialCount: 6,
-    onPractice: () => location.assign("/welcome#step-try"),
   }));
 
   /** Assets and Learn ask Explain the same way on both surfaces: go to Explain and answer now. */
@@ -501,7 +499,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   function paintStats(): void {
     const on = storedConsent() === "granted";
     statsLine.textContent = on
-      ? "On. Anonymous usage statistics help improve ATLAS Explain. We never collect what you highlight, type or save."
+      ? "On. Anonymous usage statistics help improve ATLAS Explain. We never collect what you type or save."
       : "Off. Nothing about how you use ATLAS Explain is collected.";
     const label = statsToggle.querySelector("span");
     if (label) label.textContent = on ? "Turn off usage statistics" : "Turn on usage statistics";
@@ -569,7 +567,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     yourData: yourData.node,
     stats: statsGroup,
     legal: { onTerms: () => openLegal("terms"), onPrivacy: () => openLegal("privacy") },
-    about: { action: { icon: "panel", label: "Get the Chrome extension", run: () => shell.openSheet("Chrome extension", extensionNodes()) } },
+    about: { action: { icon: "plug", label: "Use it in your AI assistant", run: () => location.assign("/connect") } },
   }).nodes;
   // One page has one top-level heading (Explain); the other section titles sit a level below it.
   for (const id of ["today", "glossary", "assets"] as const) {
@@ -1267,7 +1265,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (demo === "error") panel.show({ kind: "error", message: "The cloud model could not be reached. Check your connection and retry.", retry: false });
     if (preview.get("onboarding") === "1") showOnboarding();
     if (preview.get("sheet") === "terms") openLegal("terms");
-    if (preview.get("sheet") === "extension") shell.openSheet("Chrome extension", extensionNodes());
     if (preview.get("sheet") === "confirm-email") {
       shell.openSheet("Finish signing in", [emailConfirmPanel(() => Promise.reject(new Error("Preview only: there is no sign-in link to finish.")))]);
     }

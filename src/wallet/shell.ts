@@ -60,7 +60,7 @@ export interface WalletShell {
  */
 export function createWalletShell(options: {
   host: HTMLElement;
-  surface: "extension" | "web" | "app";
+  surface: "web" | "app";
   menu: MenuItem[];
   onSelect?: (tab: TabId) => void;
   onAccount?: () => void;
@@ -104,7 +104,7 @@ export function createWalletShell(options: {
     lockup.addEventListener("click", () => select(tabs[0]?.id ?? firstTab, { focus: true }));
   }
   const logo = document.createElement("img");
-  logo.src = options.surface === "extension" ? "./logo.svg" : "/logo.svg";
+  logo.src = "/logo.svg";
   logo.alt = "";
   logo.width = 30;
   logo.height = 30;

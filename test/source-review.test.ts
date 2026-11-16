@@ -27,14 +27,6 @@ describe("one address per page", () => {
   });
 });
 
-describe("the extension keeps only the site of a page", () => {
-  it("never parks a full page address, which can hold account ids", () => {
-    const bg = readFileSync("extension/src/background.ts", "utf8");
-    expect(bg).not.toMatch(/url: tab\??\.url/);
-    expect(bg.match(/url: siteOf\(/g)?.length).toBe(4);
-  });
-});
-
 describe("saved explanations are capped in the rules", () => {
   it("allows only the fields the app writes and never an edit", () => {
     const rules = readFileSync("firestore.rules", "utf8");

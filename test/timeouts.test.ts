@@ -1,16 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DeadlineError, cloudErrorCopy, withDeadline } from "../src/core/timeouts";
-import { shouldUseOnDevice } from "../extension/src/on-device";
 
 describe("every wait ends", () => {
   it("resolves fast work and rejects slow work with a DeadlineError", async () => {
     await expect(withDeadline(Promise.resolve(1), 50, "slow")).resolves.toBe(1);
     await expect(withDeadline(new Promise(() => {}), 10, "slow")).rejects.toBeInstanceOf(DeadlineError);
-  });
-
-  it("only uses Nano when it is ready now, never while it downloads", () => {
-    expect(shouldUseOnDevice("available")).toBe(true);
-    for (const s of ["downloadable", "downloading", "unavailable", "no", "after-download"]) expect(shouldUseOnDevice(s)).toBe(false);
   });
 
   it("explains cloud failures in plain language without asking users for debug tokens", () => {

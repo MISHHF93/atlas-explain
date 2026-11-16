@@ -50,7 +50,7 @@ export function installErrorBoundary(root: HTMLElement, reload: () => void = () 
   let shown = false;
   const takeOver = (reason: unknown) => {
     console.error("[atlas-explain]", reason);
-    report("uncaught", location.protocol === "chrome-extension:" ? "extension" : "web", reason instanceof Error ? reason.name : "error");
+    report("uncaught", "web", reason instanceof Error ? reason.name : "error");
     if (!shouldTakeOver(root, shown)) return;
     shown = true;
     renderFallback(root, reload);

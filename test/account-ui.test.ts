@@ -43,8 +43,6 @@ describe("sign in and account entry points", () => {
     expect(app).toContain("saveAccountHint(view)");
     const shell = readFileSync("src/wallet/shell.ts", "utf8");
     expect(shell).toContain('el("span", "acct-label", "Sign in")');
-    // The extension popup passes no accountMenu, so it keeps its compact account icon.
-    expect(readFileSync("extension/src/popup.ts", "utf8")).not.toContain("accountMenu");
   });
 });
 

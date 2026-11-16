@@ -341,7 +341,7 @@ const ONBOARDING: { icon: IconName; title: string; body: string; light?: "grey" 
   {
     icon: "sparkle",
     title: "Understand the move, not a tip",
-    body: "Highlight a term or a headline on any page and get it in plain language. Education only, never a trade instruction.",
+    body: "Type a term or paste a headline and get it in plain language. Education only, never a trade instruction.",
   },
   {
     icon: "chip",
@@ -351,7 +351,7 @@ const ONBOARDING: { icon: IconName; title: string; body: string; light?: "grey" 
   {
     icon: "shield",
     title: "Private by design",
-    body: "Only the text you highlight, the page title and the site name are used. Never balances, account numbers or form fields.",
+    body: "Only the text you type is used. Never balances, account numbers or anything else on your computer.",
   },
 ];
 

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { sitePage } from "./site-page";
 import { describe, expect, it } from "vitest";
-import { CHROME_STORE_URL, MCP_URL } from "../src/core/links";
+import { MCP_URL } from "../src/core/links";
 import { handleHttp, MCP_PATH } from "../src/mcp/http";
 import { EDUCATION_LINE, TOOLS, explainTerm, handle, todaysHeadlines, type Fetcher } from "../src/mcp/server";
 
@@ -106,7 +106,6 @@ describe("hosted MCP over HTTP", () => {
 
 describe("online-only links", () => {
   it("shows coming-soon text until the owner sets each address, and never a dead link", () => {
-    expect(CHROME_STORE_URL === null || CHROME_STORE_URL.startsWith("https://chromewebstore.google.com/")).toBe(true);
     expect(MCP_URL === null || /^https:\/\/[^/]+\/mcp(\?v=\d+)?$/.test(MCP_URL)).toBe(true);
     // Support keeps its old anchor but sends people to the one setup page.
     const support = sitePage("support.html");

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
  * component styles, nothing below 11px, and WCAG AA contrast for every text pair in both themes.
  */
 const tokens = readFileSync("src/brand/tokens.css", "utf8");
-const sheets = ["src/wallet/wallet.css", "src/site/site.css", "src/app/app.css", "extension/popup.css"].map((f) => [f, readFileSync(f, "utf8")] as const);
+const sheets = ["src/wallet/wallet.css", "src/site/site.css", "src/app/app.css"].map((f) => [f, readFileSync(f, "utf8")] as const);
 
 /** Reads one theme block's colour tokens. */
 function theme(selector: string): Record<string, string> {

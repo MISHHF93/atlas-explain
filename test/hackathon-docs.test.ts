@@ -30,15 +30,14 @@ describe("hackathon write-up matches current features", () => {
     expect(demo).toMatch(/presenter's laptop|presenters laptop|your laptop/i);
   });
 
-  it("lists the recording shots and both extension shortcuts", () => {
+  it("lists the recording shots, connector first, with no Chrome extension", () => {
     expect(demo).toMatch(/Shot list/);
     expect(demo).toMatch(/Explain this move/);
     expect(demo).toMatch(/Live prices/);
     expect(demo).toMatch(/ATLAS connected/);
-    expect(demo).toMatch(/Alt\+Shift\+E/);
-    expect(demo).toMatch(/Alt\+Shift\+X/);
-    expect(readme).toMatch(/Alt\+Shift\+E/);
-    expect(readme).toMatch(/Alt\+Shift\+X/);
+    expect(demo).toMatch(/price_history/);
+    expect(demo.indexOf("explain_term")).toBeLessThan(demo.indexOf("On this device"));
+    for (const text of [demo, readme]) expect(text).not.toMatch(/Alt\+Shift|build:extension|Load unpacked/);
   });
 
 
@@ -52,7 +51,6 @@ describe("hackathon write-up matches current features", () => {
       "hosted-full.png",
       "glossary-shadow.png",
       "signal-grey.png",
-      "highlight-practice.png",
     ];
     for (const name of shots) {
       expect(existsSync(join(root, "docs/screenshots", name))).toBe(true);

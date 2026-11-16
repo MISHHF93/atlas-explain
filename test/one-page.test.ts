@@ -4,18 +4,12 @@ import { parseRoute, pathFor, tabFor } from "../src/app/routes";
 
 const app = readFileSync("src/web/app.ts", "utf8");
 const shell = readFileSync("src/wallet/shell.ts", "utf8");
-const popup = readFileSync("extension/src/popup.ts", "utf8");
 
 describe("the web app is one page", () => {
   it("stacks Explain, Today, Learn and Assets in that order, with Account out of the navigation", () => {
     const tabs = /export const APP_TABS[^=]*= \[([\s\S]*?)\];/.exec(app)?.[1] ?? "";
     expect([...tabs.matchAll(/id: "(\w+)"/g)].map((m) => m[1])).toEqual(["explain", "today", "glossary", "assets"]);
     expect(app).toContain('layout: "page"');
-  });
-
-  it("keeps the extension popup on tabs", () => {
-    expect(popup).not.toContain('layout: "page"');
-    expect(shell).toContain('const paged = options.layout === "page";');
   });
 
   it("uses section links, not tab roles, on the page layout", () => {
