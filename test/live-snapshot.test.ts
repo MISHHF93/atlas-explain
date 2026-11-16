@@ -34,3 +34,12 @@ describe("live snapshot", () => {
     expect(snapshotTime("2026-11-13T23:00:00Z", "en-US")).toMatch(/\d/);
   });
 });
+
+describe("change window wording", () => {
+  it("never says 'over in the last 24 hours'", async () => {
+    const { changeWindowText } = await import("../src/core/assets");
+    expect(changeWindowText({ changeWindow: "in the last 24 hours" })).toBe("in the last 24 hours");
+    expect(changeWindowText({ changeWindow: "since 00:00 UTC" })).toBe("since 00:00 UTC");
+    expect(changeWindowText({ changeWindow: "24h" })).toBe("over 24h");
+  });
+});
