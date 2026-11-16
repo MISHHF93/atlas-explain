@@ -14,12 +14,6 @@ export const APP_URL = `${EXPLAIN_WEB_URL}/app`;
 /** The one page for setting up the connector in AI assistants. */
 export const CONNECT_URL = `${EXPLAIN_WEB_URL}/connect`;
 
-/* ---------- the data site (published by the scheduled data job) ---------- */
-export const DATA_SITE_URL = "https://atlas-explain-data.web.app";
-export const MARKET_DATA_URL = `${DATA_SITE_URL}/data/v1/market.json`;
-export const NEWS_DATA_URL = `${DATA_SITE_URL}/data/v1/news.json`;
-export const CRYPTO_DATA_URL = `${DATA_SITE_URL}/data/v1/crypto.json`;
-
 /* ---------- the MCP connector (Cloudflare Workers free plan) ---------- */
 export const MCP_ORIGIN = "https://atlas-explain-mcp.atlas-explain.workers.dev";
 /**
@@ -28,6 +22,18 @@ export const MCP_ORIGIN = "https://atlas-explain-mcp.atlas-explain.workers.dev";
  * server ignores the query.
  */
 export const MCP_URL: string | null = `${MCP_ORIGIN}/mcp`;
+
+/* ---------- live data (captured on a schedule by the same Worker, kept in Workers KV) ---------- */
+/**
+ * Where the app and the connector read live data: one address, one copy. The connector's Worker
+ * captures it on a schedule (src/data/capture.ts) and serves it here, so every surface shows the
+ * same numbers with the same times. Providers, one job each: Cloudflare runs the connector and the
+ * data; Firebase runs the website, the web app, sign-in and Gemini; GitHub only holds the code.
+ */
+export const DATA_SITE_URL = MCP_ORIGIN;
+export const MARKET_DATA_URL = `${DATA_SITE_URL}/data/v1/market.json`;
+export const NEWS_DATA_URL = `${DATA_SITE_URL}/data/v1/news.json`;
+export const CRYPTO_DATA_URL = `${DATA_SITE_URL}/data/v1/crypto.json`;
 
 /* ---------- the education line ---------- */
 /** The short form, for tight spaces (chart footers, error screens). */

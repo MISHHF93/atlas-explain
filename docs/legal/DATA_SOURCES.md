@@ -19,9 +19,9 @@ that parameter is published as `coingecko`.
 | IEX / stock prices | Stock rows and paper stats | Only through ATLAS on this computer | Not fetched directly by Explain. The hosted app tells the visitor to connect ATLAS. | Shown as a gap with an honest "Connect ATLAS" note when only a public crypto feed is used |
 | Firebase / Gemini | Educational explanations | Firebase AI Logic, App Check | Google's terms for Firebase and Gemini. Explanations are generated, not a market-data feed. | Cloud fallback and the hosted app |
 
-## Official free sources (scheduled data job)
+## Official free sources (scheduled capture)
 
-Added 2026-11-13. Fetched by `.github/workflows/market-data.yml` (`scripts/data/build-data.ts`), validated against the Asset schema, and published to the separate free hosting site https://atlas-explain-data.web.app. The app re-validates every record before showing it. Plan: docs/ux/MULTI_ASSET_CATALOG.md.
+Added 2026-11-13; moved 2026-11-16. Fetched on a schedule by the connector's Cloudflare Worker (`src/data/capture.ts`; SEC filings by `npm run data:publish` from a computer), validated against the Asset schema, and served at https://atlas-explain-mcp.atlas-explain.workers.dev/data/v1/. The app re-validates every record before showing it. Plan: docs/ux/MULTI_ASSET_CATALOG.md.
 
 | Source | What the app shows | Licence (summary; legal review to confirm ⚑ rows) | Attribution shown |
 | --- | --- | --- | --- |

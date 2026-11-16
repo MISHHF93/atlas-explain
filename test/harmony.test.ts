@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CONNECT_URL, CRYPTO_DATA_URL, DATA_SITE_URL, EDUCATION_LINE, EDUCATION_SHORT, MARKET_DATA_URL, MCP_ORIGIN, MCP_URL, NEWS_DATA_URL } from "../src/core/links";
 import { handleHttp } from "../src/mcp/http";
 import { completePromptArgument, handle, ICONS, SERVER_VERSION, type Fetcher } from "../src/mcp/server";
-import { DATA_ORIGIN } from "../src/mcp/worker";
+import { DATA_ORIGIN } from "../src/mcp/live-data";
 import { sitePage } from "./site-page";
 
 const files = (dir: string): string[] =>

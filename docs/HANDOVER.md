@@ -7,7 +7,8 @@ You are the lead engineer and product designer for ATLAS Explain. Pick up the pr
 ATLAS Explain is a hosted MCP connector for AI assistants, plus a website and web app. It explains market jargon in plain language. **Owner decision, 15 Nov 2026 (final): MCP first, app second, and no Chrome extension.** Earlier the same day the owner chose to keep both the extension and the connector, then reversed it: "there is no point of making a Chrome extension if it's an MCP". The extension, its build, the bridge page, the practice page (/welcome) and the Chrome Web Store assets were deleted on branch `feat/drop-extension`. The website leads with the connector (Home hero, header button and the first footer link go to `/connect`); the web app is the second option, in Home's "Or use the web app" section (`#browser`). Support answers connector questions first, and How it's built opens with the connector. Keep the hybrid-AI explanation on Home and How it's built: the #BuildHybridAI entry now rests on the web app, which runs Gemini Nano through Firebase AI Logic in desktop Chrome. Gemini Nano runs on the device first; when that isn't available, Gemini answers in the cloud through Firebase AI Logic. The answer always says which one ran.
 
 - Repo: `MISHHF93/atlas-explain`. Local path: `C:\Users\borah\atlas-explain` (Windows).
-- Live site: https://atlas-explain.web.app. Data site: https://atlas-explain-data.web.app.
+- Live site: https://atlas-explain.web.app. Live data: https://atlas-explain-mcp.atlas-explain.workers.dev/data/v1/{market,news,crypto}.json (served and captured by the connector's Cloudflare Worker).
+- **Providers, one job each (owner decision, 16 Nov 2026):** Firebase runs the website, the web app, sign-in, Firestore, Remote Config, App Check and Gemini (AI Logic). Cloudflare runs the MCP connector and all live data: a cron in the same Worker captures it (`src/data/capture.ts`) into free Workers KV and serves it at `/data/v1/`, so the app and the connector read the same file. GitHub only holds the code: no scheduled jobs. The old Firebase data site (atlas-explain-data.web.app) and the GitHub data job are retired.
 - Firebase project: `atlas-explain`.
 - The project is entered in Google's #BuildHybridAI hackathon. Deadline: **30 Nov 2026, 2 PM PT**. Keep the on-device/cloud hybrid working and visible everywhere.
 
@@ -19,7 +20,7 @@ ATLAS Explain is a hosted MCP connector for AI assistants, plus a website and we
 4. Never commit secrets or edit `.env`. Never force push. Never overwrite local changes.
 5. Never commit Stripe keys. Use Firebase secrets or env config, and document the owner's exact setup steps.
 6. The Remote Config flag `billing_enabled` controls going live. It stays **false** until the owner flips it after hackathon judging.
-7. **Zero budget.** There is no budget at all (the US$5 Chrome Web Store fee is no longer needed). Use only free, public or government data and free tiers. Scheduled jobs run on GitHub Actions, not Cloud Functions (no Blaze plan). Ask before adding anything that costs money.
+7. **Zero budget.** There is no budget at all (the US$5 Chrome Web Store fee is no longer needed). Use only free, public or government data and free tiers. Scheduled jobs run as Cloudflare Worker crons (free), not Cloud Functions (no Blaze plan) and not GitHub Actions. Ask before adding anything that costs money.
 8. The web app's entry bundle budget is 150 kB (`scripts/bundle-budget.mjs`). Heavy code loads lazily, and guard tests enforce this.
 
 ## How to work here
@@ -75,7 +76,7 @@ ATLAS Explain is a hosted MCP connector for AI assistants, plus a website and we
   - US Treasury, ECB, Bank of Canada, EIA (optional free key)
   - SEC EDGAR (stocks and ETFs from filings)
   - GDELT ("in the news today")
-- An hourly GitHub Actions job (`.github/workflows/market-data.yml`, `scripts/data/build-data.ts`) publishes `market.json`, `news.json` and `crypto.json` (prices and 30 days of hourly closes for the ten coins, from Kraken with CoinGecko as backup; the MCP connector reads crypto only from here, so it calls no third-party API itself) to the data site. Owner secrets: `FIREBASE_SERVICE_ACCOUNT`, `EIA_API_KEY` (optional), `SEC_USER_AGENT`.
+- Live data is captured by the connector's Worker (`src/mcp/live-data.ts`, crons in `wrangler.toml`): crypto prices and 30 days of hourly closes every 10 minutes (Kraken, CoinGecko as backup; only the newest bars are fetched, a few ms of CPU), GDELT headlines every 3 hours, and Treasury, ECB and Bank of Canada figures every 6 hours. Each part keeps its last good values when a source fails. SEC filings are too large for the Worker's free CPU budget: refresh them from a computer with `npm run data:publish` (captures everything, then uploads the three files to the Worker's KV with this computer's Cloudflare login). EIA needs a free key set as a Worker secret (`npx wrangler@4 secret put EIA_API_KEY`). The web app reads the captured crypto file first and asks Kraken or CoinGecko directly only when it is missing or over 20 minutes old (`src/core/captured-prices.ts`).
 - Index, futures and options pages are education only, with no licensed index levels.
 - Watchlist (max 50; on the device or synced). Real coin icons from CoinGecko. Logo.dev company logos only if the owner adds a `pk_` token. No government or exchange logos.
 - Paid feeds are listed only in a "later, if revenue allows" appendix. **Get the owner's OK before adding any provider that needs a paid plan.**
@@ -109,4 +110,4 @@ The full list is in `docs/LAUNCH_CHECKLIST.md`:
 
 ## First thing to do
 
-Run `git status` and `npm run release:check` (in PowerShell) on `main` to confirm the state is green. Then check whether the owner has unlocked GitHub Actions (see open work, item 1).
+Run `git status` and `npm run release:check` (in PowerShell) on `main` to confirm the state is green. Then check the live data is fresh: https://atlas-explain-mcp.atlas-explain.workers.dev/data/v1/crypto.json should be under 20 minutes old.

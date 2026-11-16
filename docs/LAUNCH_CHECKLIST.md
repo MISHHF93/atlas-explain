@@ -40,7 +40,7 @@ Education only: no buy/sell wording, never reads balances or account details.
 ## Added in the production pass (November 2026)
 
 ### Owner steps (free)
-- [ ] **GitHub secrets** for the market-data job: `FIREBASE_SERVICE_ACCOUNT`, `SEC_USER_AGENT` ("ATLAS Explain you@yourdomain"), optional `EIA_API_KEY`.
+- [ ] **Optional data keys** (Cloudflare Worker secrets, free): `npx wrangler@4 secret put EIA_API_KEY` for energy prices. SEC filings: run `npm run data:publish` from a computer every few days (set `SEC_USER_AGENT` to "ATLAS Explain you@yourdomain" first).
 - [ ] **Remote Config**: `price_provider` = `coingecko`; optional `logo_dev_token` (Logo.dev publishable key, `pk_…`).
 - [ ] **Analytics (optional)**: link Google Analytics to the Firebase project, set data retention to 2 months, then set Remote Config `analytics_enabled` = `true`. The web app then asks each visitor once; nothing loads before that.
 - [ ] **Legal**: add the operator's legal name and a privacy/support email to `/privacy` and `/terms`, then go through docs/legal/REVIEW_NOTES.md with a lawyer.

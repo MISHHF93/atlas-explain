@@ -26,8 +26,8 @@ What it never does: read balances, account numbers, positions or form fields; ma
 - **Firebase AI Logic hybrid inference** is the core path: `InferenceMode.PREFER_ON_DEVICE` tries Gemini Nano in Chrome first and falls back to Gemini in the cloud. The "On this device" / "Cloud" badge is the SDK's own `inferenceSource`, never a guess.
 - **One codebase.** The connector and the web app share the glossary, the data readers and the education rules, so they never drift apart.
 - **Firebase** for hosting, Authentication (Google and email link), Firestore with owner-only rules, Remote Config and App Check, all on the free Spark plan.
-- **Free and official data only.** A scheduled job publishes US Treasury, ECB, Bank of Canada, EIA and SEC EDGAR figures, GDELT headlines, and crypto prices (Kraken, with CoinGecko as backup) to our own data site. Every value carries its source, licence and time; anything missing is shown as missing, with the reason.
-- **The MCP connector** runs on Cloudflare Workers' free plan in TypeScript with no dependencies, reuses the app's own readers, and reads only our data site. It supports the newest MCP spec (2026-07-28, stateless) alongside earlier versions.
+- **Free and official data only.** A Cloudflare cron captures US Treasury, ECB, Bank of Canada, EIA and SEC EDGAR figures, GDELT headlines, and crypto prices (Kraken, with CoinGecko as backup) into one data address that the web app and the connector both read, so they always show the same numbers. Every value carries its source, licence and time; anything missing is shown as missing, with the reason.
+- **The MCP connector** runs on Cloudflare Workers' free plan in TypeScript with no dependencies, reuses the app's own readers, and reads only the data it captures itself. It supports the newest MCP spec (2026-07-28, stateless) alongside earlier versions.
 - **Guards in the build:** a release check runs types, lint, more than 500 tests, both builds, a bundle budget, npm audit and a scan that fails the build on any trade-advice wording.
 
 ## Challenges we ran into

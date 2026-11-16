@@ -4,10 +4,10 @@ name: Billing plan sync
 # This replaces a Stripe webhook: the project is on Firebase's free plan, which has no server functions.
 # It does nothing until the owner sets the repository variable BILLING_SYNC to "on" and adds the
 # secrets. Setup steps: docs/MONETIZATION.md.
+# GitHub only holds the code (owner decision, 16 Nov 2026): no scheduled jobs run here. Billing is
+# off until after judging; when it goes live, this sync moves to the Cloudflare Worker cron that
+# already captures the live data (src/mcp/worker.ts). Until then it can be run by hand.
 on:
-  schedule:
-    # Every 15 minutes. GitHub may start scheduled runs late, so the app says "within about 15 minutes".
-    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:

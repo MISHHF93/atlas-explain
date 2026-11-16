@@ -5,10 +5,10 @@ import { CHART_RANGES, supportsChartRanges } from "../src/core/price-provider";
 import { hasDiagram } from "../src/wallet/term-diagrams";
 
 describe("coin chart ranges", () => {
-  it("offers 24 hours, 7 days and 30 days, from CoinGecko only", () => {
+  it("offers 24 hours, 7 days and 30 days for every coin (the captured file holds 30 days of hourly closes)", () => {
     expect(CHART_RANGES.map((r) => r.label)).toEqual(["24H", "7D", "30D"]);
     expect(supportsChartRanges({ provider: "coingecko" })).toBe(true);
-    expect(supportsChartRanges({ provider: "kraken" })).toBe(false);
+    expect(supportsChartRanges({ provider: "kraken" })).toBe(true);
   });
 
   it("keeps a long range's whole shape in at most 96 points, first and last included", () => {

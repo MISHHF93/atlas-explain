@@ -1,32 +1,20 @@
 /**
- * Cloudflare Workers entry for the hosted ATLAS Explain MCP server (free plan: 100,000
- * requests a day, no card; over the limit requests fail, nothing is charged).
+ * Cloudflare Workers entry for ATLAS Explain's live side: the MCP connector at /mcp, the live data
+ * at /data/v1, and the cron that captures that data (all in src/mcp/live-data.ts). The runtime
+ * treats every export of this file as an entry point, so it exports only the handler object.
  * Deployed with `npm run deploy:mcp` (wrangler.toml). See docs/MCP.md.
  */
-import { handleHttp } from "./http";
-import { CONNECT_URL, DATA_SITE_URL } from "../core/links";
-import type { Fetcher } from "./server";
+import { handleRequest, runCapture, type WorkerEnv } from "./live-data";
 
-/**
- * The only place the server's data comes from: ATLAS Explain's own data site. Any other address is
- * refused, so the connector never calls a third-party API itself (the data job does that, hourly).
- */
-export const DATA_ORIGIN = DATA_SITE_URL;
-
-// The data files change hourly at most, so Cloudflare's edge keeps them for 5 minutes.
-// The app's shared readers pass browser-only options (cache, credentials) that Workers reject, so
-// they are dropped here; a User-Agent names the server.
-export const ownDataFetch: Fetcher = (url, init = {}) => {
-  if (new URL(url).origin !== DATA_ORIGIN) return Promise.reject(new Error(`Refused: ${new URL(url).origin} is not ATLAS Explain's data site.`));
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { cache, credentials, ...rest } = init;
-  const headers = new Headers(rest.headers);
-  headers.set("User-Agent", `ATLAS Explain MCP (+${CONNECT_URL})`);
-  return fetch(url, { ...rest, headers, cf: { cacheTtl: 300, cacheEverything: true } } as RequestInit);
-};
+interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+}
 
 export default {
-  fetch(request: Request): Promise<Response> {
-    return handleHttp(request, ownDataFetch);
+  fetch(request: Request, env: WorkerEnv): Promise<Response> {
+    return handleRequest(request, env);
+  },
+  scheduled(event: { cron: string }, env: WorkerEnv, ctx: ExecutionContext): void {
+    ctx.waitUntil(runCapture(event.cron, env));
   },
 };

@@ -12,6 +12,8 @@
     "build": "vite build",
     "build:mcp": "vite build --config vite.mcp.config.ts",
     "deploy:mcp": "npx wrangler@4 deploy",
+    "data:capture": "node scripts/data/build-data.ts",
+    "data:publish": "node scripts/data/build-data.ts --upload",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assetDetails, browseGlossary, cryptoPrices, EDUCATION_LINE, handle, officialFigures, priceHistory, TOOLS, type Fetcher } from "../src/mcp/server";
+import { DATA_SITE_URL } from "../src/core/links";
 
 const NOW = Date.parse("2026-11-15T12:00:00Z");
 const src = (text: string) => ({ providerId: "sec_edgar", label: "10-K, filed 3 Nov 2026", attribution: { text, href: "https://www.sec.gov/x" }, licence: { status: "public_domain", displayAllowed: true, mlAllowed: false, note: "" } });
@@ -41,7 +42,7 @@ const crypto = (asOf = "2026-11-15T11:30:00Z") => ({
 /** Only ATLAS Explain's own data site answers; any other address is a failure, as on the live server. */
 const net = (opts: { cryptoAsOf?: string; cryptoDown?: boolean } = {}): Fetcher => async (url) => {
   const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
-  if (!url.startsWith("https://atlas-explain-data.web.app/")) throw new Error(`not our data site: ${url}`);
+  if (!url.startsWith(`${DATA_SITE_URL}/`)) throw new Error(`not our data site: ${url}`);
   if (url.endsWith("/data/v1/market.json")) return ok(market);
   if (url.endsWith("/data/v1/crypto.json")) return opts.cryptoDown ? new Response("down", { status: 503 }) : ok(crypto(opts.cryptoAsOf));
   throw new Error(`unexpected ${url}`);
@@ -94,9 +95,9 @@ describe("the connector covers what the app shows", () => {
   });
 
   it("never calls a third-party API: the server's fetch refuses anything but its own data site", async () => {
-    const { ownDataFetch } = await import("../src/mcp/worker");
+    const { ownDataFetch } = await import("../src/mcp/live-data");
     for (const url of ["https://api.coingecko.com/api/v3/ping", "https://api.kraken.com/0/public/Time", "https://example.com/"]) {
-      await expect(ownDataFetch(url)).rejects.toThrow(/not ATLAS Explain's data site/);
+      await expect(ownDataFetch()(url)).rejects.toThrow(/not ATLAS Explain's data site/);
     }
     const { readFileSync } = await import("node:fs");
     const src = readFileSync("src/mcp/server.ts", "utf8");

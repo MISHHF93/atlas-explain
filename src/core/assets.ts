@@ -26,7 +26,7 @@ export const ASSET_SCHEMA = "atlas-explain-asset-v1";
 export const POLL_CRYPTO_MS = 15_000;
 export const POLL_STOCK_MS = 15 * 60_000;
 /** Client-side staleness bounds, checked again even when ATLAS says "ok". */
-export const CRYPTO_STALE_MS = 15 * 60_000;
+export const CRYPTO_STALE_MS = 20 * 60_000;
 export const STOCK_STALE_MS = 5 * 86_400_000;
 
 export const LEANS_UP_LABEL = "Leans up";

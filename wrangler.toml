@@ -4,3 +4,14 @@ name = "atlas-explain-mcp"
 main = "src/mcp/worker.ts"
 compatibility_date = "2025-09-01"
 workers_dev = true
+
+# Live data: captured on a schedule by this Worker (src/data/capture.ts) and served at /data/v1/.
+# One cron per part keeps each run inside the free plan's CPU and subrequest limits. These three
+# strings must match CRONS in src/mcp/worker.ts.
+[triggers]
+crons = ["*/10 * * * *", "37 */3 * * *", "47 */6 * * *"]
+
+# Free Workers KV namespace holding market.json, news.json and crypto.json (keys data/v1/<file>).
+[[kv_namespaces]]
+binding = "DATA"
+id = "3b50fb5cbf73422f89f22cfbbc2d64b9"

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { Fetcher } from "../src/core/assets";
 import {
   DEFAULT_PRICE_PROVIDER,
@@ -11,6 +11,7 @@ import {
   priceFeedFromRemoteValues,
   readCoinGeckoDemoKey,
 } from "../src/core/price-provider";
+import { resetCapturedCache } from "../src/core/captured-prices";
 
 const NOW = Date.parse("2026-11-13T21:00:00Z");
 const krakenTicker = {
@@ -21,6 +22,9 @@ const markets = [
   { id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 91000, price_change_percentage_24h: 1, last_updated: "2026-11-13T21:00:00.000Z" },
 ];
 const json = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), { status });
+/** These tests are about the direct fallback, so the captured file is "not there yet". */
+const noCapture = (fetcher: Fetcher): Fetcher => async (url, init) => (String(url).endsWith("/data/v1/crypto.json") ? json({}, 404) : fetcher(url, init));
+beforeEach(() => resetCapturedCache());
 
 describe("price provider selection", () => {
   it("defaults to CoinGecko and only accepts known ids", () => {
@@ -62,10 +66,10 @@ describe("price provider selection", () => {
       seen.push(String(url));
       return json(String(url).includes("coingecko") ? markets : krakenTicker);
     };
-    const kraken = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW, 8000, createPriceCache());
+    const kraken = await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW, 8000, createPriceCache());
     expect(kraken.kind).toBe("ready");
     if (kraken.kind === "ready") expect(kraken.catalog.source).toBe("kraken");
-    const gecko = await loadLiveCatalog({ provider: "coingecko" }, fetcher, NOW, 8000, createPriceCache());
+    const gecko = await loadLiveCatalog({ provider: "coingecko" }, noCapture(fetcher), NOW, 8000, createPriceCache());
     expect(gecko.kind).toBe("ready");
     if (gecko.kind === "ready") {
       expect(gecko.catalog.source).toBe("coingecko");
@@ -83,16 +87,16 @@ describe("price provider selection", () => {
       return json(krakenTicker);
     };
     const cache = createPriceCache();
-    const first = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW, 8000, cache);
+    const first = await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW, 8000, cache);
     expect(first.kind).toBe("error");
     expect(calls).toBe(1);
-    const second = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 1000, 8000, cache);
+    const second = await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW + 1000, 8000, cache);
     expect(second.kind).toBe("ready");
     expect(calls).toBe(2);
-    const third = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 1000 + PRICE_CACHE_MS - 1, 8000, cache);
+    const third = await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW + 1000 + PRICE_CACHE_MS - 1, 8000, cache);
     expect(third.kind).toBe("ready");
     expect(calls).toBe(2);
-    await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 1000 + PRICE_CACHE_MS, 8000, cache);
+    await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW + 1000 + PRICE_CACHE_MS, 8000, cache);
     expect(calls).toBe(3);
   });
 
@@ -104,11 +108,11 @@ describe("price provider selection", () => {
     };
     let saved: string | null = null;
     const store = { read: () => saved, write: (value: string) => { saved = value; } };
-    await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW, 8000, createPriceCache(), store);
+    await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW, 8000, createPriceCache(), store);
     expect(calls).toBe(1);
     expect(saved).toContain('"kind":"ready"');
     // A new page load has an empty in-memory cache but the same browser storage.
-    const reload = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 20_000, 8000, createPriceCache(), store);
+    const reload = await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW + 20_000, 8000, createPriceCache(), store);
     expect(reload.kind).toBe("ready");
     expect(calls).toBe(1);
   });
@@ -118,14 +122,14 @@ describe("price provider selection", () => {
     const fetcher: Fetcher = async () => (fail ? json({}, 429) : json(krakenTicker));
     let saved: string | null = null;
     const store = { read: () => saved, write: (value: string) => { saved = value; } };
-    const good = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW, 8000, createPriceCache(), store);
+    const good = await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW, 8000, createPriceCache(), store);
     fail = true;
-    const busy = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 5 * 60_000, 8000, createPriceCache(), store);
+    const busy = await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW + 5 * 60_000, 8000, createPriceCache(), store);
     expect(busy).toEqual(good);
-    const tooOld = await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 16 * 60_000, 8000, createPriceCache(), store);
+    const tooOld = await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW + 21 * 60_000, 8000, createPriceCache(), store);
     expect(tooOld.kind).not.toBe("ready");
     // A stored list for another feed, or junk, is never used.
     saved = "not json";
-    expect((await loadLiveCatalog({ provider: "kraken" }, fetcher, NOW + 1000, 8000, createPriceCache(), store)).kind).not.toBe("ready");
+    expect((await loadLiveCatalog({ provider: "kraken" }, noCapture(fetcher), NOW + 1000, 8000, createPriceCache(), store)).kind).not.toBe("ready");
   });
 });
