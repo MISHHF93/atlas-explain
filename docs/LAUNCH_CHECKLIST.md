@@ -34,7 +34,7 @@ Education only: no buy/sell wording, never reads balances or account details.
 12. **Licensed price feed.** Remote Config `price_provider` defaults to `kraken`. Before a public market launch, set it to `coingecko` and obtain a paid CoinGecko commercial plan (attribution is already shown), or keep Kraken only after written consent. Optional: set `coingecko_demo_api_key` in Remote Config (never commit a key). See `docs/legal/DATA_SOURCES.md`. Do not train any model on these feeds.
 
 ### After judging
-13. **Billing switch-on:** once phase 2 below is built, follow "Go-live" in `docs/MONETIZATION.md` (Stripe account, Payment Links, portal link, read-only key, webhook, Worker secrets, test purchase), then flip Remote Config `billing_enabled` to `true`. No Blaze plan needed.
+13. **Billing switch-on:** follow "Go-live" in `docs/MONETIZATION.md` (Stripe account, Payment Links, portal link, read-only key, webhook, Worker secrets, test purchase), then flip Remote Config `billing_enabled` to `true`. No Blaze plan needed.
 14. **Monitoring sink:** add a real sink (for example Firebase Analytics or Sentry) with `addMonitorSink` and mention it in the privacy policy.
 
 ## Added in the production pass (November 2026)
@@ -66,8 +66,8 @@ Every phase keeps the connector and all of today's tools free, and never adds tr
 
 ### Phase 2: Pro in the web app (after judging)
 Engineer:
-- [ ] Worker endpoint `POST /billing/v1/stripe`: verify the Stripe signature (HMAC-SHA256, 5-minute tolerance), handle `checkout.session.completed`, `customer.subscription.updated` and `customer.subscription.deleted`, keep subscription → account in KV, write or delete `users/{uid}/plan/current` through the Firestore REST API with a service-account token. Reuse `src/core/billing-sync.ts`. Tests with recorded Stripe payloads; never downgrade on an error.
-- [ ] A test that the app's checkout copy and the webhook agree that Pro turns on immediately.
+- [x] Worker endpoint `POST /billing/v1/stripe` (16 Nov 2026, `src/mcp/billing-webhook.ts`): verify the Stripe signature (HMAC-SHA256, 5-minute tolerance), handle `checkout.session.completed`, `customer.subscription.updated` and `customer.subscription.deleted`, keep subscription → account in KV, write or delete `users/{uid}/plan/current` through the Firestore REST API with a service-account token. Reuse `src/core/billing-sync.ts`. Tests with recorded Stripe payloads; never downgrade on an error.
+- [x] A test that the app's checkout copy and the webhook agree that Pro turns on immediately (`test/billing-webhook.test.ts`).
 Owner:
 - [ ] Stripe test mode: product, two prices, two Payment Links, customer portal login link, restricted read-only key, webhook endpoint (`docs/MONETIZATION.md`, Go-live 2–7).
 - [ ] Worker secrets `STRIPE_WEBHOOK_SECRET`, `STRIPE_RESTRICTED_KEY`, `FIREBASE_SERVICE_ACCOUNT` (Go-live 8).

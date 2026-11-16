@@ -15,7 +15,7 @@
  * so an outage can never switch a paying account back to Free.
  */
 import { createSign } from "node:crypto";
-import { planChanges, plansFromStripe, type PlanRecord, type StripeSession, type StripeSubscription } from "../../src/core/billing-sync.ts";
+import { planChanges, planFields, planFromFields, plansFromStripe, type FsFields, type PlanRecord, type StripeSession, type StripeSubscription } from "../../src/core/billing-sync.ts";
 
 const TIMEOUT_MS = 30_000;
 const DRY_RUN = process.env.DRY_RUN === "1";
@@ -89,37 +89,6 @@ async function accessToken(account: ServiceAccount): Promise<string> {
   return body.access_token;
 }
 
-type FsValue = { stringValue?: string; booleanValue?: boolean; timestampValue?: string; nullValue?: null };
-type FsFields = Record<string, FsValue>;
-
-function toFields(record: PlanRecord, now: Date): FsFields {
-  return {
-    plan: { stringValue: record.plan },
-    status: { stringValue: record.status },
-    subscriptionId: { stringValue: record.subscriptionId },
-    interval: { stringValue: record.interval },
-    cancelAtPeriodEnd: { booleanValue: record.cancelAtPeriodEnd },
-    currentPeriodEnd: record.currentPeriodEndMs === null ? { nullValue: null } : { timestampValue: new Date(record.currentPeriodEndMs).toISOString() },
-    updatedAt: { timestampValue: now.toISOString() },
-  };
-}
-
-/** A stored document back as a PlanRecord, or null when it is not one this job wrote (it is then rewritten). */
-function fromFields(fields: FsFields | undefined): PlanRecord | null {
-  const interval = fields?.interval?.stringValue;
-  const end = fields?.currentPeriodEnd?.timestampValue;
-  if (fields?.plan?.stringValue !== "pro" || !fields.status?.stringValue || !fields.subscriptionId?.stringValue) return null;
-  if (interval !== "month" && interval !== "year" && interval !== "other") return null;
-  return {
-    plan: "pro",
-    status: fields.status.stringValue,
-    subscriptionId: fields.subscriptionId.stringValue,
-    interval,
-    cancelAtPeriodEnd: fields.cancelAtPeriodEnd?.booleanValue === true,
-    currentPeriodEndMs: end ? Date.parse(end) : null,
-  };
-}
-
 const PLAN_DOC = /\/documents\/users\/([A-Za-z0-9]{1,128})\/plan\/current$/;
 
 /** Every plan document that exists. They exist only for paying accounts, so this stays small. */
@@ -132,7 +101,7 @@ async function storedPlans(base: string, auth: Record<string, string>): Promise<
   const stored = new Map<string, PlanRecord | null>();
   for (const row of rows) {
     const uid = row.document ? PLAN_DOC.exec(row.document.name)?.[1] : undefined;
-    if (uid && row.document) stored.set(uid, fromFields(row.document.fields));
+    if (uid && row.document) stored.set(uid, planFromFields(row.document.fields));
   }
   return stored;
 }
@@ -170,7 +139,7 @@ async function main(): Promise<void> {
     await getJson(`${base}/users/${uid}/plan/current`, {
       method: "PATCH",
       headers: { ...auth, "Content-Type": "application/json" },
-      body: JSON.stringify({ fields: toFields(record, now) }),
+      body: JSON.stringify({ fields: planFields(record, now) }),
     }, "Writing a plan to Firestore");
   }
   for (const uid of changes.remove) {

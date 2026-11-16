@@ -55,6 +55,60 @@ function intervalOf(sub: StripeSubscription): PlanRecord["interval"] {
   return interval === "month" || interval === "year" ? interval : "other";
 }
 
+/** True for a Firebase Auth uid this code will write a plan for. */
+export const isAccountUid = (uid: unknown): uid is string => typeof uid === "string" && ACCOUNT_UID.test(uid);
+
+/** The subscription id a Checkout Session created, if any. */
+export function sessionSubscriptionId(session: StripeSession): string | null {
+  const id = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+  return typeof id === "string" && id.startsWith("sub_") ? id : null;
+}
+
+/** The plan one subscription gives, or null when its status no longer pays for Pro. */
+export function planFromSubscription(sub: StripeSubscription): PlanRecord | null {
+  if (!PAID_STATUSES.includes(sub.status)) return null;
+  return {
+    plan: "pro",
+    status: sub.status,
+    subscriptionId: sub.id,
+    interval: intervalOf(sub),
+    cancelAtPeriodEnd: sub.cancel_at_period_end === true,
+    currentPeriodEndMs: periodEndMs(sub),
+  };
+}
+
+/** Firestore REST field values for a plan document (shared by the sync job and the Worker's webhook). */
+export type FsValue = { stringValue?: string; booleanValue?: boolean; timestampValue?: string; nullValue?: null };
+export type FsFields = Record<string, FsValue>;
+
+export function planFields(record: PlanRecord, now: Date): FsFields {
+  return {
+    plan: { stringValue: record.plan },
+    status: { stringValue: record.status },
+    subscriptionId: { stringValue: record.subscriptionId },
+    interval: { stringValue: record.interval },
+    cancelAtPeriodEnd: { booleanValue: record.cancelAtPeriodEnd },
+    currentPeriodEnd: record.currentPeriodEndMs === null ? { nullValue: null } : { timestampValue: new Date(record.currentPeriodEndMs).toISOString() },
+    updatedAt: { timestampValue: now.toISOString() },
+  };
+}
+
+/** A stored document back as a PlanRecord, or null when it is not one this code wrote. */
+export function planFromFields(fields: FsFields | undefined): PlanRecord | null {
+  const interval = fields?.interval?.stringValue;
+  const end = fields?.currentPeriodEnd?.timestampValue;
+  if (fields?.plan?.stringValue !== "pro" || !fields.status?.stringValue || !fields.subscriptionId?.stringValue) return null;
+  if (interval !== "month" && interval !== "year" && interval !== "other") return null;
+  return {
+    plan: "pro",
+    status: fields.status.stringValue,
+    subscriptionId: fields.subscriptionId.stringValue,
+    interval,
+    cancelAtPeriodEnd: fields.cancelAtPeriodEnd?.booleanValue === true,
+    currentPeriodEndMs: end ? Date.parse(end) : null,
+  };
+}
+
 /** The plan every paying account should have right now, keyed by account id. */
 export function plansFromStripe(sessions: readonly StripeSession[], subscriptions: readonly StripeSubscription[]): Map<string, PlanRecord> {
   const byId = new Map(subscriptions.map((sub) => [sub.id, sub]));
@@ -62,17 +116,10 @@ export function plansFromStripe(sessions: readonly StripeSession[], subscription
   for (const session of sessions) {
     const uid = session.client_reference_id ?? "";
     if (session.status !== "complete" || !ACCOUNT_UID.test(uid)) continue;
-    const subId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+    const subId = sessionSubscriptionId(session);
     const sub = subId ? byId.get(subId) : undefined;
-    if (!sub || !PAID_STATUSES.includes(sub.status)) continue;
-    const record: PlanRecord = {
-      plan: "pro",
-      status: sub.status,
-      subscriptionId: sub.id,
-      interval: intervalOf(sub),
-      cancelAtPeriodEnd: sub.cancel_at_period_end === true,
-      currentPeriodEndMs: periodEndMs(sub),
-    };
+    const record = sub ? planFromSubscription(sub) : null;
+    if (!record) continue;
     // Someone who subscribed twice keeps the plan that runs longest.
     const held = plans.get(uid);
     if (!held || (record.currentPeriodEndMs ?? 0) > (held.currentPeriodEndMs ?? 0)) plans.set(uid, record);

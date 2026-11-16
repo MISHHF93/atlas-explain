@@ -15,8 +15,8 @@ The owner keeps the Firebase project on the free Spark plan with no card on file
 |---|---|---|
 | Checkout | A **Stripe Payment Link** per price. The app opens it with `?client_reference_id=<account id>`, so Stripe records which account paid. | Built (`src/core/billing.ts`) |
 | Change or cancel | Stripe's hosted **customer portal** login link. | Built |
-| Granting Pro | Stripe sends **webhooks** to the Worker at `/billing/v1/stripe`. The Worker checks Stripe's signature, then writes `users/{uid}/plan/current` in Firestore through the Firestore REST API, using a Google service account held as a Worker secret. Pro is on as soon as Stripe confirms payment. | **To build** (phase 2) |
-| Matching later events | Subscription updates and cancellations carry the subscription id, not the account. The Worker keeps `billing/v1/sub/<subscription id>` → account id in its KV store, written at checkout. | **To build** |
+| Granting Pro | Stripe sends **webhooks** to the Worker at `/billing/v1/stripe`. The Worker checks Stripe's signature, then writes `users/{uid}/plan/current` in Firestore through the Firestore REST API, using a Google service account held as a Worker secret. Pro is on as soon as Stripe confirms payment. | Built 16 Nov 2026 (`src/mcp/billing-webhook.ts`); waits for the owner's Stripe setup and secrets |
+| Matching later events | Subscription updates and cancellations carry the subscription id, not the account. The Worker keeps `billing/v1/sub/<subscription id>` → account id in its KV store, written at checkout. | Built |
 | Reconciling | The existing job (`scripts/billing/sync-plans.ts`, run by hand from GitHub Actions) stays as a backup: it rebuilds every plan from Stripe if a webhook was ever missed. | Built, not yet run live |
 | Reading the plan | The app reads that document. Firestore rules let an account read its own plan and never write it. | Built |
 | Daily cloud limit | The app counts cloud answers in `users/{uid}/usage/{yyyy-mm-dd}` (UTC) and stops at the plan's limit. | Built |
@@ -61,7 +61,7 @@ Both go away once revenue pays for the paid Gemini tier. That is the first thing
 | Phase | What | Needs |
 |---|---|---|
 | 1. Free (now, through judging) | Everything free; `billing_enabled` false | Nothing |
-| 2. Pro in the web app | Stripe test mode, then the Worker's webhook endpoint and secrets, then live mode and `billing_enabled` true | Owner's Stripe account; engineer builds `/billing/v1/stripe` (about a day, with tests) |
+| 2. Pro in the web app | Stripe test mode, the webhook endpoint's secrets, then live mode and `billing_enabled` true | Owner's Stripe account (the endpoint is built and tested) |
 | 3. Pro in the connector | Premium connector tools (see `docs/PRICING.md` ³) behind a sign-in | Owner decision on which tools; engineer builds OAuth on the Worker |
 | 4. Paid Gemini tier | Move the cloud fallback to Gemini's paid tier: Pro's limit to 300, the stronger model, EEA/UK allowed, no training on prompts | Revenue to cover it; owner adds a card to Google Cloud |
 
@@ -77,7 +77,8 @@ The free tools must keep working with no account, in every assistant. So the con
 
 - Plan math, Stripe link checks and the plan-document reader: `src/core/billing.ts` (no Firebase).
 - The limit check and the usage count for every cloud answer, in the web app: `src/platform/web/explain-service.ts` (`cloudGate`, `recordCloudAnswer`).
-- Stripe records to plans, and the write/remove diff: `src/core/billing-sync.ts` (pure, tested in `test/billing-sync.test.ts`). The phase-2 webhook handler reuses it.
+- Stripe records to plans, the plan document's fields, and the write/remove diff: `src/core/billing-sync.ts` (pure, tested in `test/billing-sync.test.ts`). The webhook and the reconciliation job share it.
+- The webhook: `src/mcp/billing-webhook.ts`, routed by the Worker at `/billing/v1/stripe` (`src/mcp/live-data.ts`). Tested in `test/billing-webhook.test.ts` with Stripe-format signatures, a real RSA key for the Google token, and stand-ins for Stripe, Google and Firestore. Without its three secrets it answers 503, so it is harmless until the owner sets it up.
 - The reconciliation job: `scripts/billing/sync-plans.ts` with `.github/workflows/billing-sync.yml` (manual runs only). It needs only Node.
 - Remote Config keys: `billing_enabled`, `free_cloud_daily_limit` (10), `pro_cloud_daily_limit` (100), `pro_monthly_link`, `pro_yearly_link`, `billing_portal_link`. The three links are public URLs, not secrets. A value that is not a Stripe link is ignored and its button stays hidden.
 - Rules: `users/{uid}/plan/{doc}` is read-only for its owner. `users/{uid}/usage/{day}` can be created at 1 and raised by exactly 1; today's counter cannot be deleted.
@@ -85,13 +86,13 @@ The free tools must keep working with no account, in every assistant. So the con
 
 ### Not verified yet
 
-The pure logic is unit-tested. Nothing has run against real Stripe or Firestore, because that needs the owner's Stripe account and secrets. The first real run is step 9 below, in test mode.
+The logic and the webhook are tested against stand-ins. Nothing has run against real Stripe, Google or Firestore, because that needs the owner's Stripe account and secrets. The first real run is step 9 below, in test mode: Stripe's dashboard shows each delivery and the Worker's answer, and `npx wrangler@4 tail atlas-explain-mcp` shows a line per event ("billing evt_…: checkout for …: pro (active)").
 
 ## Go-live, after judging (owner steps, in order)
 
 Leave `billing_enabled` false until the last step. Do everything in **Stripe test mode** first, then repeat steps 2 to 7 in live mode.
 
-1. Confirm hackathon judging is over, and that the engineer has built the webhook endpoint (phase 2).
+1. Confirm hackathon judging is over. (The webhook endpoint is built and deployed with the connector.)
 2. **Stripe account.** Create one at stripe.com (free; it needs a bank account for payouts, not a card).
 3. **Product and prices.** Product `ATLAS Explain Pro`; recurring prices US$5.99 monthly and US$47.99 yearly (lookup keys `pro_monthly`, `pro_yearly`).
 4. **Payment Links.** One per price. For each: after payment → "Don't show confirmation page" → redirect to `https://atlas-explain.web.app/app/account?checkout=done`. Turn on promotion codes for the FOUNDER code, and Stripe Tax if your accountant says to. Copy the link (`https://buy.stripe.com/...`).

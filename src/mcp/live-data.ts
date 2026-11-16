@@ -4,7 +4,8 @@
  * One Worker, three jobs:
  *   - /mcp: the hosted MCP connector (src/mcp/http.ts, src/mcp/server.ts);
  *   - /data/v1/{market,news,crypto,economy}.json: the live data the web app and the connector both read;
- *   - capture: keeps that data fresh (src/data/capture.ts) in Workers KV.
+ *   - capture: keeps that data fresh (src/data/capture.ts) in Workers KV;
+ *   - /billing/v1/stripe: Stripe webhooks that turn Pro on and off (src/mcp/billing-webhook.ts).
  *
  * Fresh on every visit: whenever the app or the connector reads a file, it gets the stored copy
  * at once, and if that copy is older than REFRESH_AFTER_MS the Worker captures a new one in the
@@ -17,6 +18,7 @@ import { DATA_SITE_URL } from "../core/links";
 import type { Fetcher } from "./server";
 import { CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureEconomy, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
 import { readEconomyFile } from "../data/economy";
+import { STRIPE_WEBHOOK_PATH, handleStripeWebhook } from "./billing-webhook";
 import { readCryptoFile } from "../data/crypto";
 import { MARKET_SCHEMA, type MarketFile } from "../data/market-sources";
 import { readNewsFile } from "../core/news";
@@ -33,6 +35,10 @@ export interface WorkerEnv {
   DATA: DataStore;
   /** Optional Worker secret: a free eia.gov key. Without it energy prices are skipped. */
   EIA_API_KEY?: string;
+  /** Billing secrets (docs/MONETIZATION.md, Go-live step 8). Without them the webhook answers 503. */
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_RESTRICTED_KEY?: string;
+  FIREBASE_SERVICE_ACCOUNT?: string;
 }
 
 export interface WaitContext {
@@ -215,9 +221,11 @@ export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(),
   await capture(file, env, now, "cron", sleep);
 }
 
-/** The Worker's request handler: live data at /data/v1, the connector everywhere else. */
+/** The Worker's request handler: live data at /data/v1, Stripe webhooks, the connector everywhere else. */
 export function handleRequest(request: Request, env: WorkerEnv, ctx?: WaitContext): Promise<Response> {
-  const file = fileOf(new URL(request.url).pathname);
+  const path = new URL(request.url).pathname;
+  if (path === STRIPE_WEBHOOK_PATH) return handleStripeWebhook(request, env);
+  const file = fileOf(path);
   if (file) return serveData(request, env, file, ctx);
   return handleHttp(request, ownDataFetch(env, ctx));
 }
