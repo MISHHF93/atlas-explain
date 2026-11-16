@@ -168,6 +168,12 @@ export const NEWS_GAP_MS = 6_000;
 
 /** Headlines for each news target. A query that fails keeps that asset's last headlines. */
 export async function captureNews(env: CaptureEnv, prev: NewsFile | null): Promise<NewsFile> {
+  // Official press releases first: keyless RSS feeds that answer reliably, read in parallel, so
+  // a slow or refusing GDELT can never cost a run its headlines.
+  const feeds = await Promise.all(OFFICIAL_FEEDS.map((feed) => env.get(feed.url).catch(() => "")));
+  const official = feeds.flatMap((xml, i) => parseRss(xml, OFFICIAL_FEEDS[i]!.domain, env.now)).sort((a, b) => b.seenAt.localeCompare(a.seenAt));
+  const feedsAnswered = feeds.filter((xml) => /<(rss|feed)\b/i.test(xml)).length;
+
   const all: NewsItem[] = [];
   let answered = 0;
   for (const [i, query] of NEWS_GROUPS.entries()) {
@@ -181,16 +187,6 @@ export async function captureNews(env: CaptureEnv, prev: NewsFile | null): Promi
     if (body.trim().startsWith("{")) answered += 1;
     all.push(...parsed);
   }
-  // Official press releases: keyless RSS feeds that, unlike GDELT, answer automated requests.
-  const official: NewsItem[] = [];
-  let feedsAnswered = 0;
-  for (const feed of OFFICIAL_FEEDS) {
-    const xml = await env.get(feed.url).catch(() => "");
-    const parsed = parseRss(xml, feed.domain, env.now);
-    if (/<(rss|feed)\b/i.test(xml)) feedsAnswered += 1;
-    official.push(...parsed);
-  }
-  official.sort((a, b) => b.seenAt.localeCompare(a.seenAt));
 
   const fresh = assignNews([...all, ...official]);
   const items: Record<string, NewsItem[]> = {};

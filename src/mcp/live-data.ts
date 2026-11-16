@@ -92,7 +92,8 @@ export const CRONS = {
 function captureEnv(env: WorkerEnv, now: number): CaptureEnv {
   return {
     get: async (url, userAgent = CAPTURE_UA) => {
-      const res = await fetch(url, { headers: { "User-Agent": userAgent, Accept: "*/*" } });
+      // Every source gets 20 seconds, so one slow source can't hold up a scheduled run.
+      const res = await fetch(url, { headers: { "User-Agent": userAgent, Accept: "*/*" }, signal: AbortSignal.timeout(20_000) });
       if (!res.ok) throw new Error(`${new URL(url).host} answered ${res.status}`);
       return res.text();
     },
