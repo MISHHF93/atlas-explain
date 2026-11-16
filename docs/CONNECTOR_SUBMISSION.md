@@ -39,18 +39,17 @@ Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `a
 - **Icon:** leave it at the default. The server serves its own favicon and icons from its own address (`/favicon.ico`, `/icon.png` 512×512, `/icon.svg`, generated from public/logo.svg by `node scripts/write-mcp-icons.mjs`), and announces the PNG and SVG in its MCP `icons`. `store/connector/icon-512.png` is the same image if the portal asks for an upload anyway.
 - **Slug** (permanent): `atlas-explain`
 
-### Carousel screenshots (MCP App)
+### Carousel screenshots (MCP Apps)
 
-Four 1200px-wide PNGs in `store/connector/`, cropped to the app response, made by `node store/src/capture-connector.mjs` from the live server with real data:
+Five 1200px-wide PNGs in `store/connector/`, cropped to the app response, made by `node store/src/capture-connector.mjs` from the live server with real data. The portal needs them served over https from our own domain, so the same files are published at `https://atlas-explain.web.app/directory/<file>` (copied into `public/directory/`; re-copy and redeploy hosting after re-running the script). Entered in the portal on 16 Nov 2026.
 
 | File | Prompt |
 |---|---|
 | chart-btc-7d.png | Show me Bitcoin's price over the last 7 days with ATLAS Explain. |
-| chart-eth-30d.png | How has Ethereum moved over the last 30 days? Use ATLAS Explain. |
+| crypto-board.png | What are the big crypto moves today? Use ATLAS Explain. |
+| yield-curve.png | Show me the US Treasury yield curve with ATLAS Explain. |
 | chart-sol-24h.png | Using ATLAS Explain, chart Solana over the last 24 hours. |
-| chart-xrp-7d.png | What did XRP do this week? Show it with ATLAS Explain. |
-
-Re-run the script just before submitting so the prices are current.
+| chart-eth-30d.png | How has Ethereum moved over the last 30 days? Use ATLAS Explain. |
 
 ## 4. Use cases
 
