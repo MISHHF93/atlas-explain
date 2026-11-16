@@ -357,9 +357,12 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   ).then((v) => { brief.show(v); refreshToday(); });
 
   // Market moves (ATLAS desk links, samples, your own card) keep their full flow, one tap away.
-  // A market move opens here only from a link (the ATLAS desk or a shared explanation). It stays hidden otherwise.
-  const moveBox = disclosure("Explain a market move", [
-    el("p", "fine", "The answer weighs both sides of the move. Samples use rounded figures from public news reports."),
+  // Shown to everyone, closed, under Recent: a sample move (or one sent by the ATLAS desk) with
+  // optional private notes, which only ever go to the on-device model. This is where the privacy
+  // routing of hybrid inference is visible: a cloud fallback drops the notes and says so.
+  const moveBox = disclosure("Explain a market move, with private notes", [
+    el("p", "fine", "Pick a sample move and press Explain the move. The answer weighs both sides. Samples use rounded figures from public news reports."),
+    el("p", "fine", "Add private notes about your own situation if you like: they are used only when Gemini Nano answers on this device. If the answer has to come from the cloud, they are left out and the answer says so."),
     fromDesk,
     moveSlot,
     sampleRow,
@@ -376,7 +379,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     actions,
   ]);
   moveBox.classList.add("move-box");
-  moveBox.hidden = true;
 
   shell.panels.explain.append(
     panel.head,
