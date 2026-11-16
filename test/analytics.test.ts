@@ -1,5 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { EVENTS, createTracker, readConsent, sanitizeEvent } from "../src/core/analytics";
 import { DEFAULT_SETTINGS } from "../src/core/settings";
@@ -45,16 +44,8 @@ describe("analytics privacy rules", () => {
   });
 });
 
-describe("the Chrome extension", () => {
-  it("contains no analytics code at all", () => {
-    const files = readdirSync("extension/src").filter((f) => f.endsWith(".ts")).map((f) => readFileSync(join("extension/src", f), "utf8"));
-    for (const src of files) {
-      expect(src).not.toMatch(/firebase\/analytics|core\/analytics|gtag/);
-    }
-  });
-
+describe("the web app", () => {
   it("logs errors to the console only in development builds", () => {
-    expect(readFileSync("extension/src/popup.ts", "utf8")).toContain("if (import.meta.env.DEV) addMonitorSink(consoleSink);");
     expect(readFileSync("src/main.ts", "utf8")).toContain("if (import.meta.env.DEV) addMonitorSink(consoleSink);");
   });
 });

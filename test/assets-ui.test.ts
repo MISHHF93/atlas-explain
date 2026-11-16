@@ -1,41 +1,22 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { LOCAL_ATLAS_PERMISSION_NOTE } from "../src/core/extension-prompt";
 
 const box = JSON.parse(readFileSync("test/fixtures/atlas-catalog.json", "utf8")) as unknown;
 const TRADE = /\b(buy|sell)\b/i;
 
-describe("assets UI and extension", () => {
-  const manifest = JSON.parse(readFileSync("extension/manifest.json", "utf8")) as { host_permissions?: string[]; permissions: string[] };
+describe("assets UI", () => {
   const ui = readFileSync("src/wallet/assets.ts", "utf8");
   const ctl = readFileSync("src/wallet/assets-controller.ts", "utf8");
   const shell = readFileSync("src/wallet/shell.ts", "utf8");
   const css = readFileSync("src/wallet/wallet.css", "utf8");
-  const popup = readFileSync("extension/src/popup.ts", "utf8");
   const web = readFileSync("src/web/app.ts", "utf8");
-  const legal = readFileSync("src/wallet/legal.ts", "utf8");
-
-  it("asks at install only for our own web app; the local ATLAS host is optional and requested on demand", () => {
-    expect(manifest.host_permissions).toEqual(["https://atlas-explain.web.app/*"]);
-    expect((manifest as { optional_host_permissions?: string[] }).optional_host_permissions).toEqual(["http://localhost:3000/*"]);
-    expect(popup).toContain("chrome.permissions.request({ origins: ATLAS_ORIGINS })");
-    expect(popup).toContain("canReachAtlas: hasChrome && atlasAllowed");
-    expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/atlas-explain\.web\.app/);
-    expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/ATLAS research software/);
-    expect(LOCAL_ATLAS_PERMISSION_NOTE).toMatch(/never reads balances, accounts or keys/);
-    expect(popup).toContain("LOCAL_ATLAS_PERMISSION_NOTE");
-    // Public copy never asks people to run anything on localhost.
-    for (const text of [LOCAL_ATLAS_PERMISSION_NOTE, legal]) expect(text).not.toMatch(/localhost/);
-  });
 
   it("adds an Assets tab with list, badges, lights, detail, sparkline and the explain hand-off", () => {
     expect(shell).toContain('{ id: "assets", label: "Assets"');
     expect(css).toContain("repeat(var(--tab-count, 5), 1fr)");
     for (const part of ["asset-row", "fresh-badge", "light-dot", "Why this colour?", "Explain this", "connectCard", "spark", "Price predictions are not shown"]) expect(ui).toContain(part);
     expect(ctl).toContain("visibilitychange");
-    expect(popup).toContain("mountAssets");
     expect(web).toContain("canReachLocalAtlas(location, false)");
-    expect(popup).toContain("probeAtlasDesk");
   });
 
   it("keeps fonts at 11px or more and colours on tokens", () => {

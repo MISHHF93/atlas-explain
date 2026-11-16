@@ -1,16 +1,35 @@
-// Bundle-size budget for the web app and the extension. Run after both builds.
+// Bundle-size budget for the web app. Run after npm run build.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const MAX_CHUNK_KB = 500;
-/** The parts that load before anything is clicked must stay small. */
+/**
+ * The parts that load before anything is clicked must stay small. Each budget counts the entry
+ * file plus every chunk it imports statically (what the browser downloads before first paint),
+ * so moving code between the entry and a shared chunk can't hide or fake a change.
+ * The web app's first load was 183 kB on 15 Nov 2026 before the extension was removed, 182 kB after.
+ */
 export const ENTRY_BUDGETS_KB = [
-  { label: "extension popup.js", match: /^extension\/dist\/popup\.js$/, max: 120 },
-  { label: "extension background.js", match: /^extension\/dist\/background\.js$/, max: 20 },
-  { label: "web app entry app-*.js", match: /^dist\/assets\/app-[^/]+\.js$/, max: 150 },
-  { label: "public site script site-*.js", match: /^dist\/assets\/site-[^/]+\.js$/, max: 10 },
+  { label: "web app first load (app-*.js and its static imports)", match: /^dist\/assets\/app-[^/]+\.js$/, max: 190 },
+  { label: "public site first load (site-*.js and its static imports)", match: /^dist\/assets\/site-[^/]+\.js$/, max: 10 },
 ];
+
+/** Bytes of a chunk plus everything it imports statically (`from"./x.js"` in the built output). */
+function firstLoadBytes(file) {
+  const seen = new Set();
+  const todo = [file];
+  let total = 0;
+  while (todo.length) {
+    const current = todo.pop();
+    if (seen.has(current)) continue;
+    seen.add(current);
+    const text = readFileSync(current, "utf8");
+    total += Buffer.byteLength(text);
+    for (const m of text.matchAll(/(?:from|import)\s*"\.\/([^"]+\.js)"/g)) todo.push(join(dirname(current), m[1]));
+  }
+  return total;
+}
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const walk = (dir) =>
@@ -21,7 +40,7 @@ const walk = (dir) =>
 
 const problems = [];
 const rows = [];
-for (const dir of ["dist", "extension/dist"]) {
+for (const dir of ["dist"]) {
   let files;
   try {
     files = walk(join(root, dir)).filter((f) => f.endsWith(".js"));
@@ -35,7 +54,10 @@ for (const dir of ["dist", "extension/dist"]) {
     rows.push([rel, kb]);
     if (kb > MAX_CHUNK_KB) problems.push(`${rel} is ${kb.toFixed(1)} kB (max ${MAX_CHUNK_KB} kB per chunk)`);
     for (const b of ENTRY_BUDGETS_KB) {
-      if (b.match.test(rel) && kb > b.max) problems.push(`${b.label} is ${kb.toFixed(1)} kB (budget ${b.max} kB)`);
+      if (!b.match.test(rel)) continue;
+      const first = firstLoadBytes(file) / 1000;
+      console.log(`  ${b.label}: ${first.toFixed(1)} kB (budget ${b.max} kB)`);
+      if (first > b.max) problems.push(`${b.label} is ${first.toFixed(1)} kB (budget ${b.max} kB)`);
     }
   }
 }

@@ -15,8 +15,6 @@ export const EXPLAIN_WEB_URL = "https://atlas-explain.web.app";
 export const APP_URL = `${EXPLAIN_WEB_URL}/app`;
 /** The one page for setting up the connector in AI assistants. */
 export const CONNECT_URL = `${EXPLAIN_WEB_URL}/connect`;
-/** Chrome Web Store listing, e.g. "https://chromewebstore.google.com/detail/atlas-explain/<id>". */
-export const CHROME_STORE_URL: string | null = null;
 
 /* ---------- the data site (published by the scheduled data job) ---------- */
 export const DATA_SITE_URL = "https://atlas-explain-data.web.app";

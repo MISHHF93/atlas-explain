@@ -1,7 +1,7 @@
 {
   "name": "atlas-explain",
   "version": "0.1.0",
-  "description": "Educational explanations of market moves using Firebase AI Logic hybrid inference. Not financial advice.",
+  "description": "Market jargon in plain language: an MCP connector for AI assistants and a web app with Firebase AI Logic hybrid inference. Education only, not financial advice.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
@@ -10,17 +10,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:extension": "vite build --config vite.extension.config.ts && node scripts/zip-extension.mjs",
     "build:mcp": "vite build --config vite.mcp.config.ts",
     "deploy:mcp": "npx wrangler@4 deploy",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.extension.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
     "remote-config": "node scripts/emit-remote-config.mjs",
-    "check:manifest": "node scripts/check-manifest.mjs",
-    "release:extension": "npm run build:extension && node scripts/release-extension.mjs",
-    "version": "node scripts/sync-manifest-version.mjs && git add extension/manifest.json",
     "check:bundle": "node scripts/bundle-budget.mjs",
     "check:trade-words": "node scripts/trade-word-scan.mjs",
     "release:check": "node scripts/release-check.mjs",
@@ -32,7 +28,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@firebase/rules-unit-testing": "^6.0.0",
-    "@types/chrome": "^0.3.7",
     "eslint": "^10.14.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.2",

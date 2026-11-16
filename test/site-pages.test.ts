@@ -1,9 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { SITE_PAGES, sitePage } from "./site-page";
 import { describe, expect, it } from "vitest";
-import { CHROME_STORE_URL } from "../src/core/links";
 
-const PAGES = ["index.html", "connect.html", "support.html", "privacy.html", "terms.html", "welcome.html", "how-its-built.html", "404.html", "app.html"];
+const PAGES = ["index.html", "connect.html", "support.html", "privacy.html", "terms.html", "how-its-built.html", "404.html", "app.html"];
 const home = sitePage("index.html");
 const hosting = JSON.parse(readFileSync("firebase.json", "utf8")).hosting as {
   rewrites: { source: string }[];
@@ -19,15 +18,17 @@ describe("the public site is four pages", () => {
     expect(readFileSync("public/sitemap.xml", "utf8")).not.toContain("how-it-works");
   });
 
-  it("keeps how it works and the install steps on Home", () => {
+  it("keeps how it works on Home, and offers no Chrome extension anywhere", () => {
     expect(home).toContain('id="how-it-works"');
-    expect(home).toContain('id="install"');
-    // Installed online only: no zip, no Developer mode, no build steps for visitors.
+    expect(home).toContain('id="browser"');
+    // Online only, and no extension: nothing to download or install.
     expect(home).not.toMatch(/\.zip|Load unpacked|Developer mode|npm /);
-    expect(home).toContain("not in the Chrome Web Store yet");
-    expect(home).toMatch(/<div data-when-store hidden>[\s\S]*data-store-link/);
+    for (const page of PAGES) expect(readFileSync(page, "utf8"), page).not.toMatch(/Chrome extension|Chrome Web Store|data-store-link|Add to Chrome/);
     expect(readFileSync("how-its-built.html", "utf8")).not.toMatch(/npm |unpacked/);
-    expect(hosting.redirects).toContainEqual({ source: "/download/**", destination: "/#install", type: 301 });
+    expect(hosting.redirects).toContainEqual({ source: "/download/**", destination: "/connect", type: 301 });
+    expect(hosting.redirects).toContainEqual({ source: "/welcome", destination: "/connect", type: 301 });
+    expect(existsSync("welcome.html")).toBe(false);
+    expect(existsSync("extension")).toBe(false);
     expect(home).toContain("No predictions.");
   });
 
@@ -35,7 +36,6 @@ describe("the public site is four pages", () => {
     // A redirect with no fragment of its own keeps the visitor's #install.
     expect(hosting.redirects).toContainEqual({ source: "/how-it-works", destination: "/", type: 301 });
     expect(hosting.rewrites.map((r) => r.source)).not.toContain("/how-it-works");
-    expect(CHROME_STORE_URL === null || CHROME_STORE_URL.startsWith("https://chromewebstore.google.com/")).toBe(true);
   });
 
   it("has no link to the removed page anywhere", () => {
@@ -57,16 +57,9 @@ describe("one header and one footer for every site page", () => {
     const footer = /<nav aria-label="Footer">(.*?)<\/nav>/.exec(sitePage("index.html"))?.[1] ?? "";
     const hrefs = [...footer.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(hrefs).size).toBe(hrefs.length);
-    expect(hrefs).toEqual(expect.arrayContaining(["/app", "/welcome#step-try", "/connect", "/support", "/privacy", "/terms"]));
+    expect(hrefs).toEqual(expect.arrayContaining(["/app", "/connect", "/support", "/privacy", "/terms"]));
+    expect(hrefs[0]).toBe("/connect");
     expect(hrefs).not.toContain("/support#faq");
-  });
-
-  it("only says Add to Chrome when there is a store listing to add from", () => {
-    for (const f of SITE_PAGES) {
-      const page = sitePage(f);
-      if (CHROME_STORE_URL) expect(page, f).toContain(CHROME_STORE_URL);
-      else expect(page.replace(/<!--[\s\S]*?-->/g, ""), f).not.toMatch(/>Add to Chrome</);
-    }
   });
 
   it("does not repeat the Support FAQ on Home", () => {

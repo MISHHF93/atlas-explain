@@ -5,7 +5,6 @@ const BASE = "https://atlas-explain.web.app";
 const PAGES: Record<string, string> = {
   "index.html": "/",
   "how-its-built.html": "/how-its-built",
-  "welcome.html": "/welcome",
   "support.html": "/support",
   "connect.html": "/connect",
   "privacy.html": "/privacy",

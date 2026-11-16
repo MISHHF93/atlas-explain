@@ -2,7 +2,7 @@
  * Privacy-respecting product analytics (PR 7): the web app only, only after consent, only when
  * the owner turns it on (Remote Config analytics_enabled), and only these events with these
  * fields. Nothing a person highlights, types or saves is ever sent; neither are prices or symbols.
- * The Chrome extension sends no analytics at all.
+ * The AI-assistant connector sends no analytics at all.
  */
 
 export const CONSENT_KEY = "atlas-explain-analytics-consent";

@@ -25,7 +25,7 @@ export function consentBar(onChoice: (value: "granted" | "denied") => void): HTM
   const bar = el("section", "consent-bar");
   bar.setAttribute("role", "region");
   bar.setAttribute("aria-label", "Usage statistics");
-  const text = el("p", undefined, "Help improve ATLAS Explain with anonymous usage statistics? We never collect what you highlight, type or save. ");
+  const text = el("p", undefined, "Help improve ATLAS Explain with anonymous usage statistics? We never collect what you type or save. ");
   const more = el("a", undefined, "Privacy") as HTMLAnchorElement;
   more.href = "/privacy#analytics";
   more.target = "_blank";

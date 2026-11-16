@@ -13,12 +13,10 @@ import { applyTheme, type ThemeChoice } from "./shell";
 export const HOW_ANSWERS_ARE_MADE =
   "When your browser supports it, Gemini Nano answers on your device and nothing is sent. Otherwise Gemini answers in the cloud. Every answer is labelled.";
 export const ABOUT_LINE = "ATLAS Explain is open source under the Apache-2.0 licence. Education only, never investment advice.";
-const ACCOUNT_NOTE = "Sign in on the ATLAS Explain website in this Chrome profile, and the extension uses the same account. Signing in is optional.";
-const DATA_ON_WEBSITE_NOTE = "Download your data or delete your account on the ATLAS Explain website. Recent explanations in the extension stay in this browser; clear them from Recent.";
 const ATLAS_NOTE = "If you run ATLAS research software on this computer, ATLAS Explain can read its prices and research figures. Most people don't need this.";
 
 /** The group titles, in the order they appear. Tests and both surfaces rely on this one list. */
-export const SETTINGS_GROUPS = ["Appearance", "On this page", "How answers are made", "Account", "Your data", "Usage statistics", "Privacy and terms", "For ATLAS users", "About"] as const;
+export const SETTINGS_GROUPS = ["Appearance", "How answers are made", "Your data", "Usage statistics", "Privacy and terms", "For ATLAS users", "About"] as const;
 
 export interface SettingsAction {
   icon: IconName;
@@ -32,25 +30,21 @@ export interface SettingsOptions {
   theme: ThemeChoice;
   /** Remember the choice. Applying it to the page is done here. */
   onTheme: (choice: ThemeChoice) => void;
-  /** Extension only: things that act on the page the popup was opened over. */
-  pageTools?: { onPin: () => void; onSidePanel: () => void; status: HTMLElement };
-  /** Extension only: the web app shows its sign-in panel above Settings instead. */
-  onAccount?: () => void;
-  /** Web app: the full "Your data" group. Extension: a link to it on the website. */
-  yourData: HTMLElement | { onOpenWebsite: () => void };
+  /** The full "Your data" group. */
+  yourData: HTMLElement;
   /** Web app only, and only when the owner has switched analytics on. */
   stats?: HTMLElement;
   legal: { note?: string; onTerms?: () => void; onPrivacy: () => void };
-  /** Extension only: the optional permission to read ATLAS on this computer. */
+  /** Optional: read ATLAS research software on this computer. */
   atlas?: SettingsAction;
   about: { version?: string; hint?: string; action: SettingsAction };
 }
 
 export interface SettingsHandle {
   nodes: Node[];
-  /** Show a theme that was loaded after the sheet was built (the popup reads it from storage). */
+  /** Show a theme that was loaded after the sheet was built. */
   setTheme: (choice: ThemeChoice) => void;
-  /** Relabel the ATLAS row once the popup knows whether the permission is granted. */
+  /** Relabel the ATLAS row. */
   setAtlasLabel: (label: string) => void;
 }
 
@@ -67,23 +61,9 @@ export function buildSettings(options: SettingsOptions): SettingsHandle {
   const act = (a: SettingsAction): HTMLButtonElement => row(a.icon, a.label, a.run);
   const nodes: Node[] = [options.plan, group("Appearance", [themeSlot])];
 
-  if (options.pageTools) {
-    nodes.push(group("On this page", [
-      row("pin", "Show Explain button on this page", options.pageTools.onPin),
-      row("panel", "Open in side panel", options.pageTools.onSidePanel),
-      options.pageTools.status,
-    ]));
-  }
-
   nodes.push(group("How answers are made", [el("p", "fine", HOW_ANSWERS_ARE_MADE)]));
 
-  if (options.onAccount) {
-    nodes.push(group("Account", [el("p", "fine", ACCOUNT_NOTE), row("user", "Account and sign-in", options.onAccount)]));
-  }
-
-  nodes.push(options.yourData instanceof HTMLElement
-    ? options.yourData
-    : group("Your data", [el("p", "fine", DATA_ON_WEBSITE_NOTE), row("external", "Download or delete your data", options.yourData.onOpenWebsite)]));
+  nodes.push(options.yourData);
 
   if (options.stats) nodes.push(options.stats);
 

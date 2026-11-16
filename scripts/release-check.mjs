@@ -29,9 +29,7 @@ const steps = [
   ["lint", "npm", ["run", "lint"]],
   ["test", "npm", ["test"]],
   ["build (web)", "npm", ["run", "build"]],
-  ["build:extension", "npm", ["run", "build:extension"]],
   ["build:mcp", "npm", ["run", "build:mcp"]],
-  ["manifest least-privilege", "node", ["scripts/check-manifest.mjs"]],
   ["bundle budget", "node", ["scripts/bundle-budget.mjs"]],
   ["npm audit", "npm", ["audit", "--audit-level=low"]],
   ["trade-word scan", "node", ["scripts/trade-word-scan.mjs"]],
@@ -56,4 +54,4 @@ if (failed || results.length !== steps.length) {
   console.error(`\n✗ release:check failed at "${failed?.[0]}". Do not deploy.`);
   process.exit(1);
 }
-console.log("\n✓ release:check passed. Safe to deploy hosting and package the extension.");
+console.log("\n✓ release:check passed. Safe to deploy hosting and the MCP connector.");

@@ -30,7 +30,7 @@ describe("the header status pill", () => {
   });
 
   it("is decided in one place for both surfaces", () => {
-    for (const file of ["src/web/app.ts", "extension/src/popup.ts"]) {
+    for (const file of ["src/web/app.ts"]) {
       const src = readFileSync(file, "utf8");
       expect(src, file).toContain("shell.setConnection(connectionFor({");
       expect(src, file).not.toMatch(/setConnection\("(offline|desk|local|live|hosted|none)"\)/);

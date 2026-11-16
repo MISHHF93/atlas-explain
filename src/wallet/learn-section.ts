@@ -11,7 +11,6 @@ import { relatedTerms } from "../core/related-terms";
 import type { TermEntry } from "../core/terms";
 import { glossaryPanel } from "./glossary-panel";
 import { learnCard } from "./learn-card";
-import { el, labelledButton } from "./dom";
 
 export { relatedTerms };
 
@@ -27,8 +26,6 @@ export function mountLearn(host: HTMLElement, deps: {
   announce: (text: string) => void;
   /** Show only this many glossary terms until the reader searches, filters or asks for all. */
   initialCount?: number;
-  /** Open the practice page: sample sentences to highlight with the extension. */
-  onPractice?: () => void;
 }): void {
   let learned = parseLearned(deps.storedLearned);
   const slot = document.createElement("div");
@@ -50,17 +47,5 @@ export function mountLearn(host: HTMLElement, deps: {
     }));
   };
   render();
-  const extras: HTMLElement[] = [];
-  if (deps.onPractice) {
-    const practice = el("section", "card practice");
-    const open = labelledButton("highlight", "Open the practice page", "secondary");
-    open.addEventListener("click", deps.onPractice);
-    practice.append(
-      el("h3", "card-title", "Practise with real sentences"),
-      el("p", "fine", "Sample sentences from market news and order tickets, ready to highlight and explain with the Chrome extension. No prices and no account."),
-      open,
-    );
-    extras.push(practice);
-  }
-  host.replaceChildren(slot, glossaryPanel({ askLabel: EXPLAIN_TERM_LABEL, onAsk: deps.onAsk, initialCount: deps.initialCount }), ...extras);
+  host.replaceChildren(slot, glossaryPanel({ askLabel: EXPLAIN_TERM_LABEL, onAsk: deps.onAsk, initialCount: deps.initialCount }));
 }

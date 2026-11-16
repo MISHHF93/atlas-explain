@@ -4,28 +4,23 @@ import { addToHistory, makeEntry, parseHistory } from "../src/core/history";
 
 const panel = readFileSync("src/wallet/explain-panel.ts", "utf8");
 const app = readFileSync("src/web/app.ts", "utf8");
-const popup = readFileSync("extension/src/popup.ts", "utf8");
 
 describe("Explain is built once for both surfaces", () => {
   it("is mounted by the web app and by the popup", () => {
     expect(app).toContain("const panel = explainPanel({");
-    expect(popup).toContain("const panel = explainPanel({");
   });
 
   it("leaves each surface with only its own way of getting an answer", () => {
     expect(app).toContain("ask: askWeb,");
-    expect(popup).toContain("ask: askPopup,");
     expect(app).toContain("async function askWeb(request: ExplainRequest): Promise<ExplainOutcome>");
-    expect(popup).toContain("async function askPopup(request: ExplainRequest): Promise<ExplainOutcome>");
   });
 
   it("keeps the answer card, progress, errors and history out of both entry files", () => {
-    for (const [name, src] of [["web app", app], ["popup", popup]] as const) {
+    for (const [name, src] of [["web app", app]] as const) {
       expect(src, name).not.toMatch(/function (onExplainText|showTextAnswer|renderTextHistory|showExplanation|keepGoingFor|keepGoing|renderHistory|remember|runCard|loadHistory|historyItem|showResult|setBusy)\(/);
       expect(src, name).not.toContain("historyCard(");
       for (const card of ["explanationCard(", "loadingCard(", "limitCard(", "offlineCard("]) expect(src, `${name} ${card}`).not.toContain(card);
     }
-    expect(popup).not.toContain("messageCard(");
   });
 
   it("answers a market move through the same panel, so it has the same card, follow-ups and Recent", () => {
@@ -62,20 +57,12 @@ describe("Explain is built once for both surfaces", () => {
     expect(app).toContain("Market-move answers are also saved to your account");
   });
 
-  it("loads Gemini Nano when the popup opens, uses that session once, and never starts a download", () => {
-    const onDevice = readFileSync("extension/src/on-device.ts", "utf8");
-    expect(popup).toContain("void warmOnDevice();");
-    expect(onDevice).toContain("if (!shouldUseOnDevice(await model.availability())) return;");
-    expect(onDevice).toMatch(/const warm = spare;\s*spare = null;/);
-  });
-
   it("keeps only the first ask in Recent, not each follow-up", () => {
     expect(panel).toContain('show(outcome, outcome.kind === "answer" && !followUp);');
   });
 
   it("sends typed text the same way from both surfaces", () => {
     // Both pass the typed text as the thing to explain and the follow-up (or nothing) as the question.
-    expect(popup).toContain("buildExtensionPrompt({ context, question: request.question })");
     expect(app).toContain("backend.explainText(request.text, request.question,");
   });
 });

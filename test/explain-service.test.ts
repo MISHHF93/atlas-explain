@@ -124,10 +124,9 @@ describe("the one explain service", () => {
 
 describe("one back end, used by both surfaces", () => {
   const backend = readFileSync("src/platform/web/backend.ts", "utf8");
-  const bridge = readFileSync("src/bridge/main.ts", "utf8");
 
-  it("has the web app and the extension bridge start Firebase and ask for answers in the same place", () => {
-    for (const file of [backend, bridge]) {
+  it("has the web app start Firebase and ask for answers in the same place", () => {
+    for (const file of [backend]) {
       expect(file).toContain("startFirebase(env");
       expect(file).toContain("createExplainService({");
       expect(file).toContain("service.cloudGate(settings)");
@@ -137,7 +136,7 @@ describe("one back end, used by both surfaces", () => {
   });
 
   it("leaves no second copy of the model call, the limit check or the Firebase set-up", () => {
-    for (const file of [backend, bridge]) {
+    for (const file of [backend]) {
       expect(file).not.toMatch(/getGenerativeModel|initializeAppCheck|initializeApp\(|allowCloudCall\(|takeCloudSlot|peekCloudSlot|incrementCloudCalls|fetchAndActivate/);
     }
   });

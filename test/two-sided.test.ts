@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildExtensionPrompt, toPageContext } from "../src/core/extension-prompt";
 import { TWO_SIDED_SCHEMA, parseTwoSided, twoSidedCopyText } from "../src/core/two-sided";
@@ -43,13 +42,4 @@ describe("two-sided extension answers", () => {
     expect(text.trim().endsWith("not investment advice.")).toBe(true);
   });
 
-  it("the popup passes the schema to Gemini Nano and shares the web layout", () => {
-    const popup = readFileSync(new URL("../extension/src/popup.ts", import.meta.url), "utf8");
-    const web = readFileSync(new URL("../src/web/app.ts", import.meta.url), "utf8");
-    expect(popup).toContain("explainOnDevice(built.prompt, TWO_SIDED_SCHEMA)");
-    // The two-sided layout is drawn once, by the panel both surfaces mount.
-    const panel = readFileSync(new URL("../src/wallet/explain-panel.ts", import.meta.url), "utf8");
-    expect(panel).toContain("twoSidedNodes(twoSided)");
-    for (const src of [popup, web]) expect(src).toContain("explainPanel({");
-  });
 });

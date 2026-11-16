@@ -51,6 +51,6 @@ describe("keep-going follow-ups", () => {
     const panel = readFileSync("src/wallet/explain-panel.ts", "utf8");
     expect(panel).toContain("...FOLLOW_UPS.map((item) =>");
     expect(panel).toContain("ask: lastAsk");
-    for (const file of ["extension/src/popup.ts", "src/web/app.ts"]) expect(readFileSync(file, "utf8"), file).not.toContain("FOLLOW_UPS");
+    for (const file of ["src/web/app.ts"]) expect(readFileSync(file, "utf8"), file).not.toContain("FOLLOW_UPS");
   });
 });

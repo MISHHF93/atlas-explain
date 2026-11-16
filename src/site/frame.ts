@@ -1,18 +1,15 @@
 /**
  * The one header and footer of the public site pages (/, /connect, /support, /privacy, /terms,
- * /welcome, /how-its-built, 404). Each page holds only `<!-- site:header -->` and `<!-- site:footer -->`
+ * /how-its-built, 404). Each page holds only `<!-- site:header -->` and `<!-- site:footer -->`
  * markers; the build (vite.config.ts) and the tests (applySiteFrame) put this markup in, so the
  * pages can never drift apart again.
  *
  * The site is connector first: the header button leads to /connect, where an AI assistant gets the
- * ATLAS Explain address. The web app and the Chrome extension are the second option ("in your
- * browser"). Their wording is honest: until the Chrome Web Store listing exists (CHROME_STORE_URL in
- * src/core/links.ts), installCta says "Open the app" and opens the web app; setting the listing
- * turns it into "Add to Chrome" at the next build.
+ * ATLAS Explain address. The web app at /app is the second option, for use in the browser.
  */
-import { CHROME_STORE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
+import { EDUCATION_LINE, MCP_URL } from "../core/links";
 
-export type SitePage = "home" | "connect" | "support" | "privacy" | "terms" | "welcome" | "how-its-built" | "404";
+export type SitePage = "home" | "connect" | "support" | "privacy" | "terms" | "how-its-built" | "404";
 
 const SOURCE_URL = "https://github.com/MISHHF93/atlas-explain";
 
@@ -27,8 +24,6 @@ const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
 const FOOTER_LINKS: readonly { href: string; label: string }[] = [
   { href: "/connect", label: "Add to your AI assistant" },
   { href: "/app", label: "The app" },
-  { href: "/#install", label: "Chrome extension" },
-  { href: "/welcome#step-try", label: "Practice page" },
   { href: "/support", label: "Support and FAQ" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
@@ -39,11 +34,9 @@ export function connectCta(className: string): string {
   return `<a class="${className}" href="/connect">Add to your AI assistant</a>`;
 }
 
-/** The browser option's call to action: the store when listed, the web app until then. */
-export function installCta(className: string): string {
-  return CHROME_STORE_URL
-    ? `<a class="${className}" href="${CHROME_STORE_URL}" target="_blank" rel="noreferrer">Add to Chrome</a>`
-    : `<a class="${className}" href="/app">Open the app</a>`;
+/** The web app's call to action. */
+export function appCta(className: string): string {
+  return `<a class="${className}" href="/app">Open the app</a>`;
 }
 
 export function siteHeader(page: SitePage): string {
@@ -74,25 +67,14 @@ const HEADER_MARK = /<!--\s*site:header\s+([\w-]+)\s*-->/;
 const FOOTER_MARK = /<!--\s*site:footer\s*-->/;
 const CTA_MARK = /<!--\s*site:cta\s+"([^"]+)"\s*-->/g;
 
-/**
- * Shows the "live" block and hides the "not yet" block when the store listing is set, and puts the
- * address into its links (`data-store-link`). Done at build time, so the page never flashes the
- * wrong state and needs no script for it.
- */
-function switchOn(html: string, name: "store", url: string | null, fill: (html: string, url: string) => string): string {
-  if (!url) return html;
-  return fill(html.replaceAll(`data-before-${name}>`, `data-before-${name} hidden>`).replaceAll(`data-when-${name} hidden>`, `data-when-${name}>`), url);
-}
-
 /** Fills a page's markers. Throws if a page lost its markers, so a page can't ship without them. */
 export function applySiteFrame(html: string): string {
   const header = HEADER_MARK.exec(html);
   if (!header || !FOOTER_MARK.test(html)) throw new Error("Site page is missing <!-- site:header page --> or <!-- site:footer -->");
-  let out = html
+  const out = html
     .replace(HEADER_MARK, siteHeader(header[1] as SitePage))
     .replace(FOOTER_MARK, siteFooter())
-    .replace(CTA_MARK, (_m, cls: string) => installCta(cls));
-  out = switchOn(out, "store", CHROME_STORE_URL, (h, url) => h.replaceAll(`data-store-link href="/#install"`, `data-store-link href="${url}"`));
+    .replace(CTA_MARK, (_m, cls: string) => appCta(cls));
   // The connector address, written once in src/core/links.ts and filled in wherever a page says %MCP_URL%.
   return out.replaceAll("%MCP_URL%", MCP_URL ?? "(not online yet)");
 }

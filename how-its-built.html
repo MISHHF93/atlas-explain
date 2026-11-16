@@ -37,7 +37,7 @@
         <p>Setup steps for each assistant are on <a href="/connect">the setup page</a>.</p>
 
         <h2 id="hybrid">Hybrid inference with Firebase AI Logic</h2>
-        <p>In the web app and the Chrome extension, every explanation goes through the Firebase AI Logic Web SDK in hybrid mode, with <code>prefer_on_device</code> as the default.</p>
+        <p>In the web app, every explanation goes through the Firebase AI Logic Web SDK in hybrid mode, with <code>prefer_on_device</code> as the default.</p>
         <ol class="steps">
           <li><b>On the device.</b> When Chrome's Prompt API reports Gemini Nano as available, the prompt runs locally. Nothing leaves the computer, and the answer is labelled "On this device".</li>
           <li><b>In the cloud.</b> When Nano is unavailable (phones, other browsers, older hardware) or the text is too long for it, the same prompt goes to Gemini Flash-Lite in the cloud and is labelled "Cloud".</li>
@@ -48,7 +48,6 @@
         <h2 id="protection">Protection and configuration</h2>
         <ul class="points">
           <li><b>App Check</b> with reCAPTCHA Enterprise is enforced on Firebase AI Logic, so only this site can spend cloud calls.</li>
-          <li><b>The Chrome extension</b> makes its cloud calls through a hidden page on this site that answers only the published extension id. That way App Check runs on the web origin, and the extension holds no keys.</li>
           <li><b>Fair-use limits</b>: each browser is limited to 8 cloud answers a minute and 300 a day. Answers on the device are never limited.</li>
           <li><b>Remote Config</b> holds the inference mode, the cloud model, the prompt template, the on-device size limits, the price provider and the billing switch. Built-in defaults apply when it can't be read.</li>
           <li><b>Education-only guardrails</b>: a fixed system prompt, refusal of requests for trade decisions, removal of account-like numbers before anything is sent, and a scan in the release check that blocks trade-instruction wording.</li>
@@ -66,12 +65,11 @@
         <ul class="points">
           <li>TypeScript with Vite, no UI framework. The app's routes are lazy-loaded.</li>
           <li>The connector: a Cloudflare Worker using the same glossary and data code as the web app.</li>
-          <li>Chrome extension (Manifest V3): a popup and a side panel built from the same components as the web app, a context-menu entry and keyboard shortcuts.</li>
           <li>Firebase: AI Logic, App Check, Remote Config, Authentication (Google and email link), Firestore with owner-only rules, and Hosting.</li>
         </ul>
 
         <h2 id="source">Source</h2>
-        <p>Everything runs online: the website and web app on Firebase Hosting, the extension from the Chrome Web Store, and the AI-assistant (MCP) address on Cloudflare's free plan. The code is open source under Apache-2.0 at <a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">github.com/MISHHF93/atlas-explain</a>.</p>
+        <p>Everything runs online: the website and web app on Firebase Hosting, and the AI-assistant (MCP) address on Cloudflare's free plan. The code is open source under Apache-2.0 at <a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">github.com/MISHHF93/atlas-explain</a>.</p>
       </article>
     </main>
     <!-- site:footer -->

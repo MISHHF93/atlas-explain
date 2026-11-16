@@ -1,12 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { checkManifest, extensionSource } from "../scripts/check-manifest.mjs";
 import { FALLBACK_TEXT, shouldTakeOver } from "../src/wallet/error-boundary";
 
 const firebase = JSON.parse(readFileSync("firebase.json", "utf8")) as {
   hosting: { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> };
 };
-const manifest = JSON.parse(readFileSync("extension/manifest.json", "utf8")) as Record<string, unknown>;
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string; engines: { node: string } };
 
 function header(key: string): string {
@@ -27,8 +25,9 @@ describe("hosting security headers", () => {
     expect(csp).toContain("upgrade-insecure-requests");
     expect(csp).not.toMatch(/connect-src[^;]*localhost/);
     expect(csp).not.toMatch(/connect-src[^;]*127\.0\.0\.1/);
-    // The owner's ATLAS desk (on localhost) embeds the app for "Explain this move"; only it and the extension may frame us.
-    expect(csp).toMatch(/frame-ancestors 'self' http:\/\/localhost:3000 http:\/\/127\.0\.0\.1:3000 chrome-extension:\/\/[a-p]{32}/);
+    // The owner's ATLAS desk (on localhost) embeds the app for "Explain this move"; only it may frame us.
+    expect(csp).toMatch(/frame-ancestors 'self' http:\/\/localhost:3000 http:\/\/127\.0\.0\.1:3000;/);
+    expect(csp).not.toContain("chrome-extension:");
     expect(csp).toMatch(/connect-src[^;]*https:\/\/\*\.googleapis\.com/);
     expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.kraken\.com/);
     expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.coingecko\.com/);
@@ -42,26 +41,6 @@ describe("hosting security headers", () => {
   });
 });
 
-describe("extension manifest", () => {
-  it("asks only for least-privilege permissions", () => {
-    expect(checkManifest(manifest, extensionSource("."))).toEqual([]);
-  });
-
-  it("rejects broad hosts, content scripts and remote code", () => {
-    const wide = { ...manifest, host_permissions: ["<all_urls>"], content_scripts: [{}], permissions: ["tabs"] };
-    const problems = checkManifest(wide, extensionSource("."));
-    expect(problems.join("\n")).toMatch(/<all_urls>/);
-    expect(problems.join("\n")).toMatch(/content_scripts/);
-    expect(problems.join("\n")).toMatch(/"tabs"/);
-    const evalCsp = { ...manifest, content_security_policy: { extension_pages: "script-src 'self' 'unsafe-eval'" } };
-    expect(checkManifest(evalCsp, extensionSource(".")).length).toBeGreaterThan(0);
-  });
-
-  it("keeps the manifest version in step with package.json", () => {
-    expect(manifest.version).toBe(pkg.version);
-  });
-});
-
 describe("error boundary", () => {
   it("only takes over an empty wallet, once", () => {
     expect(shouldTakeOver({ childElementCount: 0 }, false)).toBe(true);
@@ -69,9 +48,8 @@ describe("error boundary", () => {
     expect(shouldTakeOver({ childElementCount: 0 }, true)).toBe(false);
   });
 
-  it("is installed in the web app and the popup, with education-only copy", () => {
+  it("is installed in the web app, with education-only copy", () => {
     expect(readFileSync("src/main.ts", "utf8")).toContain("installErrorBoundary");
-    expect(readFileSync("extension/src/popup.ts", "utf8")).toContain("installErrorBoundary");
     expect(FALLBACK_TEXT).not.toMatch(/\b(buy|sell)\b/i);
     expect(readFileSync("src/wallet/error-boundary.ts", "utf8")).not.toContain("innerHTML");
   });

@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "extension/dist/**", "mcp-dist/**", ".wrangler/**", "node_modules/**", "coverage/**"],
+    ignores: ["dist/**", "mcp-dist/**", ".wrangler/**", "node_modules/**", "coverage/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

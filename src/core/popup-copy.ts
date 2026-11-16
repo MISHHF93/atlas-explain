@@ -31,7 +31,6 @@ export interface SignalCopy {
 }
 
 export const ATLAS_DESK_URL = "http://localhost:3000/markets";
-import { EXPLAIN_WEB_URL } from "./links";
 
 export function signalCopy(view: SignalView): SignalCopy {
   if (!view.connected || view.reason === CONNECT_ATLAS) {
@@ -98,15 +97,12 @@ export function whyQuestion(view: SignalView): string {
 
 /** The sample explained by "Try a sample now" in onboarding: the fastest path to a first answer. */
 export const SAMPLE_TERM = "Stop-limit order";
-/** Opened once when the extension is first installed: pin it, then try it on a practice passage. */
-export const WELCOME_URL = `${EXPLAIN_WEB_URL}/welcome?installed=1`;
 
-export const EMPTY_TITLE = "Highlight anything you don't understand";
+export const EMPTY_TITLE = "Type anything you don't understand";
 export const EMPTY_BODY =
-  "Select a term on any page, then press Explain. You can also right-click and choose Explain with ATLAS.";
-export const SHORTCUT_HINT = "Alt+Shift+E opens this popup.";
+  "Type or paste a term or a sentence, then press Explain.";
 
-export const STEP_READ = "Reading your highlight";
+export const STEP_READ = "Reading your question";
 export const STEP_DEVICE = "Trying your device first";
 export const STEP_CLOUD = "Asking the cloud model";
 

@@ -4,6 +4,8 @@ Educational explanations of a market move. After a sharp drop, ATLAS Explain tur
 
 The model runs through **Firebase AI Logic hybrid inference**. Chrome uses Gemini Nano on the device when that model is available, and Gemini in the cloud when it is not. The screen names the path that actually ran.
 
+ATLAS Explain comes two ways, from one codebase: an **MCP connector** that AI assistants (Claude, ChatGPT, Cursor, VS Code) add with one address, and a **web app** at https://atlas-explain.web.app/app. There is no Chrome extension (removed on 15 Nov 2026).
+
 This is an entry for [Google's #BuildHybridAI 2026 hackathon](https://firebasehybridaihackathon.devpost.com/).
 
 > Educational explanations only. Not financial advice, not a recommendation, and not an offer to buy or sell any security.
@@ -56,7 +58,7 @@ Without a Firebase web config and a reCAPTCHA Enterprise site key, `src/main.ts`
 
 ## Architecture
 
-`src/core` has no Firebase and no DOM. A Chrome extension or an Android shell can reuse the move card, the prompt, the taxonomy parser, and the path decision. The web UI and the extension popup share one wallet shell in `src/wallet/`; the web app (`src/web/app.ts`) mounts it over a `WebBackend`.
+`src/core` has no Firebase and no DOM, so the MCP connector (`src/mcp/`) and a future Android shell reuse the glossary, the move card, the prompt, the taxonomy parser and the path decision. The web app (`src/web/app.ts`) mounts the wallet shell in `src/wallet/` over a `WebBackend`.
 
 ```mermaid
 flowchart TD
@@ -159,7 +161,7 @@ A bare public move card (the existing JSON shape) is also accepted. Allowed card
 
 `src/core/context-link.ts` builds and parses these hashes. Concept ids live in `src/core/glossary.ts`: `shadow`, `signal15`, `chart_layers`, `live_lock`, `paper_only`, `drop_study`, `hybrid_inference`, and `move_card`.
 
-**postMessage**, for a same-machine ATLAS desk tab or a future extension page that is not implemented in this change:
+**postMessage**, for a same-machine ATLAS desk tab:
 
 ```js
 otherWindow.postMessage(
@@ -175,7 +177,7 @@ The app accepts that type only from `https://atlas-explain.web.app`, `https://at
 ATLAS Explain never reads balances, positions, or account ids. When it talks to the private ATLAS desk, it uses this repo's connectors library (`src/connectors/`, see [docs/connectors/README.md](docs/connectors/README.md)):
 
 1. The hosted web app at https://atlas-explain.web.app **never calls localhost**. Its header pill says **Live prices** when the public price feed answers, and shows nothing otherwise. Everything ATLAS-only (the Signal tab, the desk menu item, the ATLAS digest) is hidden.
-2. The Chrome extension and a local loopback build may probe ATLAS on this computer. They prefer public MCP (`POST /api/mcp/public`) and fall back to the REST catalog (`GET /api/explain/assets`).
+2. A local loopback build may probe ATLAS on this computer. They prefer public MCP (`POST /api/mcp/public`) and fall back to the REST catalog (`GET /api/explain/assets`).
 3. The header says **ATLAS connected** only when one of those probes actually answers, and only then do the ATLAS-only parts appear. It says **ATLAS desk** when this tab is the Markets desk and **Offline** when the browser is offline. It does not fake a connection, and it never shows a "Not connected" state to people who don't run ATLAS.
 
 The desk can also open this app with a public move card (`#c=` / `#card=`) or a glossary concept (`#concept=`). Loading a card does not run the model until you click **Explain the move**.
@@ -186,7 +188,7 @@ ATLAS Explain also has a free, read-only MCP server hosted online (Cloudflare Wo
 
 ## Screenshots
 
-Stills live in [docs/screenshots/](docs/screenshots/). Six were retaken on 15 Nov 2026 from the live site and a local build; `local-header.png` (ATLAS was not running at the time) and `desk-explain-link.png` (a crop of the private desk) are older. They show honest header states, the desk hand-off, today's brief, the grey signal light, and the practice page. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
+Stills live in [docs/screenshots/](docs/screenshots/). Six were retaken on 15 Nov 2026 from the live site and a local build; `local-header.png` (ATLAS was not running at the time) and `desk-explain-link.png` (a crop of the private desk) are older. They show honest header states, the desk hand-off, today's brief, and the grey signal light. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
 
 ![Hosted app header](docs/screenshots/hosted-header.png)
 
@@ -216,9 +218,6 @@ A `#concept=shadow` link opens "Explain a market move" with an educational quest
 
 The paper signal light stays grey unless the desk sends its public signal. This is the honest default when there is not enough evidence, or when this tab is not the desk.
 
-![Practice page](docs/screenshots/highlight-practice.png)
-
-The practice page (https://atlas-explain.web.app/welcome, opened on install) uses static, educational language. It has no live prices and no account fields.
 
 ## On-device model in Chrome
 
@@ -232,38 +231,15 @@ If Nano is not available and the card has no private notes, `PREFER_ON_DEVICE` f
 
 ## Demo
 
-Try the highlight flow on a static practice page with no prices and no account: [atlas-explain.web.app/welcome](https://atlas-explain.web.app/welcome). Highlight a sentence, right-click, and choose **Explain with ATLAS Explain**, or press `Alt+Shift+X`. `Alt+Shift+E` opens the Explain popup.
-
-The full three-minute script (ATLAS desk → Explain → on-device badge → two-sided reasons → highlighted text on a trading page → Recent and Learn path → signal light) is in [docs/DEMO.md](docs/DEMO.md). The submission checklist is in [docs/SUBMISSION.md](docs/SUBMISSION.md).
+The full three-minute script (the connector in Claude → a chart and official figures with their sources → the web app answering on the device with Gemini Nano → Keep going, Recent, Learn and Assets) is in [docs/DEMO.md](docs/DEMO.md). The submission checklist is in [docs/SUBMISSION.md](docs/SUBMISSION.md).
 
 | Step | What the judge sees |
 | --- | --- |
-| 1 | The ATLAS desk's **Explain this move** opens a public move card in the wallet. Nothing runs until the click. |
-| 2 | **Explain the move** runs Firebase AI Logic hybrid inference; the badge names the path that ran (on-device Gemini Nano or cloud Gemini). |
-| 3 | Three reasons a buyer might weigh, three a seller might weigh, and what would change the picture. |
-| 4 | On a trading or charting page, a highlighted sentence is explained in the same wallet, with the site type (charting, broker, crypto exchange, market news) read from the site name only. |
+| 1 | The home page leads with the connector; /connect gives the one address to add. |
+| 2 | In Claude, ATLAS Explain explains a term, draws a price chart and returns official figures, each with its source and time. |
+| 3 | In the web app, **Explain** runs Firebase AI Logic hybrid inference; the badge names the path that ran (on-device Gemini Nano or cloud Gemini). |
+| 4 | Two sides and what would change the picture, never an instruction. |
 | 5 | Recent explanations and Learn path progress stay on the device. |
-
-## Chrome extension
-
-The Manifest V3 extension lives in `extension/` and reuses `src/core` for the prompt, the refusal rules, and the billing entitlements. It tries Chrome's Prompt API (Gemini Nano) first. If that model is unavailable, it calls Firebase AI Logic with `InferenceMode.ONLY_IN_CLOUD` on the same `atlas-explain` project. The popup says which path answered.
-
-Each explanation is a click: the toolbar icon, the selection context menu **Explain with ATLAS Explain**, the `Alt+Shift+X` shortcut (or `Alt+Shift+E` to open the popup), or a button you add to the current page. The extension sends the highlighted text, the page title, and the site name. The site name and title also tell it what kind of page the highlight came from (charting site, broker, crypto exchange, market news, or the ATLAS desk), so an "RSI" on a charting site is read as an indicator; the page body is never read. Recent explanations and Learn path progress are kept in `chrome.storage.local` on the device only. It does not read form fields, balances, or account numbers. On-device answers are unlimited. Cloud answers follow `billing_enabled` (off during beta, so they are free).
-
-`scripting` is included with `activeTab` so the highlight and the page button run only after that click. `sidePanel` is optional.
-
-Load it unpacked:
-
-1. `npm run build:extension`
-2. Open `chrome://extensions`, turn on Developer mode, and choose **Load unpacked**.
-3. Select `extension/dist`.
-4. For Gemini Nano, use Chrome on desktop, version 139 or newer, and set `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` to Enabled.
-5. The reCAPTCHA key does not include `chrome-extension://` origins. For a cloud fallback while unpacked, register an App Check debug token and paste it into **Settings → AI** in the popup.
-6. To light the signal, open the ATLAS Markets desk (`http://localhost:3000/markets`) in the active tab, then click the toolbar icon. The desk answers the popup's `atlas-explain/v1/request-context` message with its public payload. Only `lean`, `hitRate`, `sampleSize`, and `reason` are read.
-
-`npm run build:extension` writes `extension/atlas-explain-chrome.zip`. For a Chrome Web Store release, bump the version with `npm version <x.y.z>` (it updates `extension/manifest.json` too), then `npm run release:extension` writes `release/atlas-explain-chrome-v<x.y.z>.zip` and its `.sha256`; upload that zip. Listing images are in `store/`; the full listing text, privacy-practices answers and submission steps are in [docs/CHROME_STORE.md](docs/CHROME_STORE.md). The identity is documented in [docs/BRAND.md](docs/BRAND.md). The listing should say the extension is educational and not investment advice. Do not ship an App Check debug token in the store build.
-
-The popup opens like a wallet menu that drops down from the toolbar, with three tabs: Explain, Learn and Assets. Settings opens from its menu, and a Signal tab appears only while ATLAS research software is running. The hosted web app at `/app` uses the same parts on one scrolling page. Explanations of highlighted text appear in the same popup, with loading, empty, error, and offline states. The layout, motion, and icon rules are in [docs/BRAND.md](docs/BRAND.md). A signal light at the top stays grey unless a shadow model has cleared the evidence gate. Today none have, so the honest state is grey, or "connect ATLAS" when the desk tab is not open. The light never says buy or sell.
 
 ## Tests and CI
 
@@ -271,7 +247,7 @@ The popup opens like a wallet menu that drops down from the toolbar, with three 
 npm run release:check
 ```
 
-That one command runs the Node version check, typecheck, lint, tests, the web and extension builds, the manifest least-privilege check, the bundle budget (every chunk ≤ 500 kB, popup ≤ 120 kB), `npm audit` (must be 0) and the trade-word scan, and stops at the first failure. Hosting sends a strict CSP and security headers from `firebase.json`. Node `^22.12 || ^24` (`.nvmrc` = 24). Audit overrides are explained in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
+That one command runs the Node version check, typecheck, lint, tests, the web and MCP builds, the bundle budget (every chunk ≤ 500 kB, app entry ≤ 150 kB), `npm audit` (must be 0) and the trade-word scan, and stops at the first failure. Hosting sends a strict CSP and security headers from `firebase.json`. Node `^22.12 || ^24` (`.nvmrc` = 24). Audit overrides are explained in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
 Unit tests cover move-card validation, prompt building, the taxonomy parser, inference-path selection, the explain retry that drops private notes, and the Firebase AI Logic calls with `firebase/ai` mocked. GitHub Actions (`.github/workflows/ci.yml`) runs the same steps on Node 22.
 
@@ -292,8 +268,6 @@ Unit tests cover move-card validation, prompt building, the taxonomy parser, inf
 ATLAS is a private, paper-only trading-research desk. ATLAS Explain is a separate public companion. This repository does not contain ATLAS models, signals, notebooks, positions, or data. A move card exists only because someone pasted it, picked a labeled sample, or loaded their own saved explanation.
 
 ## What to build next
-
-**Chrome extension.** Shipped in `extension/` (see above). Next: a Chrome Web Store listing, and structured output on the extension's on-device path so its answers use the same buyer/seller schema as the web app.
 
 **Android shell.** Port the move card, prompt, taxonomy, and path decision, then call Firebase AI Logic's Android hybrid API so Gemini Nano runs through ML Kit when the device has it and Gemini in the cloud otherwise. Use the current Android getting-started guide rather than a copied web snippet: [hybrid inference for Android](https://firebase.google.com/docs/ai-logic/hybrid/android/get-started). Reuse App Check (Play Integrity), the same Firestore rules, and the same Remote Config keys.
 
