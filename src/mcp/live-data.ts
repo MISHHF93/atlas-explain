@@ -50,7 +50,8 @@ const fileOf = (pathname: string): DataFile | null => {
 
 /**
  * How old a stored file may be before a visit starts a new capture. Also the shortest gap between
- * two captures of a part: at most 480 + 96 + 24 = 600 KV writes a day, under the free 1,000.
+ * two captures of a part: at most 480 + 96 + 24 = 600 KV writes a day from visits, plus 144 from
+ * the crypto cron (which alone updates the price history), 744 in all, under the free 1,000.
  */
 export const REFRESH_AFTER_MS: Record<DataFile, number> = {
   "crypto.json": 3 * 60_000,
@@ -175,7 +176,8 @@ async function capture(file: DataFile, env: WorkerEnv, now: number, why: "visit"
   const cap = captureEnv(env, now);
   if (sleep) cap.sleep = sleep;
   if (file === "crypto.json") {
-    const data = await captureCrypto(cap, readCryptoFile(await stored(env, file)));
+    // A visit refreshes prices only: ten coins' history with polite gaps outlasts its ~30 seconds.
+    const data = await captureCrypto(cap, readCryptoFile(await stored(env, file)), { history: why === "cron" });
     if (data) await save(env, file, data, now);
   } else if (file === "news.json") {
     const data = await captureNews(cap, readNewsFile(await stored(env, file), now), { gdelt: why === "cron" });
@@ -193,7 +195,12 @@ export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(),
   const file = CRON_FILE[cron];
   if (!file) return;
   // News always runs on its cron, because only the cron asks GDELT.
-  if (file !== "news.json") {
+  if (file === "crypto.json") {
+    // Visits refresh prices only, so the cron goes by the age of the history, which only it updates.
+    const history = readCryptoFile(await stored(env, file))?.history;
+    const historyAge = history ? now - Date.parse(history.asOf) : Infinity;
+    if (historyAge < REFRESH_AFTER_MS[file]) return;
+  } else if (file !== "news.json") {
     const { ageMs } = await read(env, file, now);
     if (ageMs < REFRESH_AFTER_MS[file]) return;
   }

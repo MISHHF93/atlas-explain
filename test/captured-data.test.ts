@@ -220,11 +220,49 @@ describe("the Worker serves and stores the data", () => {
     expect(perDay).toBeLessThanOrEqual(700);
   });
 
-  it("skips a cron part that a visit just refreshed", async () => {
+  it("skips a cron part that was just refreshed", async () => {
     const key = "data/v1/crypto.json";
-    const DATA = kv({ [key]: "{}" }, { [key]: { capturedAt: new Date(NOW - 60_000).toISOString() } });
+    // Crypto goes by the age of its history, which only the cron updates.
+    const DATA = kv({ [key]: JSON.stringify(file(new Date(NOW - 60_000).toISOString())) }, { [key]: { capturedAt: new Date(NOW - 60_000).toISOString() } });
     await runCapture(CRONS.crypto, { DATA }, NOW, async () => undefined);
     expect(DATA.writes).toBe(0);
+    const market = "data/v1/market.json";
+    const M = kv({ [market]: "{}" }, { [market]: { capturedAt: new Date(NOW - 60_000).toISOString() } });
+    await runCapture(CRONS.market, { DATA: M }, NOW, async () => undefined);
+    expect(M.writes).toBe(0);
+  });
+
+  it("a visit refreshes crypto prices only, inside its ~30 seconds; the cron still brings the history up to date", async () => {
+    const key = "data/v1/crypto.json";
+    const old = file("2026-11-16T11:00:00Z");
+    const urls: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("/Ticker")) return json({ error: [], result: Object.fromEntries(CRYPTO_COINS.map((c) => [c.krakenKeys[0], { c: ["100.0", "1"], o: "99.0" }])) });
+      if (url.includes("/OHLC")) return json({ error: [], result: { X: [[sec("2026-11-16T12:00:00Z"), "0", "0", "0", "64600.0"]], last: 0 } });
+      return json({}, 503);
+    }) as typeof fetch;
+    try {
+      // A visit: one Ticker request, history untouched.
+      const DATA = kv({ [key]: JSON.stringify(old) }, { [key]: { capturedAt: "2026-11-16T11:00:00Z" } });
+      const ctx = waits();
+      await serveData(new Request(`${MCP_ORIGIN}/data/v1/crypto.json`), { DATA }, "crypto.json", ctx, NOW);
+      await Promise.all(ctx.list);
+      expect(urls.some((u) => u.includes("/Ticker"))).toBe(true);
+      expect(urls.some((u) => u.includes("/OHLC"))).toBe(false);
+      const visited = JSON.parse(DATA.data[key]!) as CryptoFile;
+      expect(visited.prices.coins[0]?.priceUsd).toBe(100);
+      expect(visited.history).toEqual(old.history);
+      // The cron right after: prices were saved a moment ago, but the history is an hour old, so it runs.
+      urls.length = 0;
+      await runCapture(CRONS.crypto, { DATA }, NOW, async () => undefined);
+      expect(urls.some((u) => u.includes("/OHLC"))).toBe(true);
+      expect((JSON.parse(DATA.data[key]!) as CryptoFile).history.asOf).toBe(new Date(NOW).toISOString());
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   it("writes only the part its cron is for", async () => {

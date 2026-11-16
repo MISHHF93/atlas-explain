@@ -18,8 +18,8 @@ export const CONNECT_URL = `${EXPLAIN_WEB_URL}/connect`;
 export const MCP_ORIGIN = "https://atlas-explain-mcp.atlas-explain.workers.dev";
 /**
  * The public connector address (the directory, the registry and /connect use it). One account that
- * had added it before the protocol fix kept a saved failure for it and used "?v=2" instead; the
- * server ignores the query.
+ * had added it before the protocol fix kept a saved failure for it and used "?v=2", and on 16 Nov 2026
+ * "?v=3" (chat stopped seeing the tools though the server answered); the server ignores the query.
  */
 export const MCP_URL: string | null = `${MCP_ORIGIN}/mcp`;
 

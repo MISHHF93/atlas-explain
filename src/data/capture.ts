@@ -224,7 +224,7 @@ export function mergeCloses(old: readonly [number, number][], add: readonly [num
  * backup. With last hour's file it asks Kraken only for the bars since then (a few hundred
  * bytes per coin), which keeps an hourly Worker run to a few milliseconds of CPU.
  */
-export async function captureCrypto(env: CaptureEnv, prev: CryptoFile | null): Promise<CryptoFile | null> {
+export async function captureCrypto(env: CaptureEnv, prev: CryptoFile | null, options: { history?: boolean } = {}): Promise<CryptoFile | null> {
   const at = new Date(env.now).toISOString();
   const json = async (url: string): Promise<unknown> => JSON.parse(await env.get(url));
 
@@ -243,6 +243,12 @@ export async function captureCrypto(env: CaptureEnv, prev: CryptoFile | null): P
   if (!prices) {
     env.log("crypto prices: both sources failed and nothing was published before");
     return null;
+  }
+  // Prices only (a visit's refresh, which has about 30 seconds): keep the last history as it is.
+  // The 10-minute cron brings the history up to date.
+  if (options.history === false && prev) {
+    env.log(`crypto: ${prices.coins.length} prices (${prices.source}); history kept from ${prev.history.asOf}`);
+    return { schema: CRYPTO_SCHEMA, generatedAt: at, prices, history: prev.history };
   }
 
   const series: Record<string, [number, number][]> = {};
