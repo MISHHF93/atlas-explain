@@ -26,9 +26,9 @@ Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `a
 
   - Explain any market term from a curated glossary (stop-limit order, bid-ask spread, yield curve and more), or follow the learning path topic by topic.
   - Look up what an asset is: its market, trading hours, and its latest official figure or price, or why no price is shown.
-  - Official figures from free government and regulator sources: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and SEC-filed figures for about 30 large US companies and ETFs.
-  - Prices for ten major coins, refreshed hourly, and how a coin moved over 24 hours, 7 days or 30 days, drawn as an interactive chart in Claude.
-  - Today's market headlines from the GDELT Project, each linked to its publisher.
+  - Official figures from free government and regulator sources: US Treasury yields (drawn as a yield curve in Claude), ECB and Bank of Canada rates, EIA energy prices, and SEC-filed figures for about 30 large US companies and ETFs.
+  - Prices for ten major coins, refreshed about every 10 minutes, shown in Claude as a price board with 24-hour sparklines; choose a coin to see how it moved over 24 hours, 7 days or 30 days on an interactive chart.
+  - Today's market headlines and official press releases (Federal Reserve, SEC, CFTC, ECB), each linked to its publisher.
 
   Every answer names its source and time, says plainly when data is missing instead of filling the gap, and ends with "Educational information, not investment advice." It never recommends a trade and never forecasts prices. The connector is free, read-only, needs no account, and stores none of the requests it answers.
 

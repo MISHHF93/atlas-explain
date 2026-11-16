@@ -21,8 +21,8 @@ export const BOARD_APP_HTML = appPage({
   .row .num { text-align: right; }
   .row .chg { text-align: right; font-size: 13px; }
   .spark { width: 88px; height: 26px; display: block; }
-  .spark path { fill: none; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-  .spark.up path { stroke: var(--up); } .spark.down path { stroke: var(--down); } .spark.flat path { stroke: var(--muted); }
+  /* One neutral colour: the line covers 24 hours, the change beside it counts from 00:00 UTC, so their directions can differ. */
+  .spark path { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
   #detail { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
   @media (max-width: 420px) { .row { grid-template-columns: minmax(0, 1fr) 64px 60px; } .spark { display: none; } }`,
   body: `  <header>
@@ -48,8 +48,7 @@ export const BOARD_APP_HTML = appPage({
   function spark(values) {
     const W = 88, H = 26, lo = Math.min(...values), hi = Math.max(...values), span = hi - lo || 1;
     const d = values.map((v, i) => (i ? "L" : "M") + ((i / (values.length - 1)) * W).toFixed(1) + " " + (2 + (1 - (v - lo) / span) * (H - 4)).toFixed(1)).join(" ");
-    const dir = values[values.length - 1] > values[0] ? "up" : values[values.length - 1] < values[0] ? "down" : "flat";
-    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, preserveAspectRatio: "none", class: "spark " + dir, "aria-hidden": "true" });
+    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, preserveAspectRatio: "none", class: "spark", "aria-hidden": "true" });
     svg.append(svgEl("path", { d }));
     return svg;
   }
