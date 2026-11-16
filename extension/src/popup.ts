@@ -69,8 +69,8 @@ if (!(host instanceof HTMLElement)) throw new Error("Missing #app");
 installErrorBoundary(host);
 
 const store = {
-  async get(): Promise<{ theme?: unknown; appCheckDebugToken?: unknown; onboarded?: unknown; history?: unknown; learned?: unknown }> {
-    if (hasChrome) return chrome.storage.local.get(["theme", "appCheckDebugToken", "onboarded", HISTORY_KEY, LEARN_KEY]);
+  async get(): Promise<{ theme?: unknown; onboarded?: unknown; history?: unknown; learned?: unknown }> {
+    if (hasChrome) return chrome.storage.local.get(["theme", "onboarded", HISTORY_KEY, LEARN_KEY]);
     return {};
   },
   async set(patch: Record<string, unknown>): Promise<void> {
