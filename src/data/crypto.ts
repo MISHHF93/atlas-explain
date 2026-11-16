@@ -101,7 +101,7 @@ export function parseKrakenTicker(body: unknown): CryptoPrice[] {
 }
 
 /** How many levels of each side of the book are kept. */
-export const BOOK_LEVELS = 25;
+export const BOOK_LEVELS = 100;
 
 /** Kraken Depth → the best BOOK_LEVELS bids (highest first) and asks (lowest first). */
 export function parseKrakenDepth(body: unknown): { bids: BookSide; asks: BookSide } | null {

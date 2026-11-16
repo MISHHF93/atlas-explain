@@ -672,6 +672,22 @@ function fill(side: [number, number][], sizeUsd: number): { filled: boolean; avg
   return { filled: true, avgPriceUsd: Number(avg.toPrecision(8)), slippagePct: Number(((Math.abs(avg - best) / best) * 100).toFixed(4)) };
 }
 
+/**
+ * The depth bands as sentences: each band the book fully covers, then one line for how far the
+ * stored levels reach when a band goes beyond them (busy coins hold millions within 0.1%).
+ */
+function depthLines(depth: { bandPct: number; bidsUsd: number; asksUsd: number; complete: boolean }[], book: { bids: [number, number][]; asks: [number, number][] } | null, mid: number): string[] {
+  if (!book) return [];
+  const lines = depth.filter((d) => d.complete).map((d) => `Within ${d.bandPct}% of the middle price: ${formatPrice(d.bidsUsd)} of bids and ${formatPrice(d.asksUsd)} of asks.`);
+  if (depth.some((d) => !d.complete)) {
+    const low = book.bids[book.bids.length - 1]![0];
+    const high = book.asks[book.asks.length - 1]![0];
+    const total = (side: [number, number][]) => side.reduce((s, [p, q]) => s + p * q, 0);
+    lines.push(`The ${book.bids.length} best levels a side reach ${(((mid - low) / mid) * 100).toFixed(2)}% below and ${(((high - mid) / mid) * 100).toFixed(2)}% above the middle price and hold ${formatPrice(Math.round(total(book.bids)))} of bids and ${formatPrice(Math.round(total(book.asks)))} of asks; the book goes further.`);
+  }
+  return lines;
+}
+
 export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<ToolResult> {
   const coin = coinFor(coinKey);
   if (!coin) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COIN_NAMES}.`, true);
@@ -703,10 +719,11 @@ export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<To
   const lines = [
     `${coin.name} (${coin.symbol}) on Kraken:`,
     `Best bid ${formatPrice(bid)}, best ask ${formatPrice(ask)}. Spread ${formatPrice(spread)} (${(spreadPct * 100).toFixed(2)} basis points of the middle price, ${formatPrice(mid)}).`,
-    ...depth.map((d) => `Within ${d.bandPct}% of the middle price: ${formatPrice(d.bidsUsd)} of bids and ${formatPrice(d.asksUsd)} of asks${d.complete ? "" : " (at least; the book goes beyond the levels shown)"}.`),
+    ...depthLines(depth, book, mid),
+    ...(book ? [`In the order book captured ${utc(file.books!.asOf)}:`] : []),
     ...impact.filter((r) => r.sizeUsd === 10_000).map((r) => r.filled
-      ? `Filling $10,000 against the ${r.side} would average ${formatPrice(r.avgPriceUsd!)}, ${r.slippagePct!.toFixed(4)}% from the best ${r.side === "asks" ? "ask" : "bid"} (that gap is called slippage).`
-      : `$10,000 is more than the ${r.side} in the levels shown.`),
+      ? `- filling $10,000 against the ${r.side} would average ${formatPrice(r.avgPriceUsd!)}, ${r.slippagePct!.toFixed(4)}% from the best ${r.side === "asks" ? "ask" : "bid"} in that book (that gap is called slippage).`
+      : `- $10,000 is more than the ${r.side} in the levels shown.`),
     book ? "" : "The order book itself isn't available right now; the bid and ask above are current.",
     "This is a snapshot of how the market looked, to explain spreads and slippage; it never suggests a trade.",
     credit,

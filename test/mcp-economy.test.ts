@@ -166,6 +166,16 @@ describe("market depth", () => {
     expect(text(r).endsWith(EDUCATION_LINE)).toBe(true);
   });
 
+  it("says once how far the stored levels reach when a busy book goes beyond them, instead of repeating each band", async () => {
+    const tight = cryptoFile();
+    tight.books!.books.BTC = { bids: [[65000, 5], [64999, 5]], asks: [[65010, 5], [65011, 5]] };
+    const t = text(await marketDepth("BTC", serve(tight)));
+    expect(t).not.toContain("Within 0.5%");
+    expect(t).toContain("The 2 best levels a side reach");
+    expect(t).toContain("the book goes further");
+    expect(t).toContain("In the order book captured 2026-11-16 21:00 UTC:");
+  });
+
   it("is reachable through the JSON-RPC handler, and refuses an unknown coin", async () => {
     const reply = await handle({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "market_depth", arguments: { coin: "Shiba" } } }, serve(cryptoFile()));
     expect((reply?.result as { isError?: boolean }).isError).toBe(true);
