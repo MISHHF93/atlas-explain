@@ -45,6 +45,8 @@ export function siteHeader(page: SitePage): string {
     `<header class="site-head">`,
     `      <a class="brand" href="/" aria-label="ATLAS Explain home"><img src="/logo.svg" alt="" width="28" height="28" /><span><b>ATLAS</b> Explain</span></a>`,
     `      <nav class="site-nav" aria-label="Site">${nav}</nav>`,
+    // Signed out: "Sign in". site.ts turns it into your initials and "Account" when the app says you're signed in.
+    `      <a class="site-signin" href="/signin" data-account-link>Sign in</a>`,
     `      ${installCta("btn btn-primary btn-sm")}`,
     `    </header>`,
   ].join("\n");

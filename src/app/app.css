@@ -120,3 +120,19 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 .headline-title { color: var(--atlas-ink); font-size: var(--atlas-text-sm); font-weight: 650; line-height: 1.35; text-decoration: none; overflow-wrap: anywhere; }
 .headline-title:hover { text-decoration: underline; }
 .headline-title:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 2px; border-radius: var(--atlas-radius-sm); }
+
+/* ---------- the Sign in page (/signin), over the app frame as its own page ---------- */
+.signin-page { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; overflow-y: auto; padding: 1.5rem 1rem; background: var(--atlas-paper); }
+.signin-page[hidden] { display: none; }
+.signin-card { display: grid; gap: 0.9rem; width: min(100%, 26rem); padding: 1.75rem 1.5rem; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius-lg); background: var(--atlas-card); box-shadow: var(--atlas-shadow-lg); }
+.signin-brand { display: inline-flex; align-items: center; gap: 0.6rem; justify-self: start; color: var(--atlas-ink); text-decoration: none; font-size: var(--atlas-text-base); }
+.signin-brand img { border-radius: var(--atlas-radius-sm); }
+.signin-word b { letter-spacing: 0.06em; }
+.signin-title { margin: 0.25rem 0 0; font-family: var(--atlas-font-serif); font-size: var(--atlas-text-xl); font-weight: 600; line-height: 1.2; color: var(--atlas-ink); }
+.signin-lede { margin: 0; color: var(--atlas-muted); font-size: var(--atlas-text-sm); line-height: 1.55; }
+.signin-note { margin: 0; padding: 0.6rem 0.75rem; border-radius: var(--atlas-radius); background: color-mix(in srgb, var(--atlas-accent) 12%, transparent); color: var(--atlas-ink); font-size: var(--atlas-text-sm); }
+.signin-note[hidden] { display: none; }
+.signin-skip { justify-self: stretch; }
+.signin-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1rem; margin: 0.25rem 0 0; font-size: var(--atlas-text-xs); }
+.signin-links a { color: var(--atlas-muted); }
+.signin-links a:hover { color: var(--atlas-ink); }

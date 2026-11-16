@@ -1,4 +1,5 @@
 import { legacyRedirect } from "../app/routes";
+import { readAccountHint } from "../core/account-hint";
 import "./site.css";
 
 /*
@@ -20,6 +21,19 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")
       () => { button.textContent = "Select and copy"; },
     ).finally(() => setTimeout(() => { button.textContent = label; }, 1600));
   });
+}
+
+// Signed in on this browser (a hint the app saves): the header links to your account instead of "Sign in".
+const hint = readAccountHint();
+const accountLink = document.querySelector<HTMLAnchorElement>("[data-account-link]");
+if (hint && accountLink) {
+  accountLink.href = "/app/account";
+  accountLink.dataset.signedIn = "true";
+  accountLink.setAttribute("aria-label", `Your account (${hint.label})`);
+  const initials = document.createElement("span");
+  initials.className = "site-signin-initials";
+  initials.textContent = hint.initials;
+  accountLink.replaceChildren(initials, document.createTextNode("Account"));
 }
 
 // Opened by the extension right after install (/welcome?installed=1): confirm it instead of offering "Add to Chrome".
