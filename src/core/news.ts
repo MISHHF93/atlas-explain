@@ -1,17 +1,35 @@
 /**
  * "What was in the news today" (docs/ux/MULTI_ASSET_CATALOG.md §5.5, M7).
- * Headlines come from the GDELT Project's free news index (commercial use allowed with a
- * citation and link), collected by the scheduled data job into a small news.json.
+ * Two free sources, captured on a schedule (src/data/capture.ts) into a small news.json:
+ *   - the GDELT Project's news index (commercial use allowed with a citation and link), matched
+ *     to assets by name;
+ *   - official press releases from the Federal Reserve, the SEC, the CFTC (US government works)
+ *     and the ECB (reuse allowed with the source named), kept as market-wide news and also
+ *     matched to assets they name. GDELT often refuses automated requests; these feeds don't.
  * The app never searches the web from the model: it hands the model only these linked
  * headlines and asks for a summary, so every sentence can be traced to a source.
  *
- * Pure: no network, no DOM. Shared by the data job (Node) and the app.
+ * Pure: no network, no DOM. Shared by the capture (Worker and Node) and the app.
  */
 
 export const NEWS_SCHEMA = "atlas-explain-news-v1";
 export const NEWS_MAX_PER_ASSET = 5;
 /** Headlines older than this are not "today's" news. */
 export const NEWS_MAX_AGE_MS = 36 * 3_600_000;
+/** Official releases come out less often (and not at weekends), so they stay for four days, with their dates shown. */
+export const OFFICIAL_MAX_AGE_MS = 4 * 86_400_000;
+/** The key in news.json for market-wide official releases (not tied to one asset). */
+export const OFFICIAL_NEWS_ID = "market:official";
+export const OFFICIAL_MAX = 6;
+
+/** Official press-release feeds: free, keyless RSS. */
+export const OFFICIAL_FEEDS: readonly { id: string; label: string; url: string; domain: string }[] = [
+  { id: "fed", label: "Federal Reserve", url: "https://www.federalreserve.gov/feeds/press_all.xml", domain: "federalreserve.gov" },
+  { id: "sec", label: "SEC", url: "https://www.sec.gov/news/pressreleases.rss", domain: "sec.gov" },
+  { id: "cftc", label: "CFTC", url: "https://www.cftc.gov/RSS/RSSGP/rssgp.xml", domain: "cftc.gov" },
+  { id: "ecb", label: "ECB", url: "https://www.ecb.europa.eu/rss/press.html", domain: "ecb.europa.eu" },
+];
+export const HEADLINE_CREDIT = "Headlines: the GDELT Project's news index and official releases from the Federal Reserve, SEC, CFTC and ECB.";
 
 export interface NewsItem {
   title: string;
@@ -135,6 +153,44 @@ export function parseGdelt(body: string, now: number = Date.now()): NewsItem[] {
   return out;
 }
 
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+function xmlText(raw: string): string {
+  return raw
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
+      if (e[0] === "#") {
+        const code = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+        return Number.isFinite(code) && code > 31 ? String.fromCodePoint(code) : " ";
+      }
+      return ENTITIES[e.toLowerCase()] ?? m;
+    });
+}
+
+/**
+ * An RSS or Atom feed to clean, recent, linkable headlines, newest first. A plain reader (no XML
+ * library), so it runs in a Worker: items without a title, an http(s) link or a date are skipped.
+ */
+export function parseRss(xml: string, domain: string, now: number = Date.now(), maxAgeMs: number = OFFICIAL_MAX_AGE_MS): NewsItem[] {
+  const out: NewsItem[] = [];
+  const seen = new Set<string>();
+  for (const m of xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)) {
+    const block = m[0];
+    const tag = (name: string) => new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)<\\/${name}>`, "i").exec(block)?.[1];
+    const title = cleanTitle(xmlText(tag("title") ?? ""));
+    const link = xmlText(tag("link") ?? "").trim() || /<link\b[^>]*href="([^"]+)"/i.exec(block)?.[1] || "";
+    const dateRaw = xmlText(tag("pubDate") ?? tag("dc:date") ?? tag("updated") ?? tag("published") ?? "").trim();
+    const t = Date.parse(dateRaw);
+    if (title.length < 12 || !/^https?:\/\/[^\s]{4,500}$/.test(link) || !Number.isFinite(t)) continue;
+    if (now - t > maxAgeMs || t > now + 600_000 || INSTRUCTION.test(title)) continue;
+    const key = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ title, url: link, domain, seenAt: new Date(t).toISOString() });
+  }
+  return out.sort((a, b) => b.seenAt.localeCompare(a.seenAt));
+}
+
 /** Reads the published news.json; anything malformed or stale is dropped, never shown. */
 export function readNewsFile(body: unknown, now: number = Date.now()): NewsFile | null {
   if (!body || typeof body !== "object") return null;
@@ -142,11 +198,16 @@ export function readNewsFile(body: unknown, now: number = Date.now()): NewsFile 
   if (f.schema !== NEWS_SCHEMA || typeof f.generatedAt !== "string" || !f.items || typeof f.items !== "object") return null;
   const items: Record<string, NewsItem[]> = {};
   for (const [id, list] of Object.entries(f.items)) {
-    if (!NEWS_TARGET_IDS.has(id) || !Array.isArray(list)) continue;
-    items[id] = list.filter((n): n is NewsItem =>
+    const official = id === OFFICIAL_NEWS_ID;
+    if ((!official && !NEWS_TARGET_IDS.has(id)) || !Array.isArray(list)) continue;
+    const isOfficialDomain = (d: string) => OFFICIAL_FEEDS.some((feed) => feed.domain === d);
+    const kept = list.filter((n): n is NewsItem =>
       !!n && typeof n.title === "string" && n.title.length <= 200 && typeof n.url === "string" && /^https?:\/\//.test(n.url) &&
-      typeof n.domain === "string" && typeof n.seenAt === "string" && now - Date.parse(n.seenAt) <= NEWS_MAX_AGE_MS,
-    ).slice(0, NEWS_MAX_PER_ASSET);
+      typeof n.domain === "string" && typeof n.seenAt === "string" &&
+      // An official release stays for four days; a news story for 36 hours.
+      now - Date.parse(n.seenAt) <= (isOfficialDomain(n.domain) ? OFFICIAL_MAX_AGE_MS : NEWS_MAX_AGE_MS),
+    ).slice(0, official ? OFFICIAL_MAX : NEWS_MAX_PER_ASSET);
+    if (kept.length) items[id] = kept;
   }
   return { schema: NEWS_SCHEMA, generatedAt: f.generatedAt, items };
 }

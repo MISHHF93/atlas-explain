@@ -55,7 +55,7 @@
 
         <h2 id="data">Data</h2>
         <ul class="points">
-          <li><b>Official figures</b> (US Treasury, ECB, Bank of Canada, EIA and SEC EDGAR), <b>headlines</b> (GDELT) and <b>crypto prices</b> (Kraken, with CoinGecko as backup) are captured on a schedule by the connector’s Cloudflare Worker and served from one address, so the web app and the connector show the same numbers, every answer names its source and time, and nothing depends on a rate-limited source.</li>
+          <li><b>Official figures</b> (US Treasury, ECB, Bank of Canada, EIA and SEC EDGAR), <b>headlines</b> (GDELT and official releases from the Federal Reserve, SEC, CFTC and ECB) and <b>crypto prices</b> (Kraken, with CoinGecko as backup) are captured on a schedule by the connector’s Cloudflare Worker and served from one address, so the web app and the connector show the same numbers, every answer names its source and time, and nothing depends on a rate-limited source.</li>
           <li><b>Live crypto prices</b> in the web app come from a public market-data provider (Kraken or CoinGecko, chosen in Remote Config). The provider is named and linked next to every price, with its time.</li>
           <li><b>No fixtures.</b> Missing data is shown as missing, with the reason.</li>
           <li><b>ATLAS research desk.</b> ATLAS Explain can also read the public signal of the ATLAS research software when that software runs on the same computer. That integration is optional and is hidden for everyone who doesn't run ATLAS. Its paper predictions stay withheld until they pass a published evidence gate.</li>

@@ -29,7 +29,8 @@ Added 2026-11-13; moved 2026-11-16. Fetched on a schedule by the connector's Clo
 | ECB euro reference rates | EUR pairs and crosses derived from two ECB rates (labelled) | Free use if reproduced accurately with the ECB cited; for information, not transactions | "Source: European Central Bank" |
 | Bank of Canada Valet API | CAD pairs; Government of Canada benchmark bond yields | Free to use, copy and distribute with attribution ⚑ | "Source: Bank of Canada" |
 | EIA open data | WTI, Brent and Henry Hub daily spot (needs a free `EIA_API_KEY`; skipped without it) | US government data, public domain | "Source: U.S. Energy Information Administration" |
-| SEC EDGAR (company tickers, submissions, XBRL company facts) | For ~30 large US companies and 3 trust ETFs: revenue, net income, diluted EPS, shares outstanding (same fiscal year, ≤ 18 months old) and recent 10-K/10-Q/8-K filings, each linked to sec.gov. No prices. Refreshed daily at ≤ 4 requests a second with a declared User-Agent (`SEC_USER_AGENT` secret). | US government data, public domain; fair access ≤ 10 requests a second | "Source: SEC EDGAR", linked to the filing |
+$1| Official press releases: Federal Reserve, SEC, CFTC (RSS) | Headline, link and time of each release, as market news ("In the news", `todays_headlines`); matched to a company when it names one. Titles and links only, never the release text. | US government works, public domain | The publisher's domain on each headline, and "official releases from the Federal Reserve, SEC, CFTC and ECB" in the credit line |
+| ECB press releases (RSS) | Same as above | Reuse allowed with the source named ⚑ | Same as above |
 
 None of these feeds is used to train a model. Stock, ETF, index, gold and silver prices are **not** shown: no free source is licensed for public display.
 

@@ -7,7 +7,7 @@
  * a web address to their assistant and download nothing. It needs no API key, and only reads
  * public sources the app already uses:
  *   - the glossary and learning path (built in),
- *   - official figures (US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR), headlines (GDELT) and
+ *   - official figures (US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR), headlines (GDELT and official releases) and
  *     crypto prices with 30 days of hourly closes (collected from Kraken, CoinGecko as backup),
  *     all from ATLAS Explain's own data site, which the scheduled data job publishes.
  * It calls no third-party API itself.
@@ -24,7 +24,7 @@ import { thinEvenly } from "../core/coingecko";
 import { EDUCATION_ASSETS } from "../core/education-assets";
 import { CRYPTO_COINS, CRYPTO_CREDIT, readCryptoFile, type CryptoFile, type CryptoSource } from "../data/crypto";
 import { LEARN_PATH, learnTerms } from "../core/learn";
-import { readNewsFile, type NewsItem } from "../core/news";
+import { HEADLINE_CREDIT, readNewsFile, type NewsItem } from "../core/news";
 import { CHART_APP_HTML, CHART_APP_URI, MCP_APP_MIME } from "./chart-app";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
@@ -151,7 +151,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "todays_headlines",
     title: "Today's market headlines",
-    description: "Recent market headlines ATLAS Explain collected from the GDELT Project, each with its publisher, link and time. Headlines older than 36 hours are never returned. Optional filter by company or coin.",
+    description: "Recent market headlines ATLAS Explain collected from the GDELT Project's news index and from official press releases (Federal Reserve, SEC, CFTC, ECB), each with its publisher, link and time. News stories older than 36 hours and releases older than 4 days are never returned. Optional filter by company or coin.",
     inputSchema: { type: "object", properties: { about: str("Optional company, coin or word, for example 'Nvidia' or 'Bitcoin'.") }, additionalProperties: false },
     annotations: annotations("Today's market headlines", true),
     icons: ICONS,
@@ -493,7 +493,7 @@ export async function todaysHeadlines(about: string | undefined, fetcher: Fetche
       : `No headline is recent enough to call today's news (the list was last refreshed ${utc(file.generatedAt)}). Older headlines are not returned.`, { refreshedAt: file.generatedAt, headlines: [] });
   }
   return data(items.map((n) => `${n.title}\n${n.domain}, ${utc(n.seenAt)}: ${n.url}`).join("\n\n") +
-    "\n\nHeadlines found by the GDELT Project. They link to their publishers; ATLAS Explain does not write or check them.", {
+    `\n\n${HEADLINE_CREDIT} They link to their publishers; ATLAS Explain does not write or check them.`, {
     refreshedAt: file.generatedAt,
     headlines: items.map((n) => ({ title: n.title, publisher: n.domain, url: n.url, seenAt: n.seenAt })),
   });

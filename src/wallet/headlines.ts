@@ -1,14 +1,15 @@
 /**
- * "In the news" on Today: real headlines from the free GDELT feed, published by the scheduled
- * data job, each with its source, its age and one tap to explain it in plain language.
+ * "In the news" on Today: real headlines from the GDELT news index and official press releases
+ * (src/core/news.ts), captured on a schedule, each with its source, its age and one tap to
+ * explain it in plain language.
  * Nothing is made up: when no headline is recent enough, the card says so and why.
  */
 import type { HeadlinesView } from "../core/catalog";
-import type { NewsItem } from "../core/news";
+import { HEADLINE_CREDIT, type NewsItem } from "../core/news";
 import { relativeTime } from "../core/history";
 import { el, labelledButton } from "./dom";
 
-export const HEADLINES_SOURCE = "Headlines found by the GDELT Project";
+export const HEADLINES_SOURCE = HEADLINE_CREDIT.replace(/\.$/, "");
 
 export function headlinesCard(view: HeadlinesView | { kind: "loading" }, onExplain: (title: string) => void, now: number = Date.now()): HTMLElement {
   const card = el("section", "card headlines");

@@ -11,7 +11,7 @@
  */
 import { validateAsset, type Asset } from "../core/asset-schema.ts";
 import { EXPLAIN_WEB_URL } from "../core/links.ts";
-import { NEWS_GROUPS, NEWS_SCHEMA, NEWS_TARGETS, assignNews, gdeltUrl, isRateLimitNotice, parseGdelt, type NewsFile, type NewsItem } from "../core/news.ts";
+import { NEWS_GROUPS, NEWS_SCHEMA, NEWS_TARGETS, OFFICIAL_FEEDS, OFFICIAL_MAX, OFFICIAL_NEWS_ID, assignNews, gdeltUrl, isRateLimitNotice, parseGdelt, parseRss, type NewsFile, type NewsItem } from "../core/news.ts";
 import {
   COINGECKO_PUBLIC_API,
   CRYPTO_COINS,
@@ -181,14 +181,28 @@ export async function captureNews(env: CaptureEnv, prev: NewsFile | null): Promi
     if (body.trim().startsWith("{")) answered += 1;
     all.push(...parsed);
   }
-  const fresh = assignNews(all);
+  // Official press releases: keyless RSS feeds that, unlike GDELT, answer automated requests.
+  const official: NewsItem[] = [];
+  let feedsAnswered = 0;
+  for (const feed of OFFICIAL_FEEDS) {
+    const xml = await env.get(feed.url).catch(() => "");
+    const parsed = parseRss(xml, feed.domain, env.now);
+    if (/<(rss|feed)\b/i.test(xml)) feedsAnswered += 1;
+    official.push(...parsed);
+  }
+  official.sort((a, b) => b.seenAt.localeCompare(a.seenAt));
+
+  const fresh = assignNews([...all, ...official]);
   const items: Record<string, NewsItem[]> = {};
   for (const t of NEWS_TARGETS) {
     // An asset with no fresh match keeps its last headlines.
     const list = fresh[t.assetId] ?? prev?.items[t.assetId] ?? [];
     if (list.length) items[t.assetId] = list;
   }
-  env.log(`news: ${answered}/${NEWS_GROUPS.length} queries answered, ${all.length} headlines, ${Object.keys(fresh).length} assets matched`);
+  // Market-wide: the newest releases across the feeds; the last ones if every feed failed.
+  const market = official.length ? official.slice(0, OFFICIAL_MAX) : prev?.items[OFFICIAL_NEWS_ID] ?? [];
+  if (market.length) items[OFFICIAL_NEWS_ID] = market;
+  env.log(`news: GDELT ${answered}/${NEWS_GROUPS.length} queries answered (${all.length} headlines); official feeds ${feedsAnswered}/${OFFICIAL_FEEDS.length} (${official.length} releases); ${Object.keys(fresh).length} assets matched`);
   return { schema: NEWS_SCHEMA, generatedAt: new Date(env.now).toISOString(), items };
 }
 

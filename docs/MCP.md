@@ -12,7 +12,7 @@ ATLAS Explain has a small, read-only [Model Context Protocol](https://modelconte
 | `official_figures` | Official figures from free government and regulator sources: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and the latest SEC-filed figures (revenue, net income, earnings per share, shares outstanding) for about 30 large US companies and ETFs. Each with its source and date. |
 | `crypto_prices` | Prices for the ten major coins, biggest moves first, from `crypto.json` on ATLAS Explain's own data address (captured every 10 minutes by this Worker's cron from Kraken, CoinGecko as backup). Each answer says when they were collected, and how old they are if the refresh has stopped. |
 | `price_history` | A coin's start, end, change, high and low over 24 hours, 7 days or 30 days, from the same file's 30 days of hourly closes. Past moves only, never a forecast. |
-| `todays_headlines` | Recent market headlines from the GDELT Project, each with its publisher, link and time. Headlines older than 36 hours are never returned. |
+| `todays_headlines` | Recent market headlines from the GDELT Project's news index and official press releases (Federal Reserve, SEC, CFTC, ECB), each with its publisher, link and time. News stories older than 36 hours and releases older than 4 days are never returned. |
 
 Every answer names its source and ends with: "Educational information, not investment advice."
 

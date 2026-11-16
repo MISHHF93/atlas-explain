@@ -388,7 +388,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const atlasBlock = el("div", "stack atlas-only");
   atlasBlock.hidden = true;
   atlasBlock.append(marketCard, brief.node, el("h2", "section-label", "Paper signal light"), signal.node);
-  // In the news: real headlines from the free GDELT feed, each one tap from a plain explanation.
+  // In the news: real headlines (GDELT and official releases), each one tap from a plain explanation.
   let headlines: HTMLElement = headlinesCard({ kind: "loading" }, (title) => sendToExplain(title));
   shell.panels.today.append(
     todayHead,
