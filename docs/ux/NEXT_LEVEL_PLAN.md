@@ -1,5 +1,7 @@
 # ATLAS Explain: next-level UX plan
 
+> **Historical (written before 15 Nov 2026).** The Chrome extension, its popup and side panel described here were removed; ATLAS Explain is now an MCP connector first and a web app second. Keep this for the reasoning, not as a description of the current product.
+
 Audit date: 13 Nov 2026 (main `8b896be`). Scope: the Chrome extension popup (and side panel, which reuses it) and the hosted web app at https://atlas-explain.web.app. Screens were captured with a headless browser from the built `dist/` and `extension/dist/` folders using the preview query flags (`?demo=`, `?tab=`, `?assets=`).
 
 The rules do not change: education only (no buy/sell or recommendation wording), selected text only (never balances or account details), no made-up numbers (honest "Connect ATLAS" and "not ready" states), billing built in and switched off, fonts at 11px or larger, design tokens only.

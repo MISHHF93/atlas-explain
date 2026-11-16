@@ -11,10 +11,9 @@ describe("Explain connectors registry", () => {
     }
   });
 
-  it("lets the extension and loopback pages call ATLAS, and refuses the hosted app", () => {
-    expect(mayCallLocalAtlas({ protocol: "https:", hostname: "atlas-explain.web.app" }, false)).toBe(false);
-    expect(mayCallLocalAtlas({ protocol: "http:", hostname: "localhost" }, false)).toBe(true);
-    expect(mayCallLocalAtlas({ protocol: "https:", hostname: "atlas-explain.web.app" }, true)).toBe(true);
+  it("lets loopback pages call ATLAS, and refuses the hosted app", () => {
+    expect(mayCallLocalAtlas({ protocol: "https:", hostname: "atlas-explain.web.app" })).toBe(false);
+    expect(mayCallLocalAtlas({ protocol: "http:", hostname: "localhost" })).toBe(true);
   });
 
   it("does not fetch when the page is hosted, and reports an honest state", async () => {

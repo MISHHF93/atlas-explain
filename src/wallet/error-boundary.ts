@@ -1,9 +1,9 @@
 /**
- * Last-resort error boundary for the wallet (web app and extension popup).
+ * Last-resort error boundary for the wallet (web app).
  *
  * - If mounting throws, or an uncaught error leaves the wallet empty, the
  *   root is replaced with a plain "Something went wrong" card and a reload
- *   button, instead of a blank popup.
+ *   button, instead of a blank page.
  * - Errors after a successful mount are logged only; the wallet's own cards
  *   already show per-action error and offline states.
  *

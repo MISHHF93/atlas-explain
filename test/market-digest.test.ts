@@ -14,7 +14,6 @@ import {
   stillNeeded,
   trackRecord,
 } from "../src/core/market-digest";
-import { digestRowStatus } from "../src/core/digest";
 
 const NOW = Date.parse("2026-11-13T21:34:00Z");
 const GATE = { passed: false, failed: ["n_oos", "brier_beats_base_rate", "logloss_beats_base_rate", "shadow_weeks"], reason: "below the evidence gate", loaded: true, shadowWeeks: 2, requiredWeeks: 4 };
@@ -121,10 +120,6 @@ describe("track record copy", () => {
 });
 
 describe("digest row with markets", () => {
-  it("reads Today once the live catalog is in", () => {
-    expect(digestRowStatus({ kind: "not_connected", reason: "x", today: "2026-11-13" }, true)).toEqual({ label: "Today", tone: "ready" });
-  });
-
   it("feeds the digest only from the live ATLAS catalog, and no preview file ships", () => {
     expect(existsSync("src/wallet/box-preview.json")).toBe(false);
     for (const path of ["src/web/app.ts"]) {

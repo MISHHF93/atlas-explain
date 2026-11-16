@@ -1,5 +1,7 @@
 # ATLAS Explain: assets, engines and the grounded digest
 
+> **Historical (written before 15 Nov 2026).** The Chrome extension, its popup and side panel described here were removed; ATLAS Explain is now an MCP connector first and a web app second. Keep this for the reasoning, not as a description of the current product.
+
 Written 13 Nov 2026 against ATLAS `5279646` (the :3000 server was running on the owner's laptop) and ATLAS Explain `15ddd53`. Every number below comes from read-only GETs against that live server between 16:30 and 16:35 America/Toronto. Nothing in ATLAS was changed. Yoyo owns the ATLAS platform, so anything ATLAS needs to add is listed as a **request for Yoyo** at the end.
 
 The rules don't change: education only (no buy/sell wording), no made-up numbers, no account data, and "not ready" instead of a guess.

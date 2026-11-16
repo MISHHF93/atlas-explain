@@ -2,8 +2,8 @@
 
 > **DRAFT for review. Not final and not legal advice.** Written as a plain-language
 > starting point. Have it reviewed before a public launch, fill in every `[TODO]`, and
-> publish the final text at a stable URL (needed for the Chrome Web Store listing and
-> the Google OAuth consent screen).
+> publish the final text at a stable URL (needed for the Google OAuth consent screen and
+> the Claude connectors directory).
 
 Last updated: [TODO date] · Operator: [TODO legal name], Ontario, Canada · Contact: [TODO privacy email]
 
@@ -25,14 +25,13 @@ We do **not** collect balances, account numbers, form fields, private notes or
 watchlists. Private notes and watchlists are only used on your device and are dropped
 from any cloud request.
 
-## The Chrome extension
-- Sends only the text you highlight, the page title and the site name, and only when you click Explain.
-- Site permissions: `http://localhost:3000` (reads ATLAS on your own computer; nothing leaves your computer) and `https://atlas-explain.web.app` (our web app, which runs cloud explanations behind Firebase App Check and shares your sign-in).
-- Explanation history in the extension stays in your browser.
+## The AI-assistant connector
+- Receives only what your AI assistant sends when it uses an ATLAS Explain tool, such as a term or a ticker.
+- Is read-only: it changes nothing, stores none of it and sends no usage statistics.
 
 ## Where explanations run
 - **On your device:** Gemini Nano in Chrome. The prompt does not leave your computer.
-- **In the cloud:** Gemini through Google's Firebase AI Logic, with App Check. The public move card or highlighted text and your question are sent to Google to generate the answer. See Google's terms for the Gemini API: https://aistudio.google.com/docs/terms. The project uses the free tier, where Google may use this text and the answer to improve its products and human reviewers may read it.
+- **In the cloud:** Gemini through Google's Firebase AI Logic, with App Check. The public move card or the text you typed and your question are sent to Google to generate the answer. See Google's terms for the Gemini API: https://aistudio.google.com/docs/terms. The project uses the free tier, where Google may use this text and the answer to improve its products and human reviewers may read it.
 
 ## Service providers
 - Google Firebase (hosting, authentication, database, App Check, Remote Config, AI Logic). Google acts as our processor. Data may be processed outside Canada.

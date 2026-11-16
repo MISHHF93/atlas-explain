@@ -21,7 +21,7 @@ import {
   POLL_STOCK_MS,
   type Fetcher,
 } from "../src/core/assets";
-import { connectionCopy } from "../src/core/popup-copy";
+import { connectionCopy } from "../src/core/app-copy";
 
 
 const box = JSON.parse(readFileSync("test/fixtures/atlas-catalog.json", "utf8")) as { capturedAt: string; list: unknown; details: Record<string, unknown> };
@@ -142,9 +142,8 @@ describe("connection", () => {
   });
 
   it("never lets the hosted web app call localhost", () => {
-    expect(canReachLocalAtlas({ protocol: "https:", hostname: "atlas-explain.web.app" }, false)).toBe(false);
-    expect(canReachLocalAtlas({ protocol: "http:", hostname: "localhost" }, false)).toBe(true);
-    expect(canReachLocalAtlas({ protocol: "chrome-extension:", hostname: "abc" }, true)).toBe(true);
+    expect(canReachLocalAtlas({ protocol: "https:", hostname: "atlas-explain.web.app" })).toBe(false);
+    expect(canReachLocalAtlas({ protocol: "http:", hostname: "localhost" })).toBe(true);
   });
 
   it("maps an unreachable ATLAS to the grey connect state", async () => {

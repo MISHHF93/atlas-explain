@@ -1,5 +1,5 @@
 import type { PricingView } from "../core/billing";
-import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
+import { ANSWER_DISCLAIMER } from "../core/explain-prompt";
 import {
   ATLAS_DESK_URL,
   EMPTY_BODY,
@@ -10,7 +10,7 @@ import {
   STEP_READ,
   shortSelection,
   signalCopy,
-} from "../core/popup-copy";
+} from "../core/app-copy";
 import type { SignalView } from "../core/signal";
 import { el, externalLink, iconButton, labelledButton, replay } from "./dom";
 import { icon, type IconName } from "./icons";
@@ -162,7 +162,7 @@ export function messageCard(kind: "error" | "offline" | "limit" | "info", title:
   const head = el("p", "card-title");
   head.append(icon(iconName, 16), el("span", undefined, title));
   card.append(head, el("p", "fine strong", text));
-  if (kind === "limit") card.append(el("p", "fine", EXTENSION_DISCLAIMER));
+  if (kind === "limit") card.append(el("p", "fine", ANSWER_DISCLAIMER));
   if (retry) {
     const again = labelledButton("refresh", "Try again", "secondary small");
     again.addEventListener("click", retry);
@@ -422,4 +422,3 @@ export function onboarding(onDone: () => void, options: { onTry?: () => void } =
   }
 }
 
-export const ONBOARDING_STEPS = ONBOARDING.length;

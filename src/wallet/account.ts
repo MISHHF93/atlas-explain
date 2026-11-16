@@ -9,7 +9,7 @@ export interface AccountHandlers {
 }
 
 /**
- * Account sheet for the web app and the extension: sign in with Google or an email
+ * Account sheet for the web app: sign in with Google or an email
  * link, or sign out. Signed out still works; it only keeps history on this browser.
  */
 export function accountPanel(view: AccountView | null, handlers: AccountHandlers, options: { emailLink?: boolean; compact?: boolean } = {}): HTMLElement {

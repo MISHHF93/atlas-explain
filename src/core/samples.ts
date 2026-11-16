@@ -159,6 +159,3 @@ export const SAMPLE_MOVES: readonly SampleMove[] = [
   },
 ];
 
-export function sampleById(id: string): SampleMove | undefined {
-  return SAMPLE_MOVES.find((sample) => sample.id === id);
-}

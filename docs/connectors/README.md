@@ -2,7 +2,7 @@
 
 Read-only connectors for this project. They live under `src/connectors/`, separate from ATLAS's `src/atlas/mcp/adapters`. `execution_permission` is none. No secrets, no balances, no account fields.
 
-The hosted web app at atlas-explain.web.app never calls localhost. Only the Chrome extension and a local loopback build may probe ATLAS on this computer.
+The hosted web app at atlas-explain.web.app never calls localhost. Only a local loopback build may probe ATLAS on this computer.
 
 ## Path
 
@@ -12,7 +12,7 @@ The hosted web app at atlas-explain.web.app never calls localhost. Only the Chro
 | ATLAS local MCP + REST fallback | `src/connectors/atlas-local.ts` |
 | Public MCP client | `src/core/atlas-mcp.ts` (`POST /api/mcp/public`) |
 | REST catalog | `src/core/assets.ts` (`GET /api/explain/assets`) |
-| Header connection pill | `src/core/popup-copy.ts`, wired from the extension popup and the web app |
+| Header connection pill | `src/core/app-copy.ts`, wired from the web app |
 
 ## How a local connection is decided
 
@@ -23,4 +23,4 @@ The hosted web app at atlas-explain.web.app never calls localhost. Only the Chro
 
 ## Tests
 
-`npx vitest run test/connectors.test.ts test/popup-ux.test.ts test/assets-mcp.test.ts`
+`npx vitest run test/connectors.test.ts test/connection-state.test.ts test/assets-mcp.test.ts`

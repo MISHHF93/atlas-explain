@@ -1,6 +1,6 @@
 # ATLAS Explain design system
 
-One set of tokens and components is shared by the website, the web app (`/app`) and the Chrome extension's popup and side panel. The rules below are enforced by `test/design-system.test.ts`, so a change that breaks them fails `npm run release:check`.
+One set of tokens and components is shared by the website, and the web app (`/app`). The rules below are enforced by `test/design-system.test.ts`, so a change that breaks them fails `npm run release:check`.
 
 ## Principles
 
@@ -43,7 +43,7 @@ Up and down are never shown by colour alone: changes carry a sign (+ / −) and,
 |---|---|---|
 | Card | `.card` | The basic surface. One topic per card. |
 | Group | `.card.group` + `h3` | Settings and page sections ("Official figures", "About forex"). |
-| Section label | `.section-label` | Small uppercase heading above a list (shared by the app and the popup). |
+| Section label | `.section-label` | Small uppercase heading above a list (used across the app). |
 | Primary button | `.primary` | One per view: the main action ("Explain", "Explain this asset"). |
 | Secondary button | `.secondary` | Other actions ("Add to watchlist", "Try again"). |
 | Link button | `.link-btn` | Low-emphasis inline actions ("Clear", "Remove"). |

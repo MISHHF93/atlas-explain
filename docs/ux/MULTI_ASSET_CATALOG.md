@@ -1,6 +1,6 @@
 # Multi-asset catalog
 
-Status: **design approved in direction: free data only** (owner, 2026-11-13). The only money spent on this project is the US$5 Chrome Web Store registration. Every source in the launch plan below costs **$0**. Paid feeds are listed at the end only so the owner knows what each one would unlock later.
+Status: **design approved in direction: free data only** (owner, 2026-11-13). No money is spent on this project (the Chrome extension and its US$5 store fee were dropped on 15 Nov 2026). Every source in the launch plan below costs **$0**. Paid feeds are listed at the end only so the owner knows what each one would unlock later.
 
 This turns `/app/assets` and `/app/assets/:symbol` from a list of 10 coins into one catalog for every kind of instrument a person meets on a trading platform: crypto, stocks, ETFs, indices, forex, commodities, futures and options, and bonds and rates.
 
@@ -31,7 +31,7 @@ The rules don't change:
 
 ## 2. Data model
 
-One normalized schema, `src/core/asset-schema.ts`. It is pure types and validators, with no network code, so the popup stays small.
+One normalized schema, `src/core/asset-schema.ts`. It is pure types and validators, with no network code, so the app's first load stays small.
 
 ```ts
 type AssetClass =

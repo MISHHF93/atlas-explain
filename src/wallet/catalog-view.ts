@@ -1,7 +1,7 @@
 /**
  * The public multi-asset catalog: one search, class filters, calm class sections,
  * recently viewed, honest rows and a page that adapts to each class.
- * Loaded on demand, so the popup's first paint does not pay for it.
+ * Loaded on demand, so the app's first paint does not pay for it.
  */
 import type { Asset, AssetClass } from "../core/asset-schema";
 import { formatPrice, sparkSvg, type SparkPoint } from "../core/assets";
@@ -20,7 +20,7 @@ import {
 import { ALL_TERMS } from "../core/terms";
 import { tracker } from "../core/analytics";
 
-/** Everything the public catalog needs, in this one lazily loaded chunk (keeps popup.js small). */
+/** Everything the public catalog needs, in this one lazily loaded chunk (keeps the app entry small). */
 export { assetFromLiveRow } from "../core/asset-schema";
 export { EDUCATION_ASSETS } from "../core/education-assets";
 export { loadNews, withCompanyLogos } from "../core/catalog";

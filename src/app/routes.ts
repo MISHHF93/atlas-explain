@@ -111,7 +111,7 @@ const LEGACY_TABS: Record<string, string> = {
 
 /**
  * Links made before the site and app were split still work: ATLAS desk links (#c=...),
- * the extension sign-in link (?account=open), email sign-in links (?signin=email&oobCode=...)
+ * old account links (?account=open), email sign-in links (?signin=email&oobCode=...)
  * and the preview flags (?tab=, ?demo=, ...). Returns where "/" should send the visitor, or null
  * to stay on the landing page.
  */

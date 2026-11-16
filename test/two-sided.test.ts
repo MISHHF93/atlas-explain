@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExtensionPrompt, toPageContext } from "../src/core/extension-prompt";
+import { buildExplainPrompt, toPageContext } from "../src/core/explain-prompt";
 import { TWO_SIDED_SCHEMA, parseTwoSided, twoSidedCopyText } from "../src/core/two-sided";
 
 const good = {
@@ -29,7 +29,7 @@ describe("two-sided extension answers", () => {
   });
 
   it("asks for the shape in the prompt and constrains it with a schema", () => {
-    const { prompt } = buildExtensionPrompt({ context: toPageContext({ selection: "RSI", title: "Chart", url: "https://www.tradingview.com/" }), question: "" });
+    const { prompt } = buildExplainPrompt({ context: toPageContext({ selection: "RSI", title: "Chart", url: "https://www.tradingview.com/" }), question: "" });
     expect(prompt).toContain('"buyerReasons"');
     expect(prompt).toContain('"sellerReasons"');
     expect(TWO_SIDED_SCHEMA.required).toEqual(["summary", "buyerReasons", "sellerReasons", "whatWouldChange"]);

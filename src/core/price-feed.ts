@@ -1,7 +1,7 @@
 /**
  * Light types and Remote Config parsing for the public live-price feed.
  * Heavy network clients live in price-provider.ts and are loaded on demand
- * so the extension popup stays under the bundle budget.
+ * so the app's first load stays under the bundle budget.
  */
 import type { CatalogView } from "./assets";
 

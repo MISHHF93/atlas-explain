@@ -1,6 +1,6 @@
 /**
  * One normalized Asset schema for every instrument class (docs/ux/MULTI_ASSET_CATALOG.md §2).
- * Pure types, validators and the provider registry. No network code, so the popup stays small.
+ * Pure types, validators and the provider registry. No network code, so the app's first load stays small.
  *
  * Rules enforced here, not just documented:
  * - A shown figure always carries a source, an attribution and a licence that allows display.

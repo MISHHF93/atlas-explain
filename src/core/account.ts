@@ -1,5 +1,5 @@
 /**
- * Account state shared by the web app and the extension. Pure, so it is tested
+ * Account state for the web app. Pure, so it is tested
  * without Firebase. ATLAS Explain stays usable signed out: a signed-out visitor
  * gets an anonymous id so saved explanations stay on that browser.
  */

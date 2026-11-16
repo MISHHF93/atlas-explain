@@ -1,8 +1,7 @@
-import { redactSensitive } from "./extension-prompt";
+import { redactSensitive } from "./explain-prompt";
 
 /**
- * Recent explanations, kept on this device only (chrome.storage.local in the
- * extension). Never written to Firestore and never sent anywhere.
+ * Recent explanations, kept on this device only. Never written to Firestore and never sent anywhere.
  */
 export interface HistoryEntry {
   id: string;
@@ -16,7 +15,6 @@ export interface HistoryEntry {
   contextLine?: string;
 }
 
-export const HISTORY_KEY = "history";
 export const HISTORY_MAX = 20;
 const SELECTION_MAX = 240;
 const TEXT_MAX = 4_000;

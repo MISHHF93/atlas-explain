@@ -5,7 +5,7 @@ import "./site.css";
 /*
  * Public site pages (/, /support, /privacy, /terms, /connect, /how-its-built, 404). Static HTML with
  * the shared header and footer filled in at build time (src/site/frame.ts). This tiny script
- * only forwards links made for the old single-page app (desk links, extension sign-in,
+ * only forwards links made for the old single-page app (desk links, old account links,
  * email sign-in links, preview flags) to their new address under /app.
  */
 const target = legacyRedirect(location);

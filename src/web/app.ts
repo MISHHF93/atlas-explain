@@ -4,7 +4,7 @@ import { conceptQuestion, getConcept } from "../core/glossary";
 import { EXPLAIN_LOAD_MESSAGE, inboundReply, readInboundMessage } from "../core/inbound";
 import { applyPrivateFields, parseMoveCardJson, publicMoveCard } from "../core/move-card";
 import { ExplanationParseError } from "../core/parse-explanation";
-import { ATLAS_DESK_URL, SAMPLE_TERM, connectionFor } from "../core/popup-copy";
+import { ATLAS_DESK_URL, SAMPLE_TERM, connectionFor } from "../core/app-copy";
 import { OnDeviceUnavailableError } from "../core/run-explanation";
 import { SAMPLE_MOVES, type SampleMove } from "../core/samples";
 import { DEFAULT_SETTINGS } from "../core/settings";
@@ -68,7 +68,7 @@ export const APP_TABS: readonly TabDef[] = [
 ];
 
 const THEME_KEY = "atlas-explain-theme";
-/** Learn path progress in this browser (the extension keeps it in chrome.storage). */
+/** Learn path progress in this browser. */
 const LEARN_STORE_KEY = WEB_LEARN_KEY;
 
 function readLearned(): unknown {
@@ -87,7 +87,7 @@ export interface WebWalletOptions {
 }
 
 /**
- * The hosted ATLAS Explain app at /app: the same wallet parts as the extension, laid out as
+ * The hosted ATLAS Explain app at /app: the shared wallet parts (src/wallet/), laid out as
  * one scrolling page (Explain first, then Today, Learn and Assets). Slim links in the header
  * jump between sections, the logo goes back to the top, and each section keeps its own address.
  */
@@ -289,11 +289,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
 
   /* The core loop: paste or type → plain answer → keep going → related terms → history.
-     The panel is the same code as the extension popup's; the web app supplies only how it
+     The panel is shared code (src/wallet/explain-panel.ts); the web app supplies only how it
      gets an answer (askWeb below) and where history is kept (this browser). */
   const panel = explainPanel({
     ask: askWeb,
-    readsPage: false,
     placeholder: "Paste or type a term, a sentence or a headline: stop-limit order, implied volatility…",
     hint: "Ctrl+Enter to explain. Only the text you type here is used. Nothing is sent until you press Explain.",
     rows: 3,
@@ -337,7 +336,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     liveCard.replaceWith(nextLive);
     liveCard = nextLive;
   };
-  void (canReachLocalAtlas(location, false)
+  void (canReachLocalAtlas(location)
     ? loadDigest()
     : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's ATLAS digest isn't ready yet." })
   ).then((v) => { brief.show(v); refreshToday(); });
@@ -423,7 +422,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   async function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): Promise<void> {
     assets = mountAssets({
       shell,
-      canReachAtlas: canReachLocalAtlas(location, false),
+      canReachAtlas: canReachLocalAtlas(location),
       priceFeed,
       watchlist,
       compact: true,
@@ -457,7 +456,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   const glossaryHead = el("div", "panel-title");
   glossaryHead.append(el("h1", undefined, "Learn"), el("span", "fine", "Plain language"));
-  // The same Learn section as the popup (learn path, then the glossary), loaded on demand.
+  // The Learn section (learn path, then the glossary), loaded on demand.
   const learnSlot = el("div");
   learnSlot.append(el("p", "fine", "Loading the glossary…"));
   shell.panels.glossary.append(glossaryHead, learnSlot);
@@ -585,7 +584,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   window.addEventListener("offline", () => { updateConnection(); refreshEngine(); });
 
   let currentSignal: SignalView = mapSignal({ connected: false });
-  const hosted = !mayCallLocalAtlas(location, false);
+  const hosted = !mayCallLocalAtlas(location);
 
   function updateConnection(): void {
     // ATLAS-only parts appear only when ATLAS itself is here: running locally, or the desk sent its signal.
@@ -1363,7 +1362,7 @@ function friendlyError(error: unknown): string {
     return "The answer came back in a shape we couldn't read. Try again; it usually works the second time.";
   }
   if (error instanceof OnDeviceUnavailableError) return "This browser can't answer on the device right now. Try again to get an answer from the cloud.";
-  return cloudErrorCopy(error instanceof Error ? error.message : "", "web");
+  return cloudErrorCopy(error instanceof Error ? error.message : "");
 }
 
 /** Development-only run for screenshots (?demo=run). Labelled sample text, not a market call. */

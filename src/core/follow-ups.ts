@@ -1,4 +1,4 @@
-import { shortSelection } from "./popup-copy";
+import { shortSelection } from "./app-copy";
 
 /**
  * "Keep going" follow-ups under an answer: a simpler retelling, an everyday example,

@@ -1,44 +1,34 @@
 /**
- * The Explain panel, built once for both surfaces: the box, the button, where answers run,
- * progress, the answer with its follow-ups and related terms, errors, and recent explanations.
+ * The Explain panel: the box, the button, where answers run, progress, the answer with its
+ * follow-ups and related terms, errors, and recent explanations.
  *
- * A surface supplies only `ask`: how it gets an answer. The extension popup reads the page
- * highlight, tries Gemini Nano and falls back to the cloud bridge; the web app calls its
- * backend. Everything the reader sees and does is the same code.
+ * The web app supplies only `ask`: how it gets an answer (its backend, or the market-move card).
  */
-import { composerAction } from "../core/composer";
-import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
+import { ANSWER_DISCLAIMER } from "../core/explain-prompt";
 import { FOLLOW_UPS, followUpQuestion } from "../core/follow-ups";
 import { makeEntry, addToHistory, relativeTime, type HistoryEntry } from "../core/history";
-import { STEP_CLOUD, STEP_DEVICE, STEP_READ } from "../core/popup-copy";
+import { STEP_CLOUD, STEP_DEVICE } from "../core/app-copy";
 import { parseTwoSided, twoSidedCopyText } from "../core/two-sided";
 import { emptyCard, explanationCard, limitCard, loadingCard, messageCard, offlineCard } from "./cards";
 import { el, labelledButton, prefersReducedMotion } from "./dom";
 import { engineStrip, type EngineStripHandle } from "./engine";
 import { historyCard } from "./history-learn";
-import { icon } from "./icons";
 import { twoSidedNodes } from "./two-sided";
 
 export type AnswerSource = "on_device" | "in_cloud" | "unknown";
 
 export interface ExplainRequest {
-  /** What to explain: the typed text, or the topic of a follow-up. Empty when the page highlight should be read. */
+  /** What to explain: the typed text, or the topic of a follow-up. */
   text: string;
   /** A follow-up question about `text`. Empty for a first ask. */
   question: string;
-  /** Read the highlighted text from the page (extension only). */
-  fromPage: boolean;
-  /** Where the text came from, when the surface already knows (the right-click menu). */
-  page?: { title: string; url: string };
   /** Report the stage: 0 reading, 1 first attempt, 2 second attempt; with an optional line of detail. */
   progress: (step: 0 | 1 | 2, message?: string) => void;
-  /** Show what is being explained in the box (the highlight, once it has been read). */
-  setSubject: (text: string) => void;
 }
 
 export type ExplainOutcome =
   | { kind: "answer"; rawText: string; source: AnswerSource; subject: string; contextLine?: string; notes?: string[]; /** Shown from Recent, not newly written: when it was written. */ savedAt?: number }
-  /** Nothing to explain, for example no highlight on the page. */
+  /** Nothing to explain. */
   | { kind: "nothing"; message: string }
   | { kind: "limit"; message: string }
   | { kind: "offline" }
@@ -46,8 +36,6 @@ export type ExplainOutcome =
 
 export interface ExplainPanelOptions {
   ask: (request: ExplainRequest) => Promise<ExplainOutcome>;
-  /** The main button reads the page highlight while the box is empty (extension). */
-  readsPage: boolean;
   placeholder: string;
   /** The quiet line shown where the answer will appear. */
   hint: string;
@@ -57,8 +45,6 @@ export interface ExplainPanelOptions {
   examples?: readonly string[];
   /** The three progress labels. Defaults to reading, on-device, cloud. */
   steps?: [string, string, string];
-  /** Hide the "Explain" title visually (the popup's tab already says it). */
-  headHidden?: boolean;
   history: {
     initial: HistoryEntry[];
     save: (list: HistoryEntry[]) => void;
@@ -79,8 +65,6 @@ export interface ExplainRunOptions {
    * keep using it, so a follow-up about a move stays about that move.
    */
   ask?: ExplainAsk;
-  fromPage?: boolean;
-  page?: { title: string; url: string };
   /** Explain this instead of what is in the box (follow-ups). */
   subject?: string;
   question?: string;
@@ -118,7 +102,7 @@ const WHERE_IT_RAN: Record<AnswerSource, string> = {
 };
 
 export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
-  const head = el("div", options.headHidden ? "panel-title sr-only" : "panel-title");
+  const head = el("div", "panel-title");
   head.append(el("h1", undefined, "Explain"), el("span", "fine", "Education only"));
 
   const input = document.createElement("textarea");
@@ -128,7 +112,6 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
   input.autocomplete = "off";
   input.placeholder = options.placeholder;
   input.setAttribute("aria-label", "Term or text to explain");
-  // One primary action. On the extension it reads the highlight while the box is empty.
   const button = labelledButton("sparkle", "Explain", "primary composer-go");
   const composer = el("section", "composer");
   composer.setAttribute("aria-label", "Ask Explain");
@@ -167,12 +150,6 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
   /** A saved answer is reused for this long; after that the question is asked again. */
   const SAVED_FOR_MS = 24 * 60 * 60 * 1000;
 
-  function sync(): void {
-    const action = options.readsPage ? composerAction(input.value) : { mode: "typed" as const, label: "Explain", icon: "sparkle" as const };
-    button.dataset.mode = action.mode;
-    button.replaceChildren(icon(action.icon, 16), el("span", undefined, action.label));
-  }
-
   function hintLine(): HTMLElement {
     return el("p", "state-empty composer-hint", options.hint);
   }
@@ -193,9 +170,8 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
   }
 
   /** The progress card, with a way to stop waiting. */
-  function progressCard(step: 0 | 1 | 2, fromPage: boolean): HTMLElement {
-    // The first step reads the page only when there is a highlight to read.
-    const steps = options.steps ?? [fromPage ? STEP_READ : "Reading your question", STEP_DEVICE, STEP_CLOUD];
+  function progressCard(step: 0 | 1 | 2): HTMLElement {
+    const steps = options.steps ?? ["Reading your question", STEP_DEVICE, STEP_CLOUD];
     const card = loadingCard(step, steps);
     const stop = labelledButton("close", "Stop", "secondary small");
     stop.addEventListener("click", () => {
@@ -254,18 +230,18 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
     const plain = outcome.rawText.trim();
     const subject = outcome.subject.trim();
     // Plain answers sometimes end with the education line already; never show it twice.
-    const carriesDisclaimer = !twoSided && plain.includes(EXTENSION_DISCLAIMER);
+    const carriesDisclaimer = !twoSided && plain.includes(ANSWER_DISCLAIMER);
     showCard(explanationCard({
       source: outcome.source,
       selection: outcome.subject,
       contextLine: outcome.contextLine,
       ...(twoSided ? { body: twoSidedNodes(twoSided) } : { text: plain }),
-      copyText: twoSided ? twoSidedCopyText(twoSided, EXTENSION_DISCLAIMER) : carriesDisclaimer ? plain : `${plain}\n\n${EXTENSION_DISCLAIMER}`,
+      copyText: twoSided ? twoSidedCopyText(twoSided, ANSWER_DISCLAIMER) : carriesDisclaimer ? plain : `${plain}\n\n${ANSWER_DISCLAIMER}`,
       notes: [
         ...(outcome.savedAt !== undefined ? [`Saved answer (${relativeTime(outcome.savedAt)}). Nothing was sent. Ask again for a new one.`] : []),
         ...(outcome.notes ?? []),
         WHERE_IT_RAN[outcome.source],
-        ...(carriesDisclaimer ? [] : [EXTENSION_DISCLAIMER]),
+        ...(carriesDisclaimer ? [] : [ANSWER_DISCLAIMER]),
       ],
       onClear: () => {
         showCard(hintLine());
@@ -305,9 +281,8 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
 
   async function run(runOptions: ExplainRunOptions = {}): Promise<void> {
     if (busy || disabled) return;
-    const fromPage = runOptions.fromPage === true;
     const text = (runOptions.subject ?? input.value).trim();
-    if (!text && !fromPage) {
+    if (!text) {
       status.textContent = "Paste or type a term, a sentence or a headline first.";
       input.focus();
       return;
@@ -317,8 +292,8 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
     lastAsk = ask;
     const followUp = Boolean(runOptions.question);
     // Asking the same first question again shows the answer already written, at once and for
-    // free. Only for the plain text path; a market move or a page highlight is always asked fresh.
-    const saved = !followUp && !fromPage && !runOptions.fresh && ask === options.ask ? savedAnswer(text) : undefined;
+    // free. Only for the plain text path; a market move is always asked fresh.
+    const saved = !followUp && !runOptions.fresh && ask === options.ask ? savedAnswer(text) : undefined;
     if (saved) {
       status.textContent = "";
       show(savedOutcome(saved));
@@ -327,20 +302,17 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
     const id = ++runId;
     setBusy(true);
     status.textContent = "";
-    showCard(progressCard(0, fromPage));
+    showCard(progressCard(0));
     let outcome: ExplainOutcome;
     try {
       outcome = await ask({
         text,
         question: runOptions.question ?? "",
-        fromPage,
-        page: runOptions.page,
         progress: (step, message) => {
           if (id !== runId) return;
-          showCard(progressCard(step, fromPage));
+          showCard(progressCard(step));
           status.textContent = message ?? "";
         },
-        setSubject: (subject) => setText(subject),
       });
     } catch (error) {
       outcome = { kind: "error", message: error instanceof Error && error.message ? error.message : "That did not finish. Try again.", retry: true };
@@ -359,7 +331,6 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
 
   function setText(text: string, note?: string): void {
     input.value = text;
-    sync();
     if (note !== undefined) status.textContent = note;
   }
 
@@ -368,16 +339,14 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
     void run();
   }
 
-  input.addEventListener("input", sync);
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && input.value.trim()) {
       event.preventDefault();
       void run();
     }
   });
-  button.addEventListener("click", () => void run(options.readsPage && !input.value.trim() ? { fromPage: true } : {}));
+  button.addEventListener("click", () => void run());
 
-  sync();
   showCard(hintLine());
   renderHistory();
 
@@ -398,7 +367,7 @@ export function explainPanel(options: ExplainPanelOptions): ExplainPanelHandle {
       renderHistory();
     },
     show,
-    showLoading: (step) => showCard(progressCard(step, false)),
+    showLoading: (step) => showCard(progressCard(step)),
     disable: (card) => {
       disabled = true;
       button.disabled = true;

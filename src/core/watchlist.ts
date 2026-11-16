@@ -52,7 +52,7 @@ export function watchlistWriteAllowed(data: Record<string, unknown>): boolean {
   );
 }
 
-/* ---------- the store used by the app and the extension ---------- */
+/* ---------- the store used by the app ---------- */
 
 export interface WatchlistRemote {
   /** The account's list, or null when nobody is signed in (anonymous counts as signed out). */
@@ -146,7 +146,7 @@ export function createWatchlist(local: KeyValue, remote: WatchlistRemote | null)
   };
 }
 
-/** localStorage, guarded for private mode and the extension's no-DOM tests. */
+/** localStorage, guarded for private mode and no-DOM tests. */
 export function localKeyValue(key: string = WATCHLIST_KEY): KeyValue {
   return {
     get: () => {

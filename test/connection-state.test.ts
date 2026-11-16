@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { connectionFor } from "../src/core/popup-copy";
+import { connectionFor } from "../src/core/app-copy";
 
 const base = { online: true, deskConnected: false, atlasLocal: false, livePrices: false };
 

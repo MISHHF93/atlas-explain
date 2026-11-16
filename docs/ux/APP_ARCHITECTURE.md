@@ -1,5 +1,7 @@
 # ATLAS Explain: product architecture (site, extension, app)
 
+> **Historical (written before 15 Nov 2026).** The Chrome extension, its popup and side panel described here were removed; ATLAS Explain is now an MCP connector first and a web app second. Keep this for the reasoning, not as a description of the current product.
+
 Written 13 Nov 2026 against main `3370b22`. Owner direction (13 Nov, 6:05 PM Toronto): **the Chrome extension is the first product.** The website is built around it, the web app at `/app` is its companion, and phone-store builds (Capacitor, iOS, Android) are deferred.
 
 The rules do not change: education only (no buy/sell wording), selected text only (never balances or account details), no made-up numbers (honest grey, "withheld", "not ready" and "Connect ATLAS" states), price attribution always visible, billing built in and switched off, fonts at 11px or larger, design tokens only, WCAG AA, keyboard and reduced motion. The #BuildHybridAI judge flow (on-device ⇄ cloud engine strip, Firebase AI Logic hybrid inference) must keep working at every step.

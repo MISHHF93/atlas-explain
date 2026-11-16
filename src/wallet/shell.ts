@@ -1,6 +1,6 @@
-import { EXTENSION_DISCLAIMER } from "../core/extension-prompt";
+import { ANSWER_DISCLAIMER } from "../core/explain-prompt";
 import type { AccountView } from "../core/account";
-import { connectionCopy, showsConnectionChip, signalCopy, type ConnectionState } from "../core/popup-copy";
+import { connectionCopy, showsConnectionChip, signalCopy, type ConnectionState } from "../core/app-copy";
 import type { SignalView } from "../core/signal";
 import { el, iconButton, prefersReducedMotion, replay } from "./dom";
 import { icon, type IconName } from "./icons";
@@ -14,9 +14,8 @@ export type ThemeChoice = "system" | "light" | "dark";
 export interface TabDef { id: TabId; label: string; icon: IconName }
 
 /**
- * The extension popup's tabs. Three for everyone: Explain, Learn, Assets. Signal is a fourth
- * that the popup shows only while ATLAS research software is running. Settings is not a tab;
- * it opens from the menu as a sheet.
+ * The default tabs: Explain, Learn, Assets. Signal is a fourth, shown only while ATLAS
+ * research software is running. Settings is not a tab; it opens from the menu as a sheet.
  */
 export const TABS: readonly TabDef[] = [
   { id: "explain", label: "Explain", icon: "sparkle" },
@@ -54,7 +53,7 @@ export interface WalletShell {
 }
 
 /**
- * The wallet frame shared by the Chrome extension popup and the hosted web app:
+ * The wallet frame of the hosted web app:
  * header (logo, status light, menu), tab panels, bottom navigation, a slide-in
  * sheet, and an overlay slot for onboarding.
  */
@@ -67,10 +66,10 @@ export function createWalletShell(options: {
   /**
    * Signed-in account menu (the web app). When given, the header shows a "Sign in" button while
    * signed out, and the initials open this menu (name, email, these actions) while signed in.
-   * Without it (the extension popup) the account button keeps its compact icon and opens onAccount.
+   * Without it the account button keeps its compact icon and opens onAccount.
    */
   accountMenu?: MenuItem[];
-  /** Tabs shown in the navigation, in order. Defaults to the extension's (TABS). */
+  /** Tabs shown in the navigation, in order. Defaults to TABS. */
   tabs?: readonly TabDef[];
   /** First tab shown. Defaults to the first tab. */
   initialTab?: TabId;
@@ -298,7 +297,7 @@ export function createWalletShell(options: {
 
   /* footer line */
   const foot = el("p", "edu-line");
-  foot.append(icon("shield", 12), el("span", undefined, EXTENSION_DISCLAIMER));
+  foot.append(icon("shield", 12), el("span", undefined, ANSWER_DISCLAIMER));
 
   /* sheet */
   const sheet = el("section", "sheet");

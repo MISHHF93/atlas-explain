@@ -1,19 +1,11 @@
-import {
-  resolveEntitlements,
-  type BillingInput,
-} from "./billing";
 import { detectPageKind, type PageKindView } from "./page-kind";
 import { SAMPLE_MOVES, type SampleMove } from "./samples";
 import { TWO_SIDED_INSTRUCTION } from "./two-sided";
 
 import { EDUCATION_SHORT } from "./links";
-export const EXTENSION_DISCLAIMER = EDUCATION_SHORT;
+export const ANSWER_DISCLAIMER = EDUCATION_SHORT;
 
-export const EXTENSION_PRIVACY_NOTE =
-  "ATLAS Explain sends only the text you highlight, the page title, and the site name. It does not read form fields, balances, or account numbers. Nothing runs until you click.";
-
-
-export const EXTENSION_SYSTEM =
+export const EXPLAIN_SYSTEM =
   "You explain trading language and market moves for education. You are not an advisor. You never tell anyone to buy, sell, hold, or size a trade. If asked for a trade decision, refuse it and explain the factors instead. You never invent prices or account details.";
 
 export interface PageContext {
@@ -72,17 +64,13 @@ export function toPageContext(raw: { selection: string; title: string; url: stri
   };
 }
 
-/** Historical sample cards whose public facts match the highlighted text. */
+/** Historical sample cards whose public facts match the text. */
 export function relevantSamples(text: string): SampleMove[] {
   const hay = text.toLowerCase();
   return SAMPLE_MOVES.filter((sample) => sample.kind === "historical" && sampleMatches(sample, hay)).slice(0, 2);
 }
 
-export function extensionHighlightAllowed(input: BillingInput): boolean {
-  return resolveEntitlements(input).extensionHighlightToExplain;
-}
-
-export function buildExtensionPrompt(input: {
+export function buildExplainPrompt(input: {
   context: PageContext;
   question: string;
   samples?: readonly SampleMove[];
@@ -116,18 +104,18 @@ export function buildExtensionPrompt(input: {
     ? "The user is asking for a buy, sell, or hold decision. Do not give one. Do not name a target or a position size. Explain the factors on both sides instead."
     : "If a trade decision is requested, refuse it and explain the factors instead.";
 
-  const prompt = `${EXTENSION_SYSTEM}
+  const prompt = `${EXPLAIN_SYSTEM}
 
 ${refusal}
 
-Explain the highlighted text in plain language. Cover trading terms (such as stop-limit, margin, spread, or IV), indicators, order types, or chart patterns when they appear. If the text is about a price move, explain factors a buyer and a seller might weigh. Use a sample card only as historical illustration.
+Explain the text in plain language. Cover trading terms (such as stop-limit, margin, spread, or IV), indicators, order types, or chart patterns when they appear. If the text is about a price move, explain factors a buyer and a seller might weigh. Use a sample card only as historical illustration.
 
 Page context (selection, title, and site name only):
 Site: ${input.context.host || "unknown"}
 Site type: ${page.label}. ${page.hint}
 Title: ${input.context.title || "unknown"}
-Highlighted text:
-${input.context.selection || "(nothing highlighted)"}
+Text:
+${input.context.selection || "(no text)"}
 
 Question:
 ${question || "Explain what this text is saying."}
@@ -135,15 +123,9 @@ ${question || "Explain what this text is saying."}
 ${sampleBlock}
 
 ${TWO_SIDED_INSTRUCTION}
-The app adds this line under every answer: ${EXTENSION_DISCLAIMER}`;
+The app adds this line under every answer: ${ANSWER_DISCLAIMER}`;
 
   return { prompt, refusedRecommendation };
-}
-
-export function withDisclaimer(answer: string): string {
-  const trimmed = answer.trim();
-  if (trimmed.includes(EXTENSION_DISCLAIMER)) return trimmed;
-  return `${trimmed}\n\n${EXTENSION_DISCLAIMER}`;
 }
 
 function sampleMatches(sample: SampleMove, hay: string): boolean {

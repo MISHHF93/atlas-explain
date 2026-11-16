@@ -35,12 +35,12 @@ describe("Explain is built once for both surfaces", () => {
   it("says where each answer ran, and always adds the education line", () => {
     expect(panel).toContain("Answered on your device with Gemini Nano. Nothing was sent.");
     expect(panel).toContain("Answered in the cloud with Gemini.");
-    expect(panel).toMatch(/\.\.\.\(outcome\.notes \?\? \[\]\),\s*WHERE_IT_RAN\[outcome\.source\],\s*\.\.\.\(carriesDisclaimer \? \[\] : \[EXTENSION_DISCLAIMER\]\)/);
+    expect(panel).toMatch(/\.\.\.\(outcome\.notes \?\? \[\]\),\s*WHERE_IT_RAN\[outcome\.source\],\s*\.\.\.\(carriesDisclaimer \? \[\] : \[ANSWER_DISCLAIMER\]\)/);
   });
 
   it("shows a saved answer at once for a repeated question, says so, and offers Ask again", () => {
-    // Plain text first asks only: a follow-up, a page highlight or a market move is always asked fresh.
-    expect(panel).toContain("const saved = !followUp && !fromPage && !runOptions.fresh && ask === options.ask ? savedAnswer(text) : undefined;");
+    // Plain text first asks only: a follow-up or a market move is always asked fresh.
+    expect(panel).toContain("const saved = !followUp && !runOptions.fresh && ask === options.ask ? savedAnswer(text) : undefined;");
     expect(panel).toContain("Date.now() - entry.at < SAVED_FOR_MS");
     expect(panel).toContain("Nothing was sent. Ask again for a new one.");
     expect(panel).toContain('{ label: "Ask again", run: () => void run({ subject, fresh: true }) }');
@@ -52,8 +52,8 @@ describe("Explain is built once for both surfaces", () => {
     expect(panel).toContain("if (id !== runId) return;");
   });
 
-  it("says it is reading a highlight only when there is one, and Recent says honestly where it is kept", () => {
-    expect(panel).toContain('[fromPage ? STEP_READ : "Reading your question", STEP_DEVICE, STEP_CLOUD]');
+  it("shows honest progress steps, and Recent says honestly where it is kept", () => {
+    expect(panel).toContain('["Reading your question", STEP_DEVICE, STEP_CLOUD]');
     expect(app).toContain("Market-move answers are also saved to your account");
   });
 
