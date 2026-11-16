@@ -15,7 +15,7 @@ describe("the public site is four pages", () => {
   it("has Home, Support, Privacy and Terms in the navigation, and no separate How it works page", () => {
     expect(existsSync("how-it-works.html")).toBe(false);
     const nav = /<nav class="site-nav"[^>]*>(.*?)<\/nav>/.exec(home)?.[1] ?? "";
-    expect([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual(["/#how-it-works", "/app", "/connect", "/support"]);
+    expect([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual(["/#how-it-works", "/connect", "/app", "/support"]);
     expect(readFileSync("public/sitemap.xml", "utf8")).not.toContain("how-it-works");
   });
 

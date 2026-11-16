@@ -4,9 +4,11 @@
  * markers; the build (vite.config.ts) and the tests (applySiteFrame) put this markup in, so the
  * pages can never drift apart again.
  *
- * Install wording is honest: until the Chrome Web Store listing exists (CHROME_STORE_URL in
- * src/core/links.ts), every primary button says "Open the app" and opens the web app; setting the listing turns them all
- * into "Add to Chrome" at the next build.
+ * The site is connector first: the header button leads to /connect, where an AI assistant gets the
+ * ATLAS Explain address. The web app and the Chrome extension are the second option ("in your
+ * browser"). Their wording is honest: until the Chrome Web Store listing exists (CHROME_STORE_URL in
+ * src/core/links.ts), installCta says "Open the app" and opens the web app; setting the listing
+ * turns it into "Add to Chrome" at the next build.
  */
 import { CHROME_STORE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
 
@@ -16,23 +18,28 @@ const SOURCE_URL = "https://github.com/MISHHF93/atlas-explain";
 
 const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
   { href: "/#how-it-works", label: "How it works" },
-  { href: "/app", label: "The app" },
   { href: "/connect", label: "AI assistants", page: "connect" },
+  { href: "/app", label: "The app" },
   { href: "/support", label: "Support", page: "support" },
 ];
 
 /** Every public destination, once. */
 const FOOTER_LINKS: readonly { href: string; label: string }[] = [
-  { href: "/#install", label: "Chrome extension" },
+  { href: "/connect", label: "Add to your AI assistant" },
   { href: "/app", label: "The app" },
+  { href: "/#install", label: "Chrome extension" },
   { href: "/welcome#step-try", label: "Practice page" },
-  { href: "/connect", label: "AI assistants" },
   { href: "/support", label: "Support and FAQ" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
 ];
 
-/** The primary call to action: the store when listed, the web app until then. */
+/** The site-wide call to action: add the connector to an AI assistant. */
+export function connectCta(className: string): string {
+  return `<a class="${className}" href="/connect">Add to your AI assistant</a>`;
+}
+
+/** The browser option's call to action: the store when listed, the web app until then. */
 export function installCta(className: string): string {
   return CHROME_STORE_URL
     ? `<a class="${className}" href="${CHROME_STORE_URL}" target="_blank" rel="noreferrer">Add to Chrome</a>`
@@ -47,7 +54,7 @@ export function siteHeader(page: SitePage): string {
     `      <nav class="site-nav" aria-label="Site">${nav}</nav>`,
     // Signed out: "Sign in". site.ts turns it into your initials and "Account" when the app says you're signed in.
     `      <a class="site-signin" href="/signin" data-account-link>Sign in</a>`,
-    `      ${installCta("btn btn-primary btn-sm")}`,
+    `      ${connectCta("btn btn-primary btn-sm")}`,
     `    </header>`,
   ].join("\n");
 }

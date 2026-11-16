@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Support and FAQ · ATLAS Explain</title>
-    <meta name="description" content="Get help with ATLAS Explain and read the frequently asked questions." />
+    <meta name="description" content="Get help with the ATLAS Explain connector, web app and extension, and read the frequently asked questions." />
     <link rel="canonical" href="https://atlas-explain.web.app/support" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="ATLAS Explain" />
     <meta property="og:title" content="Support and FAQ · ATLAS Explain" />
-    <meta property="og:description" content="Get help with ATLAS Explain and read the frequently asked questions." />
+    <meta property="og:description" content="Get help with the ATLAS Explain connector, web app and extension, and read the frequently asked questions." />
     <meta property="og:url" content="https://atlas-explain.web.app/support" />
     <meta property="og:image" content="https://atlas-explain.web.app/og/atlas-explain.png" />
     <meta property="og:image:width" content="1200" />
@@ -33,22 +33,22 @@
         </div>
         <h2 id="faq">Frequently asked questions</h2>
         <div class="faq">
-          <details class="qa"><summary>Is it free?</summary><p>Yes. Explaining, learning and live prices are free. A Pro plan with more cloud answers may be offered later, and you will always see the price before paying anything.</p></details>
-          <details class="qa"><summary>Does it give trading advice?</summary><p>No. It is education only. Every answer shows two sides and what would change the picture. It never tells anyone to trade.</p></details>
-          <details class="qa"><summary>What does it read on a page?</summary><p>Only the text you highlight, the page title and the site name, and only when you ask for an explanation. It never reads balances, account numbers, positions or form fields.</p></details>
-          <details class="qa"><summary>Where does the AI run?</summary><p>On your device first, with Gemini Nano in desktop Chrome when your computer supports it. Otherwise Gemini answers in the cloud. Every answer says which one ran.</p></details>
-          <details class="qa"><summary>Where do the prices come from?</summary><p>From a public market-data provider, named and linked next to the prices. Missing prices stay missing.</p></details>
-          <details class="qa"><summary>Do I need an account?</summary><p>No. It works signed out. Signing in with Google or an email link keeps your saved explanations across devices.</p></details>
-          <details class="qa"><summary>Does it work on my phone?</summary><p>The extension needs desktop Chrome. On a phone, open the web app at atlas-explain.web.app/app; answers there come from the cloud model and are labelled.</p></details>
+          <details class="qa" id="ai-assistants"><summary>How do I add it to my AI assistant?</summary><p>Add one address as a connector in Claude, ChatGPT, Cursor, VS Code or any assistant that supports MCP. The address and the steps for each assistant are on <a href="/connect">the setup page</a>. No account or key is needed.</p></details>
+          <details class="qa"><summary>Is it free?</summary><p>Yes. The connector, explaining, learning and live prices are free. A Pro plan with more cloud answers in the web app may be offered later, and you will always see the price before paying anything.</p></details>
+          <details class="qa"><summary>Does it give trading advice?</summary><p>No. It is education only. It explains terms and shows sources, and it never tells anyone to trade or says where a price is going.</p></details>
+          <details class="qa"><summary>What does the connector receive?</summary><p>Only what your assistant sends when it uses an ATLAS Explain tool, such as a term or a ticker. It never sees your chat history, accounts or files, changes nothing and keeps none of it.</p></details>
+          <details class="qa"><summary>Where do the figures and prices come from?</summary><p>Official figures come from government and regulator sources, crypto prices from a public market-data provider, and headlines from public news feeds. Each answer names its source and time. Missing data stays missing, with the reason.</p></details>
+          <details class="qa"><summary>Can I use it without an AI assistant?</summary><p>Yes. The web app at atlas-explain.web.app/app explains whatever you type, and the Chrome extension explains what you highlight. In desktop Chrome they try Gemini Nano on your device first; otherwise Gemini answers in the cloud. Every answer says which one ran.</p></details>
+          <details class="qa"><summary>What does the extension read on a page?</summary><p>Only the text you highlight, the page title and the site name, and only when you ask for an explanation. It never reads balances, account numbers, positions or form fields.</p></details>
+          <details class="qa"><summary>Do I need an account?</summary><p>No. The connector never asks for one, and the web app works signed out. Signing in to the web app with Google or an email link keeps your saved explanations across devices.</p></details>
         </div>
         <h2 id="troubleshooting">If something looks stuck</h2>
         <ul class="points">
-          <li><b>"Cloud" answers do not arrive:</b> check your connection. Each browser has a fair-use limit of 8 cloud answers a minute and 300 a day; on-device answers are never limited.</li>
+          <li><b>Your assistant can't reach ATLAS Explain:</b> check the address on <a href="/connect">the setup page</a>, then remove the connector and add it again.</li>
+          <li><b>"Cloud" answers do not arrive in the web app:</b> check your connection. Each browser has a fair-use limit of 8 cloud answers a minute and 300 a day; on-device answers are never limited.</li>
           <li><b>Answers always say "Cloud":</b> Gemini Nano needs recent desktop Chrome on a supported computer. When it isn't available, the cloud answers instead and says so.</li>
           <li><b>The site looks out of date:</b> reload with Ctrl+Shift+R (Cmd+Shift+R on a Mac).</li>
         </ul>
-        <h2 id="ai-assistants">Use ATLAS Explain in your AI assistant</h2>
-        <p>Claude, ChatGPT, Cursor, VS Code and other assistants that support MCP connectors can use ATLAS Explain while you chat. The address, setup steps for each assistant and things to ask are on one page: <a href="/connect">ATLAS Explain for AI assistants</a>.</p>
       </article>
     </main>
     <!-- site:footer -->

@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>How it's built · ATLAS Explain</title>
-    <meta name="description" content="The technical design of ATLAS Explain: hybrid on-device and cloud AI with Firebase AI Logic, Gemini Nano and Gemini, App Check, Remote Config and the Chrome extension." />
+    <meta name="description" content="How ATLAS Explain is built: an MCP connector on Cloudflare's free plan, and hybrid on-device and cloud AI with Firebase AI Logic, Gemini Nano and Gemini." />
     <link rel="canonical" href="https://atlas-explain.web.app/how-its-built" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="ATLAS Explain" />
     <meta property="og:title" content="How it's built · ATLAS Explain" />
-    <meta property="og:description" content="The technical design of ATLAS Explain: hybrid on-device and cloud AI with Firebase AI Logic, Gemini Nano and Gemini, App Check, Remote Config and the Chrome extension." />
+    <meta property="og:description" content="How ATLAS Explain is built: an MCP connector on Cloudflare's free plan, and hybrid on-device and cloud AI with Firebase AI Logic, Gemini Nano and Gemini." />
     <meta property="og:url" content="https://atlas-explain.web.app/how-its-built" />
     <meta property="og:image" content="https://atlas-explain.web.app/og/atlas-explain.png" />
     <meta property="og:image:width" content="1200" />
@@ -28,8 +28,16 @@
         <h1>How it's built</h1>
         <p class="lede">The technical design behind ATLAS Explain, for developers and for the judges of Google's #BuildHybridAI challenge. Everyday use needs none of this.</p>
 
+        <h2 id="connector">The AI-assistant connector (MCP)</h2>
+        <ul class="points">
+          <li><b>One address</b> on Cloudflare Workers' free plan speaks the Model Context Protocol over Streamable HTTP, current and earlier protocol versions alike.</li>
+          <li><b>Seven read-only tools</b>: explain a term, browse the glossary, asset details, official figures, crypto prices, price history (with an interactive chart inside the chat) and today's headlines. It also offers prompts, glossary resources and completions.</li>
+          <li><b>No account, no key, no storage.</b> It answers what the assistant asks and keeps nothing. It is listed in the official MCP Registry.</li>
+        </ul>
+        <p>Setup steps for each assistant are on <a href="/connect">the setup page</a>.</p>
+
         <h2 id="hybrid">Hybrid inference with Firebase AI Logic</h2>
-        <p>Every explanation goes through the Firebase AI Logic Web SDK in hybrid mode, with <code>prefer_on_device</code> as the default.</p>
+        <p>In the web app and the Chrome extension, every explanation goes through the Firebase AI Logic Web SDK in hybrid mode, with <code>prefer_on_device</code> as the default.</p>
         <ol class="steps">
           <li><b>On the device.</b> When Chrome's Prompt API reports Gemini Nano as available, the prompt runs locally. Nothing leaves the computer, and the answer is labelled "On this device".</li>
           <li><b>In the cloud.</b> When Nano is unavailable (phones, other browsers, older hardware) or the text is too long for it, the same prompt goes to Gemini Flash-Lite in the cloud and is labelled "Cloud".</li>
@@ -48,7 +56,8 @@
 
         <h2 id="data">Data</h2>
         <ul class="points">
-          <li><b>Live crypto prices</b> come from a public market-data provider (Kraken or CoinGecko, chosen in Remote Config). The provider is named and linked next to every price, with its time.</li>
+          <li><b>Official figures</b> (US Treasury, ECB, Bank of Canada, EIA and SEC EDGAR), <b>headlines</b> (GDELT) and the connector’s <b>crypto prices</b> (Kraken, with CoinGecko as backup) are collected into a small data site this project publishes, so every answer can name its source and time and the connector never depends on a rate-limited source.</li>
+          <li><b>Live crypto prices</b> in the web app come from a public market-data provider (Kraken or CoinGecko, chosen in Remote Config). The provider is named and linked next to every price, with its time.</li>
           <li><b>No fixtures.</b> Missing data is shown as missing, with the reason.</li>
           <li><b>ATLAS research desk.</b> ATLAS Explain can also read the public signal of the ATLAS research software when that software runs on the same computer. That integration is optional and is hidden for everyone who doesn't run ATLAS. Its paper predictions stay withheld until they pass a published evidence gate.</li>
         </ul>
@@ -56,6 +65,7 @@
         <h2 id="stack">Stack</h2>
         <ul class="points">
           <li>TypeScript with Vite, no UI framework. The app's routes are lazy-loaded.</li>
+          <li>The connector: a Cloudflare Worker using the same glossary and data code as the web app.</li>
           <li>Chrome extension (Manifest V3): a popup and a side panel built from the same components as the web app, a context-menu entry and keyboard shortcuts.</li>
           <li>Firebase: AI Logic, App Check, Remote Config, Authentication (Google and email link), Firestore with owner-only rules, and Hosting.</li>
         </ul>

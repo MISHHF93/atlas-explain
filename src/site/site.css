@@ -164,10 +164,12 @@ tr:last-child td { border-bottom: 0; }
 .site-foot nav a:hover { color: var(--atlas-ink); }
 .foot-edu { font-size: var(--atlas-text-sm); font-weight: 650; color: var(--atlas-warn-ink); }
 
-/* extension-first landing */
+/* connector-first landing (the web app and extension are the second option) */
 .btn-lg { min-height: 3.1rem; padding: 0.6rem 1.35rem; font-size: var(--atlas-text-base); }
 .hero-shot { margin: 0; justify-self: center; }
 .hero-shot img, .shots img { display: block; width: 100%; max-width: 380px; aspect-ratio: auto; height: auto; border-radius: var(--atlas-radius-xl); border: 1px solid var(--atlas-line); box-shadow: var(--atlas-shadow-lg); background: var(--atlas-card); }
+.hero-shot-wide { justify-self: stretch; }
+.hero-shot-wide img { max-width: 640px; margin-inline: auto; }
 .band-lede { margin-top: 0.5rem; color: var(--atlas-muted); line-height: 1.6; max-width: 32rem; }
 .split { align-items: center; }
 .flow { display: grid; gap: 0.85rem; padding: 0; list-style: none; }
