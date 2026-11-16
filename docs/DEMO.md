@@ -65,9 +65,9 @@ https://atlas-explain.web.app opens with the home page: "Market jargon, explaine
 
 ## Still frames for the README
 
-Stills in `docs/screenshots/`. `site-home`, `site-connect`, `signin`, `hosted-header` and `hosted-full` are captured from the live site by `node store/src/capture-site.mjs` (last run 15 Nov 2026, after the Sign in page shipped); `local-header.png` and `desk-explain-link.png` are older:
+Stills in `docs/screenshots/`. `site-home`, `site-connect`, `signin`, `hosted-header` and `hosted-full` are captured from the live site by `node store/src/capture-site.mjs` (last run 16 Nov 2026, after the site went connector first and the extension was removed); `local-header.png` and `desk-explain-link.png` are older:
 
-- `site-home.png`: the website home page, connector first (retake after the 15 Nov 2026 MCP-first change)
+- `site-home.png`: the website home page, connector first
 - `site-connect.png`: ATLAS Explain for AI assistants (/connect), with the connector address
 - `signin.png`: the Sign in page (/signin)
 
