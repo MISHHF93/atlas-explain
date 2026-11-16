@@ -14,7 +14,7 @@ Checked against Anthropic's checklist (https://claude.com/docs/connectors/buildi
 
 ## 2. Tools
 
-Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `asset_details`, `official_figures`, `crypto_prices`, `price_history`, `todays_headlines`), 3 prompts (`market_brief`, `explain_asset`, `learn_next`) and 1 resource (the `price_history` chart app). No write tools.
+Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `asset_details`, `official_figures`, `crypto_prices`, `price_history`, `todays_headlines`), 3 prompts (`market_brief`, `explain_asset`, `learn_next`) and 3 interactive chart views (MCP Apps: the `price_history` chart, the `crypto_prices` board with sparklines, the `official_figures` cards and yield curve). No write tools.
 
 ## 3. Listing
 

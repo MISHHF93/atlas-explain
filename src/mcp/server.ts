@@ -26,10 +26,12 @@ import { CRYPTO_COINS, CRYPTO_CREDIT, readCryptoFile, type CryptoFile, type Cryp
 import { LEARN_PATH, learnTerms } from "../core/learn";
 import { HEADLINE_CREDIT, readNewsFile, type NewsItem } from "../core/news";
 import { CHART_APP_HTML, CHART_APP_URI, MCP_APP_MIME } from "./chart-app";
+import { BOARD_APP_HTML, BOARD_APP_URI } from "./board-app";
+import { FIGURES_APP_HTML, FIGURES_APP_URI } from "./figures-app";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.4.0";
+export const SERVER_VERSION = "1.5.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -80,9 +82,10 @@ const FIGURE: Schema = {
   type: "object",
   properties: {
     name: { type: "string" }, symbol: { type: "string" }, assetClass: { type: "string" },
-    value: nullable("number"), currency: { type: "string" }, changePct: nullable("number"), changeWindow: nullable("string"), asOf: nullable("string"),
+    value: nullable("number"), currency: { type: "string" }, change: nullable("number"), changePct: nullable("number"), changeWindow: nullable("string"), asOf: nullable("string"),
     facts: { type: "array", items: { type: "object", properties: { label: { type: "string" }, value: { type: "string" }, period: nullable("string") }, required: ["label", "value"] } },
     source: nullable("string"), sourceUrl: nullable("string"), noPriceReason: nullable("string"),
+    tenor: nullable("string"),
   },
   required: ["name", "symbol", "assetClass"],
 };
@@ -122,20 +125,24 @@ export const TOOLS: readonly Tool[] = [
     annotations: annotations("Official market figures", true),
     icons: ICONS,
     outputSchema: obj({ figures: { type: "array", items: FIGURE } }, ["figures"]),
+    // Clients that support MCP Apps draw the figures as cards, and yields as a curve (src/mcp/figures-app.ts).
+    _meta: { ui: { resourceUri: FIGURES_APP_URI } },
   },
   {
     name: "crypto_prices",
     title: "Crypto prices",
-    description: "Recent prices for the ten major coins ATLAS Explain follows (Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink, Avalanche), biggest moves first. Collected hourly by ATLAS Explain's data job from Kraken's public market data (CoinGecko as backup) and served from ATLAS Explain's own data site; each answer says when they were collected.",
+    description: "Recent prices for the ten major coins ATLAS Explain follows (Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink, Avalanche), biggest moves first, each with its last 24 hours of hourly closes. Refreshed about every 10 minutes by ATLAS Explain's data job from Kraken's public market data (CoinGecko as backup) and served from ATLAS Explain's own data site; each answer says when they were collected.",
     inputSchema: { type: "object", properties: { coin: str("Optional coin name or symbol, for example 'BTC' or 'Ethereum'.") }, additionalProperties: false },
     annotations: annotations("Crypto prices", true),
     icons: ICONS,
-    outputSchema: obj({ source: { type: "string" }, coins: { type: "array", items: { type: "object", properties: { name: { type: "string" }, symbol: { type: "string" }, priceUsd: { type: "number" }, changePct: nullable("number"), changeWindow: { type: "string" }, asOf: nullable("string") }, required: ["name", "symbol", "priceUsd"] } } }, ["source", "coins"]),
+    outputSchema: obj({ source: { type: "string" }, coins: { type: "array", items: { type: "object", properties: { name: { type: "string" }, symbol: { type: "string" }, priceUsd: { type: "number" }, changePct: nullable("number"), changeWindow: { type: "string" }, asOf: nullable("string"), spark: { type: "array", items: { type: "number" } } }, required: ["name", "symbol", "priceUsd"] } } }, ["source", "coins"]),
+    // Clients that support MCP Apps draw a board with sparklines; a coin opens its chart (src/mcp/board-app.ts).
+    _meta: { ui: { resourceUri: BOARD_APP_URI } },
   },
   {
     name: "price_history",
     title: "Crypto price history",
-    description: "How a coin's price moved over the last 24 hours, 7 days or 30 days: start, end, change, high and low with their times, from the hourly closes on ATLAS Explain's own data site (refreshed hourly). Describes the past only; never a forecast.",
+    description: "How a coin's price moved over the last 24 hours, 7 days or 30 days: start, end, change, high and low with their times, from the hourly closes on ATLAS Explain's own data site (refreshed about every 10 minutes). Describes the past only; never a forecast.",
     inputSchema: {
       type: "object",
       properties: { coin: str("Coin name or symbol, for example 'BTC'."), range: { type: "string", enum: ["24h", "7d", "30d"], description: "Time range. Default 7d." } },
@@ -160,16 +167,23 @@ export const TOOLS: readonly Tool[] = [
 ];
 
 const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed hourly) and past moves; todays_headlines for recent news. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news. In clients that support MCP Apps, crypto_prices, price_history and official_figures also draw interactive charts (a price board, a price chart, a yield curve). Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
 const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
   prompts: { listChanged: false },
   completions: {},
-  // The interactive chart (price_history) is an MCP App; hosts without it get the text answer.
+  // The charts (price_history, crypto_prices, official_figures) are MCP Apps; hosts without them get the text answer.
   extensions: { "io.modelcontextprotocol/ui": { mimeTypes: [MCP_APP_MIME] } },
 };
 const SERVER_INFO = () => ({ name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: ICONS });
+
+/** The interactive views (MCP Apps) the tools above point at with _meta.ui.resourceUri. */
+export const MCP_APPS = [
+  { uri: CHART_APP_URI, name: "price-chart", title: "Interactive price chart", description: "The chart price_history draws in clients that support MCP Apps.", html: CHART_APP_HTML },
+  { uri: BOARD_APP_URI, name: "crypto-board", title: "Crypto price board", description: "The board crypto_prices draws in clients that support MCP Apps: prices, changes and 24-hour sparklines; a coin opens its chart.", html: BOARD_APP_HTML },
+  { uri: FIGURES_APP_URI, name: "official-figures", title: "Official figures and yield curve", description: "The view official_figures draws in clients that support MCP Apps: figure cards, and a yield curve when the answer holds government bond yields.", html: FIGURES_APP_HTML },
+] as const;
 
 /* ---------- glossary as resources (attachable as context in clients that support resources) ---------- */
 
@@ -304,6 +318,7 @@ function figureRecord(a: Asset): Record<string, unknown> {
     assetClass: a.class,
     value: a.quote ? a.quote.value : null,
     currency: a.currency,
+    change: a.quote?.change ?? null,
     changePct: a.quote?.changePct ?? null,
     changeWindow: a.quote?.changeWindow ?? null,
     asOf: a.quote?.asOf ?? a.facts[0]?.asOf ?? null,
@@ -311,6 +326,7 @@ function figureRecord(a: Asset): Record<string, unknown> {
     source: source ? source.attribution.text.replace(/^source:\s*/i, "") : null,
     sourceUrl: source?.attribution.href ?? null,
     noPriceReason: a.quote ? null : a.noQuoteReason,
+    tenor: a.classData?.class === "rate" ? a.classData.tenor : null,
   };
 }
 
@@ -336,7 +352,7 @@ const coinFor = (key: string) => {
   return CRYPTO_COINS.find((c) => c.symbol.toLowerCase() === k || c.name.toLowerCase() === k || c.coingeckoId === k);
 };
 const COIN_NAMES = CRYPTO_COINS.map((c) => c.name).join(", ");
-/** Older than this, an answer says plainly that the hourly refresh hasn't run since. */
+/** Older than this, an answer says plainly that the regular refresh hasn't run since. */
 export const CRYPTO_STALE_MS = 3 * 3_600_000;
 
 async function loadCrypto(fetcher: Fetcher): Promise<CryptoFile | null> {
@@ -348,11 +364,11 @@ async function loadCrypto(fetcher: Fetcher): Promise<CryptoFile | null> {
 function cryptoCredit(source: CryptoSource, asOf: string, now: number): string {
   const age = now - Date.parse(asOf);
   const hours = Math.round(age / 3_600_000);
-  const old = age > CRYPTO_STALE_MS ? ` These are ${hours >= 48 ? `${Math.round(hours / 24)} days` : `${hours} hours`} old: the hourly refresh hasn't run since.` : "";
+  const old = age > CRYPTO_STALE_MS ? ` These are ${hours >= 48 ? `${Math.round(hours / 24)} days` : `${hours} hours`} old: the regular refresh hasn't run since.` : "";
   return `Collected ${utc(asOf)} by ATLAS Explain's data job and served from its own data site. ${CRYPTO_CREDIT[source]}${old}`;
 }
 
-/** The app's crypto intro says its prices are live; the connector's are hourly, so it says only this. */
+/** The app's crypto intro says its prices are live; the connector's are a few minutes old, so it says only this. */
 const CRYPTO_ABOUT = "Cryptocurrencies trade around the clock, every day, on many exchanges at once.";
 const NO_CRYPTO = "ATLAS Explain's crypto data couldn't be loaded right now. Nothing is shown in its place; try again in a few minutes.";
 
@@ -422,8 +438,14 @@ export async function cryptoPrices(coinKey: string | undefined, fetcher: Fetcher
   const lines = rows.map((a) => `${a.name} (${a.symbol}): ${formatPrice(a.priceUsd)}, ${formatChange(a.changePct).text} ${a.changeWindow}`);
   return data(`${want ? "" : "Biggest moves first.\n"}${lines.join("\n")}\n\n${credit}`, {
     source: credit,
-    coins: rows.map((a) => ({ name: a.name, symbol: a.symbol, priceUsd: a.priceUsd, changePct: a.changePct, changeWindow: a.changeWindow, asOf: file.prices.asOf })),
+    coins: rows.map((a) => ({ name: a.name, symbol: a.symbol, priceUsd: a.priceUsd, changePct: a.changePct, changeWindow: a.changeWindow, asOf: file.prices.asOf, spark: lastDay(file.history.series[a.symbol] ?? []) })),
   });
+}
+
+/** A coin's last 24 hourly closes, oldest first, for the board's sparkline. */
+function lastDay(series: readonly (readonly [number, number])[]): number[] {
+  const end = series.length ? series[series.length - 1]![0] : 0;
+  return thinEvenly(series.filter(([t]) => t >= end - 86_400), 25).map(([, c]) => c);
 }
 
 const RANGES = {
@@ -549,7 +571,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
     case "resources/list":
       return ok({
         resources: [
-          { uri: CHART_APP_URI, name: "price-chart", title: "Interactive price chart", description: "The chart price_history draws in clients that support MCP Apps.", mimeType: MCP_APP_MIME, icons: ICONS },
+          ...MCP_APPS.map((a) => ({ uri: a.uri, name: a.name, title: a.title, description: a.description, mimeType: MCP_APP_MIME, icons: ICONS })),
           { uri: LEARNING_PATH_URI, name: "learning-path", title: "The ATLAS Explain learning path", description: "Every topic in order, with its terms explained in plain language.", mimeType: "text/markdown", icons: ICONS },
           ...ALL_TERMS.map(termResource),
         ],
@@ -558,7 +580,8 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
       return ok({ resourceTemplates: [{ uriTemplate: `${GLOSSARY_URI}{term}`, name: "glossary-term", title: "Glossary term", description: "A market term from the ATLAS Explain glossary, in plain language.", mimeType: "text/markdown", icons: ICONS }] }, true);
     case "resources/read": {
       const uri = String(message.params?.uri);
-      if (uri === CHART_APP_URI) return ok({ contents: [{ uri: CHART_APP_URI, mimeType: MCP_APP_MIME, text: CHART_APP_HTML, _meta: { ui: { prefersBorder: true } } }] }, true);
+      const app = MCP_APPS.find((a) => a.uri === uri);
+      if (app) return ok({ contents: [{ uri, mimeType: MCP_APP_MIME, text: app.html, _meta: { ui: { prefersBorder: true } } }] }, true);
       const doc = readGlossaryResource(uri);
       // Resource not found: -32602 from 2026-07-28 on, -32002 before.
       return doc ? ok({ contents: [doc] }, true) : fail(modern ? -32602 : -32002, `Resource not found: ${uri}`, { uri });

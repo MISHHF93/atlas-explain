@@ -81,15 +81,15 @@ describe("the connector covers what the app shows", () => {
     expect(r.indexOf("Ethereum")).toBeLessThan(r.indexOf("Bitcoin"));
     expect(r).toContain("Bitcoin (BTC): $65,000.00, −1.20% since 00:00 UTC");
     expect(r).toContain("Collected 2026-11-15 11:30 UTC by ATLAS Explain's data job and served from its own data site. Prices: Kraken public market data");
-    expect(r).not.toContain("old: the hourly refresh");
+    expect(r).not.toContain("old: the regular refresh");
     const down = await cryptoPrices(undefined, net({ cryptoDown: true }), NOW);
     expect(down.isError).toBe(true);
     expect(body(down)).not.toMatch(/\$\d/);
     expect(body(await cryptoPrices("Shiba", net(), NOW))).toContain("isn't one of the ten coins");
   });
 
-  it("says plainly how old the prices are when the hourly refresh has stopped", async () => {
-    expect(body(await cryptoPrices(undefined, net({ cryptoAsOf: "2026-11-15T05:00:00Z" }), NOW))).toContain("These are 7 hours old: the hourly refresh hasn't run since.");
+  it("says plainly how old the prices are when the regular refresh has stopped", async () => {
+    expect(body(await cryptoPrices(undefined, net({ cryptoAsOf: "2026-11-15T05:00:00Z" }), NOW))).toContain("These are 7 hours old: the regular refresh hasn't run since.");
     expect(body(await cryptoPrices(undefined, net({ cryptoAsOf: "2026-11-12T12:00:00Z" }), NOW))).toContain("These are 3 days old");
     expect(body(await priceHistory("BTC", "7d", net({ cryptoAsOf: "2026-11-12T12:00:00Z" }), NOW))).toContain("3 days old");
   });
