@@ -39,7 +39,7 @@ export function createSignInPage(options: { onContinue: () => void }): SignInPag
 
   const title = el("h1", "signin-title", "Sign in to ATLAS Explain");
   title.id = "signin-title";
-  const lede = el("p", "signin-lede", "Keep your saved explanations and settings across devices. Signing in is optional.");
+  const lede = el("p", "signin-lede", "Sign in to keep your saved explanations and settings on every device, or continue without an account. ATLAS Explain works the same either way.");
   const note = el("p", "signin-note");
   note.setAttribute("role", "status");
   const slot = el("div", "signin-body");
@@ -55,7 +55,10 @@ export function createSignInPage(options: { onContinue: () => void }): SignInPag
     a.textContent = label;
     links.append(a);
   }
-  card.append(brand, title, lede, note, slot, skip, links);
+  const or = el("div", "or-divider");
+  or.setAttribute("role", "separator");
+  or.append(el("span", undefined, "or"));
+  card.append(brand, title, lede, note, slot, or, skip, links);
   node.append(card);
 
   let open = false;

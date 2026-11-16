@@ -48,6 +48,11 @@
   --atlas-glow: 0 0 0 1px color-mix(in srgb, var(--atlas-accent) 30%, transparent), 0 8px 22px -10px var(--atlas-accent);
   --atlas-surface-2: color-mix(in srgb, var(--atlas-ink) 4%, var(--atlas-card));
   --atlas-accent-soft: color-mix(in srgb, var(--atlas-accent) 12%, transparent);
+  /* Google sign-in button: set by Google's branding rules, the same in both themes. */
+  --atlas-google-bg: #ffffff;
+  --atlas-google-hover: #f2f2f2;
+  --atlas-google-ink: #1f1f1f;
+  --atlas-google-line: #747775;
   --atlas-radius-xl: 20px;
   --atlas-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --atlas-dur-fast: 140ms;

@@ -45,14 +45,14 @@ import { isEngineState } from "../core/hybrid-engine";
 import { TEXT_HISTORY_KEY, readTextHistory, type TextHistoryEntry } from "../core/text-history";
 import { parseTwoSided } from "../core/two-sided";
 import { liveSnapshot, snapshotBreadth, snapshotTime } from "../core/live-snapshot";
-import { parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } from "../app/routes";
+import { needsSignInStep, parseRoute, pathFor, tabFor, titleFor, type AppRoute, type AppTab } from "../app/routes";
 import type { TabDef } from "../wallet/shell";
 import { createWatchlist, localKeyValue } from "../core/watchlist";
 import { buildSettings } from "../wallet/settings";
 import { headlinesCard } from "../wallet/headlines";
 import { WEB_LEARN_KEY } from "../core/account-data";
 import { yourDataGroup } from "../wallet/your-data";
-import { saveAccountHint } from "../core/account-hint";
+import { readAccountHint, readGuestChoice, saveAccountHint, saveGuestChoice } from "../core/account-hint";
 import { createSignInPage } from "../wallet/signin-page";
 import { tracker } from "../core/analytics";
 import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
@@ -147,9 +147,24 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   });
   document.title = titleFor(route);
   // The Sign in page (/signin) sits over the app frame as its own page.
-  const signInPage = createSignInPage({ onContinue: () => afterSignIn() });
+  const signInPage = createSignInPage({
+    onContinue: () => {
+      // Remembered on this browser, so the app opens straight away next time.
+      saveGuestChoice();
+      afterSignIn();
+    },
+  });
   host.append(signInPage.node);
   let signInNote: string | undefined;
+  // Every way into the app passes the Sign in page once on a browser (website links, bookmarks,
+  // typed addresses). Signed-in visitors and those who chose to continue without an account go
+  // straight in. Where they were heading is kept in ?next= and opened after.
+  if (needsSignInStep(route, location, { signedIn: readAccountHint() != null, guest: readGuestChoice() })) {
+    const heading = pathFor(route);
+    history.replaceState(null, "", heading === "/app" ? "/signin" : `/signin?next=${encodeURIComponent(heading)}`);
+    route = { kind: "signin" };
+    document.title = titleFor(route);
+  }
   // One address per page: old aliases (/app/glossary, /app/settings), a trailing slash or a
   // lower-case symbol become the canonical path. The query (sign-in links) and hash are kept.
   if (route.kind !== "not_found" && location.pathname !== pathFor(route)) {

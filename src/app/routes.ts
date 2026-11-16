@@ -136,3 +136,17 @@ export function legacyRedirect(loc: { pathname: string; search: string; hash: st
   const q = params.toString();
   return `${base}${q ? `?${q}` : ""}${hash}`;
 }
+
+/**
+ * Whether opening the app should show the Sign in page first: every way in (the website's links,
+ * a bookmark, a typed address) passes it once on a browser, unless the visitor is signed in or has
+ * already chosen to continue without an account. Links that carry their own job (an ATLAS desk
+ * card in the hash, an email sign-in link, a preview flag) are let through as they are.
+ */
+export function needsSignInStep(route: AppRoute, loc: { search: string; hash: string }, state: { signedIn: boolean; guest: boolean }): boolean {
+  if (route.kind === "signin" || route.kind === "not_found") return false;
+  if (state.signedIn || state.guest) return false;
+  if (loc.hash && loc.hash !== "#") return false;
+  const params = new URLSearchParams(loc.search);
+  return !LEGACY_KEYS.some((key) => params.has(key));
+}

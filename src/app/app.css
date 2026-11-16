@@ -142,3 +142,13 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 /* ---------- app identity: separate from the website ---------- */
 .wallet[data-surface="app"] .bar { border-top: 3px solid var(--atlas-accent); background: var(--atlas-card); }
 .app-badge { align-self: center; margin-left: 0.4rem; padding: 0.1rem 0.45rem; border-radius: var(--atlas-radius-pill); background: var(--atlas-accent-soft); color: var(--atlas-accent); font-size: var(--atlas-text-2xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ---------- sign-in: Google's button and "or" dividers ---------- */
+/* Google's sign-in branding: a neutral button with the four-colour G, in light and dark themes. */
+.google-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem; width: 100%; min-height: 2.75rem; padding: 0.55rem 1rem; border-radius: var(--atlas-radius-pill); border: 1px solid var(--atlas-google-line); background: var(--atlas-google-bg); color: var(--atlas-google-ink); font: inherit; font-weight: 600; cursor: pointer; }
+.google-btn:hover { background: var(--atlas-google-hover); }
+.google-btn:focus-visible { outline: 3px solid var(--atlas-accent); outline-offset: 2px; }
+.google-btn:disabled { opacity: 0.6; cursor: progress; }
+.google-btn svg { flex: none; }
+.or-divider { display: flex; align-items: center; gap: 0.75rem; color: var(--atlas-muted); font-size: var(--atlas-text-xs); }
+.or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--atlas-line); }
