@@ -34,6 +34,7 @@ export const DATA_SITE_URL = MCP_ORIGIN;
 export const MARKET_DATA_URL = `${DATA_SITE_URL}/data/v1/market.json`;
 export const NEWS_DATA_URL = `${DATA_SITE_URL}/data/v1/news.json`;
 export const CRYPTO_DATA_URL = `${DATA_SITE_URL}/data/v1/crypto.json`;
+export const ECONOMY_DATA_URL = `${DATA_SITE_URL}/data/v1/economy.json`;
 
 /* ---------- the education line ---------- */
 /** The short form, for tight spaces (chart footers, error screens). */

@@ -46,6 +46,19 @@ export interface CryptoPrice {
   priceUsd: number;
   changePct: number | null;
   changeWindow: string;
+  /** Best bid and ask at capture time (Kraken only; CoinGecko gives a single price). */
+  bidUsd?: number;
+  askUsd?: number;
+}
+
+/** One side of an order book: [price USD, size in coins], best first. */
+export type BookSide = [number, number][];
+
+/** Kraken order books, the best levels on each side (captured with the history). */
+export interface CryptoBooks {
+  source: "kraken";
+  asOf: string;
+  books: Record<string, { bids: BookSide; asks: BookSide }>;
 }
 
 export interface CryptoFile {
@@ -54,6 +67,7 @@ export interface CryptoFile {
   prices: { source: CryptoSource; asOf: string; coins: CryptoPrice[] };
   /** Hourly closes, oldest first, as [unix seconds, USD]; up to 30 days per coin. */
   history: { source: CryptoSource; asOf: string; interval: "1h"; series: Record<string, [number, number][]> };
+  books?: CryptoBooks;
 }
 
 type Rec = Record<string, unknown>;
@@ -79,8 +93,30 @@ export function parseKrakenTicker(body: unknown): CryptoPrice[] {
     const last = t && Array.isArray(t.c) ? pos(t.c[0]) : null;
     if (!t || last == null) return [];
     const open = pos(t.o);
-    return [{ symbol: c.symbol, name: c.name, priceUsd: round(last), changePct: open ? Number((((last - open) / open) * 100).toFixed(2)) : null, changeWindow: "since 00:00 UTC" }];
+    const bid = Array.isArray(t.b) ? pos(t.b[0]) : null;
+    const ask = Array.isArray(t.a) ? pos(t.a[0]) : null;
+    const quote = bid != null && ask != null && ask >= bid ? { bidUsd: round(bid), askUsd: round(ask) } : {};
+    return [{ symbol: c.symbol, name: c.name, priceUsd: round(last), changePct: open ? Number((((last - open) / open) * 100).toFixed(2)) : null, changeWindow: "since 00:00 UTC", ...quote }];
   });
+}
+
+/** How many levels of each side of the book are kept. */
+export const BOOK_LEVELS = 25;
+
+/** Kraken Depth → the best BOOK_LEVELS bids (highest first) and asks (lowest first). */
+export function parseKrakenDepth(body: unknown): { bids: BookSide; asks: BookSide } | null {
+  const result = krakenResult(body);
+  const book = result ? Object.values(result).find(isRec) : null;
+  if (!book) return null;
+  const side = (rows: unknown): BookSide =>
+    (Array.isArray(rows) ? rows : []).flatMap((r) => {
+      const p = Array.isArray(r) ? pos(r[0]) : null;
+      const v = Array.isArray(r) ? pos(r[1]) : null;
+      return p != null && v != null ? [[round(p), round(v)] as [number, number]] : [];
+    });
+  const bids = side(book.bids).sort((a, b) => b[0] - a[0]).slice(0, BOOK_LEVELS);
+  const asks = side(book.asks).sort((a, b) => a[0] - b[0]).slice(0, BOOK_LEVELS);
+  return bids.length && asks.length && asks[0]![0] >= bids[0]![0] ? { bids, asks } : null;
 }
 
 /** CoinGecko /coins/markets: price and 24-hour change. */
@@ -129,7 +165,13 @@ export function readCryptoFile(body: unknown): CryptoFile | null {
   if (!isRec(p) || !SOURCES.includes(p.source as string) || !isTime(p.asOf) || !Array.isArray(p.coins)) return null;
   if (!isRec(h) || !SOURCES.includes(h.source as string) || !isTime(h.asOf) || !isRec(h.series)) return null;
   const known = new Set(CRYPTO_COINS.map((c) => c.symbol));
-  const coins = p.coins.filter((c): c is CryptoPrice => isRec(c) && known.has(c.symbol as string) && pos(c.priceUsd) != null && typeof c.changeWindow === "string" && (c.changePct === null || typeof c.changePct === "number"));
+  const coins = p.coins
+    .filter((c): c is CryptoPrice => isRec(c) && known.has(c.symbol as string) && pos(c.priceUsd) != null && typeof c.changeWindow === "string" && (c.changePct === null || typeof c.changePct === "number"))
+    .map((c) => {
+      const ok = pos(c.bidUsd) != null && pos(c.askUsd) != null && (c.askUsd as number) >= (c.bidUsd as number);
+      const { bidUsd: _b, askUsd: _a, ...rest } = c;
+      return ok ? { ...rest, bidUsd: c.bidUsd, askUsd: c.askUsd } : rest;
+    });
   const series: Record<string, [number, number][]> = {};
   for (const [symbol, rows] of Object.entries(h.series)) {
     if (!known.has(symbol) || !Array.isArray(rows)) continue;
@@ -141,5 +183,20 @@ export function readCryptoFile(body: unknown): CryptoFile | null {
     generatedAt: body.generatedAt,
     prices: { source: p.source as CryptoSource, asOf: p.asOf, coins },
     history: { source: h.source as CryptoSource, asOf: h.asOf, interval: "1h", series },
+    ...readBooks(body.books, known),
   };
+}
+
+function readBooks(raw: unknown, known: Set<string>): { books?: CryptoBooks } {
+  if (!isRec(raw) || raw.source !== "kraken" || !isTime(raw.asOf) || !isRec(raw.books)) return {};
+  const side = (rows: unknown): BookSide =>
+    Array.isArray(rows) ? rows.filter((r): r is [number, number] => Array.isArray(r) && pos(r[0]) != null && pos(r[1]) != null).slice(0, BOOK_LEVELS) : [];
+  const books: CryptoBooks["books"] = {};
+  for (const [symbol, b] of Object.entries(raw.books)) {
+    if (!known.has(symbol) || !isRec(b)) continue;
+    const bids = side(b.bids);
+    const asks = side(b.asks);
+    if (bids.length && asks.length) books[symbol] = { bids, asks };
+  }
+  return Object.keys(books).length ? { books: { source: "kraken", asOf: raw.asOf, books } } : {};
 }

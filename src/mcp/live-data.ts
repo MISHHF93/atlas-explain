@@ -3,7 +3,7 @@
  * plan: 100,000 requests a day, no card; over the limit requests fail, nothing is charged).
  * One Worker, three jobs:
  *   - /mcp: the hosted MCP connector (src/mcp/http.ts, src/mcp/server.ts);
- *   - /data/v1/{market,news,crypto}.json: the live data the web app and the connector both read;
+ *   - /data/v1/{market,news,crypto,economy}.json: the live data the web app and the connector both read;
  *   - capture: keeps that data fresh (src/data/capture.ts) in Workers KV.
  *
  * Fresh on every visit: whenever the app or the connector reads a file, it gets the stored copy
@@ -15,7 +15,8 @@
 import { handleHttp } from "./http";
 import { DATA_SITE_URL } from "../core/links";
 import type { Fetcher } from "./server";
-import { CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
+import { CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureEconomy, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
+import { readEconomyFile } from "../data/economy";
 import { readCryptoFile } from "../data/crypto";
 import { MARKET_SCHEMA, type MarketFile } from "../data/market-sources";
 import { readNewsFile } from "../core/news";
@@ -40,7 +41,7 @@ export interface WaitContext {
 
 /** The only place the data comes from: this Worker's own /data/v1 address. */
 export const DATA_ORIGIN = DATA_SITE_URL;
-export const DATA_FILES = ["market.json", "news.json", "crypto.json"] as const;
+export const DATA_FILES = ["market.json", "news.json", "crypto.json", "economy.json"] as const;
 export type DataFile = (typeof DATA_FILES)[number];
 const KEY = (file: DataFile) => `data/v1/${file}`;
 const fileOf = (pathname: string): DataFile | null => {
@@ -57,10 +58,12 @@ export const REFRESH_AFTER_MS: Record<DataFile, number> = {
   "crypto.json": 3 * 60_000,
   "news.json": 15 * 60_000,
   "market.json": 60 * 60_000,
+  // Monthly and daily official figures: four captures a day is plenty (and BLS allows 25 keyless reads).
+  "economy.json": 6 * 60 * 60_000,
 };
 
 /** Browsers and the edge may keep a copy this long; short, so a refresh shows up quickly. */
-const MAX_AGE_S: Record<DataFile, number> = { "crypto.json": 30, "news.json": 60, "market.json": 120 };
+const MAX_AGE_S: Record<DataFile, number> = { "crypto.json": 30, "news.json": 60, "market.json": 120, "economy.json": 600 };
 
 const DATA_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -85,7 +88,8 @@ async function read(env: WorkerEnv, file: DataFile, now: number): Promise<{ body
 
 /** Starts a background capture of `file` when its copy is too old and none is running here. */
 function refreshIfStale(file: DataFile, ageMs: number, env: WorkerEnv, ctx: WaitContext | undefined, now: number): void {
-  if (!ctx || ageMs < REFRESH_AFTER_MS[file] || inFlight.has(file)) return;
+  // The economy reads ten official sources, too many for a visit's ~30 seconds: only its cron captures it.
+  if (!ctx || file === "economy.json" || ageMs < REFRESH_AFTER_MS[file] || inFlight.has(file)) return;
   const run = capture(file, env, now, "visit").finally(() => inFlight.delete(file));
   inFlight.set(file, run);
   ctx.waitUntil(run);
@@ -129,8 +133,9 @@ export const CRONS = {
   crypto: "*/10 * * * *",
   news: "37 */3 * * *",
   market: "47 */6 * * *",
+  economy: "17 */6 * * *",
 } as const;
-const CRON_FILE: Record<string, DataFile> = { [CRONS.crypto]: "crypto.json", [CRONS.news]: "news.json", [CRONS.market]: "market.json" };
+const CRON_FILE: Record<string, DataFile> = { [CRONS.crypto]: "crypto.json", [CRONS.news]: "news.json", [CRONS.market]: "market.json", [CRONS.economy]: "economy.json" };
 
 /** The pause between polite source requests. Tests swap it for an instant one. */
 let pause = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -178,6 +183,9 @@ async function capture(file: DataFile, env: WorkerEnv, now: number, why: "visit"
   if (file === "crypto.json") {
     // A visit refreshes prices only: ten coins' history with polite gaps outlasts its ~30 seconds.
     const data = await captureCrypto(cap, readCryptoFile(await stored(env, file)), { history: why === "cron" });
+    if (data) await save(env, file, data, now);
+  } else if (file === "economy.json") {
+    const data = await captureEconomy(cap, readEconomyFile(await stored(env, file)));
     if (data) await save(env, file, data, now);
   } else if (file === "news.json") {
     const data = await captureNews(cap, readNewsFile(await stored(env, file), now), { gdelt: why === "cron" });

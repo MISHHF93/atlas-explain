@@ -28,10 +28,13 @@ import { HEADLINE_CREDIT, readNewsFile, type NewsItem } from "../core/news";
 import { CHART_APP_HTML, CHART_APP_URI, MCP_APP_MIME } from "./chart-app";
 import { BOARD_APP_HTML, BOARD_APP_URI } from "./board-app";
 import { FIGURES_APP_HTML, FIGURES_APP_URI } from "./figures-app";
+import { ECONOMY_APP_HTML, ECONOMY_APP_URI } from "./economy-app";
+import { DEPTH_APP_HTML, DEPTH_APP_URI } from "./depth-app";
+import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile, type Indicator } from "../data/economy";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.5.0";
+export const SERVER_VERSION = "1.6.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -48,7 +51,7 @@ export const META = {
 } as const;
 /** How long clients and caches may reuse list and read results (MCP 2026-07-28 CacheableResult). */
 const CACHE = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-import { APP_URL, CRYPTO_DATA_URL, EDUCATION_LINE, EXPLAIN_WEB_URL, MARKET_DATA_URL, MCP_ORIGIN, NEWS_DATA_URL } from "../core/links";
+import { APP_URL, CRYPTO_DATA_URL, ECONOMY_DATA_URL, EDUCATION_LINE, EXPLAIN_WEB_URL, MARKET_DATA_URL, MCP_ORIGIN, NEWS_DATA_URL } from "../core/links";
 export { EDUCATION_LINE, MCP_ORIGIN };
 
 /** The platform fetch (Cloudflare Workers, Node or a test double). */
@@ -88,6 +91,21 @@ const FIGURE: Schema = {
     tenor: nullable("string"),
   },
   required: ["name", "symbol", "assetClass"],
+};
+const INDICATOR: Schema = {
+  type: "object",
+  properties: {
+    id: { type: "string" }, name: { type: "string" }, unit: { type: "string", enum: ["%", "USD"] }, value: { type: "number" }, period: { type: "string" },
+    change: nullable("number"), changeWindow: { type: "string" }, note: nullable("string"),
+    series: { type: "array", items: { type: "object", properties: { t: { type: "string" }, v: { type: "number" } }, required: ["t", "v"] } },
+    source: { type: "string" }, sourceUrl: { type: "string" }, capturedAt: { type: "string" },
+  },
+  required: ["id", "name", "unit", "value", "period", "series", "source"],
+};
+const EVENT: Schema = {
+  type: "object",
+  properties: { date: { type: "string" }, startDate: nullable("string"), institution: { type: "string" }, title: { type: "string" }, about: { type: "string" }, withProjections: { type: "boolean" }, daysAway: { type: "number" }, sourceUrl: { type: "string" } },
+  required: ["date", "institution", "title"],
 };
 const annotations = (title: string, openWorldHint: boolean) => ({ title, readOnlyHint: true as const, destructiveHint: false as const, idempotentHint: true as const, openWorldHint });
 
@@ -158,22 +176,60 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "todays_headlines",
     title: "Today's market headlines",
-    description: "Recent market headlines ATLAS Explain collected from the GDELT Project's news index and from official press releases (Federal Reserve, SEC, CFTC, ECB), each with its publisher, link and time. News stories older than 36 hours and releases older than 4 days are never returned. Optional filter by company or coin.",
+    description: "Recent market headlines ATLAS Explain collected from the GDELT Project's news index and from official press releases (Federal Reserve, SEC, CFTC, ECB, Bank of Canada, Bank of England), each with its publisher, link and time. News stories older than 36 hours and releases older than 4 days are never returned. Optional filter by company or coin.",
     inputSchema: { type: "object", properties: { about: str("Optional company, coin or word, for example 'Nvidia' or 'Bitcoin'.") }, additionalProperties: false },
     annotations: annotations("Today's market headlines", true),
     icons: ICONS,
     outputSchema: obj({ refreshedAt: { type: "string" }, headlines: { type: "array", items: { type: "object", properties: { title: { type: "string" }, publisher: { type: "string" }, url: { type: "string" }, seenAt: { type: "string" } }, required: ["title", "url"] } } }, ["headlines"]),
   },
+  {
+    name: "economy_snapshot",
+    title: "The economy at a glance",
+    description: "Headline economic figures from official sources, each with its period, change and source: US inflation (CPI over 12 months) and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation (ECB), Canada's policy rate (Bank of Canada) and US public debt (Treasury). Includes about a year of history for each, and the next central-bank rate decisions. Optional filter by topic.",
+    inputSchema: { type: "object", properties: { topic: str("Optional topic, for example 'inflation', 'jobs', 'rates', 'debt', 'euro' or 'canada'. Leave empty for all.") }, additionalProperties: false },
+    annotations: annotations("The economy at a glance", true),
+    icons: ICONS,
+    outputSchema: obj({ refreshedAt: { type: "string" }, indicators: { type: "array", items: INDICATOR }, nextEvents: { type: "array", items: EVENT } }, ["indicators"]),
+    // Clients that support MCP Apps draw cards and trend charts (src/mcp/economy-app.ts).
+    _meta: { ui: { resourceUri: ECONOMY_APP_URI } },
+  },
+  {
+    name: "economic_calendar",
+    title: "Upcoming rate decisions",
+    description: "The next interest-rate decisions of the Federal Reserve (FOMC), the European Central Bank and the Bank of Canada, from each bank's own published calendar, with what happens on the day. Dates only: it never guesses the outcome. Optional filter by central bank.",
+    inputSchema: { type: "object", properties: { bank: str("Optional: 'Fed', 'ECB' or 'Bank of Canada'. Leave empty for all.") }, additionalProperties: false },
+    annotations: annotations("Upcoming rate decisions", true),
+    icons: ICONS,
+    outputSchema: obj({ refreshedAt: { type: "string" }, events: { type: "array", items: EVENT } }, ["events"]),
+  },
+  {
+    name: "market_depth",
+    title: "Bid, ask and order book",
+    description: "For one of the ten coins ATLAS Explain follows: the best bid and ask, the bid-ask spread, how much is offered near the middle price, and how far the average price would move (slippage) if an order of a given size were filled against the order book. From Kraken's public market data; the spread is refreshed every few minutes and the order book about every 10 minutes. Explains how markets work; never suggests a trade.",
+    inputSchema: { type: "object", properties: { coin: str("Coin name or symbol, for example 'BTC'.") }, required: ["coin"], additionalProperties: false },
+    annotations: annotations("Bid, ask and order book", true),
+    icons: ICONS,
+    outputSchema: obj({
+      name: { type: "string" }, symbol: { type: "string" }, bidUsd: { type: "number" }, askUsd: { type: "number" }, midUsd: { type: "number" },
+      spreadUsd: { type: "number" }, spreadPct: { type: "number" }, spreadBps: { type: "number" }, quoteAsOf: { type: "string" },
+      book: { type: ["object", "null"], properties: { asOf: { type: "string" }, bids: { type: "array" }, asks: { type: "array" } } },
+      depth: { type: "array", items: { type: "object", properties: { bandPct: { type: "number" }, bidsUsd: { type: "number" }, asksUsd: { type: "number" }, complete: { type: "boolean" } } } },
+      impact: { type: "array", items: { type: "object", properties: { sizeUsd: { type: "number" }, side: { type: "string", enum: ["asks", "bids"] }, filled: { type: "boolean" }, avgPriceUsd: nullable("number"), slippagePct: nullable("number") } } },
+      source: { type: "string" },
+    }, ["symbol", "bidUsd", "askUsd", "spreadUsd", "source"]),
+    // Clients that support MCP Apps draw the order book as a depth chart (src/mcp/depth-app.ts).
+    _meta: { ui: { resourceUri: DEPTH_APP_URI } },
+  },
 ];
 
 const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news. In clients that support MCP Apps, crypto_prices, price_history and official_figures also draw interactive charts (a price board, a price chart, a yield curve). Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot and market_depth also draw interactive charts. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
 const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
   prompts: { listChanged: false },
   completions: {},
-  // The charts (price_history, crypto_prices, official_figures) are MCP Apps; hosts without them get the text answer.
+  // The charts (price_history, crypto_prices, official_figures, economy_snapshot, market_depth) are MCP Apps; hosts without them get the text answer.
   extensions: { "io.modelcontextprotocol/ui": { mimeTypes: [MCP_APP_MIME] } },
 };
 const SERVER_INFO = () => ({ name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: ICONS });
@@ -182,6 +238,8 @@ const SERVER_INFO = () => ({ name: SERVER_NAME, title: "ATLAS Explain", version:
 export const MCP_APPS = [
   { uri: CHART_APP_URI, name: "price-chart", title: "Interactive price chart", description: "The chart price_history draws in clients that support MCP Apps.", html: CHART_APP_HTML },
   { uri: BOARD_APP_URI, name: "crypto-board", title: "Crypto price board", description: "The board crypto_prices draws in clients that support MCP Apps: prices, changes and 24-hour sparklines; a coin opens its chart.", html: BOARD_APP_HTML },
+  { uri: ECONOMY_APP_URI, name: "economy", title: "The economy at a glance", description: "The view economy_snapshot draws in clients that support MCP Apps: a card per indicator, its trend over about a year, and the next rate decisions.", html: ECONOMY_APP_HTML },
+  { uri: DEPTH_APP_URI, name: "market-depth", title: "Order book depth chart", description: "The view market_depth draws in clients that support MCP Apps: best bid and ask, the spread, a depth chart of the order book and slippage by order size.", html: DEPTH_APP_HTML },
   { uri: FIGURES_APP_URI, name: "official-figures", title: "Official figures and yield curve", description: "The view official_figures draws in clients that support MCP Apps: figure cards, and a yield curve when the answer holds government bond yields.", html: FIGURES_APP_HTML },
 ] as const;
 
@@ -521,6 +579,146 @@ export async function todaysHeadlines(about: string | undefined, fetcher: Fetche
   });
 }
 
+/* ---------- the economy and the calendar (from ATLAS Explain's own data site) ---------- */
+
+const NO_ECONOMY = "ATLAS Explain's economic data couldn't be loaded right now. Nothing is shown in its place; try again in a few minutes.";
+/** Older than this, an answer says plainly that the 6-hourly refresh hasn't run since. */
+const ECONOMY_STALE_MS = 2 * 86_400_000;
+
+async function loadEconomy(fetcher: Fetcher): Promise<EconomyFile | null> {
+  const body = await getJson(ECONOMY_DATA_URL, fetcher);
+  return body == null ? null : readEconomyFile(body);
+}
+
+const TOPICS: Record<string, readonly Indicator["id"][]> = {
+  inflation: ["us_cpi", "euro_hicp"], prices: ["us_cpi", "euro_hicp"], cpi: ["us_cpi"], hicp: ["euro_hicp"],
+  jobs: ["us_unemployment"], unemployment: ["us_unemployment"], employment: ["us_unemployment"], labour: ["us_unemployment"], labor: ["us_unemployment"],
+  rates: ["us_fed_funds", "us_sofr", "ca_policy_rate"], fed: ["us_fed_funds", "us_sofr"], sofr: ["us_sofr"], "interest rates": ["us_fed_funds", "us_sofr", "ca_policy_rate"],
+  debt: ["us_debt"], deficit: ["us_debt"], euro: ["euro_hicp"], ecb: ["euro_hicp"], europe: ["euro_hicp"], canada: ["ca_policy_rate"], boc: ["ca_policy_rate"],
+  us: ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "us_debt"],
+};
+
+const fmtIndicator = (i: Indicator): string => (i.unit === "USD" ? (i.value >= 1e12 ? `${(i.value / 1e12).toFixed(2)} trillion` : formatPrice(i.value)) : `${i.value.toFixed(2)}%`);
+const fmtChange = (i: Indicator): string => (i.change == null ? "" : ` (${i.change > 0 ? "+" : i.change < 0 ? "−" : "±"}${Math.abs(i.change).toFixed(2)}${i.unit === "%" ? " pt" : "%"} ${i.changeWindow})`);
+
+function eventRecord(e: CalendarEvent, now: number): Record<string, unknown> {
+  const daysAway = Math.round((Date.parse(`${e.date}T12:00:00Z`) - now) / 86_400_000);
+  return { date: e.date, startDate: e.startDate, institution: e.institution, title: e.title, about: e.about, withProjections: e.withProjections, daysAway, sourceUrl: e.sourceUrl };
+}
+const eventLine = (e: CalendarEvent, now: number): string => {
+  const days = Number(eventRecord(e, now).daysAway);
+  const when = days <= 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
+  return `${e.date}${e.startDate ? ` (meeting from ${e.startDate})` : ""}, ${when}: ${e.title}${e.withProjections ? ", with the Summary of Economic Projections" : ""}. ${e.about} Source: ${e.sourceUrl}`;
+};
+
+export async function economySnapshot(topic: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
+  const file = await loadEconomy(fetcher);
+  if (!file) return text(NO_ECONOMY, true);
+  const q = topic?.trim().toLowerCase() ?? "";
+  const ids = q ? TOPICS[q] ?? Object.entries(TOPICS).find(([k]) => q.includes(k))?.[1] : undefined;
+  const list = file.indicators.filter((i) => !ids || ids.includes(i.id));
+  if (q && !ids) return text(`No economic topic called "${topic}". Try inflation, jobs, rates, debt, euro or canada, or leave it empty for everything.`, true);
+  const next = upcoming(file.calendar.events, now, 3);
+  const age = now - Date.parse(file.generatedAt);
+  const stale = age > ECONOMY_STALE_MS ? ` These were captured ${Math.round(age / 86_400_000)} days ago: the 6-hourly refresh hasn't run since.` : "";
+  const lines = list.length
+    ? list.map((i) => `${i.name}: ${fmtIndicator(i)} for ${i.period}${fmtChange(i)}.${i.note ? ` ${i.note}` : ""} Source: ${i.source} (${i.sourceUrl}).`)
+    : ["None of these figures could be captured yet. Nothing is shown in their place."];
+  const body = [
+    ...lines,
+    next.length ? `\nNext rate decisions:\n${next.map((e) => `- ${eventLine(e, now)}`).join("\n")}` : "",
+    `\nCaptured ${utc(file.generatedAt)} by ATLAS Explain's data job from each official source.${stale} These are published figures, never a forecast.`,
+  ].filter(Boolean).join("\n");
+  return data(body, { refreshedAt: file.generatedAt, indicators: list, nextEvents: next.map((e) => eventRecord(e, now)) });
+}
+
+const BANKS: Record<string, CalendarEvent["institution"]> = {
+  fed: "Federal Reserve", fomc: "Federal Reserve", "federal reserve": "Federal Reserve", us: "Federal Reserve",
+  ecb: "European Central Bank", "european central bank": "European Central Bank", euro: "European Central Bank",
+  boc: "Bank of Canada", "bank of canada": "Bank of Canada", canada: "Bank of Canada",
+};
+
+export async function economicCalendar(bank: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
+  const file = await loadEconomy(fetcher);
+  if (!file) return text(NO_ECONOMY, true);
+  const q = bank?.trim().toLowerCase() ?? "";
+  const institution = q ? BANKS[q] : undefined;
+  if (q && !institution) return text(`"${bank}" isn't one of the central banks ATLAS Explain follows: the Federal Reserve, the European Central Bank and the Bank of Canada.`, true);
+  const events = upcoming(file.calendar.events.filter((e) => !institution || e.institution === institution), now, institution ? 8 : 12);
+  const body = events.length
+    ? `Upcoming rate decisions, soonest first:\n${events.map((e) => `- ${eventLine(e, now)}`).join("\n")}\n\nDates from each central bank's published calendar, read ${utc(file.calendar.capturedAt)}. ATLAS Explain lists the dates only and never guesses a decision.`
+    : `No upcoming rate decision is in the calendars ATLAS Explain read (${utc(file.calendar.capturedAt)}). Nothing is shown in its place.`;
+  return data(body, { refreshedAt: file.calendar.capturedAt, events: events.map((e) => eventRecord(e, now)) });
+}
+
+/* ---------- market depth (bid, ask and the order book) ---------- */
+
+const DEPTH_BANDS = [0.1, 0.5, 1];
+const IMPACT_SIZES = [1_000, 10_000, 100_000];
+
+/** Filling `sizeUsd` against one side of the book: the average price and how far it is from the best price. */
+function fill(side: [number, number][], sizeUsd: number): { filled: boolean; avgPriceUsd: number | null; slippagePct: number | null } {
+  let usdLeft = sizeUsd;
+  let coins = 0;
+  for (const [price, qty] of side) {
+    const take = Math.min(usdLeft, price * qty);
+    coins += take / price;
+    usdLeft -= take;
+    if (usdLeft <= 1e-9) break;
+  }
+  if (usdLeft > 1e-9 || coins === 0) return { filled: false, avgPriceUsd: null, slippagePct: null };
+  const avg = sizeUsd / coins;
+  const best = side[0]![0];
+  return { filled: true, avgPriceUsd: Number(avg.toPrecision(8)), slippagePct: Number(((Math.abs(avg - best) / best) * 100).toFixed(4)) };
+}
+
+export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<ToolResult> {
+  const coin = coinFor(coinKey);
+  if (!coin) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COIN_NAMES}.`, true);
+  const file = await loadCrypto(fetcher);
+  if (!file) return text(NO_CRYPTO, true);
+  const row = file.prices.coins.find((c) => c.symbol === coin.symbol);
+  const book = file.books?.books[coin.symbol] ?? null;
+  // The best bid and ask: from the ticker when it has them (fresher), else the top of the book.
+  const bid = row?.bidUsd ?? book?.bids[0]?.[0];
+  const ask = row?.askUsd ?? book?.asks[0]?.[0];
+  if (bid == null || ask == null) return text(`ATLAS Explain has no bid and ask for ${coin.name} right now (they come from Kraken only). Nothing is shown in their place.`, true);
+  const quoteAsOf = row?.bidUsd != null ? file.prices.asOf : file.books!.asOf;
+  const mid = (bid + ask) / 2;
+  const spread = ask - bid;
+  const spreadPct = (spread / mid) * 100;
+  const depth = book
+    ? DEPTH_BANDS.map((band) => {
+        const lo = mid * (1 - band / 100);
+        const hi = mid * (1 + band / 100);
+        const bidsUsd = book.bids.filter(([p]) => p >= lo).reduce((s, [p, q]) => s + p * q, 0);
+        const asksUsd = book.asks.filter(([p]) => p <= hi).reduce((s, [p, q]) => s + p * q, 0);
+        // If the last level shown is still inside the band, the book goes further than ATLAS Explain keeps.
+        const complete = book.bids[book.bids.length - 1]![0] < lo && book.asks[book.asks.length - 1]![0] > hi;
+        return { bandPct: band, bidsUsd: Math.round(bidsUsd), asksUsd: Math.round(asksUsd), complete };
+      })
+    : [];
+  const impact = book ? IMPACT_SIZES.flatMap((size) => (["asks", "bids"] as const).map((side) => ({ sizeUsd: size, side, ...fill(side === "asks" ? book.asks : book.bids, size) }))) : [];
+  const credit = `${CRYPTO_CREDIT.kraken} Best bid and ask collected ${utc(quoteAsOf)}${book ? `, order book (best ${book.bids.length} levels a side) ${utc(file.books!.asOf)}` : ""}, served from ATLAS Explain's own data site.`;
+  const lines = [
+    `${coin.name} (${coin.symbol}) on Kraken:`,
+    `Best bid ${formatPrice(bid)}, best ask ${formatPrice(ask)}. Spread ${formatPrice(spread)} (${(spreadPct * 100).toFixed(2)} basis points of the middle price, ${formatPrice(mid)}).`,
+    ...depth.map((d) => `Within ${d.bandPct}% of the middle price: ${formatPrice(d.bidsUsd)} of bids and ${formatPrice(d.asksUsd)} of asks${d.complete ? "" : " (at least; the book goes beyond the levels shown)"}.`),
+    ...impact.filter((r) => r.sizeUsd === 10_000).map((r) => r.filled
+      ? `Filling $10,000 against the ${r.side} would average ${formatPrice(r.avgPriceUsd!)}, ${r.slippagePct!.toFixed(4)}% from the best ${r.side === "asks" ? "ask" : "bid"} (that gap is called slippage).`
+      : `$10,000 is more than the ${r.side} in the levels shown.`),
+    book ? "" : "The order book itself isn't available right now; the bid and ask above are current.",
+    "This is a snapshot of how the market looked, to explain spreads and slippage; it never suggests a trade.",
+    credit,
+  ].filter(Boolean);
+  return data(lines.join("\n"), {
+    name: coin.name, symbol: coin.symbol, bidUsd: bid, askUsd: ask, midUsd: Number(mid.toPrecision(10)),
+    spreadUsd: Number(spread.toPrecision(8)), spreadPct: Number(spreadPct.toFixed(5)), spreadBps: Number((spreadPct * 100).toFixed(2)), quoteAsOf,
+    book: book ? { asOf: file.books!.asOf, bids: book.bids, asks: book.asks } : null,
+    depth, impact, source: credit,
+  });
+}
+
 /* ---------- JSON-RPC (the HTTP transport is in src/mcp/http.ts) ---------- */
 
 type Message = { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> };
@@ -616,6 +814,9 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "crypto_prices": return ok(await cryptoPrices(s(args.coin), fetcher));
         case "price_history": return ok(await priceHistory(s(args.coin) ?? "", s(args.range), fetcher));
         case "todays_headlines": return ok(await todaysHeadlines(s(args.about), fetcher));
+        case "economy_snapshot": return ok(await economySnapshot(s(args.topic), fetcher));
+        case "economic_calendar": return ok(await economicCalendar(s(args.bank), fetcher));
+        case "market_depth": return ok(await marketDepth(s(args.coin) ?? "", fetcher));
         default: return fail(-32602, `Unknown tool: ${String(name)}`);
       }
     }

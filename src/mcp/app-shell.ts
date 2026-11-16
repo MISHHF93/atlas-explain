@@ -50,12 +50,15 @@ const HELPERS_JS = `
   const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
   const usd = (v) => "$" + v.toLocaleString("en-US", { minimumFractionDigits: v >= 1 ? 2 : 4, maximumFractionDigits: v >= 1 ? 2 : 6 });
   const when = (t) => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  /** "2026-09" as "Sep 2026"; a full date as a day. */
+  const period = (t) => (/^\\d{4}-\\d{2}$/.test(t) ? new Date(t + "-15T12:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", timeZone: "UTC" }) : day(t));
   const day = (t) => new Date(t).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
   const pct = (v) => (v > 0 ? "+" : v < 0 ? "\\u2212" : "") + Math.abs(v).toFixed(2) + "%";
   const trend = (v) => (v > 0 ? "chg up" : v < 0 ? "chg down" : "chg");
 
   /** An area line chart of [{t, c}] in host, with a cursor that reads each point out in readout. */
-  function lineChart(host, points, label, readout, format) {
+  function lineChart(host, points, label, readout, format, timeFormat) {
+    const stamp = timeFormat || when;
     const W = 600, H = 150, pad = 4, ys = points.map((p) => p.c), lo = Math.min(...ys), hi = Math.max(...ys), span = hi - lo || 1;
     const xy = points.map((p, i) => [pad + (i / (points.length - 1)) * (W - 2 * pad), pad + (1 - (p.c - lo) / span) * (H - 2 * pad)]);
     const line = xy.map(([x, y], i) => (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1)).join(" ");
@@ -68,7 +71,7 @@ const HELPERS_JS = `
       const r = svg.getBoundingClientRect();
       const i = Math.max(0, Math.min(points.length - 1, Math.round(((clientX - r.left) / r.width) * (points.length - 1))));
       cursor.style.display = "block"; cursor.style.left = (xy[i][0] / W) * 100 + "%";
-      readout.textContent = format(points[i].c) + " \\u00b7 " + when(points[i].t);
+      readout.textContent = format(points[i].c) + " \\u00b7 " + stamp(points[i].t);
     };
     svg.addEventListener("pointermove", (e) => show(e.clientX));
     svg.addEventListener("pointerdown", (e) => show(e.clientX));

@@ -14,7 +14,7 @@ Checked against Anthropic's checklist (https://claude.com/docs/connectors/buildi
 
 ## 2. Tools
 
-Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `asset_details`, `official_figures`, `crypto_prices`, `price_history`, `todays_headlines`), 3 prompts (`market_brief`, `explain_asset`, `learn_next`) and 3 interactive chart views (MCP Apps: the `price_history` chart, the `crypto_prices` board with sparklines, the `official_figures` cards and yield curve). No write tools.
+Synced from the server: 10 read-only tools (`explain_term`, `browse_glossary`, `asset_details`, `official_figures`, `crypto_prices`, `price_history`, `todays_headlines`, and since 1.6.0 `economy_snapshot`, `economic_calendar`, `market_depth`), 3 prompts (`market_brief`, `explain_asset`, `learn_next`) and 5 interactive chart views (MCP Apps: the `price_history` chart, the `crypto_prices` board with sparklines, the `official_figures` cards and yield curve, the `economy_snapshot` dashboard, the `market_depth` depth chart). No write tools.
 
 ## 3. Listing
 
@@ -28,7 +28,9 @@ Synced from the server: 7 read-only tools (`explain_term`, `browse_glossary`, `a
   - Look up what an asset is: its market, trading hours, and its latest official figure or price, or why no price is shown.
   - Official figures from free government and regulator sources: US Treasury yields (drawn as a yield curve in Claude), ECB and Bank of Canada rates, EIA energy prices, and SEC-filed figures for about 30 large US companies and ETFs.
   - Prices for ten major coins, refreshed about every 10 minutes, shown in Claude as a price board with 24-hour sparklines; choose a coin to see how it moved over 24 hours, 7 days or 30 days on an interactive chart.
-  - Today's market headlines and official press releases (Federal Reserve, SEC, CFTC, ECB), each linked to its publisher.
+  - The economy at a glance: US inflation and unemployment, the fed funds rate and SOFR, euro-area inflation, Canada's policy rate and US public debt, each with about a year of history, plus the next Fed, ECB and Bank of Canada rate decisions.
+  - How trading works, with real numbers: a coin's bid-ask spread, its order book as a depth chart, and the slippage of filling different order sizes.
+  - Today's market headlines and official press releases (Federal Reserve, SEC, CFTC, ECB, Bank of Canada, Bank of England), each linked to its publisher.
 
   Every answer names its source and time, says plainly when data is missing instead of filling the gap, and ends with "Educational information, not investment advice." It never recommends a trade and never forecasts prices. The connector is free, read-only, needs no account, and stores none of the requests it answers.
 
@@ -69,7 +71,7 @@ Five 1200px-wide PNGs in `store/connector/`, cropped to the app response, made b
 
 ## 7. Data handling
 
-- **API ownership: "We own the API".** The connector reads only ATLAS Explain's own data, which the same Worker captures from public sources on a schedule and again when someone asks for stale data, and serves at /data/v1/: US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR, official press releases (Federal Reserve, SEC, CFTC, ECB) with GDELT as an optional extra, and crypto prices from Kraken (CoinGecko as backup). The server refuses to fetch any other address. Original sources are credited on every answer.
+- **API ownership: "We own the API".** The connector reads only ATLAS Explain's own data, which the same Worker captures from public sources on a schedule and again when someone asks for stale data, and serves at /data/v1/: US Treasury, ECB, Bank of Canada, EIA, SEC EDGAR, official press releases (Federal Reserve, SEC, CFTC, ECB, Bank of Canada, Bank of England) with GDELT as an optional extra, the Bureau of Labor Statistics, the New York Fed, US Treasury Fiscal Data, the central banks' rate-decision calendars, and crypto prices and order books from Kraken (CoinGecko as backup). The server refuses to fetch any other address. Original sources are credited on every answer.
 - **Personal health data:** no. **Sponsored content:** no.
 
 ## 8. Test & launch

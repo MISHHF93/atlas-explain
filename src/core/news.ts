@@ -20,7 +20,7 @@ export const NEWS_MAX_AGE_MS = 36 * 3_600_000;
 export const OFFICIAL_MAX_AGE_MS = 4 * 86_400_000;
 /** The key in news.json for market-wide official releases (not tied to one asset). */
 export const OFFICIAL_NEWS_ID = "market:official";
-export const OFFICIAL_MAX = 6;
+export const OFFICIAL_MAX = 8;
 
 /** Official press-release feeds: free, keyless RSS. */
 export const OFFICIAL_FEEDS: readonly { id: string; label: string; url: string; domain: string }[] = [
@@ -28,8 +28,10 @@ export const OFFICIAL_FEEDS: readonly { id: string; label: string; url: string; 
   { id: "sec", label: "SEC", url: "https://www.sec.gov/news/pressreleases.rss", domain: "sec.gov" },
   { id: "cftc", label: "CFTC", url: "https://www.cftc.gov/RSS/RSSGP/rssgp.xml", domain: "cftc.gov" },
   { id: "ecb", label: "ECB", url: "https://www.ecb.europa.eu/rss/press.html", domain: "ecb.europa.eu" },
+  { id: "boc", label: "Bank of Canada", url: "https://www.bankofcanada.ca/content_type/press-releases/feed/", domain: "bankofcanada.ca" },
+  { id: "boe", label: "Bank of England", url: "https://www.bankofengland.co.uk/rss/news", domain: "bankofengland.co.uk" },
 ];
-export const HEADLINE_CREDIT = "Headlines: the GDELT Project's news index and official releases from the Federal Reserve, SEC, CFTC and ECB.";
+export const HEADLINE_CREDIT = "Headlines: the GDELT Project's news index and official releases from the Federal Reserve, SEC, CFTC, ECB, Bank of Canada and Bank of England.";
 
 export interface NewsItem {
   title: string;

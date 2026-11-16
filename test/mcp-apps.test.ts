@@ -20,12 +20,14 @@ const crypto = {
 const net: Fetcher = async (url) => new Response(JSON.stringify(url.includes("crypto") ? crypto : market), { status: 200 });
 
 describe("interactive views in the chat (MCP Apps)", () => {
-  it("links price_history, crypto_prices and official_figures to their views", () => {
+  it("links each charted tool to its view", () => {
     const linked = Object.fromEntries(TOOLS.filter((t) => t._meta).map((t) => [t.name, t._meta!.ui.resourceUri]));
     expect(linked).toEqual({
       price_history: "ui://atlas-explain/price-chart.html",
       crypto_prices: "ui://atlas-explain/crypto-board.html",
       official_figures: "ui://atlas-explain/official-figures.html",
+      economy_snapshot: "ui://atlas-explain/economy.html",
+      market_depth: "ui://atlas-explain/market-depth.html",
     });
   });
 

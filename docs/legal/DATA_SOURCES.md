@@ -29,8 +29,15 @@ Added 2026-11-13; moved 2026-11-16. Fetched on a schedule by the connector's Clo
 | ECB euro reference rates | EUR pairs and crosses derived from two ECB rates (labelled) | Free use if reproduced accurately with the ECB cited; for information, not transactions | "Source: European Central Bank" |
 | Bank of Canada Valet API | CAD pairs; Government of Canada benchmark bond yields | Free to use, copy and distribute with attribution ⚑ | "Source: Bank of Canada" |
 | EIA open data | WTI, Brent and Henry Hub daily spot (needs a free `EIA_API_KEY`; skipped without it) | US government data, public domain | "Source: U.S. Energy Information Administration" |
-$1| Official press releases: Federal Reserve, SEC, CFTC (RSS) | Headline, link and time of each release, as market news ("In the news", `todays_headlines`); matched to a company when it names one. Titles and links only, never the release text. | US government works, public domain | The publisher's domain on each headline, and "official releases from the Federal Reserve, SEC, CFTC and ECB" in the credit line |
+| Official press releases: Federal Reserve, SEC, CFTC, Bank of Canada, Bank of England (RSS) | Headline, link and time of each release, as market news ("In the news", `todays_headlines`); matched to a company when it names one. Titles and links only, never the release text. | US government works, public domain | The publisher's domain on each headline, and "official releases from the Federal Reserve, SEC, CFTC, ECB, Bank of Canada and Bank of England" in the credit line |
 | ECB press releases (RSS) | Same as above | Reuse allowed with the source named ⚑ | Same as above |
+| BLS public API v1 (keyless, 25 requests a day) | US CPI-U, converted to inflation over 12 months, and the unemployment rate (`economy_snapshot`) | US government works, public domain | "U.S. Bureau of Labor Statistics" with a link |
+| New York Fed reference rates API | Effective federal funds rate with the target range, and SOFR | Free to use with the New York Fed named ⚑ | "Federal Reserve Bank of New York" with a link |
+| ECB data portal (HICP dataset) | Euro-area inflation over 12 months | Free use if reproduced accurately with the ECB cited | "European Central Bank" with a link |
+| Bank of Canada Valet (series V39079) | Canada's policy rate (target for the overnight rate) | Free to use with attribution ⚑ | "Bank of Canada" with a link |
+| US Treasury Fiscal Data (Debt to the Penny) | Total public debt outstanding | US government works, public domain | "U.S. Department of the Treasury, Fiscal Data" with a link |
+| Fed, ECB and Bank of Canada calendar pages | Dates of upcoming rate decisions (`economic_calendar`) | Public schedules; dates and titles only | Each bank's page linked on every date |
+| Kraken public Ticker and Depth | Best bid and ask, and the best 25 levels of each coin's order book (`market_depth`) | Same terms as Kraken prices above (legal review item 12) ⚑ | "Kraken public market data" with the capture times |
 
 None of these feeds is used to train a model. Stock, ETF, index, gold and silver prices are **not** shown: no free source is licensed for public display.
 

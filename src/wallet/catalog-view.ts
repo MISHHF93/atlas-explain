@@ -436,7 +436,7 @@ export function assetPage(start: Asset, options: {
     const summarise = labelledButton("sparkle", "Summarise these", "primary small");
     summarise.addEventListener("click", () => options.onAsk?.(newsQuestion(current.name, current.symbol, list, filings)));
     const credit = el("p", "fine");
-    credit.append(link(SOURCES.gdelt.attribution.text, SOURCES.gdelt.attribution.href), " and official releases (Federal Reserve, SEC, CFTC, ECB). Headlines link to their publishers; we don't check or endorse them.");
+    credit.append(link(SOURCES.gdelt.attribution.text, SOURCES.gdelt.attribution.href), " and official releases (Federal Reserve, SEC, CFTC, ECB, Bank of Canada, Bank of England). Headlines link to their publishers; we don't check or endorse them.");
     newsBody.replaceChildren(ul, ...(options.onAsk ? [summarise] : []), ...(list.length ? [credit] : []));
   }
   paint(start);

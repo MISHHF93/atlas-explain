@@ -9,7 +9,7 @@ workers_dev = true
 # One cron per part keeps each run inside the free plan's CPU and subrequest limits. These three
 # strings must match CRONS in src/mcp/worker.ts.
 [triggers]
-crons = ["*/10 * * * *", "37 */3 * * *", "47 */6 * * *"]
+crons = ["*/10 * * * *", "37 */3 * * *", "47 */6 * * *", "17 */6 * * *"]
 
 # Free Workers KV namespace holding market.json, news.json and crypto.json (keys data/v1/<file>).
 [[kv_namespaces]]

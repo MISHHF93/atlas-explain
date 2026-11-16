@@ -21,10 +21,14 @@ import {
   parseCoinGeckoMarkets,
   parseKrakenOhlc,
   parseKrakenTicker,
+  parseKrakenDepth,
+  BOOK_LEVELS,
+  type CryptoBooks,
   type CryptoFile,
   type CryptoSource,
 } from "./crypto.ts";
 import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
+import { ECONOMY_SCHEMA, ECONOMY_SOURCES, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
 import { SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, readTickerMap, stockFromSec } from "./sec.ts";
 
 export const CAPTURE_UA = `ATLAS Explain data capture (+${EXPLAIN_WEB_URL}/how-its-built)`;
@@ -205,6 +209,8 @@ export async function captureNews(env: CaptureEnv, prev: NewsFile | null, option
 
 /** Kraken allows about one public call a second; CoinGecko's keyless API much less. */
 export const KRAKEN_GAP_MS = 1_100;
+/** The pause before retrying a refused Kraken request once. */
+export const KRAKEN_RETRY_MS = 3_000;
 const COINGECKO_GAP_MS = 6_000;
 /** A coin's last history is reused for up to two days if both sources fail for it. */
 const HISTORY_REUSE_MS = 2 * 86_400_000;
@@ -248,7 +254,7 @@ export async function captureCrypto(env: CaptureEnv, prev: CryptoFile | null, op
   // The 10-minute cron brings the history up to date.
   if (options.history === false && prev) {
     env.log(`crypto: ${prices.coins.length} prices (${prices.source}); history kept from ${prev.history.asOf}`);
-    return { schema: CRYPTO_SCHEMA, generatedAt: at, prices, history: prev.history };
+    return { schema: CRYPTO_SCHEMA, generatedAt: at, prices, history: prev.history, ...(prev.books ? { books: prev.books } : {}) };
   }
 
   const series: Record<string, [number, number][]> = {};
@@ -260,7 +266,13 @@ export async function captureCrypto(env: CaptureEnv, prev: CryptoFile | null, op
     // Incremental when last hour's bars are recent; a full 30 days otherwise.
     const since = lastT && env.now / 1000 - lastT < 2 * 86_400 ? `&since=${lastT - 3_600}` : "";
     if (fetched++ > 0) await env.sleep(KRAKEN_GAP_MS);
-    let rows = parseKrakenOhlc(await json(`${KRAKEN_PUBLIC_API}/OHLC?pair=${coin.krakenPair}&interval=60${since}`).catch(() => null));
+    const ohlcUrl = `${KRAKEN_PUBLIC_API}/OHLC?pair=${coin.krakenPair}&interval=60${since}`;
+    let rows = parseKrakenOhlc(await json(ohlcUrl).catch(() => null));
+    if (!rows.length) {
+      // Kraken's public API sheds bursts now and then: one more try after a pause, before CoinGecko.
+      await env.sleep(KRAKEN_RETRY_MS);
+      rows = parseKrakenOhlc(await json(ohlcUrl).catch(() => null));
+    }
     let merged = rows.length ? mergeCloses(since ? old : [], rows, env.now) : [];
     if (merged.length < 2) {
       await env.sleep(COINGECKO_GAP_MS);
@@ -276,5 +288,58 @@ export async function captureCrypto(env: CaptureEnv, prev: CryptoFile | null, op
   // Any coin read from CoinGecko marks the history as CoinGecko's, so the next run starts afresh from Kraken.
   const source: CryptoSource = usedCoinGecko ? "coingecko" : "kraken";
   env.log(`crypto: ${prices.coins.length} prices (${prices.source}), history for ${Object.keys(series).length} coins (${source})`);
-  return { schema: CRYPTO_SCHEMA, generatedAt: at, prices, history: { source, asOf: at, interval: "1h", series } };
+  // Order books, captured with the history: the best levels on each side, from Kraken only.
+  const books: CryptoBooks["books"] = {};
+  for (const coin of CRYPTO_COINS) {
+    await env.sleep(KRAKEN_GAP_MS);
+    const book = parseKrakenDepth(await json(`${KRAKEN_PUBLIC_API}/Depth?pair=${coin.krakenPair}&count=${BOOK_LEVELS}`).catch(() => null));
+    if (book) books[coin.symbol] = book;
+  }
+  const bookCount = Object.keys(books).length;
+  env.log(`crypto: order books for ${bookCount} coins`);
+  const keptBooks = bookCount ? { books: { source: "kraken" as const, asOf: at, books } } : prev?.books ? { books: prev.books } : {};
+  return { schema: CRYPTO_SCHEMA, generatedAt: at, prices, history: { source, asOf: at, interval: "1h", series }, ...keptBooks };
+}
+
+/* ---------- the economy (data/v1/economy.json) ---------- */
+
+/**
+ * Captures the headline indicators and the central-bank calendar. Each source is read on its own;
+ * one that fails keeps its last good value (with its own capture time), and an indicator that was
+ * never captured is simply absent. BLS allows 25 keyless requests a day: this asks for 2 per run.
+ */
+export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null): Promise<EconomyFile | null> {
+  const at = new Date(env.now).toISOString();
+  const json = async (url: string): Promise<unknown> => JSON.parse(await env.get(url));
+  const reads: [IndicatorId, string, (body: unknown, at: string) => Indicator | null][] = [
+    ["us_cpi", ECONOMY_SOURCES.blsCpi, parseBlsCpi],
+    ["us_unemployment", ECONOMY_SOURCES.blsUnemployment, parseBlsUnemployment],
+    ["us_fed_funds", ECONOMY_SOURCES.effr, parseEffr],
+    ["us_sofr", ECONOMY_SOURCES.sofr, parseSofr],
+    ["euro_hicp", ECONOMY_SOURCES.hicp, parseEcbHicp],
+    ["ca_policy_rate", ECONOMY_SOURCES.bocPolicy, parseBocPolicy],
+    ["us_debt", ECONOMY_SOURCES.debt, parseTreasuryDebt],
+  ];
+  const indicators: Indicator[] = [];
+  for (const [id, url, parse] of reads) {
+    const fresh = parse(await json(url).catch(() => null), at);
+    const kept = fresh ?? prev?.indicators.find((i) => i.id === id) ?? null;
+    if (!fresh) env.log(`economy ${id}: ${kept ? `kept the value captured ${kept.capturedAt}` : "no data"}`);
+    if (kept) indicators.push(kept);
+  }
+  const pages: [string, (html: string) => CalendarEvent[], CalendarEvent["institution"]][] = [
+    [ECONOMY_SOURCES.fomc, parseFomcCalendar, "Federal Reserve"],
+    [ECONOMY_SOURCES.ecbCalendar, parseEcbCalendar, "European Central Bank"],
+    [ECONOMY_SOURCES.bocEvents, parseBocEvents, "Bank of Canada"],
+  ];
+  const events: CalendarEvent[] = [];
+  for (const [url, parse, institution] of pages) {
+    const fresh = parse(await env.get(url).catch(() => ""));
+    const kept = fresh.length ? fresh : (prev?.calendar.events ?? []).filter((e) => e.institution === institution);
+    if (!fresh.length) env.log(`economy calendar ${institution}: ${kept.length ? "kept the last dates" : "no dates"}`);
+    events.push(...kept);
+  }
+  if (!indicators.length && !events.length) return null;
+  env.log(`economy: ${indicators.length} indicators, ${events.length} calendar dates`);
+  return { schema: ECONOMY_SCHEMA, generatedAt: at, indicators, calendar: { capturedAt: at, events } };
 }
