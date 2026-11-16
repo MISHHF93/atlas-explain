@@ -136,11 +136,11 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       else if (route.kind !== "tab" || route.tab === "settings") navigate({ kind: "tab", tab: shell.current() as AppTab }, { replace: true, scroll: false });
     },
     menu: [
+      { label: "ATLAS Explain website", icon: "back", run: () => location.assign("/") },
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
       { label: "Get the Chrome extension", icon: "panel", run: () => shell.openSheet("Chrome extension", extensionNodes()) },
       { label: "Use it in your AI assistant", icon: "plug", run: () => location.assign("/connect") },
       { label: "Help and support", icon: "info", run: () => location.assign("/support") },
-      { label: "ATLAS Explain home page", icon: "external", run: () => location.assign("/") },
       { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },
       { label: "Terms", icon: "doc", run: () => openLegal("terms") },
       { label: "Privacy", icon: "shield", run: () => openLegal("privacy") },

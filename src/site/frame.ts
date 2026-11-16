@@ -5,7 +5,7 @@
  * pages can never drift apart again.
  *
  * Install wording is honest: until the Chrome Web Store listing exists (CHROME_STORE_URL in
- * src/core/links.ts), every primary button opens the web app; setting the listing turns them all
+ * src/core/links.ts), every primary button says "Open the app" and opens the web app; setting the listing turns them all
  * into "Add to Chrome" at the next build.
  */
 import { CHROME_STORE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
@@ -16,7 +16,7 @@ const SOURCE_URL = "https://github.com/MISHHF93/atlas-explain";
 
 const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
   { href: "/#how-it-works", label: "How it works" },
-  { href: "/app", label: "Web app" },
+  { href: "/app", label: "The app" },
   { href: "/connect", label: "AI assistants", page: "connect" },
   { href: "/support", label: "Support", page: "support" },
 ];
@@ -24,7 +24,7 @@ const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
 /** Every public destination, once. */
 const FOOTER_LINKS: readonly { href: string; label: string }[] = [
   { href: "/#install", label: "Chrome extension" },
-  { href: "/app", label: "Web app" },
+  { href: "/app", label: "The app" },
   { href: "/welcome#step-try", label: "Practice page" },
   { href: "/connect", label: "AI assistants" },
   { href: "/support", label: "Support and FAQ" },
@@ -36,7 +36,7 @@ const FOOTER_LINKS: readonly { href: string; label: string }[] = [
 export function installCta(className: string): string {
   return CHROME_STORE_URL
     ? `<a class="${className}" href="${CHROME_STORE_URL}" target="_blank" rel="noreferrer">Add to Chrome</a>`
-    : `<a class="${className}" href="/app">Open the web app</a>`;
+    : `<a class="${className}" href="/app">Open the app</a>`;
 }
 
 export function siteHeader(page: SitePage): string {

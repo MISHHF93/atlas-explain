@@ -92,8 +92,9 @@ export function titleFor(route: AppRoute): string {
     glossary: "Learn",
     settings: "Account",
   };
-  if (route.kind === "tab") return `${names[route.tab]} · ATLAS Explain`;
-  if (route.kind === "asset") return `${route.symbol} · Assets · ATLAS Explain`;
+  // App pages say so in the tab title, so the website ("… · ATLAS Explain") and the app are easy to tell apart.
+  if (route.kind === "tab") return `${names[route.tab]} · ATLAS Explain app`;
+  if (route.kind === "asset") return `${route.symbol} · Assets · ATLAS Explain app`;
   if (route.kind === "signin") return "Sign in · ATLAS Explain";
   return "Page not found · ATLAS Explain";
 }

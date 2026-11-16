@@ -8,6 +8,7 @@ const home = sitePage("index.html");
 const hosting = JSON.parse(readFileSync("firebase.json", "utf8")).hosting as {
   rewrites: { source: string }[];
   redirects: { source: string; destination: string; type: number }[];
+  headers: { source: string; headers: { key: string; value: string }[] }[];
 };
 
 describe("the public site is four pages", () => {
@@ -71,5 +72,22 @@ describe("one header and one footer for every site page", () => {
   it("does not repeat the Support FAQ on Home", () => {
     expect(home).not.toContain('class="faq"');
     expect(home).toContain('href="/connect"');
+  });
+});
+
+describe("the website and the app read as separate places", () => {
+  it("leads into the app with one wording, and marks app pages as the app", () => {
+    for (const f of SITE_PAGES) {
+      const page = sitePage(f);
+      expect(page, f).not.toMatch(/>Open the web app</);
+      expect(page, f).toMatch(/<nav class="site-nav"[^>]*>[\s\S]*<a href="\/app">The app<\/a>/);
+    }
+    expect(readFileSync("src/wallet/shell.ts", "utf8")).toContain('el("span", "app-badge", "App")');
+    expect(readFileSync("src/web/app.ts", "utf8")).toMatch(/menu: \[\r?\n\s*\{ label: "ATLAS Explain website", icon: "back"/);
+  });
+
+  it("re-checks every HTML page on each visit, /connect included", () => {
+    const rule = hosting.headers.find((h) => h.source.includes("support"));
+    expect(rule?.source).toContain("connect");
   });
 });
