@@ -713,7 +713,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     void startAccount(backend);
     if (new URLSearchParams(location.search).get("checkout") === "done") {
       // Stripe sends people back here after paying. The plan sync job turns Pro on a little later.
-      const thanks = "Thank you. Pro turns on for your account within about 15 minutes; you don't need to keep this page open.";
+      const thanks = "Thank you. Pro turns on for your account as soon as Stripe confirms the payment, usually within a minute; you don't need to keep this page open.";
       shell.announce(thanks);
       accountNote.textContent = thanks;
       history.replaceState(null, "", location.pathname + location.hash);
@@ -1270,7 +1270,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
           });
           return button;
         };
-        extras.push(...offers.map(pay), el("p", "fine", "You pay on Stripe's page; we never see your card. Pro turns on within about 15 minutes of paying. Cancel any time."));
+        extras.push(...offers.map(pay), el("p", "fine", "You pay on Stripe's page; we never see your card. Pro turns on as soon as Stripe confirms the payment. Cancel any time."));
       }
     }
     if (b && snapshot?.pricing.showManage && snapshot.portalUrl) {

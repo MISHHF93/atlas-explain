@@ -60,13 +60,14 @@ ATLAS Explain is a hosted MCP connector for AI assistants, plus a website and we
 
 **State on 15 Nov 2026:** every PR above and every later feature branch is merged into `main`, and the live site and the MCP server match `main`. Feature branches are kept on GitHub after merging (all merged; check with `git branch --no-merged main`). Work on new short-lived branches off `main`, run release:check, then merge back. For the hackathon, `docs/SUBMISSION.md` is the checklist, `docs/DEVPOST.md` the write-up draft and `docs/DEMO.md` the shot list.
 
-## Approved pricing (docs/PRICING.md)
+## Approved pricing (docs/PRICING.md, revised 16 Nov 2026 for MCP first)
 
-- **Free:** unlimited on-device answers, 10 cloud answers a day with Gemini Flash-Lite.
-- **Pro:** US$5.99 a month or US$47.99 a year. 300 cloud answers a day with Gemini Flash, and history synced to the account.
+- **Free:** the AI-assistant connector with every tool and chart, unlimited on-device answers, 10 cloud answers a day in the web app, a 10-asset watchlist.
+- **Pro:** US$5.99 a month or US$47.99 a year. 100 cloud answers a day (300 with Gemini Flash once the paid Gemini tier is on), unlimited watchlist, and premium connector tools only once they are built. Synced history stays free for signed-in accounts unless the owner decides otherwise.
 - No trial. A FOUNDER coupon. Refundable on request within 14 days.
+- **Phases (docs/MONETIZATION.md):** 1 free through judging; 2 Pro in the web app, with Stripe webhooks handled by the Cloudflare Worker (`/billing/v1/stripe`, not built yet) so Pro turns on instantly; 3 premium connector tools behind an optional OAuth sign-in; 4 the paid Gemini tier, paid for by revenue.
 - **Owner decision, 14 Nov 2026: no card on file, so no Blaze plan.** The `explainCloud` function and the Firebase Stripe extension are dropped. Do not ask again unless the owner raises it.
-- Architecture on the free plan (`docs/MONETIZATION.md`): Stripe Payment Links for checkout, Stripe's portal link to cancel, and a GitHub Actions job (`billing-sync.yml`) that reads Stripe with a read-only key and writes `users/{uid}/plan/current`. The app counts cloud answers itself; no server enforces the limit.
+- Architecture on the free plan (`docs/MONETIZATION.md`): Stripe Payment Links for checkout, Stripe's portal link to cancel, and Stripe webhooks to the Worker, which writes `users/{uid}/plan/current` through the Firestore REST API. The GitHub Actions job (`billing-sync.yml`, manual runs only) stays as a reconciliation backup. The app counts cloud answers itself; no server enforces the limit.
 - Sold at first: a higher daily cloud limit (`pro_cloud_daily_limit`, default 100, not 300) and the larger watchlist. Free is 10 a day once billing is on. The stronger-model row is not sold. Synced history is still free for any signed-in account; gating it is an open owner decision.
 - **Gemini free-tier terms (checked 14 Nov 2026):** the cloud fallback may not be offered to users in the EEA, Switzerland or the UK on the free tier, and Google may use free-tier prompts to improve its products. The privacy page now says the second part; the first needs an owner decision (`docs/legal/REVIEW_NOTES.md` point 11).
 

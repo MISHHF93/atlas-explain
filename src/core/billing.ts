@@ -17,7 +17,7 @@ export const FREE_BADGE = "Free";
 export const FREE_WATCHLIST_SIZE = 10;
 /** Hard cap already enforced by move-card validation. */
 export const WATCHLIST_HARD_CAP = 50;
-/** Used when Remote Config has no `pro_cloud_daily_limit`. Sized for the free Gemini tier, not the 300 in docs/PRICING.md. */
+/** Used when Remote Config has no `pro_cloud_daily_limit`. Sized for the free Gemini tier; 300 once the paid tier is on (docs/PRICING.md, phase 4). */
 export const DEFAULT_PRO_CLOUD_DAILY_LIMIT = 100;
 /** Approved list prices (docs/PRICING.md). Stripe shows the amount actually charged, with tax. */
 export const PRO_PRICE_LABELS = { monthly: "US$5.99 a month", yearly: "US$47.99 a year" } as const;

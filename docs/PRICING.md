@@ -41,6 +41,7 @@ Running cost is zero. The limit is free quotas, not a bill. Revenue should first
 | Web app: cloud explanations (phones, computers without Nano) | 10 a day | 100 a day (fair use) ¹ |
 | Follow-ups, related terms, Learn library | ✓ | ✓ |
 | Assets: live prices, official figures, economy and calendar, with source and time | ✓ | ✓ |
+| Watchlist | 10 assets | Unlimited (hard cap 50) |
 | History of explanations | Synced while signed in ² | Synced across devices |
 | Premium connector tools ³ | – | ✓ |
 | Data export and account deletion | ✓ | ✓ |
@@ -56,7 +57,7 @@ Running cost is zero. The limit is free quotas, not a bill. Revenue should first
 
    These need the connector to know who is calling, so it needs a sign-in (OAuth), which Claude's directory supports. The free tools stay free and keep working with no account. See `docs/MONETIZATION.md`, "Phase 3".
 
-The pricing page shows only the rows that work. Until premium connector tools exist, Pro sells as: more cloud answers in the web app, and (if the owner decides) synced history.
+The pricing page shows only the rows that work. Until premium connector tools exist, Pro sells as: more cloud answers in the web app, the larger watchlist, and (if the owner decides) synced history.
 
 ## Why these numbers
 

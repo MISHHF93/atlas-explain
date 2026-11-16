@@ -1,6 +1,6 @@
 # ATLAS Explain launch-readiness checklist
 
-Status as of 2026-11-13. Billing stays **off** until hackathon judging is over.
+Status as of 2026-11-16. Billing stays **off** until hackathon judging is over. The roadmap to paid plans is the "Monetization roadmap" section below.
 Education only: no buy/sell wording, never reads balances or account details.
 
 ## Done in code (merged to main, live on atlas-explain.web.app)
@@ -34,7 +34,7 @@ Education only: no buy/sell wording, never reads balances or account details.
 12. **Licensed price feed.** Remote Config `price_provider` defaults to `kraken`. Before a public market launch, set it to `coingecko` and obtain a paid CoinGecko commercial plan (attribution is already shown), or keep Kraken only after written consent. Optional: set `coingecko_demo_api_key` in Remote Config (never commit a key). See `docs/legal/DATA_SOURCES.md`. Do not train any model on these feeds.
 
 ### After judging
-13. **Billing switch-on:** follow "Go-live" in `docs/MONETIZATION.md` (Stripe account, Payment Links, portal link, read-only key, GitHub secret and variable, test purchase), then flip Remote Config `billing_enabled` to `true`. No Blaze plan needed.
+13. **Billing switch-on:** once phase 2 below is built, follow "Go-live" in `docs/MONETIZATION.md` (Stripe account, Payment Links, portal link, read-only key, webhook, Worker secrets, test purchase), then flip Remote Config `billing_enabled` to `true`. No Blaze plan needed.
 14. **Monitoring sink:** add a real sink (for example Firebase Analytics or Sentry) with `addMonitorSink` and mention it in the privacy policy.
 
 ## Added in the production pass (November 2026)
@@ -45,16 +45,44 @@ Education only: no buy/sell wording, never reads balances or account details.
 - [ ] **Analytics (optional)**: link Google Analytics to the Firebase project, set data retention to 2 months, then set Remote Config `analytics_enabled` = `true`. The web app then asks each visitor once; nothing loads before that.
 - [ ] **Legal**: add the operator's legal name and a privacy/support email to `/privacy` and `/terms`, then go through docs/legal/REVIEW_NOTES.md with a lawyer.
 - [x] **MCP Registry**: published 15 Nov 2026 as `io.github.MISHHF93/atlas-explain` (`docs/MCP.md`, "Getting listed").
-- [ ] **Claude connectors directory**: submitted by the owner on 15 Nov 2026; track it at https://claude.ai/directory/manage (answers in `docs/CONNECTOR_SUBMISSION.md`).
+- [ ] **Claude connectors directory**: submitted by the owner on 15 Nov 2026 and updated 16 Nov (correct answers, carousel); track it at https://claude.ai/directory/manage (answers in `docs/CONNECTOR_SUBMISSION.md`). Its tool list still shows the 7 tools captured on 16 Nov: "Sync from server" there picks up the 10 tools of 1.6.0.
 - [x] **Hosted MCP server** (live 15 Nov 2026 at https://atlas-explain-mcp.atlas-explain.workers.dev/mcp, verified in Claude) (free Cloudflare account, no card): `npx wrangler@4 login`, `npm run deploy:mcp`, then set `MCP_URL` in `src/core/links.ts` (`docs/MCP.md`).
 - [x] **Blaze plan**: decided against on 14 Nov 2026 (no card on file). Paid plans run without it; see `docs/MONETIZATION.md`.
 - [ ] **Gemini free tier and Europe**: decide how to handle the EEA, Switzerland and the UK, where the free tier may not be used for the cloud fallback (`docs/legal/REVIEW_NOTES.md` point 11).
 
 ### Before charging money
 - [ ] A commercial licence for crypto prices (CoinGecko paid plan) if crypto stays part of what Pro sells; see docs/ux/MULTI_ASSET_CATALOG.md §9.
-- [ ] Stripe and GitHub setup, a dry run of the plan sync job, and a test purchase (`docs/MONETIZATION.md`, steps 2 to 9).
+- [ ] Stripe setup, the Worker's webhook secrets and a test purchase (`docs/MONETIZATION.md`, Go-live steps 2 to 9).
 - [ ] Set `pro_cloud_daily_limit` to what the Gemini quota page shows the project can serve.
-- [ ] Later, if revenue allows: Blaze plan and a server-side cloud quota instead of the app's own counter.
+- [ ] Later, if revenue allows: the paid Gemini tier (phase 4), and a server-side cloud quota instead of the app's own counter.
+
+## Monetization roadmap (docs/PRICING.md, docs/MONETIZATION.md; revised 16 Nov 2026)
+
+Every phase keeps the connector and all of today's tools free, and never adds trade calls, verdicts or forecasts.
+
+### Phase 1: free through judging (now)
+- [x] `billing_enabled` = false: every feature free, on-device answers unlimited, connector free.
+- [x] Pricing and payment design written for MCP first.
+
+### Phase 2: Pro in the web app (after judging)
+Engineer:
+- [ ] Worker endpoint `POST /billing/v1/stripe`: verify the Stripe signature (HMAC-SHA256, 5-minute tolerance), handle `checkout.session.completed`, `customer.subscription.updated` and `customer.subscription.deleted`, keep subscription → account in KV, write or delete `users/{uid}/plan/current` through the Firestore REST API with a service-account token. Reuse `src/core/billing-sync.ts`. Tests with recorded Stripe payloads; never downgrade on an error.
+- [ ] A test that the app's checkout copy and the webhook agree that Pro turns on immediately.
+Owner:
+- [ ] Stripe test mode: product, two prices, two Payment Links, customer portal login link, restricted read-only key, webhook endpoint (`docs/MONETIZATION.md`, Go-live 2–7).
+- [ ] Worker secrets `STRIPE_WEBHOOK_SECRET`, `STRIPE_RESTRICTED_KEY`, `FIREBASE_SERVICE_ACCOUNT` (Go-live 8).
+- [ ] Test purchase and cancellation in test mode (Go-live 9), then live mode and `billing_enabled` = true (Go-live 11).
+- [ ] Decide whether synced history becomes Pro-only.
+- [ ] Accountant: GST/HST registration and Stripe Tax.
+
+### Phase 3: premium connector tools (owner decides which)
+- [ ] Choose the first premium tool: evidence brief, release alerts or longer history (`docs/PRICING.md` ³).
+- [ ] OAuth 2.1 on the Worker (authorization and token endpoints, protected-resource metadata), sign-in through the website's `/signin`, a plan check on each premium call. Free tools keep working with no account.
+- [ ] Directory listing: authentication "Required when the server asks", new tools synced, through Anthropic's review. Registry: publish the new version.
+
+### Phase 4: the paid Gemini tier (when revenue covers it)
+- [ ] Owner adds a card to Google Cloud for the Gemini API only, with a budget alert.
+- [ ] `pro_cloud_daily_limit` = 300 and the Gemini Flash row on the pricing page; the cloud fallback offered in the EEA, Switzerland and the UK; the privacy page no longer says Google may use prompts.
 
 ### Checks that now run automatically
 - `npm run release:check`: types, lint, tests (including the design-system, privacy-surface and bundle-size guards), the web and MCP builds, bundle budget, npm audit, trade-word scan.
