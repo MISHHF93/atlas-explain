@@ -16,7 +16,7 @@ import { type PriceFeedOptions, priceFeedFromRemoteValues } from "../../core/pri
 import { parseRemoteSettings } from "../../core/settings";
 import type { AnalyticsSink } from "../../core/analytics";
 import type { AppSettings, ExplanationRun, InferenceSourceName, MoveCard } from "../../core/types";
-import { buildExtensionPrompt, toPageContext } from "../../core/extension-prompt";
+import { buildExplainPrompt, toPageContext } from "../../core/explain-prompt";
 import { parseTwoSided, type TwoSided } from "../../core/two-sided";
 import type { PublicEnvConfig } from "./env";
 import { createExplainService, createUserId, readRemoteValues, startFirebase } from "./explain-service";
@@ -91,8 +91,7 @@ export interface WebBackend {
 }
 
 export function startWebBackend(env: PublicEnvConfig): WebBackend {
-  // One back end: Firebase, settings, limits and the model call live in explain-service.ts,
-  // which the Chrome extension's bridge page uses too.
+  // One back end: Firebase, settings, limits and the model call live in explain-service.ts.
   const { app, auth, remoteConfig } = startFirebase(env, { minimumFetchIntervalMillis: import.meta.env.DEV ? 0 : 60_000 });
   let storePromise: Promise<WebStore> | null = null;
   const store = () => (storePromise ??= import("./store").then((mod) => mod.openStore(app)));
@@ -223,7 +222,7 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const { settings } = await loadSettings();
       const context = toPageContext({ selection: text, title: "ATLAS Explain web app", url: window.location.origin });
       if (!context.selection) throw new Error("Paste or type something to explain first.");
-      const built = buildExtensionPrompt({ context, question });
+      const built = buildExplainPrompt({ context, question });
       const gate = await service.cloudGate(settings);
       // With the cloud off limits, only the device is tried, so a limit can never spend a cloud call.
       const mode = gate.allowed ? settings.inferenceMode : "only_on_device";

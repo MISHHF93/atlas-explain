@@ -1,6 +1,6 @@
 /**
  * Shared types for ATLAS Explain.
- * This module is platform-free so a Chrome extension or Android shell can reuse it.
+ * This module is platform-free so the MCP connector or an Android shell can reuse it.
  */
 
 export const TOPIC_IDS = [

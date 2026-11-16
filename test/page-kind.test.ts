@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildExtensionPrompt, toPageContext } from "../src/core/extension-prompt";
+import { buildExplainPrompt, toPageContext } from "../src/core/explain-prompt";
 import { detectPageKind, pageKindLine } from "../src/core/page-kind";
 
 describe("page kind detector", () => {
@@ -32,7 +32,7 @@ describe("page kind detector", () => {
     const context = toPageContext({ selection: "Stop-limit order", title: "Order entry", url: "https://www.tradingview.com/chart/" });
     expect(context.page.label).toBe("Charting site");
     expect(pageKindLine(context.page, context.host)).toBe("Charting site · tradingview.com");
-    const { prompt } = buildExtensionPrompt({ context, question: "" });
+    const { prompt } = buildExplainPrompt({ context, question: "" });
     expect(prompt).toContain("Site type: Charting site.");
   });
 

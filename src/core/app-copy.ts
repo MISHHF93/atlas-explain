@@ -7,12 +7,12 @@ import {
   type SignalView,
 } from "./signal";
 
-/** Words and states for the wallet popup. Education only: never trade instructions. */
+/** Words and states for the web app. Education only: never trade instructions. */
 
 export type ConnectionState = "desk" | "local" | "live" | "hosted" | "none" | "offline";
 
 /**
- * Which status the header pill shows. One rule for the web app and the popup:
+ * Which status the header pill shows. One rule:
  * offline beats everything; the ATLAS desk beats the rest; then ATLAS on this computer,
  * then live public prices. `hosted` is the public website, which never looks for ATLAS.
  */
@@ -90,11 +90,6 @@ export function showsConnectionChip(state: ConnectionState): boolean {
   return connectionCopy(state).label !== "";
 }
 
-export function whyQuestion(view: SignalView): string {
-  const copy = signalCopy(view);
-  return `Why would an educational signal light show "${copy.headline}"? Explain hit rate, sample size, and why a model can lack evidence. Do not recommend a trade.`;
-}
-
 /** The sample explained by "Try a sample now" in onboarding: the fastest path to a first answer. */
 export const SAMPLE_TERM = "Stop-limit order";
 
@@ -109,12 +104,6 @@ export const STEP_CLOUD = "Asking the cloud model";
 export const OFFLINE_ANSWER =
   "You're offline, and this browser can't answer on the device. Reconnect and try again.";
 
-/** Preview explanation for store screenshots and the no-Chrome preview page. Not a market call. */
-export const SAMPLE_EXPLANATION = {
-  selection: "stop-limit order",
-  text:
-    "A stop-limit order has two prices. The stop price wakes the order up; the limit price caps the worst fill you will accept.\n\nIf the market jumps past your limit, the order can sit unfilled. That is the trade-off: price control in exchange for no guarantee of a fill.\n\nEducational information, not investment advice.",
-};
 
 export function shortSelection(text: string, max = 90): string {
   const flat = text.replace(/\s+/g, " ").trim();

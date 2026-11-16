@@ -17,7 +17,7 @@ export type MonitorKind =
 
 export interface MonitorEvent {
   kind: MonitorKind;
-  surface: "web" | "extension" | "bridge";
+  surface: "web";
   code: string;
   at: string;
 }

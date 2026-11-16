@@ -10,7 +10,6 @@ export interface Entitlements {
   cloudExplanationsPerDay: Quota;
   watchlistSize: Quota;
   dailyBrief: boolean;
-  extensionHighlightToExplain: boolean;
   onDeviceExplanations: "unlimited";
 }
 
@@ -28,7 +27,6 @@ export const PRO_ENTITLEMENTS: Entitlements = {
   cloudExplanationsPerDay: "unlimited",
   watchlistSize: "unlimited",
   dailyBrief: true,
-  extensionHighlightToExplain: true,
   onDeviceExplanations: "unlimited",
 };
 
@@ -37,8 +35,6 @@ export function freeEntitlements(freeCloudDailyLimit: number): Entitlements {
     cloudExplanationsPerDay: freeCloudDailyLimit,
     watchlistSize: FREE_WATCHLIST_SIZE,
     dailyBrief: false,
-    // Highlight-to-explain is the core product and is free on every plan (docs/PRICING.md).
-    extensionHighlightToExplain: true,
     onDeviceExplanations: "unlimited",
   };
 }

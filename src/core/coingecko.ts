@@ -17,7 +17,6 @@ import {
 import { CRYPTO_COINS } from "../data/crypto";
 
 export const COINGECKO_API = "https://api.coingecko.com/api/v3";
-export const COINGECKO_SITE = "https://www.coingecko.com";
 export const COINGECKO_SOURCE_LABEL = "CoinGecko";
 export const COINGECKO_WINDOW = "in the last 24 hours";
 export const COINGECKO_CITATION = "Prices by CoinGecko (www.coingecko.com).";

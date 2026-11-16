@@ -1,7 +1,7 @@
 /**
  * The Learn section, built once for both surfaces: the learn path (progress kept on this
  * device) above the searchable glossary. Loaded on demand, because the glossary text is the
- * largest static part of the app and the popup has a strict size budget.
+ * largest static part of the app and the app has a strict first-load budget.
  *
  * Asking about a term explains it straight away on both surfaces: pressing "Explain this" is
  * the request, so nothing is sent without the reader asking.

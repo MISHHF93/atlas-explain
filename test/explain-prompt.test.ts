@@ -1,16 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  EXTENSION_DISCLAIMER,
-  EXTENSION_PRIVACY_NOTE,
-  buildExtensionPrompt,
-  extensionHighlightAllowed,
+  ANSWER_DISCLAIMER,
+  buildExplainPrompt,
   isRecommendationRequest,
   relevantSamples,
   toPageContext,
-  withDisclaimer,
-} from "../src/core/extension-prompt";
+} from "../src/core/explain-prompt";
 
-describe("extension page context", () => {
+describe("page context", () => {
   it("keeps the host and drops the path, query, and account-like numbers", () => {
     const context = toPageContext({
       selection: "Stop-limit vs stop-market. Account number 123456789. Balance: $42,000.",
@@ -27,11 +24,11 @@ describe("extension page context", () => {
   });
 });
 
-describe("extension prompt", () => {
+describe("explain prompt", () => {
   it("refuses a trade decision and still explains factors", () => {
     expect(isRecommendationRequest("Should I buy NVDA calls?")).toBe(true);
     expect(isRecommendationRequest("What is a stop-limit order?")).toBe(false);
-    const { prompt, refusedRecommendation } = buildExtensionPrompt({
+    const { prompt, refusedRecommendation } = buildExplainPrompt({
       context: toPageContext({
         selection: "Should I buy the stock?",
         title: "NVDA",
@@ -43,14 +40,14 @@ describe("extension prompt", () => {
     expect(prompt).toContain("Do not give one");
     expect(prompt.toLowerCase()).toContain("you never tell anyone to buy, sell, hold");
     expect(prompt.toLowerCase()).not.toContain("you should buy");
-    expect(prompt).toContain(EXTENSION_DISCLAIMER);
+    expect(prompt).toContain(ANSWER_DISCLAIMER);
     expect(prompt).toContain("www.tradingview.com");
   });
 
-  it("attaches the DeepSeek sample when the highlight mentions NVDA", () => {
+  it("attaches the DeepSeek sample when the text mentions NVDA", () => {
     const samples = relevantSamples("Why did NVDA fall after DeepSeek?");
     expect(samples.map((sample) => sample.card.symbol)).toEqual(["NVDA"]);
-    const { prompt } = buildExtensionPrompt({
+    const { prompt } = buildExplainPrompt({
       context: toPageContext({
         selection: "Why did NVDA fall after DeepSeek?",
         title: "News",
@@ -63,23 +60,4 @@ describe("extension prompt", () => {
     expect(prompt).toContain("not a live data feed");
     expect(prompt).not.toContain("notes");
   });
-
-  it("stamps the disclaimer on every answer", () => {
-    expect(withDisclaimer("A stop-limit waits for a trigger, then becomes a limit.")).toContain(EXTENSION_DISCLAIMER);
-    expect(withDisclaimer(`Already closed.\n\n${EXTENSION_DISCLAIMER}`).match(/Educational information/g)).toHaveLength(1);
-  });
 });
-
-describe("extension entitlements during beta", () => {
-  it("keeps highlight-to-explain free on every plan, with billing on or off", () => {
-    expect(extensionHighlightAllowed({ billingEnabled: false, plan: "free", freeCloudDailyLimit: 50 })).toBe(true);
-    expect(extensionHighlightAllowed({ billingEnabled: true, plan: "free", freeCloudDailyLimit: 50 })).toBe(true);
-    expect(extensionHighlightAllowed({ billingEnabled: true, plan: "pro", freeCloudDailyLimit: 50 })).toBe(true);
-  });
-
-  it("states the privacy limit in the note traders see", () => {
-    expect(EXTENSION_PRIVACY_NOTE).toContain("form fields");
-    expect(EXTENSION_PRIVACY_NOTE).toContain("until you click");
-  });
-});
-

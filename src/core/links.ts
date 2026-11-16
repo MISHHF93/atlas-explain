@@ -1,13 +1,11 @@
 /**
  * ATLAS Explain's public identity, in one place: every address people or programs use, and the
- * education line every surface ends with. The website, the web app, the extension, the MCP
+ * education line every surface ends with. The website, the web app, the MCP
  * connector, the data job and the docs' tests all read from here, so they can't drift apart.
  * Dependency-free, so the data job (plain Node) and the connector (Cloudflare Workers) can import it.
  *
- * Everything people use is online: the website, the web app, the Chrome extension from the
- * Chrome Web Store, and the hosted MCP address for AI assistants. Nobody downloads or builds anything.
- * CHROME_STORE_URL is an owner step: while it is null the site says the extension is not in the store
- * yet and never shows a link that doesn't work; setting it switches every button on.
+ * Everything people use is online: the hosted MCP address for AI assistants, the website and the
+ * web app. Nobody downloads or builds anything.
  */
 
 /* ---------- the website and web app ---------- */
@@ -32,7 +30,7 @@ export const MCP_ORIGIN = "https://atlas-explain-mcp.atlas-explain.workers.dev";
 export const MCP_URL: string | null = `${MCP_ORIGIN}/mcp`;
 
 /* ---------- the education line ---------- */
-/** The short form, for tight spaces (the extension, chart footers, error screens). */
+/** The short form, for tight spaces (chart footers, error screens). */
 export const EDUCATION_SHORT = "Educational information, not investment advice.";
 /** The full line every connector answer and site page ends with. */
 export const EDUCATION_LINE = `${EDUCATION_SHORT} ATLAS Explain never tells anyone to trade.`;

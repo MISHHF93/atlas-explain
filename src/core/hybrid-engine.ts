@@ -1,7 +1,7 @@
 /**
  * Hybrid inference status for the Explain tab: which route the next answer will take.
  * Reads Chrome's Prompt API availability only. It never creates a session and never
- * starts a model download, so opening the popup stays instant and free.
+ * starts a model download, so opening the app stays instant and free.
  */
 
 export type EngineState = "checking" | "ready" | "downloadable" | "downloading" | "cloud" | "offline";

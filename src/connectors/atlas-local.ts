@@ -11,8 +11,8 @@ export const HOSTED_REASON =
 
 export const LOCAL_UNREACHABLE = "ATLAS isn't running on this computer.";
 
-export function mayCallLocalAtlas(loc: { protocol: string; hostname: string }, isExtension: boolean): boolean {
-  return canReachLocalAtlas(loc, isExtension);
+export function mayCallLocalAtlas(loc: { protocol: string; hostname: string }): boolean {
+  return canReachLocalAtlas(loc);
 }
 
 async function probeMcp(fetcher: Fetcher): Promise<ConnectorProbe> {

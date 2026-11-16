@@ -21,18 +21,14 @@ export function withDeadline<T>(work: Promise<T>, ms: number, message: string): 
   return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
 }
 
-/** Plain-language copy for cloud failures, shared by the web app and the extension. */
-export function cloudErrorCopy(message: string, surface: "web" | "extension" = "web"): string {
+/** Plain-language copy for cloud failures in the web app. */
+export function cloudErrorCopy(message: string): string {
   if (/API key not valid|API_KEY_INVALID/i.test(message)) return "Cloud answers are unavailable because of a problem on our side. Answers on this device still work.";
   if (/throttl/i.test(message)) {
-    return surface === "web"
-      ? "Our security check paused cloud answers in this browser. Reload the page to try again. Answers on this device still work."
-      : "Our security check paused cloud answers for now. Close and reopen ATLAS Explain to try again. Answers on this device still work.";
+    return "Our security check paused cloud answers in this browser. Reload the page to try again. Answers on this device still work.";
   }
   if (/app.?check|recaptcha|attestation|unauthenticated/i.test(message)) {
-    return surface === "web"
-      ? "Our security check couldn't confirm this browser. Reload the page and try again. Answers on this device still work."
-      : "Our security check couldn't confirm this browser. Try again in a moment. Answers on this device still work.";
+    return "Our security check couldn't confirm this browser. Reload the page and try again. Answers on this device still work.";
   }
   if (/quota|resource.?exhausted|429|rate/i.test(message)) return "The cloud is busy right now. Wait a minute and try again. Answers on this device still work.";
   if (/deadline|timed? ?out|took too long/i.test(message)) return "The answer took too long, so we stopped waiting. Try again; shorter questions finish faster.";

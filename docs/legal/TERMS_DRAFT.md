@@ -25,7 +25,7 @@ Last updated: [TODO date] · Operator: [TODO legal name], Ontario, Canada · Con
    See docs/legal/DATA_SOURCES.md. AI answers are generated with Google Gemini via
    Firebase AI Logic. These prices are never used to train a model.
 8. **Open source.** The client code is licensed under Apache-2.0. These terms cover use of
-   the hosted service at atlas-explain.web.app and the published Chrome extension.
+   the hosted service at atlas-explain.web.app and the MCP connector.
 9. **Disclaimer and limitation of liability.** The service is provided "as is" without
    warranties. To the extent permitted by law, we are not liable for indirect or
    consequential losses, including trading losses. [TODO: liability cap.]

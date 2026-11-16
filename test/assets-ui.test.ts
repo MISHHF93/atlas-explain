@@ -16,7 +16,7 @@ describe("assets UI", () => {
     expect(css).toContain("repeat(var(--tab-count, 5), 1fr)");
     for (const part of ["asset-row", "fresh-badge", "light-dot", "Why this colour?", "Explain this", "connectCard", "spark", "Price predictions are not shown"]) expect(ui).toContain(part);
     expect(ctl).toContain("visibilitychange");
-    expect(web).toContain("canReachLocalAtlas(location, false)");
+    expect(web).toContain("canReachLocalAtlas(location)");
   });
 
   it("keeps fonts at 11px or more and colours on tokens", () => {

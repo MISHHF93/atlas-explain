@@ -17,12 +17,10 @@ describe("every wait ends", () => {
       "Failed to fetch",
     ];
     for (const m of cases) {
-      for (const surface of ["web", "extension"] as const) {
-        const copy = cloudErrorCopy(m, surface);
-        expect(copy).not.toMatch(/debug token/i);
-        expect(copy.length).toBeLessThan(200);
-      }
+      const copy = cloudErrorCopy(m);
+      expect(copy).not.toMatch(/debug token/i);
+      expect(copy.length).toBeLessThan(200);
     }
-    expect(cloudErrorCopy("appCheck/throttled", "web")).toMatch(/Reload/);
+    expect(cloudErrorCopy("appCheck/throttled")).toMatch(/Reload/);
   });
 });

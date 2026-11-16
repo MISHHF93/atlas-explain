@@ -1,8 +1,6 @@
 /**
- * Settings, built once for both surfaces. The web app shows it in the account sheet; the
- * extension popup shows it from its menu. The groups, their order, their titles and the
- * shared wording live here. A surface only says what it can do: the popup can pin a button
- * to the page and open the side panel; the web app can export or delete an account.
+ * Settings, shown in the web app's account sheet. The groups, their order, their titles and the
+ * shared wording live here; the app passes in what only it builds (Your data, usage statistics).
  */
 import { group, row, themePicker } from "./cards";
 import { el } from "./dom";
@@ -14,9 +12,6 @@ export const HOW_ANSWERS_ARE_MADE =
   "When your browser supports it, Gemini Nano answers on your device and nothing is sent. Otherwise Gemini answers in the cloud. Every answer is labelled.";
 export const ABOUT_LINE = "ATLAS Explain is open source under the Apache-2.0 licence. Education only, never investment advice.";
 const ATLAS_NOTE = "If you run ATLAS research software on this computer, ATLAS Explain can read its prices and research figures. Most people don't need this.";
-
-/** The group titles, in the order they appear. Tests and both surfaces rely on this one list. */
-export const SETTINGS_GROUPS = ["Appearance", "How answers are made", "Your data", "Usage statistics", "Privacy and terms", "For ATLAS users", "About"] as const;
 
 export interface SettingsAction {
   icon: IconName;

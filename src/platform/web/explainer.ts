@@ -84,7 +84,7 @@ export function explanationSchema(topics: readonly string[]): ObjectSchema {
   });
 }
 
-/** Schema for a highlight or typed text: same two-sided shape as the extension (core/two-sided.ts). */
+/** Schema for typed text: the two-sided shape (core/two-sided.ts). */
 export function twoSidedSchema(): ObjectSchema {
   return Schema.object({
     description: "Plain-language educational explanation of a term or text. Not a recommendation.",

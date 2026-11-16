@@ -82,19 +82,3 @@ export function selectInferencePath(input: PathSelectionInput): PathDecision {
   };
 }
 
-export function describePathReason(reason: PathReason): string {
-  switch (reason) {
-    case "remote_config":
-      return "The inference mode comes from Remote Config (or the in-app default).";
-    case "many_headlines":
-      return "There are more headlines than the on-device limit, so this request uses the cloud model. Private notes were left out.";
-    case "long_prompt":
-      return "The prompt is too long for the on-device model, so this request uses the cloud model. Private notes were left out.";
-    case "long_document":
-      return "The attached document is long, so this request uses the cloud model. Private notes were left out.";
-    case "private_context_on_device":
-      return "Notes or a watchlist are attached, so this request stays on-device. If Gemini Nano is unavailable, a cloud retry omits them.";
-    case "private_context_too_long":
-      return "The private notes do not fit the on-device limit, so they were left out of the prompt.";
-  }
-}

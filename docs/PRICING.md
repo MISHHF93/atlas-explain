@@ -30,7 +30,7 @@ Prices, no trial, the FOUNDER code and the refund terms are unchanged. The rest 
 | Cloud model | Gemini Flash-Lite | Gemini Flash (deeper answers, served first) |
 | Follow-ups, related terms, Learn library | ✓ | ✓ |
 | Assets: live prices with source and time | ✓ | ✓ |
-| History | This browser | Synced across devices and the extension |
+| History | This browser | Synced across devices |
 | Daily market digest | Headline summary | Full digest: movers, breadth, sources ¹ |
 | Asset pages | Price, 48 h chart | Longer history, more timeframes ¹ |
 | Data export and account deletion | ✓ | ✓ |

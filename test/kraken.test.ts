@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Fetcher } from "../src/core/assets";
 import { KRAKEN_GREY_REASON, loadKrakenCatalog, loadKrakenDetail, readKrakenOhlc, readKrakenTicker } from "../src/core/kraken";
-import { connectionCopy } from "../src/core/popup-copy";
+import { connectionCopy } from "../src/core/app-copy";
 
 const NOW = Date.parse("2026-11-13T21:00:00Z");
 const ticker = {

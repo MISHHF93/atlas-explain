@@ -1,5 +1,7 @@
 # Production launch audit
 
+> **Historical (written before 15 Nov 2026).** The Chrome extension, its popup and side panel described here were removed; ATLAS Explain is now an MCP connector first and a web app second. Keep this for the reasoning, not as a description of the current product.
+
 Date: 2026-11-13 · Commit audited: `8026eec` (main) · Live site: https://atlas-explain.web.app
 
 This audit comes before any changes. It lists everything a paying member of the public should not see, and every UX, account, billing, security and launch gap between today's build and a full production launch. Each item names the PR in the shipping order that fixes it:

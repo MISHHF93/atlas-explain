@@ -22,7 +22,7 @@ export const ASSETS_PATH = "/api/explain/assets";
 export const ASSETS_SCHEMA = "atlas-explain-assets-v1";
 export const ASSET_SCHEMA = "atlas-explain-asset-v1";
 
-/** Poll cadence while the popup is open. Crypto trades 24/7; IEX stock bars land once a day. */
+/** Poll cadence while Assets is open. Crypto trades 24/7; IEX stock bars land once a day. */
 export const POLL_CRYPTO_MS = 15_000;
 export const POLL_STOCK_MS = 15 * 60_000;
 /** Client-side staleness bounds, checked again even when ATLAS says "ok". */
@@ -136,10 +136,6 @@ const iso = (v: unknown): string | null => {
 export function safeText(value: unknown, fallback: string, max = 400): string {
   const s = str(value, max);
   return s && !TRADE_WORD.test(s) ? s : fallback;
-}
-
-export function hasTradeWording(text: string): boolean {
-  return TRADE_WORD.test(text);
 }
 
 /* ---------- lean ---------- */
@@ -398,8 +394,7 @@ export const NOT_CONNECTED_BODY =
 export const HOSTED_BODY = NOT_CONNECTED_BODY;
 
 /** Whether this page may try localhost at all. The hosted web app never does. */
-export function canReachLocalAtlas(loc: { protocol: string; hostname: string }, isExtension: boolean): boolean {
-  if (isExtension) return true;
+export function canReachLocalAtlas(loc: { protocol: string; hostname: string }): boolean {
   return loc.hostname === "localhost" || loc.hostname === "127.0.0.1";
 }
 

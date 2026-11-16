@@ -1,7 +1,7 @@
 import { extractJson } from "./parse-explanation";
 
 /**
- * The web app's two-sided answer shape, for the extension: a plain summary, three
+ * The two-sided answer shape: a plain summary, three
  * reasons a buyer might weigh, three a seller might weigh, and what would change the
  * picture. Descriptive only; neither side is an instruction.
  */

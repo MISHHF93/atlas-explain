@@ -1,7 +1,7 @@
 /**
  * Live crypto prices from Kraken's public REST API (keyless, CORS-enabled).
  * Used when ATLAS on this computer is not reachable, so the hosted app and a
- * fresh extension still show real prices. This is the hackathon demo default;
+ * fresh browser still show real prices. This is the hackathon demo default;
  * a market launch needs written consent or a switch to CoinGecko. See
  * docs/legal/DATA_SOURCES.md. These figures are never used for ML or training.
  *

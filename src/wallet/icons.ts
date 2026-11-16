@@ -53,4 +53,3 @@ export function icon(name: IconName, size = 18): SVGSVGElement {
   return svg;
 }
 
-export const ICON_NAMES = Object.keys(PATHS) as IconName[];

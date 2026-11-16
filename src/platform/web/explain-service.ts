@@ -1,12 +1,7 @@
 /**
- * The one back end for ATLAS Explain. The web app (backend.ts) and the Chrome extension's
- * bridge page (src/bridge/main.ts) both start Firebase here, read settings here, and ask for
- * an answer here, so limits, prompts, the model call and the usage count cannot drift apart.
- *
- * What stays outside, on purpose:
- *   - the extension popup still tries Gemini Nano itself first (it has no Firebase loaded);
- *   - the bridge still exists, because App Check cannot attest a chrome-extension:// page.
- * Both of those then land on answerText() below for anything that reaches the cloud.
+ * The one back end for ATLAS Explain. The web app (backend.ts) starts Firebase here, reads
+ * settings here and asks for an answer here, so limits, prompts, the model call and the usage
+ * count live in one place.
  */
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
@@ -14,7 +9,7 @@ import { getAuth, signInAnonymously, type Auth } from "firebase/auth";
 import type { Firestore } from "firebase/firestore";
 import { fetchAndActivate, getRemoteConfig, getValue, type RemoteConfig } from "firebase/remote-config";
 import { CloudAllowanceUsed, allowCloudCall, type PlanId } from "../../core/billing";
-import { EXTENSION_SYSTEM } from "../../core/extension-prompt";
+import { EXPLAIN_SYSTEM } from "../../core/explain-prompt";
 import { localRateStore, peekCloudSlot, recordCloudCall, type RateDecision } from "../../core/rate-limit";
 import { REMOTE_CONFIG_KEYS, remoteConfigDefaults } from "../../core/settings";
 import { SETTINGS_FETCH_TIMEOUT_MS } from "../../core/timeouts";
@@ -144,7 +139,7 @@ export function createExplainService(deps: {
           cloudModel: settings.cloudModel,
           maxOutputTokens: settings.maxOutputTokens,
           topics: settings.topics.map((topic) => topic.id),
-          systemInstruction: EXTENSION_SYSTEM,
+          systemInstruction: EXPLAIN_SYSTEM,
           shape: "two_sided",
         },
         input.hooks,

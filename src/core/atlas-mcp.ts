@@ -8,8 +8,6 @@ import { ATLAS_ORIGIN } from "./atlas-origin";
 
 export const MCP_PATH = "/api/mcp/public";
 export const MCP_ASSETS_SCHEMA = "atlas-mcp-assets-v1";
-export const MCP_SCOPE = "atlas.public";
-
 export type Fetcher = (
   url: string,
   init: {

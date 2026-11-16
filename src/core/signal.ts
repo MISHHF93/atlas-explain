@@ -96,10 +96,6 @@ export function signalText(view: SignalView): string {
   return [view.reason, view.hitRateLabel, view.sampleLabel, view.paperLabel].join(" ");
 }
 
-export function containsTradeOrder(text: string): boolean {
-  return TRADE_WORD.test(text);
-}
-
 function view(
   colour: SignalColour,
   reason: string,
