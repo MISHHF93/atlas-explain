@@ -4,8 +4,10 @@
  * markers; the build (vite.config.ts) and the tests (applySiteFrame) put this markup in, so the
  * pages can never drift apart again.
  *
- * The site is connector first: the header button leads to /connect, where an AI assistant gets the
- * ATLAS Explain address. The web app at /app is the second option, for use in the browser.
+ * The journey: the website first, then Sign in (once per browser, or skipped when signed in), then
+ * Get started (/start), which offers the two ways in: the AI-assistant connector (/connect, public
+ * setup steps) and the web app (/app). The header's main button is "Get started"; "The app" in the
+ * navigation goes straight to the app (through Sign in once), for people who already know.
  */
 import { EDUCATION_LINE, MCP_URL } from "../core/links";
 
@@ -22,6 +24,7 @@ const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
 
 /** Every public destination, once. */
 const FOOTER_LINKS: readonly { href: string; label: string }[] = [
+  { href: "/start", label: "Get started" },
   { href: "/connect", label: "Add to your AI assistant" },
   { href: "/app", label: "The app" },
   { href: "/support", label: "Support and FAQ" },
@@ -29,7 +32,12 @@ const FOOTER_LINKS: readonly { href: string; label: string }[] = [
   { href: "/terms", label: "Terms" },
 ];
 
-/** The site-wide call to action: add the connector to an AI assistant. */
+/** The site-wide call to action: the start of the journey (Sign in, then choose a way in). */
+export function startCta(className: string): string {
+  return `<a class="${className}" href="/start">Get started</a>`;
+}
+
+/** Straight to the connector's setup steps, for people who already know they want it. */
 export function connectCta(className: string): string {
   return `<a class="${className}" href="/connect">Add to your AI assistant</a>`;
 }
@@ -47,7 +55,7 @@ export function siteHeader(page: SitePage): string {
     `      <nav class="site-nav" aria-label="Site">${nav}</nav>`,
     // Signed out: "Sign in". site.ts turns it into your initials and "Account" when the app says you're signed in.
     `      <a class="site-signin" href="/signin" data-account-link>Sign in</a>`,
-    `      ${connectCta("btn btn-primary btn-sm")}`,
+    `      ${startCta("btn btn-primary btn-sm")}`,
     `    </header>`,
   ].join("\n");
 }

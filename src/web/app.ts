@@ -54,6 +54,8 @@ import { WEB_LEARN_KEY } from "../core/account-data";
 import { yourDataGroup } from "../wallet/your-data";
 import { readAccountHint, readGuestChoice, saveAccountHint, saveGuestChoice } from "../core/account-hint";
 import { createSignInPage } from "../wallet/signin-page";
+import { createStartPage } from "../wallet/start-page";
+import { MCP_URL } from "../core/links";
 import { tracker } from "../core/analytics";
 import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
 import { RECENT_KEY, readRecent } from "../core/recent";
@@ -155,13 +157,19 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     },
   });
   host.append(signInPage.node);
+  // Get started (/start): after Sign in, choose the AI-assistant connector or the web app.
+  const startPage = createStartPage({
+    connectorUrl: MCP_URL,
+    onOpenApp: () => navigate({ kind: "tab", tab: "explain" }, { replace: true }),
+  });
+  host.append(startPage.node);
   let signInNote: string | undefined;
   // Every way into the app passes the Sign in page once on a browser (website links, bookmarks,
   // typed addresses). Signed-in visitors and those who chose to continue without an account go
   // straight in. Where they were heading is kept in ?next= and opened after.
   if (needsSignInStep(route, location, { signedIn: readAccountHint() != null, guest: readGuestChoice() })) {
     const heading = pathFor(route);
-    history.replaceState(null, "", heading === "/app" ? "/signin" : `/signin?next=${encodeURIComponent(heading)}`);
+    history.replaceState(null, "", `/signin?next=${encodeURIComponent(heading)}`);
     route = { kind: "signin" };
     document.title = titleFor(route);
   }
@@ -204,7 +212,23 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       }
     }
     if (next.kind !== "signin") hideSignIn();
+    if (next.kind === "start") showStart();
+    else hideStart();
     if (isAccountRoute(next)) openAccountRoute(next);
+  }
+
+  /** Get started: shown over the app frame, like the Sign in page. */
+  function showStart(): void {
+    shell.closeSheet();
+    shell.frame.inert = true;
+    document.title = titleFor({ kind: "start" });
+    startPage.show();
+  }
+
+  function hideStart(): void {
+    if (!startPage.open) return;
+    startPage.hide();
+    shell.frame.inert = false;
   }
 
   /** Back and forward buttons: show whatever the address now says. */
@@ -212,6 +236,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     route = parseRoute(location.pathname);
     document.title = titleFor(route);
     if (route.kind !== "signin") hideSignIn();
+    if (route.kind === "start") showStart();
+    else hideStart();
     following = true;
     try {
       shell.closeSheet();
@@ -656,6 +682,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const deepLink = route.kind !== "tab" || route.tab !== "explain";
     if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo") && !deepLink && !location.hash) showOnboarding();
     if (isAccountRoute(route) || route.kind === "not_found") void showRouteSheet();
+    if (route.kind === "start") showStart();
     requestAnimationFrame(() => jumpToRouteSection());
     if (!backend) return;
     void backend.loadSettings().then(({ settings, priceFeed: next }) => {
@@ -823,13 +850,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     }), ...settingsNodes]);
   }
 
-  /** Back to where sign-in was asked from (?next=/app/...), otherwise the top of the page. */
+  /** Back to where sign-in was asked from (?next=/app/...), otherwise Get started, to choose a way in. */
   function afterSignIn(): void {
     hideSignIn();
     const next = new URLSearchParams(location.search).get("next");
     const target = next ? parseRoute(next) : null;
     shell.closeSheet();
-    navigate(target && target.kind !== "not_found" && !isAccountRoute(target) ? target : { kind: "tab", tab: "explain" }, { replace: true });
+    navigate(target && target.kind !== "not_found" && !isAccountRoute(target) ? target : { kind: "start" }, { replace: true });
   }
 
   function renderSetup(): void {

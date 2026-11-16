@@ -6,6 +6,7 @@
  * App (one lazy-loaded bundle, app.html), one scrolling page with a section per address:
  *   /app (Explain)  /app/today  /app/learn  /app/assets  /app/assets/:symbol (sheet)
  *   /app/account and /signin (the account sheet)
+ *   /start (Get started: after Sign in, choose the AI-assistant connector or the web app)
  */
 
 export type AppTab = "today" | "explain" | "assets" | "glossary" | "settings";
@@ -14,6 +15,7 @@ export type AppRoute =
   | { kind: "tab"; tab: AppTab }
   | { kind: "asset"; symbol: string }
   | { kind: "signin" }
+  | { kind: "start" }
   | { kind: "not_found"; path: string };
 
 /** Address of each section. "glossary" and "settings" keep their internal ids but read as Learn and Account. */
@@ -45,6 +47,7 @@ export function normalisePath(pathname: string): string {
 export function parseRoute(pathname: string): AppRoute {
   const path = normalisePath(pathname);
   if (path === "/signin") return { kind: "signin" };
+  if (path === "/start") return { kind: "start" };
   for (const [tab, p] of Object.entries(TAB_PATHS) as [AppTab, string][]) {
     if (path === p) return { kind: "tab", tab };
   }
@@ -71,6 +74,8 @@ export function pathFor(route: AppRoute): string {
       return `${TAB_PATHS.assets}/${encodeURIComponent(route.symbol)}`;
     case "signin":
       return "/signin";
+    case "start":
+      return "/start";
     case "not_found":
       return route.path;
   }
@@ -96,6 +101,7 @@ export function titleFor(route: AppRoute): string {
   if (route.kind === "tab") return `${names[route.tab]} · ATLAS Explain app`;
   if (route.kind === "asset") return `${route.symbol} · Assets · ATLAS Explain app`;
   if (route.kind === "signin") return "Sign in · ATLAS Explain";
+  if (route.kind === "start") return "Get started · ATLAS Explain";
   return "Page not found · ATLAS Explain";
 }
 

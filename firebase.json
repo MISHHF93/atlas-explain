@@ -51,7 +51,7 @@
         ]
       },
       {
-        "source": "/@(app|signin|privacy|terms|how-its-built|support|connect){,/**}",
+        "source": "/@(app|signin|start|privacy|terms|how-its-built|support|connect){,/**}",
         "headers": [
           {
             "key": "Cache-Control",
@@ -80,6 +80,10 @@
       },
       {
         "source": "/signin",
+        "destination": "/app.html"
+      },
+      {
+        "source": "/start",
         "destination": "/app.html"
       },
       {

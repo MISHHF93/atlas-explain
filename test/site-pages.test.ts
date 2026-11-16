@@ -58,7 +58,8 @@ describe("one header and one footer for every site page", () => {
     const hrefs = [...footer.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(hrefs).size).toBe(hrefs.length);
     expect(hrefs).toEqual(expect.arrayContaining(["/app", "/connect", "/support", "/privacy", "/terms"]));
-    expect(hrefs[0]).toBe("/connect");
+    // The journey starts with Get started; the connector's setup steps follow.
+    expect(hrefs.slice(0, 2)).toEqual(["/start", "/connect"]);
     expect(hrefs).not.toContain("/support#faq");
   });
 
