@@ -50,7 +50,7 @@ export function authErrorCopy(code: string): string {
   switch (code) {
     case "auth/operation-not-allowed":
     case "auth/configuration-not-found":
-      return "This sign-in method is not switched on for ATLAS Explain yet. You can keep using the app signed out.";
+      return "This sign-in method is not switched on for ATLAS Explain yet. Try the other one.";
     case "auth/unauthorized-domain":
       return "Sign-in is not allowed from this address. Open atlas-explain.web.app and try again.";
     case "auth/popup-closed-by-user":

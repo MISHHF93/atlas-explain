@@ -32,9 +32,17 @@ describe("signed-in hint for the website", () => {
 });
 
 describe("sign in and account entry points", () => {
-  it("puts a Sign in link in every site page header, to the app's sign-in", () => {
-    for (const f of SITE_PAGES) expect(sitePage(f), f).toMatch(/<header class="site-head">[\s\S]*<a class="site-signin" href="\/signin" data-account-link>Sign in<\/a>[\s\S]*<\/header>/);
-    expect(readFileSync("src/site/site.ts", "utf8")).toContain('accountLink.href = "/app/account"');
+  it("gives every site page one way in, and shows your initials only when signed in", () => {
+    for (const f of SITE_PAGES) {
+      const head = /<header class="site-head">[\s\S]*?<\/header>/.exec(sitePage(f))?.[0] ?? "";
+      expect(head, f).toContain('<a class="site-signin" href="/app/account" data-account-link hidden></a>');
+      expect(head, f).toContain('href="/start" data-start-cta>Get started</a>');
+      // No separate "Sign in" or "The app": they led to the same place.
+      expect(head, f).not.toMatch(/>Sign in<|>The app</);
+    }
+    const site = readFileSync("src/site/site.ts", "utf8");
+    expect(site).toContain('cta.textContent = "Open ATLAS Explain"');
+    expect(site).toContain("accountLink.hidden = false;");
   });
 
   it("gives the web app a labelled Sign in button and a signed-in account menu with Sign out", () => {
@@ -54,7 +62,8 @@ describe("website first, then Sign in, then the app", () => {
     expect(app).toMatch(/function showSignIn\(\): void \{\s*\/\/[^\n]*\n\s*if \(account\?\.signedIn\) \{\s*afterSignIn\(\);/);
     expect(app).toContain("shell.frame.inert = true;");
     const page = readFileSync("src/wallet/signin-page.ts", "utf8");
-    for (const part of ['"Sign in to ATLAS Explain"', '"Continue without an account"', '["/", "Back to the website"]', '["/privacy", "Privacy"]']) expect(page).toContain(part);
+    for (const part of ['"Sign in to ATLAS Explain"', '["/", "Back to the website"]', '["/privacy", "Privacy"]', "needs no account"]) expect(page).toContain(part);
+    expect(page).not.toContain("Continue without an account");
   });
 
   it("leads into the app after signing in, including back from an email link, and back to Sign in after signing out", () => {

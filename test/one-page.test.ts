@@ -37,7 +37,7 @@ describe("the web app is one page", () => {
   });
 
   it("puts account and settings in one sheet and never scrolls the page when it closes", () => {
-    expect(app).toContain("}), ...settingsNodes]);");
+    expect(app).toContain("accountPanel(account, accountHandlers(backend)), ...settingsNodes]);");
     expect(app).not.toContain("shell.panels.settings.append");
     expect(app).toMatch(/onSheetClose: \(\) => \{[\s\S]*?scroll: false/);
   });

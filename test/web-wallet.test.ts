@@ -51,9 +51,9 @@ describe("public site", () => {
     expect(page).toContain('class="hero"');
     const hero = /<section class="hero"[\s\S]*?<\/section>/.exec(page)?.[0] ?? "";
     // The main button starts the journey (Sign in, then choose); the connector's steps are one click away.
-    expect(hero).toContain('<a class="btn btn-primary btn-lg" href="/start">Get started</a>');
+    expect(hero).toContain('<a class="btn btn-primary btn-lg" href="/start" data-start-cta>Get started</a>');
     expect(hero).toContain('<a class="btn" href="/connect">Add to your AI assistant</a>');
-    expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(page)?.[0]).toContain('href="/start">Get started</a>');
+    expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(page)?.[0]).toContain('href="/start" data-start-cta>Get started</a>');
     expect(page).toContain('id="browser"');
     expect(page).toMatch(/Gemini Nano, on this device/);
     expect(page).toMatch(/Gemini in the cloud, if needed/);
@@ -68,7 +68,7 @@ describe("public site", () => {
       expect(visible, file).not.toMatch(/Firebase AI Logic|App Check|Remote Config|#BuildHybridAI|coming soon|during the beta/i);
       expect(text, file).toContain('href="/how-its-built"');
     }
-    expect(page).toContain('href="/app"');
+    expect(page).toContain('href="/start"');
     expect(page).toContain("https://github.com/MISHHF93/atlas-explain");
     expect(page).toMatch(/Educational information, not investment advice/);
     expect(page).not.toContain('id="app"');

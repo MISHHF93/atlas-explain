@@ -5,7 +5,7 @@ export function termsNodes(): HTMLElement[] {
   return [
     el("p", undefined, "ATLAS Explain gives general educational information about financial terms and market news. It is not investment, financial, tax or legal advice, and it never recommends a trade."),
     el("p", undefined, "Answers are written by AI and can be wrong, incomplete or out of date. Prices can be delayed. You are responsible for your own decisions."),
-    el("p", undefined, "You can use ATLAS Explain without an account. Cloud answers have a daily limit so the service stays available for everyone. Answers on your device are not limited."),
+    el("p", undefined, "The web app needs a free account; the AI-assistant connector needs none. Cloud answers have a daily limit so the service stays available for everyone. Answers on your device are not limited."),
     el("p", undefined, "Please don't paste account numbers, balances or anything confidential."),
     fullText("Read the full terms", "/terms"),
   ];

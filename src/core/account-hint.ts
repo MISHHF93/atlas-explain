@@ -42,25 +42,3 @@ function safeStorage(): Storage | null {
   }
 }
 
-/**
- * "Continue without an account", remembered on this browser. Every way into the app passes the
- * Sign in page once; after someone chooses to continue without an account, or signs in, the app
- * opens straight away next time. It holds only that choice, nothing about the person.
- */
-export const GUEST_CHOICE_KEY = "atlas-explain:continue-without-account";
-
-export function saveGuestChoice(storage: Pick<Storage, "setItem"> | null = safeStorage()): void {
-  try {
-    storage?.setItem(GUEST_CHOICE_KEY, "1");
-  } catch {
-    // Storage blocked: the Sign in page simply shows again next time.
-  }
-}
-
-export function readGuestChoice(storage: Pick<Storage, "getItem"> | null = safeStorage()): boolean {
-  try {
-    return storage?.getItem(GUEST_CHOICE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}

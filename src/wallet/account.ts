@@ -10,7 +10,7 @@ export interface AccountHandlers {
 
 /**
  * Account sheet for the web app: sign in with Google or an email
- * link, or sign out. Signed out still works; it only keeps history on this browser.
+ * link, or sign out. The web app needs an account; signing out leads back to the Sign in page.
  */
 export function accountPanel(view: AccountView | null, handlers: AccountHandlers, options: { emailLink?: boolean; compact?: boolean } = {}): HTMLElement {
   const wrap = el("div", "stack account");
@@ -54,7 +54,7 @@ export function accountPanel(view: AccountView | null, handlers: AccountHandlers
   if (!options.compact) {
     wrap.append(
       el("p", "card-title", "Sign in to keep your explanations"),
-      el("p", "fine", "Signing in keeps saved explanations and settings across devices. You can keep using ATLAS Explain signed out; history then stays on this browser."),
+      el("p", "fine", "The web app needs a free account. Signing in keeps your saved explanations and settings on every device."),
     );
   }
   wrap.append(google);

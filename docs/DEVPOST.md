@@ -34,7 +34,7 @@ ATLAS Explain is a web app at https://atlas-explain.web.app/app. Type or paste a
 - **Today, Learn and Assets.** Live crypto prices (streaming in real time while the page is open), today's official press releases and headlines, a plain-language learning path with diagrams, and about 30 large US companies and ETFs with their SEC-filed figures, currencies, bond yields and energy prices. Every number names its source and time; missing data says why.
 - **The same knowledge in AI assistants.** A free, read-only MCP connector gives Claude, ChatGPT, Cursor and VS Code the same glossary, figures, prices and charts, with sources. It's listed in the official MCP Registry.
 
-Sign-in is optional (Google or a one-time email link) and only keeps saved explanations across devices.
+The web app needs a free account (Google or a one-time email link), which keeps saved explanations and settings on every device. The connector needs none.
 
 What it never does: read balances, account numbers or positions; make up a number; forecast a price; or tell anyone to trade.
 
@@ -80,9 +80,13 @@ An Android build with Firebase AI Logic's hybrid API (Gemini Nano through ML Kit
 
 Firebase AI Logic, Gemini Nano (Chrome Prompt API), Gemini, Firebase App Check, reCAPTCHA Enterprise, Firebase Remote Config, Firebase Authentication, Cloud Firestore, Firebase Hosting, TypeScript, Vite, Cloudflare Workers, Model Context Protocol.
 
+## Testing instructions
+
+Open https://atlas-explain.web.app and press **Get started**. Sign in with any Google account, or ask for a one-time email link; no password is needed and nothing is charged. Then choose **Open the web app**. For the on-device answer, use desktop Chrome with Gemini Nano available; elsewhere the cloud answers and the badge says so. The AI-assistant connector needs no account: add https://atlas-explain-mcp.atlas-explain.workers.dev/mcp in Claude or another assistant (steps at /connect).
+
 ## Links
 
-- Try it (no sign-in needed): https://atlas-explain.web.app/app
+- Try it: https://atlas-explain.web.app (press Get started, then sign in with any Google account or a one-time email link)
 - Website: https://atlas-explain.web.app
 - Source (Apache-2.0): https://github.com/MISHHF93/atlas-explain
 - AI-assistant connector: https://atlas-explain.web.app/connect

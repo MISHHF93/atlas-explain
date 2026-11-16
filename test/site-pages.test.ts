@@ -14,7 +14,7 @@ describe("the public site is four pages", () => {
   it("has Home, Support, Privacy and Terms in the navigation, and no separate How it works page", () => {
     expect(existsSync("how-it-works.html")).toBe(false);
     const nav = /<nav class="site-nav"[^>]*>(.*?)<\/nav>/.exec(home)?.[1] ?? "";
-    expect([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual(["/#how-it-works", "/connect", "/app", "/support"]);
+    expect([...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual(["/#how-it-works", "/connect", "/support"]);
     expect(readFileSync("public/sitemap.xml", "utf8")).not.toContain("how-it-works");
   });
 
@@ -57,7 +57,9 @@ describe("one header and one footer for every site page", () => {
     const footer = /<nav aria-label="Footer">(.*?)<\/nav>/.exec(sitePage("index.html"))?.[1] ?? "";
     const hrefs = [...footer.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(hrefs).size).toBe(hrefs.length);
-    expect(hrefs).toEqual(expect.arrayContaining(["/app", "/connect", "/support", "/privacy", "/terms"]));
+    expect(hrefs).toEqual(expect.arrayContaining(["/start", "/connect", "/support", "/privacy", "/terms"]));
+    // One way into the product: no separate link to the app.
+    expect(hrefs).not.toContain("/app");
     // The journey starts with Get started; the connector's setup steps follow.
     expect(hrefs.slice(0, 2)).toEqual(["/start", "/connect"]);
     expect(hrefs).not.toContain("/support#faq");
@@ -70,11 +72,11 @@ describe("one header and one footer for every site page", () => {
 });
 
 describe("the website and the app read as separate places", () => {
-  it("leads into the app with one wording, and marks app pages as the app", () => {
+  it("leads into the product one way, Get started, and marks app pages as the app", () => {
     for (const f of SITE_PAGES) {
       const page = sitePage(f);
-      expect(page, f).not.toMatch(/>Open the web app</);
-      expect(page, f).toMatch(/<nav class="site-nav"[^>]*>[\s\S]*<a href="\/app">The app<\/a>/);
+      expect(page, f).not.toMatch(/>Open the web app<|>Open the app<|>The app</);
+      expect(page, f).toContain('href="/start" data-start-cta>Get started</a>');
     }
     expect(readFileSync("src/wallet/shell.ts", "utf8")).toContain('el("span", "app-badge", "App")');
     expect(readFileSync("src/web/app.ts", "utf8")).toMatch(/menu: \[\r?\n\s*\{ label: "ATLAS Explain website", icon: "back"/);

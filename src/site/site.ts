@@ -23,11 +23,15 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")
   });
 }
 
-// Signed in on this browser (a hint the app saves): the header links to your account instead of "Sign in".
+// Signed in on this browser (a hint the app saves): your initials link to your account, and the
+// one way in reads "Open ATLAS Explain". The app always checks the real sign-in itself.
 const hint = readAccountHint();
 const accountLink = document.querySelector<HTMLAnchorElement>("[data-account-link]");
+if (hint) {
+  for (const cta of document.querySelectorAll<HTMLAnchorElement>("[data-start-cta]")) cta.textContent = "Open ATLAS Explain";
+}
 if (hint && accountLink) {
-  accountLink.href = "/app/account";
+  accountLink.hidden = false;
   accountLink.dataset.signedIn = "true";
   accountLink.setAttribute("aria-label", `Your account (${hint.label})`);
   const initials = document.createElement("span");

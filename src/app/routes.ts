@@ -143,16 +143,21 @@ export function legacyRedirect(loc: { pathname: string; search: string; hash: st
   return `${base}${q ? `?${q}` : ""}${hash}`;
 }
 
+/** Query keys of an email sign-in link: it finishes signing in, so it must reach the app as it is. */
+const EMAIL_LINK_KEYS = ["signin", "oobCode", "mode", "apiKey"];
+
 /**
- * Whether opening the app should show the Sign in page first: every way in (the website's links,
- * a bookmark, a typed address) passes it once on a browser, unless the visitor is signed in or has
- * already chosen to continue without an account. Links that carry their own job (an ATLAS desk
- * card in the hash, an email sign-in link, a preview flag) are let through as they are.
+ * Whether opening the app should show the Sign in page first. Signing in is required for the web
+ * app (owner decision, 16 Nov 2026): every app address, from any link, a bookmark or a typed
+ * address, shows the Sign in page unless the visitor is signed in. Only an email sign-in link
+ * passes, because it is the sign-in itself; preview flags pass in development only. The connector
+ * and its public setup page (/connect) need no account and are not app addresses.
  */
-export function needsSignInStep(route: AppRoute, loc: { search: string; hash: string }, state: { signedIn: boolean; guest: boolean }): boolean {
+export function needsSignInStep(route: AppRoute, loc: { search: string; hash: string }, state: { signedIn: boolean; dev?: boolean }): boolean {
   if (route.kind === "signin" || route.kind === "not_found") return false;
-  if (state.signedIn || state.guest) return false;
-  if (loc.hash && loc.hash !== "#") return false;
+  if (state.signedIn) return false;
   const params = new URLSearchParams(loc.search);
-  return !LEGACY_KEYS.some((key) => params.has(key));
+  if (EMAIL_LINK_KEYS.some((key) => params.has(key))) return false;
+  if (state.dev && LEGACY_KEYS.some((key) => params.has(key))) return false;
+  return true;
 }

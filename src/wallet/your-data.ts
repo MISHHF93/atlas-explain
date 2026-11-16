@@ -87,7 +87,7 @@ export function yourDataGroup(handlers: YourDataHandlers): { node: HTMLElement; 
     });
     handlers.openSheet("Delete your account", [
       el("p", undefined, "This permanently deletes your ATLAS Explain account and what it keeps: saved explanations, settings and your watchlist. History in this browser is cleared too."),
-      el("p", "fine", "You can download your data first. You can keep using ATLAS Explain without an account afterwards."),
+      el("p", "fine", "You can download your data first. Afterwards, the web app asks you to sign in again; the AI-assistant connector needs no account."),
       ...(pro ? [el("p", undefined, "You have a Pro subscription. Deleting your account does not cancel it: cancel Pro first with Manage or cancel Pro, or you will keep being charged.")] : []),
       yes,
       no,

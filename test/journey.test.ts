@@ -17,7 +17,7 @@ describe("one journey: website, Sign in, Get started, then the connector or the 
   });
 
   it("puts Get started behind the Sign in page, and remembers where the visitor was heading", () => {
-    expect(needsSignInStep({ kind: "start" }, { search: "", hash: "" }, { signedIn: false, guest: false })).toBe(true);
+    expect(needsSignInStep({ kind: "start" }, { search: "", hash: "" }, { signedIn: false })).toBe(true);
     expect(app).toContain("history.replaceState(null, \"\", `/signin?next=${encodeURIComponent(heading)}`);");
   });
 
@@ -33,8 +33,8 @@ describe("one journey: website, Sign in, Get started, then the connector or the 
 
   it("starts every website visitor there: Get started in the header, the hero and the footer", () => {
     const home = sitePage("index.html");
-    expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(home)?.[0]).toContain('<a class="btn btn-primary btn-sm" href="/start">Get started</a>');
-    expect(home).toContain('<a class="btn btn-primary btn-lg" href="/start">Get started</a>');
+    expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(home)?.[0]).toContain('<a class="btn btn-primary btn-sm" href="/start" data-start-cta>Get started</a>');
+    expect(home).toContain('<a class="btn btn-primary btn-lg" href="/start" data-start-cta>Get started</a>');
     // The connector's setup steps stay public, for the directory and for people who already know.
     expect(home).toContain('href="/connect"');
   });

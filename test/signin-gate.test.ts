@@ -1,55 +1,60 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { needsSignInStep, parseRoute } from "../src/app/routes";
-import { GUEST_CHOICE_KEY, readGuestChoice, saveGuestChoice } from "../src/core/account-hint";
 
-const fresh = { signedIn: false, guest: false };
+const out = { signedIn: false };
 const loc = (search = "", hash = "") => ({ search, hash });
 
-describe("every way into the app passes the Sign in page once", () => {
-  it("shows Sign in first to a new visitor, whichever app address they open", () => {
-    for (const path of ["/app", "/app/learn", "/app/assets", "/app/assets/BTC"]) {
-      expect(needsSignInStep(parseRoute(path), loc(), fresh), path).toBe(true);
+describe("signing in is required for the web app", () => {
+  it("shows Sign in first to anyone not signed in, whichever app address they open", () => {
+    for (const path of ["/app", "/app/learn", "/app/assets", "/app/assets/BTC", "/app/account", "/start"]) {
+      expect(needsSignInStep(parseRoute(path), loc(), out), path).toBe(true);
     }
   });
 
-  it("lets signed-in visitors, and those who chose to continue without an account, straight in", () => {
-    expect(needsSignInStep(parseRoute("/app"), loc(), { signedIn: true, guest: false })).toBe(false);
-    expect(needsSignInStep(parseRoute("/app"), loc(), { signedIn: false, guest: true })).toBe(false);
+  it("lets signed-in visitors straight in", () => {
+    expect(needsSignInStep(parseRoute("/app"), loc(), { signedIn: true })).toBe(false);
   });
 
   it("never loops on the Sign in page or a missing page", () => {
-    expect(needsSignInStep(parseRoute("/signin"), loc(), fresh)).toBe(false);
-    expect(needsSignInStep(parseRoute("/app/nope"), loc(), fresh)).toBe(false);
+    expect(needsSignInStep(parseRoute("/signin"), loc(), out)).toBe(false);
+    expect(needsSignInStep(parseRoute("/app/nope"), loc(), out)).toBe(false);
   });
 
-  it("lets links with their own job through: desk cards, email sign-in links and previews", () => {
-    expect(needsSignInStep(parseRoute("/app"), loc("", "#c=abc"), fresh)).toBe(false);
-    expect(needsSignInStep(parseRoute("/app"), loc("?oobCode=x&mode=signIn"), fresh)).toBe(false);
-    expect(needsSignInStep(parseRoute("/app"), loc("?tab=explain"), fresh)).toBe(false);
+  it("has no way round it: desk links and old preview flags sign in too; only an email sign-in link passes", () => {
+    expect(needsSignInStep(parseRoute("/app"), loc("", "#c=abc"), out)).toBe(true);
+    expect(needsSignInStep(parseRoute("/app"), loc("?tab=explain"), out)).toBe(true);
+    // The email link is the sign-in itself, so it must reach the app.
+    expect(needsSignInStep(parseRoute("/app"), loc("?oobCode=x&mode=signIn"), out)).toBe(false);
+    // Preview flags pass only in development.
+    expect(needsSignInStep(parseRoute("/app"), loc("?tab=explain"), { signedIn: false, dev: true })).toBe(false);
   });
 
-  it("remembers \"Continue without an account\" on this browser, and survives blocked storage", () => {
-    const store = new Map<string, string>();
-    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-    expect(readGuestChoice(storage)).toBe(false);
-    saveGuestChoice(storage);
-    expect(store.get(GUEST_CHOICE_KEY)).toBe("1");
-    expect(readGuestChoice(storage)).toBe(true);
-    const blocked = { getItem: () => { throw new Error("blocked"); }, setItem: () => { throw new Error("blocked"); } };
-    expect(() => saveGuestChoice(blocked)).not.toThrow();
-    expect(readGuestChoice(blocked)).toBe(false);
-  });
-
-  it("is wired into the app: the gate runs at start-up and the choice is saved on Continue", () => {
+  it("checks the real sign-in too, not only the browser's hint, and keeps a desk card through sign-in", () => {
     const app = readFileSync("src/web/app.ts", "utf8");
-    expect(app).toContain("needsSignInStep(route, location, { signedIn: readAccountHint() != null, guest: readGuestChoice() })");
-    expect(app).toMatch(/onContinue: \(\) => \{\s*\/\/[^\n]*\n\s*saveGuestChoice\(\);\s*afterSignIn\(\);/);
+    expect(app).toContain("needsSignInStep(route, location, { signedIn: readAccountHint() != null, dev: import.meta.env.DEV })");
+    expect(app).toContain("if (!view?.signedIn && !import.meta.env.DEV) requireSignIn();");
+    expect(app).toContain("keepPendingHash();");
+    expect(app).toContain("const pending = takePendingHash();");
   });
 
-  it("draws Google's button with the four-colour G, and says both choices work", () => {
+  it("no longer offers \"Continue without an account\" anywhere", () => {
+    for (const f of ["src/wallet/signin-page.ts", "src/web/app.ts", "src/core/account-hint.ts", "index.html", "support.html", "privacy.html", "terms.html"]) {
+      expect(readFileSync(f, "utf8"), f).not.toMatch(/Continue without an account|continue-without-account|saveGuestChoice/);
+    }
+  });
+
+  it("uses one page frame for Sign in and Get started, and one set of sign-in handlers", () => {
+    expect(existsSync("src/wallet/full-page.ts")).toBe(true);
+    for (const f of ["src/wallet/signin-page.ts", "src/wallet/start-page.ts"]) expect(readFileSync(f, "utf8"), f).toContain('from "./full-page"');
+    const app = readFileSync("src/web/app.ts", "utf8");
+    expect(app.match(/signInWithGoogle\(\)/g)).toHaveLength(1);
+    expect(app).toContain("accountPanel(null, accountHandlers(backend), { compact: true })");
+    expect(app).toContain("accountPanel(account, accountHandlers(backend))");
+  });
+
+  it("draws Google's button with the four-colour G", () => {
     const account = readFileSync("src/wallet/account.ts", "utf8");
     for (const colour of ["#EA4335", "#4285F4", "#FBBC05", "#34A853"]) expect(account).toContain(colour);
-    expect(readFileSync("src/wallet/signin-page.ts", "utf8")).toContain("or continue without an account");
   });
 });

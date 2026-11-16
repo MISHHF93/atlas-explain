@@ -52,7 +52,9 @@ import { buildSettings } from "../wallet/settings";
 import { headlinesCard } from "../wallet/headlines";
 import { WEB_LEARN_KEY } from "../core/account-data";
 import { yourDataGroup } from "../wallet/your-data";
-import { readAccountHint, readGuestChoice, saveAccountHint, saveGuestChoice } from "../core/account-hint";
+import { readAccountHint, saveAccountHint } from "../core/account-hint";
+/** Session storage key for an ATLAS desk link that arrived before sign-in. */
+const PENDING_HASH_KEY = "atlas-explain:pending-link";
 import { createSignInPage } from "../wallet/signin-page";
 import { createStartPage } from "../wallet/start-page";
 import { MCP_URL } from "../core/links";
@@ -149,13 +151,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   });
   document.title = titleFor(route);
   // The Sign in page (/signin) sits over the app frame as its own page.
-  const signInPage = createSignInPage({
-    onContinue: () => {
-      // Remembered on this browser, so the app opens straight away next time.
-      saveGuestChoice();
-      afterSignIn();
-    },
-  });
+  const signInPage = createSignInPage();
   host.append(signInPage.node);
   // Get started (/start): after Sign in, choose the AI-assistant connector or the web app.
   const startPage = createStartPage({
@@ -164,11 +160,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   });
   host.append(startPage.node);
   let signInNote: string | undefined;
-  // Every way into the app passes the Sign in page once on a browser (website links, bookmarks,
-  // typed addresses). Signed-in visitors and those who chose to continue without an account go
-  // straight in. Where they were heading is kept in ?next= and opened after.
-  if (needsSignInStep(route, location, { signedIn: readAccountHint() != null, guest: readGuestChoice() })) {
+  // Signing in is required for the web app (owner decision, 16 Nov 2026). Every app address shows
+  // the Sign in page first unless this browser is signed in; where the visitor was heading is kept
+  // in ?next= and opened after. This first check uses the browser's sign-in hint so a signed-in
+  // visitor never sees the page flash; the real sign-in state is checked again in startAccount().
+  if (needsSignInStep(route, location, { signedIn: readAccountHint() != null, dev: import.meta.env.DEV })) {
     const heading = pathFor(route);
+    keepPendingHash();
     history.replaceState(null, "", `/signin?next=${encodeURIComponent(heading)}`);
     route = { kind: "signin" };
     document.title = titleFor(route);
@@ -177,6 +175,25 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   // lower-case symbol become the canonical path. The query (sign-in links) and hash are kept.
   if (route.kind !== "not_found" && location.pathname !== pathFor(route)) {
     history.replaceState(null, "", pathFor(route) + location.search + location.hash);
+  }
+
+  /** An ATLAS desk link (#c=…) waits in this tab's session storage while the visitor signs in. */
+  function keepPendingHash(): void {
+    if (!location.hash || location.hash === "#") return;
+    try {
+      sessionStorage.setItem(PENDING_HASH_KEY, location.hash);
+    } catch {
+      // Storage blocked: the card is lost and the desk link can simply be opened again.
+    }
+  }
+  function takePendingHash(): string | null {
+    try {
+      const hash = sessionStorage.getItem(PENDING_HASH_KEY);
+      sessionStorage.removeItem(PENDING_HASH_KEY);
+      return hash;
+    } catch {
+      return null;
+    }
   }
 
   /** A link to a lower section (/app/learn, /app/assets, an asset page) lands on that section. */
@@ -714,6 +731,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         account = view;
         shell.setAccount(view);
         saveAccountHint(view);
+        // Not signed in (or only the anonymous id the backend keeps): the web app shows Sign in.
+        if (!view?.signedIn && !import.meta.env.DEV) requireSignIn();
         yourData.setSignedIn(Boolean(view?.signedIn));
         void refreshPlan();
         if (view && view.uid !== lastAccountUid) {
@@ -732,7 +751,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         if (outcome.state === "signed-in" && route.kind === "signin") window.setTimeout(() => afterSignIn(), 400);
       }
     } catch {
-      // Sign-in is optional. The app keeps working signed out.
+      // Sign-in couldn't start: the Sign in page says so and offers a reload.
+      requireSignIn();
     }
   }
 
@@ -772,7 +792,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (!backend) return;
     await backend.signOut();
     account = null;
-    signInNote = "You're signed out. You can sign in again, or keep using ATLAS Explain without an account.";
+    signInNote = "You're signed out. Sign in again to keep using the web app.";
     navigate({ kind: "signin" });
   }
 
@@ -804,11 +824,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     shell.frame.inert = false;
   }
 
-  /** Google or a one-time email link, from the shared account panel; signing in leads into the app. */
-  function signInBody(): HTMLElement {
-    if (!backend) return el("p", "fine", "Sign-in isn't available right now. Reload the page to try again, or continue without an account.");
-    const b = backend;
-    return accountPanel(null, {
+  /**
+   * The one set of account actions, for the Sign in page and the account sheet alike: Google, a
+   * one-time email link, and sign out. Signing in leads on (afterSignIn); signing out leads to the
+   * Sign in page, because the web app needs an account.
+   */
+  function accountHandlers(b: WebBackend): Parameters<typeof accountPanel>[1] {
+    return {
       onGoogle: async () => {
         const result = await b.signInWithGoogle();
         if (result === "redirecting") return "Taking you to Google…";
@@ -820,8 +842,17 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         await b.sendEmailLink(email);
         return `Check ${email} for a sign-in link. Open it on this device to finish.`;
       },
-      onSignOut: async () => "",
-    }, { compact: true });
+      onSignOut: async () => {
+        window.setTimeout(() => void signOutNow(), 0);
+        return "Signing out…";
+      },
+    };
+  }
+
+  /** The Sign in page's content: Google or a one-time email link, from the shared account panel. */
+  function signInBody(): HTMLElement {
+    if (!backend) return el("p", "fine", "Sign-in isn't available right now. Reload the page to try again.");
+    return accountPanel(null, accountHandlers(backend), { compact: true });
   }
 
   function openAccount(): void {
@@ -829,25 +860,16 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       shell.openSheet("Account", [el("p", "fine", "Sign-in isn't available right now. Reload the page to try again."), ...settingsNodes]);
       return;
     }
-    const b = backend;
-    shell.openSheet("Account", [accountPanel(account, {
-      onGoogle: async () => {
-        const result = await b.signInWithGoogle();
-        if (result === "redirecting") return "Taking you to Google…";
-        tracker.track("login", { method: "google" });
-        window.setTimeout(() => (route.kind === "signin" ? afterSignIn() : openAccount()), 400);
-        return "You are signed in.";
-      },
-      onEmail: async (email) => {
-        await b.sendEmailLink(email);
-        return `Check ${email} for a sign-in link. Open it on this device to finish.`;
-      },
-      onSignOut: async () => {
-        await b.signOut();
-        window.setTimeout(() => openAccount(), 400);
-        return "You are signed out. ATLAS Explain still works; history now stays on this browser.";
-      },
-    }), ...settingsNodes]);
+    shell.openSheet("Account", [accountPanel(account, accountHandlers(backend)), ...settingsNodes]);
+  }
+
+  /** Shows the Sign in page when the visitor isn't signed in, keeping where they were in ?next=. */
+  function requireSignIn(): void {
+    if (route.kind === "signin" || route.kind === "not_found") return;
+    keepPendingHash();
+    const heading = pathFor(route);
+    history.replaceState(null, "", `/signin?next=${encodeURIComponent(heading)}`);
+    navigate({ kind: "signin" }, { replace: true });
   }
 
   /** Back to where sign-in was asked from (?next=/app/...), otherwise Get started, to choose a way in. */
@@ -857,6 +879,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const target = next ? parseRoute(next) : null;
     shell.closeSheet();
     navigate(target && target.kind !== "not_found" && !isAccountRoute(target) ? target : { kind: "start" }, { replace: true });
+    const pending = takePendingHash();
+    if (pending) location.hash = pending;
   }
 
   function renderSetup(): void {
