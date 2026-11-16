@@ -77,7 +77,8 @@ export function mountAssets(options: {
 
   async function showPublic(state: Parameters<CatalogPanelHandle["update"]>[0]): Promise<void> {
     await ui();
-    panel.node.hidden = true;
+    // With ATLAS on this computer, its list stays on top; the full catalog is always shown below it.
+    panel.node.hidden = !fromAtlas;
     publicSlot.hidden = false;
     catalog?.update(state);
   }
@@ -88,9 +89,14 @@ export function mountAssets(options: {
     try {
       last = await readState();
       if (fromAtlas) {
-        publicSlot.hidden = true;
+        // Owner: the ATLAS desk's own list (crypto and stocks with paper lights) first, then the full
+        // public catalog below it (currencies, rates, ETFs, energy, filings, explainers), so nothing is hidden.
         panel.node.hidden = false;
         panel.update(last);
+        const v = await ui();
+        const official = await v.loadMarketData();
+        publicAssets = v.withCompanyLogos([...official, ...v.EDUCATION_ASSETS], options.priceFeed?.logoDevToken);
+        await showPublic({ kind: "ready", assets: publicAssets });
       } else if (last.kind !== "loading") {
         // Public catalog: live crypto plus the official data published by the scheduled job.
         const v = await ui();
