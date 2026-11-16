@@ -51,7 +51,7 @@
         ]
       },
       {
-        "source": "/@(app|signin|privacy|terms|how-its-built|welcome|support){,/**}",
+        "source": "/@(app|signin|privacy|terms|how-its-built|welcome|support|connect){,/**}",
         "headers": [
           {
             "key": "Cache-Control",

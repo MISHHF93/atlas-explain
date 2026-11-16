@@ -47,9 +47,12 @@ describe("public site", () => {
   const page = sitePage("index.html");
   const css = readFileSync("src/site/site.css", "utf8");
   const pages = SITE_PAGES.map((f) => [f, sitePage(f)] as const);
-  it("is a landing page led by the Chrome extension, with the hybrid story in static HTML", () => {
+  it("is a landing page led by the AI-assistant connector, with the browser option and its hybrid story in static HTML", () => {
     expect(page).toContain('class="hero"');
-    expect(page).toMatch(/Add to Chrome/);
+    const hero = /<section class="hero"[\s\S]*?<\/section>/.exec(page)?.[0] ?? "";
+    expect(hero).toContain('<a class="btn btn-primary btn-lg" href="/connect">Add to your AI assistant</a>');
+    expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(page)?.[0]).toContain('href="/connect">Add to your AI assistant</a>');
+    expect(page).toContain('id="browser"');
     expect(page).toMatch(/Gemini Nano, on this device/);
     expect(page).toMatch(/Gemini in the cloud, if needed/);
   });

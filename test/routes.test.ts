@@ -26,7 +26,8 @@ describe("app routes", () => {
     expect(parseRoute("/app/nope")).toEqual({ kind: "not_found", path: "/app/nope" });
   });
   it("titles every route", () => {
-    expect(titleFor({ kind: "tab", tab: "glossary" })).toBe("Learn · ATLAS Explain");
+    expect(titleFor({ kind: "tab", tab: "glossary" })).toBe("Learn · ATLAS Explain app");
+    expect(titleFor({ kind: "signin" })).toBe("Sign in · ATLAS Explain");
     expect(titleFor({ kind: "asset", symbol: "ETH" })).toContain("ETH");
   });
 });
