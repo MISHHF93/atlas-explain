@@ -57,3 +57,50 @@ What finance-education users consistently like: bite-sized lessons, a check at t
 ## Suggested order
 
 Batch 1 = items 1 and 2 (connector), then item 3 (site), then item 4 (profile). Each batch ships on its own: release:check, merge, deploy, registry publish, and a directory "Sync from server" for new tools.
+
+## Round 2: helping people use the connector at its best (researched 17 Nov 2026)
+
+Sources: Claude's MCP Apps guides on sending messages, app tools and instance supersession; "Build plugins for Claude" and the directory publishing docs; tool-description research (an arXiv study of MCP tool descriptions, Merge's guide). The theme: today each tool answers well on its own, but people have to know what to ask next. These tweaks let the views and Claude carry the conversation forward.
+
+### 6. "Ask Claude" buttons inside the views (connector; 1 day) — highest value
+
+An MCP App can send Claude a message when the user clicks (`ui/message`, `app.sendMessage`): Claude either asks to allow it or puts the text in the message box, so the user stays in control. Limits: text only, under 8,000 characters, sent on a click, never on a timer.
+
+- Economy card: "What does US inflation at 3.74% mean, and how has it changed this year?"
+- Coin row or chart: "Show me what's in the news about Bitcoin" and "Explain Bitcoin's 7-day move with ATLAS Explain's evidence brief"
+- Depth chart: "Explain this spread and slippage in plain language"
+- Yield curve: "Explain what this yield curve's shape means"
+
+One or two buttons per view (the inline-card rule is at most 2 actions), worded as questions, never as trade prompts.
+
+### 7. Tell Claude what is on screen (connector; half a day)
+
+`ui/update-model-context` lets a view tell Claude what the user is looking at, for the next turn. When someone switches the chart to 30 days, picks a coin on the board or a card on the dashboard, Claude knows, so "what about Ethereum?" or "why did it drop on the 15th?" are grounded in what the user sees. One short line per change.
+
+### 8. Package ATLAS Explain as a Claude plugin with skills (repo + submission; 1–2 days)
+
+The directory now takes plugin bundles: a GitHub repository with the connector reference and Agent Skills. Skills teach Claude how to use the tools well, which is exactly the "use it at its best" problem:
+
+- **Learn a term properly**: explain_term, a real example from live data, then one check question
+- **Today's market brief**: todays_headlines + crypto_prices + economy_snapshot + economic_calendar, each fact sourced, no calls
+- **Explain a market move**: evidence_brief + price_history + headlines, both sides, "what this doesn't tell you"
+- **Understand trading costs**: market_depth with a worked slippage example
+
+One listing then installs the connector and the know-how together. The owner submits it in the same portal.
+
+### 9. Sharper tool descriptions and more ready-made prompts (connector; half a day)
+
+- Claude lists tools by name plus the first line of each description (up to 200 characters), so every first line must stand alone and say when to use the tool. Add the natural next step where it helps ("for how it moved, price_history").
+- Prompts show up as one-click starters in many clients. Add "Evidence brief on an asset", "The economy today", "Quiz me on a topic" next to the three we have.
+
+### 10. Let Claude change an open view (connector; 1 day; limited availability)
+
+App tools let Claude act on a view that's open: "switch the chart to 30 days", "show Ethereum on the board". Only some organizations have them today, and the view keeps working without them, so this can wait until 6 and 7 are in.
+
+### 11. Only the newest copy stays live (connector; half a day)
+
+Each tool call adds another live copy of a view. With 6 and 7 in place, older copies should grey out and stop sending messages or context ("superseded"), using a server-issued key in each result and a BroadcastChannel, per Claude's guide.
+
+### Suggested order for round 2
+
+6 + 7 + 9 together (one connector release), then 8 (plugin), then 11, then 10 when app tools reach more organizations.
