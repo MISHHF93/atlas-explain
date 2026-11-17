@@ -62,7 +62,6 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
   .section-link { min-height: 2.25rem; }
 }
 .wallet[data-layout="page"] .panel-last { min-height: calc(100dvh - 9rem); }
-.wallet[data-layout="page"] .catalog-more { padding: var(--atlas-space-2) 0; }
 
 .skip {
   position: absolute;

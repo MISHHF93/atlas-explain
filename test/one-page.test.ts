@@ -42,10 +42,12 @@ describe("the web app is one page", () => {
     expect(app).toMatch(/onSheetClose: \(\) => \{[\s\S]*?scroll: false/);
   });
 
-  it("keeps long lists short until asked", () => {
-    expect(app).toContain("compact: true");
+  it("shows the whole asset catalog on All (owner decision, 17 Nov 2026), and keeps the glossary's visible Show all button", () => {
+    const catalog = readFileSync("src/wallet/catalog-view.ts", "utf8");
+    expect(catalog).not.toContain("compact");
+    expect(catalog).not.toContain("Search above or pick a category to see them.");
+    expect(app).not.toMatch(/mountAssets\([\s\S]{0,300}compact: true/);
     expect(app).toContain("initialCount: 6");
-    expect(readFileSync("src/wallet/catalog-view.ts", "utf8")).toContain("Search above or pick a category to see them.");
     expect(readFileSync("src/wallet/glossary-panel.ts", "utf8")).toContain("Show all ${items.length} terms");
   });
 });

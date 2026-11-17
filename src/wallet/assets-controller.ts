@@ -35,8 +35,6 @@ export function mountAssets(options: {
   onOpen?: (symbol: string) => void;
   /** Device-only or account-synced watchlist. */
   watchlist?: Watchlist;
-  /** Start with the watchlist and priced assets only; the rest appears on search or a class filter. */
-  compact?: boolean;
 }): { refresh: () => Promise<void>; open: (symbol: string) => Promise<boolean> } {
   const { shell } = options;
   const head = el("div", "panel-title");
@@ -68,7 +66,7 @@ export function mountAssets(options: {
     catalogUi ??= await import("./catalog-view");
     if (!catalog) {
       const v = catalogUi;
-      catalog = v.catalogPanel({ onOpen: (a) => void openPublic(a), onRetry: () => void refresh(), recent: () => readRecentIds(v), watchlist: options.watchlist, compact: options.compact });
+      catalog = v.catalogPanel({ onOpen: (a) => void openPublic(a), onRetry: () => void refresh(), recent: () => readRecentIds(v), watchlist: options.watchlist });
       options.watchlist?.onChange(() => catalog?.refreshRecent());
       publicSlot.append(catalog.node);
     }

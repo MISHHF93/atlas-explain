@@ -488,7 +488,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       canReachAtlas: canReachLocalAtlas(location),
       priceFeed,
       watchlist,
-      compact: true,
       onState: (state) => {
         // A refresh that is still loading keeps the last answer, as the price and digest lines below do.
         if (state.kind !== "loading") atlasCatalog = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
