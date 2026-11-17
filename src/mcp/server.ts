@@ -35,7 +35,7 @@ import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile, type I
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.8.0";
+export const SERVER_VERSION = "1.9.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -137,7 +137,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "asset_details",
     title: "What an asset is",
-    description: "Everything ATLAS Explain shows about one asset: what it is, where and when it trades, its latest official figure or price (with source and time), or why no price is shown. Covers crypto, US stocks and ETFs, currencies, interest rates, energy, indices, futures and options.",
+    description: "What one asset is, where and when it trades, and its latest official figure or price with source and time, or why no price is shown. Use it when someone asks about a specific coin, stock, ETF, currency, rate or index. Covers crypto, US stocks and ETFs, currencies, interest rates, energy, indices, futures and options.",
     inputSchema: { type: "object", properties: { asset: str("Name or symbol, for example 'Bitcoin', 'AAPL', 'EUR/USD', '10-year', 'S&P 500'.") }, required: ["asset"], additionalProperties: false },
     annotations: annotations("What an asset is", true),
     icons: ICONS,
@@ -146,7 +146,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "official_figures",
     title: "Official market figures",
-    description: "Official figures ATLAS Explain publishes from free government and regulator sources: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and the latest SEC-filed figures (revenue, net income and more) for large US companies and ETFs. Each has its source and date. Optional search by name or symbol.",
+    description: "Official figures with source and date: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and SEC-filed company figures. Use it for rates, yields, exchange rates or a company's reported results. The SEC figures cover revenue, net income, earnings per share and shares outstanding for about 30 large US companies and ETFs. Optional search by name or symbol.",
     inputSchema: { type: "object", properties: { query: str("Optional name or symbol, for example '10-year', 'EUR', 'AAPL'.") }, additionalProperties: false },
     annotations: annotations("Official market figures", true),
     icons: ICONS,
@@ -157,7 +157,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "crypto_prices",
     title: "Crypto prices",
-    description: "Recent prices for the ten major coins ATLAS Explain follows (Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink, Avalanche), biggest moves first, each with its last 24 hours of hourly closes. Refreshed about every 10 minutes by ATLAS Explain's data job from Kraken's public market data (CoinGecko as backup) and served from ATLAS Explain's own data site; each answer says when they were collected.",
+    description: "Current prices and today's change for ten major coins, biggest moves first, with when they were collected. Use it for how crypto is doing today, or one coin's price. Coins: Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink and Avalanche, each with its last 24 hours of hourly closes. Refreshed about every 10 minutes by ATLAS Explain's data job from Kraken's public market data (CoinGecko as backup) and served from ATLAS Explain's own data site.",
     inputSchema: { type: "object", properties: { coin: str("Optional coin name or symbol, for example 'BTC' or 'Ethereum'.") }, additionalProperties: false },
     annotations: annotations("Crypto prices", true),
     icons: ICONS,
@@ -168,7 +168,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "price_history",
     title: "Crypto price history",
-    description: "How a coin's price moved over the last 24 hours, 7 days or 30 days: start, end, change, high and low with their times, from the hourly closes on ATLAS Explain's own data site (refreshed about every 10 minutes). Describes the past only; never a forecast.",
+    description: "How a coin moved over 24 hours, 7 days or 30 days: start, end, change, high and low with their times. Use it when someone asks how a coin moved or wants a price chart. From the hourly closes on ATLAS Explain's own data site (refreshed about every 10 minutes). Describes the past only; never a forecast.",
     inputSchema: {
       type: "object",
       properties: { coin: str("Coin name or symbol, for example 'BTC'."), range: { type: "string", enum: ["24h", "7d", "30d"], description: "Time range. Default 7d." } },
@@ -184,7 +184,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "todays_headlines",
     title: "Today's market headlines",
-    description: "Recent market headlines ATLAS Explain collected from the GDELT Project's news index and from official press releases (Federal Reserve, SEC, CFTC, ECB, Bank of Canada, Bank of England), each with its publisher, link and time. News stories older than 36 hours and releases older than 4 days are never returned. Optional filter by company or coin.",
+    description: "Recent market headlines and official press releases, each with publisher, link and time. Use it for what's in the news, optionally about one company or coin. Sources: official press releases from the Federal Reserve, SEC, CFTC, ECB, Bank of Canada and Bank of England, and the GDELT Project's news index. News stories older than 36 hours and releases older than 4 days are never returned.",
     inputSchema: { type: "object", properties: { about: str("Optional company, coin or word, for example 'Nvidia' or 'Bitcoin'.") }, additionalProperties: false },
     annotations: annotations("Today's market headlines", true),
     icons: ICONS,
@@ -193,7 +193,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "economy_snapshot",
     title: "The economy at a glance",
-    description: "Headline economic figures from official sources, each with its period, change and source: US inflation (CPI over 12 months) and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation (ECB), Canada's policy rate (Bank of Canada) and US public debt (Treasury). Includes about a year of history for each, and the next central-bank rate decisions. Optional filter by topic.",
+    description: "Headline economic figures with period, change and source: inflation, unemployment, policy rates and US public debt, plus the next rate decisions. Use it for how the economy is doing, or one topic. Covers US CPI over 12 months and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation (ECB), Canada's policy rate (Bank of Canada) and US public debt (Treasury), each with about a year of history. Optional filter by topic.",
     inputSchema: { type: "object", properties: { topic: str("Optional topic, for example 'inflation', 'jobs', 'rates', 'debt', 'euro' or 'canada'. Leave empty for all.") }, additionalProperties: false },
     annotations: annotations("The economy at a glance", true),
     icons: ICONS,
@@ -205,7 +205,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "economic_calendar",
     title: "Upcoming rate decisions",
-    description: "The next interest-rate decisions of the Federal Reserve (FOMC), the European Central Bank and the Bank of Canada, from each bank's own published calendar, with what happens on the day. Dates only: it never guesses the outcome. Optional filter by central bank.",
+    description: "Dates of the next interest-rate decisions by the Federal Reserve, the European Central Bank and the Bank of Canada, with what happens on the day. Use it for when the next Fed, ECB or Bank of Canada meeting is. From each bank's own published calendar. Dates only: it never guesses the outcome. Optional filter by central bank.",
     inputSchema: { type: "object", properties: { bank: str("Optional: 'Fed', 'ECB' or 'Bank of Canada'. Leave empty for all.") }, additionalProperties: false },
     annotations: annotations("Upcoming rate decisions", true),
     icons: ICONS,
@@ -214,7 +214,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "market_depth",
     title: "Bid, ask and order book",
-    description: "For one of the ten coins ATLAS Explain follows: the best bid and ask, the bid-ask spread, how much is offered near the middle price, and how far the average price would move (slippage) if an order of a given size were filled against the order book. From Kraken's public market data; the spread is refreshed every few minutes and the order book about every 10 minutes. Explains how markets work; never suggests a trade.",
+    description: "A coin's best bid and ask, bid-ask spread, order-book depth, and the slippage of filling an order of a given size. Use it to explain spreads, liquidity or trading costs with real numbers. For the ten coins ATLAS Explain follows, from Kraken's public market data; the spread is refreshed every few minutes and the order book about every 10 minutes. Explains how markets work; never suggests a trade.",
     inputSchema: { type: "object", properties: { coin: str("Coin name or symbol, for example 'BTC'.") }, required: ["coin"], additionalProperties: false },
     annotations: annotations("Bid, ask and order book", true),
     icons: ICONS,
@@ -232,7 +232,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "evidence_brief",
     title: "Evidence brief on one asset",
-    description: "Everything ATLAS Explain knows about one asset on one page, each fact with its source and time: what it is, its latest figures or price, how it moved over 7 days and how easily it trades (coins), the economic backdrop and the next rate decision, headlines that name it, terms to know, what people commonly look at for this kind of asset, and what the brief doesn't tell you. Facts only: it never recommends, rates or forecasts anything.",
+    description: "Everything ATLAS Explain knows about one asset on one page, each fact sourced, plus what the facts don't tell you. Use it when someone wants the full picture on a coin, company, currency or rate. Includes what it is, its latest figures or price, how it moved over 7 days and how easily it trades (coins), the economic backdrop and the next rate decision, headlines that name it, terms to know, and what people commonly look at for this kind of asset. Facts only: it never recommends, rates or forecasts anything.",
     inputSchema: { type: "object", properties: { asset: str("Name or symbol, for example 'Bitcoin', 'AAPL', 'EUR/USD' or '10-year'.") }, required: ["asset"], additionalProperties: false },
     annotations: annotations("Evidence brief on one asset", true),
     icons: ICONS,
@@ -313,6 +313,27 @@ export const PROMPTS = [
     arguments: [{ name: "topic", description: "Optional topic, for example 'orders', 'risk' or 'rates'. Leave empty to start at the beginning.", required: false }],
     text: (a: Record<string, string>) => `Using ATLAS Explain, teach me ${a.topic ? `the "${a.topic}" topic` : "the first topic"} of the learning path (browse_glossary). Explain each term in plain language with a simple example, then ask me one short question to check I understood. Education only.`,
   },
+  {
+    name: "brief_on_asset",
+    title: "Evidence brief on an asset",
+    description: "All the sourced facts on one coin, company, currency or rate, with what they don't tell you.",
+    arguments: [{ name: "asset", description: "Name or symbol, for example 'Bitcoin', 'AAPL', 'EUR/USD' or '10-year'.", required: true }],
+    text: (a: Record<string, string>) => `Using ATLAS Explain, give me an evidence brief on ${a.asset || "this asset"} (evidence_brief). Keep every fact with its source and time, show both sides where it matters, and include what the brief doesn't tell me. Don't suggest any trade.`,
+  },
+  {
+    name: "economy_today",
+    title: "The economy today",
+    description: "Inflation, jobs, policy rates and the next rate decisions, in plain language with sources.",
+    arguments: [],
+    text: () => "Using ATLAS Explain, tell me how the economy looks today (economy_snapshot) and when the next central-bank rate decisions are (economic_calendar). Explain each figure in plain language, name its source and period, and don't forecast anything.",
+  },
+  {
+    name: "quiz_me",
+    title: "Quiz me on a topic",
+    description: "Three short questions on a learning-path topic, one at a time, each checked and explained.",
+    arguments: [{ name: "topic", description: "Optional topic, for example 'orders', 'risk' or 'rates'. Leave empty for the first topic.", required: false }],
+    text: (a: Record<string, string>) => `Using ATLAS Explain, quiz me on ${a.topic ? `the "${a.topic}" topic` : "the first topic"} of the learning path (browse_glossary). Ask three short questions one at a time, wait for my answer, then say whether it's right and explain the term. Education only.`,
+  },
 ] as const;
 
 /** Suggestions while someone fills in a prompt (MCP completions): coins and catalog names, or learning topics. */
@@ -321,9 +342,9 @@ export function completePromptArgument(prompt: string, argument: string, typed: 
   const pool =
     prompt === `${GLOSSARY_URI}{term}` && argument === "term"
       ? ALL_TERMS.map((t) => t.id)
-      : prompt === "explain_asset" && argument === "asset"
+      : (prompt === "explain_asset" || prompt === "brief_on_asset") && argument === "asset"
       ? [...CRYPTO_COINS.flatMap((c) => [c.name, c.symbol]), ...EDUCATION_ASSETS.map((a) => a.name)]
-      : prompt === "learn_next" && argument === "topic"
+      : (prompt === "learn_next" || prompt === "quiz_me") && argument === "topic"
         ? LEARN_PATH.flatMap((s) => [s.id, s.title])
         : [];
   const unique = [...new Set(pool)];

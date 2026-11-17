@@ -194,9 +194,9 @@ describe("structured output, prompts, icons and the chart app", () => {
     expect((await handle({ jsonrpc: "2.0", id: 3, method: "resources/read", params: { uri: "ui://nope" } }, full))?.error?.code).toBe(-32002);
   });
 
-  it("offers three education-only prompts that fill in their arguments", async () => {
+  it("offers six education-only prompts that fill in their arguments", async () => {
     const list = (await handle({ jsonrpc: "2.0", id: 1, method: "prompts/list" }, full))?.result as { prompts: { name: string }[] };
-    expect(list.prompts.map((p) => p.name)).toEqual(["market_brief", "explain_asset", "learn_next"]);
+    expect(list.prompts.map((p) => p.name)).toEqual(["market_brief", "explain_asset", "learn_next", "brief_on_asset", "economy_today", "quiz_me"]);
     const got = (await handle({ jsonrpc: "2.0", id: 2, method: "prompts/get", params: { name: "explain_asset", arguments: { asset: "Solana" } } }, full))?.result as { messages: { content: { text: string } }[] };
     const text = got.messages[0]!.content.text;
     expect(text).toContain("explain Solana");

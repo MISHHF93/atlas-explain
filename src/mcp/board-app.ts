@@ -30,6 +30,7 @@ export const BOARD_APP_HTML = appPage({
     ${EXPAND_BUTTON}
   </header>
   <div id="plot"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line"></div></div></div>
+  <div class="asks" id="asks"></div>
   <section id="detail" hidden aria-live="polite">
     <header>
       <h2 id="dtitle"></h2>
@@ -57,6 +58,7 @@ export const BOARD_APP_HTML = appPage({
   function onResult(d) {
     if (!d || !Array.isArray(d.coins) || !d.coins.length) { message("No prices to show right now."); return; }
     $("source").textContent = d.source || "";
+    askButtons($("asks"), [{ label: "Explain today's moves", prompt: "Using ATLAS Explain, explain today's biggest crypto moves in plain language, with the sources and what the numbers don't tell me." }]);
     if (d.coins.length === 1) $("sub").textContent = "Choose the coin to see its chart.";
     const rows = Object.assign(document.createElement("div"), { className: "rows" });
     for (const c of d.coins) {
@@ -73,10 +75,10 @@ export const BOARD_APP_HTML = appPage({
       rows.append(row);
     }
     $("plot").replaceChildren(rows);
-    if (d.coins.length === 1) choose(d.coins[0].symbol, "7d");
+    if (d.coins.length === 1) choose(d.coins[0].symbol, "7d", false);
   }
 
-  async function choose(symbol, range) {
+  async function choose(symbol, range, byUser = true) {
     chosen = symbol;
     for (const r of document.querySelectorAll(".row")) r.setAttribute("aria-pressed", String(r.dataset.symbol === symbol));
     for (const b of document.querySelectorAll("[data-range]")) b.setAttribute("aria-pressed", String(b.dataset.range === range));
@@ -88,6 +90,11 @@ export const BOARD_APP_HTML = appPage({
     if (!h || !Array.isArray(h.points) || h.points.length < 2) { $("dtitle").textContent = symbol + ": this chart couldn't be loaded right now."; reportSize(); return; }
     const t = $("dtitle"); t.replaceChildren(h.name + ", " + h.rangeLabel + " ", Object.assign(document.createElement("span"), { className: trend(h.changePct), textContent: pct(h.changePct) }));
     lineChart($("dplot"), h.points, h.name + " " + h.rangeLabel + ": from " + usd(h.startUsd) + " to " + usd(h.endUsd) + ", " + pct(h.changePct), $("readout"), usd);
+    askButtons($("asks"), [
+      { label: "Explain this move", prompt: "Using ATLAS Explain, give me an evidence brief on " + h.name + ", including its move over " + h.rangeLabel + " (" + pct(h.changePct) + ")." },
+      { label: "News about it", prompt: "Using ATLAS Explain, show me recent headlines about " + h.name + "." },
+    ]);
+    if (byUser) tellClaude("The user opened " + h.name + " on the ATLAS Explain crypto board: over " + h.rangeLabel + " from " + usd(h.startUsd) + " to " + usd(h.endUsd) + " (" + pct(h.changePct) + ").");
     reportSize();
   }
   for (const b of document.querySelectorAll("[data-range]")) b.addEventListener("click", () => chosen && choose(chosen, b.dataset.range));

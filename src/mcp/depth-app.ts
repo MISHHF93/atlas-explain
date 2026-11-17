@@ -32,6 +32,7 @@ export const DEPTH_APP_HTML = appPage({
   <div class="quote" id="quote"></div>
   <div id="plot" class="plot depth"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-block"></div></div></div>
   <div class="readout" id="readout" aria-live="polite"></div>
+  <div class="asks" id="asks"></div>
   <table id="impact" hidden><thead><tr><th>Order size</th><th>Side of the book</th><th>Average price</th><th>Slippage</th></tr></thead><tbody></tbody></table>`,
   footer: "A snapshot of the order book, never a forecast.",
   script: `
@@ -74,6 +75,10 @@ export const DEPTH_APP_HTML = appPage({
     $("sub").textContent = "Best bid and ask as of " + when(d.quoteAsOf) + (d.book ? "; order book as of " + when(d.book.asOf) : "");
     $("quote").replaceChildren(cell("Best bid", usd(d.bidUsd)), cell("Best ask", usd(d.askUsd)), cell("Spread", usd(d.spreadUsd) + " (" + d.spreadBps.toFixed(2) + " bp)"), cell("Middle price", usd(d.midUsd)));
     if (d.book && d.book.bids.length && d.book.asks.length) draw(d.book, d.midUsd); else message("The order book itself isn't available right now; the spread above is current.");
+    askButtons($("asks"), [
+      { label: "Explain these costs", prompt: "Using ATLAS Explain, explain " + d.name + "'s bid-ask spread of " + d.spreadBps.toFixed(2) + " basis points and the slippage numbers in plain language." },
+      { label: "Brief on " + d.symbol, prompt: "Using ATLAS Explain, give me an evidence brief on " + d.name + "." },
+    ]);
     const rows = Array.isArray(d.impact) ? d.impact : [];
     $("impact").hidden = !rows.length;
     $("impact").tBodies[0].replaceChildren(...rows.map((r) => {

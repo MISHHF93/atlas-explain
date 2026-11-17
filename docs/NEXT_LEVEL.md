@@ -62,7 +62,7 @@ Batch 1 = items 1 and 2 (connector), then item 3 (site), then item 4 (profile). 
 
 Sources: Claude's MCP Apps guides on sending messages, app tools and instance supersession; "Build plugins for Claude" and the directory publishing docs; tool-description research (an arXiv study of MCP tool descriptions, Merge's guide). The theme: today each tool answers well on its own, but people have to know what to ask next. These tweaks let the views and Claude carry the conversation forward.
 
-### 6. "Ask Claude" buttons inside the views (connector; 1 day) — highest value
+### 6. "Ask Claude" buttons inside the views (connector; done in 1.9.0, 17 Nov 2026)
 
 An MCP App can send Claude a message when the user clicks (`ui/message`, `app.sendMessage`): Claude either asks to allow it or puts the text in the message box, so the user stays in control. Limits: text only, under 8,000 characters, sent on a click, never on a timer.
 
@@ -73,7 +73,7 @@ An MCP App can send Claude a message when the user clicks (`ui/message`, `app.se
 
 One or two buttons per view (the inline-card rule is at most 2 actions), worded as questions, never as trade prompts.
 
-### 7. Tell Claude what is on screen (connector; half a day)
+### 7. Tell Claude what is on screen (connector; done in 1.9.0, 17 Nov 2026)
 
 `ui/update-model-context` lets a view tell Claude what the user is looking at, for the next turn. When someone switches the chart to 30 days, picks a coin on the board or a card on the dashboard, Claude knows, so "what about Ethereum?" or "why did it drop on the 15th?" are grounded in what the user sees. One short line per change.
 
@@ -88,7 +88,7 @@ The directory now takes plugin bundles: a GitHub repository with the connector r
 
 One listing then installs the connector and the know-how together. The owner submits it in the same portal.
 
-### 9. Sharper tool descriptions and more ready-made prompts (connector; half a day)
+### 9. Sharper tool descriptions and more ready-made prompts (connector; done in 1.9.0, 17 Nov 2026)
 
 - Claude lists tools by name plus the first line of each description (up to 200 characters), so every first line must stand alone and say when to use the tool. Add the natural next step where it helps ("for how it moved, price_history").
 - Prompts show up as one-click starters in many clients. Add "Evidence brief on an asset", "The economy today", "Quiz me on a topic" next to the three we have.

@@ -62,7 +62,7 @@ describe("interactive views in the chat (MCP Apps)", () => {
     const board = MCP_APPS.find((a) => a.name === "crypto-board")!.html;
     expect(board).toContain('callTool("price_history", { coin: symbol, range })');
     const figures = MCP_APPS.find((a) => a.name === "official-figures")!.html;
-    expect(figures).toContain("if (rates.length >= 3) curve(rates);");
+    expect(figures).toMatch(/if \(rates\.length >= 3\) \{\s+curve\(rates\);/);
     expect(figures).toContain("Inverted: the ");
   });
 });

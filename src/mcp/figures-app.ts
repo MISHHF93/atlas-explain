@@ -32,7 +32,8 @@ export const FIGURES_APP_HTML = appPage({
   </header>
   <div id="plot" class="plot curve"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-block"></div></div></div>
   <div class="readout" id="readout" aria-live="polite"></div>
-  <div id="cards" class="cards"></div>`,
+  <div id="cards" class="cards"></div>
+  <div class="asks" id="asks"></div>`,
   footer: "Published figures only, never a forecast.",
   script: `
   /** "1M", "6M", "2Y", "10Y" as months, so terms sort short to long. */
@@ -67,7 +68,8 @@ export const FIGURES_APP_HTML = appPage({
       const lab = svgEl("text", { class: "axis", x: x(i), y: H - 8, "text-anchor": "middle" }); lab.textContent = p.tenor; svg.append(lab);
       const dot = svgEl("circle", { class: "dot", cx: x(i), cy: y(p.value), r: 5, tabindex: "0" });
       const read = () => { for (const d of dots) d.classList.remove("on"); dot.classList.add("on"); $("readout").textContent = termLabel(p.tenor) + ": " + p.value.toFixed(2) + "%" + (change(p) ? ", " + change(p).text + " " + (p.changeWindow || "") : "") + " \\u00b7 " + day(p.asOf); };
-      dot.addEventListener("pointerenter", read); dot.addEventListener("focus", read); dot.addEventListener("pointerdown", read);
+      const pick = () => { read(); tellClaude("The user is reading the " + termLabel(p.tenor) + " yield on the ATLAS Explain yield curve: " + p.value.toFixed(2) + "% (" + day(p.asOf) + ", " + (p.source || "official data") + ")."); };
+      dot.addEventListener("pointerenter", read); dot.addEventListener("focus", read); dot.addEventListener("pointerdown", pick);
       svg.append(dot);
       return dot;
     });
@@ -110,7 +112,12 @@ export const FIGURES_APP_HTML = appPage({
       const k = f.source || ""; bySource.set(k, (bySource.get(k) || []).concat([f]));
     }
     const rates = [...bySource.values()].sort((a, b) => b.length - a.length)[0] || [];
-    if (rates.length >= 3) curve(rates);
+    if (rates.length >= 3) {
+      curve(rates);
+      askButtons($("asks"), [{ label: "Explain this curve", prompt: "Using ATLAS Explain, explain what the shape of this " + (rates[0].source || "") + " yield curve means: " + $("plot").querySelector(".note").textContent.split(" Ask to")[0] + " Also explain the terms yield curve and basis point." }]);
+    } else if (figs[0]) {
+      askButtons($("asks"), [{ label: "Brief on " + figs[0].symbol, prompt: "Using ATLAS Explain, give me an evidence brief on " + figs[0].symbol + " (" + figs[0].name + ")." }]);
+    }
     else { $("plot").replaceChildren(); $("readout").textContent = ""; $("title").textContent = "Official figures"; $("sub").textContent = figs.length + (figs.length === 1 ? " figure" : " figures") + ", each with its source and date."; }
     $("cards").replaceChildren(...figs.slice(0, 12).map(card));
     const sources = [...new Set(figs.map((f) => f.source).filter(Boolean))];

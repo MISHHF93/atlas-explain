@@ -70,6 +70,13 @@ const BASE_CSS = `
   .facts b { color: var(--fg); font-weight: 600; }
   footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
   .msg { color: var(--muted); padding: 24px 0; text-align: center; }
+  /* "Ask Claude" actions: at most two per view, worded as questions (Claude's inline-card rule). */
+  .asks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .asks:empty { display: none; }
+  .ask { all: unset; cursor: pointer; display: inline-flex; align-items: center; min-height: 32px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; color: var(--fg); }
+  .ask:hover { background: var(--soft); }
+  .ask:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ask-status { font-size: 12px; color: var(--muted); }
   /* Skeletons while a result is on its way: the shape of the content, not a spinner. */
   .sk { display: grid; gap: 10px; margin-top: 10px; }
   .sk-line, .sk-block { background: var(--soft); border-radius: var(--radius); animation: sk 1.2s ease-in-out infinite; }
@@ -143,6 +150,39 @@ const bridgeJs = (name: string) => `
   function message(text) {
     $("plot").replaceChildren(Object.assign(document.createElement("p"), { className: "msg", textContent: text }));
     reportSize();
+  }
+  /**
+   * Sends Claude a question when the user clicks (ui/message). Claude asks the user to allow it, or puts
+   * it in the message box, so the user stays in control. Text only, well under Claude's 8,000 characters.
+   */
+  function askClaude(text, status) {
+    status.textContent = "";
+    request("ui/message", { role: "user", content: [{ type: "text", text: String(text).slice(0, 2000) }] })
+      .then((r) => { status.textContent = r && r.isError ? "Claude didn't take the request. Ask in the chat instead." : "Check the conversation to send it."; reportSize(); })
+      .catch(() => { status.textContent = "Ask in the chat instead."; reportSize(); });
+  }
+  /** Up to two "Ask Claude" buttons in host, each {label, prompt}. */
+  function askButtons(host, items) {
+    if (!host) return;
+    const status = Object.assign(document.createElement("span"), { className: "ask-status" });
+    status.setAttribute("role", "status");
+    const buttons = items.slice(0, 2).map((it) => {
+      const b = Object.assign(document.createElement("button"), { type: "button", className: "ask", textContent: it.label });
+      b.addEventListener("click", () => askClaude(it.prompt, status));
+      return b;
+    });
+    host.replaceChildren(...buttons, status);
+    reportSize();
+  }
+  /**
+   * Tells Claude what the user is now looking at (ui/update-model-context), for the next turn, so a
+   * follow-up like "what about Ethereum?" is grounded. Only on the user's own changes; never repeated.
+   */
+  let lastContext = "";
+  function tellClaude(text) {
+    if (!text || text === lastContext) return;
+    lastContext = text;
+    request("ui/update-model-context", { content: [{ type: "text", text: String(text).slice(0, 1000) }] }).catch(() => {});
   }
   /** Claude's theme and style variables, applied at runtime; our palette stays as the fallback. */
   function applyHost(ctx) {

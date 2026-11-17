@@ -37,6 +37,7 @@ export const ECONOMY_APP_HTML = appPage({
     <div class="plot" id="dplot"></div>
     <div class="readout" id="readout"></div>
   </section>
+  <div class="asks" id="asks"></div>
   <section id="calendar" hidden>
     <h2 class="events-title">Next rate decisions</h2>
     <ul class="events" id="events"></ul>
@@ -57,7 +58,7 @@ export const ECONOMY_APP_HTML = appPage({
     svg.append(svgEl("path", { d }));
     return svg;
   }
-  function choose(id) {
+  function choose(id, byUser = true) {
     const ind = current.find((i) => i.id === id);
     if (!ind) return;
     for (const c of document.querySelectorAll(".card")) c.setAttribute("aria-pressed", String(c.dataset.id === id));
@@ -66,6 +67,11 @@ export const ECONOMY_APP_HTML = appPage({
     $("dnote").textContent = [ind.note, ind.source].filter(Boolean).join(" \\u00b7 ");
     const pts = ind.series.map((p) => ({ t: p.t, c: p.v }));
     lineChart($("dplot"), pts, ind.name + ": from " + fmt(ind, pts[0].c) + " to " + fmt(ind, pts[pts.length - 1].c), $("readout"), (v) => fmt(ind, v), period);
+    askButtons($("asks"), [
+      { label: "What does this mean?", prompt: "Using ATLAS Explain, explain what " + ind.name + " at " + fmt(ind, ind.value) + " for " + period(ind.period) + " means, and how it changed over the past year." },
+      { label: "Next rate decisions", prompt: "Using ATLAS Explain, when are the next Federal Reserve, ECB and Bank of Canada rate decisions, and what happens on the day?" },
+    ]);
+    if (byUser) tellClaude("The user is looking at " + ind.name + " on the ATLAS Explain economy dashboard: " + fmt(ind, ind.value) + " for " + period(ind.period) + " (" + ind.source + "), from " + fmt(ind, pts[0].c) + " in " + period(ind.series[0].t) + ".");
     reportSize();
   }
   function onResult(d) {
@@ -90,7 +96,7 @@ export const ECONOMY_APP_HTML = appPage({
         cards.append(b);
       }
       $("plot").replaceChildren(cards);
-      choose(current[0].id);
+      choose(current[0].id, false);
     }
     const events = d && Array.isArray(d.nextEvents) ? d.nextEvents : [];
     $("calendar").hidden = !events.length;

@@ -23,6 +23,7 @@ export const CHART_APP_HTML = appPage({
   </header>
   <div class="plot" id="plot"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-block"></div></div></div>
   <div class="readout" id="readout" aria-live="polite"></div>
+  <div class="asks" id="asks"></div>
   <div class="facts" id="facts"></div>`,
   footer: "Past prices only, never a forecast.",
   script: `
@@ -42,12 +43,19 @@ export const CHART_APP_HTML = appPage({
     }
     $("source").textContent = d.source;
     lineChart($("plot"), d.points, d.name + " " + d.rangeLabel + ": from " + usd(d.startUsd) + " to " + usd(d.endUsd) + ", " + pct(d.changePct), $("readout"), usd);
+    askButtons($("asks"), [
+      { label: "Explain this move", prompt: "Using ATLAS Explain, give me an evidence brief on " + d.name + ", including its move over " + d.rangeLabel + " (" + pct(d.changePct) + ")." },
+      { label: "News about it", prompt: "Using ATLAS Explain, show me recent headlines about " + d.name + "." },
+    ]);
   }
   async function loadRange(range) {
     if (!coin) return;
     message("Loading " + range.toUpperCase() + "…");
     const d = await callTool("price_history", { coin, range });
-    if (d) { onResult(d); reportSize(); } else message("That range couldn't be loaded right now.");
+    if (d) {
+      onResult(d); reportSize();
+      tellClaude("The user switched the ATLAS Explain chart to " + d.name + " over " + d.rangeLabel + ": from " + usd(d.startUsd) + " to " + usd(d.endUsd) + " (" + pct(d.changePct) + "), high " + usd(d.high.priceUsd) + ", low " + usd(d.low.priceUsd) + ".");
+    } else message("That range couldn't be loaded right now.");
   }
   for (const b of document.querySelectorAll("[data-range]")) b.addEventListener("click", () => loadRange(b.dataset.range));
 `,
