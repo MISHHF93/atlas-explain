@@ -813,7 +813,8 @@ export async function evidenceBrief(key: string, fetcher: Fetcher, now = Date.no
   for (const f of (Array.isArray(d.facts) ? d.facts : []) as Rec[]) facts.push({ label: f.label, value: f.value, asOf: f.period ?? d.asOf ?? null, source: d.source ?? null });
   lines.push("\nWhat it is:", String(d.about ?? ""), ...(d.tradingHours ? [`Trading hours: ${d.tradingHours}.`] : []));
   lines.push("\nLatest figures:", ...(facts.length ? facts.map((f) => `- ${f.label}: ${f.value}${f.asOf ? ` (${String(f.asOf).slice(0, 10)})` : ""}`) : [`- None shown. ${d.noPriceReason ?? ""}`.trim()]));
-  if (d.source) lines.push(`Source: ${d.source}${d.sourceUrl ? ` (${d.sourceUrl})` : ""}.`);
+  // A crypto source line already ends with a full stop; an official source's does not.
+  if (d.source) lines.push(`Source: ${d.source}${d.sourceUrl ? ` (${d.sourceUrl})` : ""}${String(d.source).endsWith(".") ? "" : "."}`);
 
   // 2. How it moved, and how easily it trades (coins).
   const h = history && !history.isError ? (history.structuredContent as Rec) : null;
