@@ -4,7 +4,7 @@
  * coin asks the host to call price_history and opens its chart below, with 24H/7D/30D.
  * Past prices only, with their source.
  */
-import { appPage } from "./app-shell";
+import { appPage, EXPAND_BUTTON } from "./app-shell";
 
 export const BOARD_APP_URI = "ui://atlas-explain/crypto-board.html";
 
@@ -27,8 +27,9 @@ export const BOARD_APP_HTML = appPage({
   @media (max-width: 420px) { .row { grid-template-columns: minmax(0, 1fr) 64px 60px; } .spark { display: none; } }`,
   body: `  <header>
     <div><h1 id="title">Crypto prices</h1><p class="sub" id="sub">Biggest moves first. Choose a coin to see its chart.</p></div>
+    ${EXPAND_BUTTON}
   </header>
-  <div id="plot"><p class="msg">Loading prices…</p></div>
+  <div id="plot"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line"></div></div></div>
   <section id="detail" hidden aria-live="polite">
     <header>
       <h2 id="dtitle"></h2>

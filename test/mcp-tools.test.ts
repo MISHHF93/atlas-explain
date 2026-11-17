@@ -207,7 +207,41 @@ describe("structured output, prompts, icons and the chart app", () => {
   it("announces tools, resources and prompts, with its icon", async () => {
     const init = (await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25" } }, full))?.result as { capabilities: Record<string, unknown>; serverInfo: { icons: unknown[] } };
     expect(Object.keys(init.capabilities).sort()).toEqual(["completions", "extensions", "prompts", "resources", "tools"]);
-    expect(init.serverInfo.icons).toHaveLength(2);
+    // An inline PNG first (Claude never fetches an app icon from a URL), then the URLs for other clients.
+    const icons = init.serverInfo.icons as { src: string; mimeType: string }[];
+    expect(icons).toHaveLength(3);
+    expect(icons[0]!.src.startsWith("data:image/png;base64,")).toBe(true);
+    // Claude's limits: under 10 KB, and the whole serverInfo within about 16,000 characters of JSON.
+    expect((icons[0]!.src.length - "data:image/png;base64,".length) * 0.75).toBeLessThan(10_000);
+    expect(JSON.stringify(init.serverInfo).length).toBeLessThan(16_000);
+  });
+
+  it("follows Claude's MCP Apps guidelines: transparent, themed by the host, two display modes, skeletons, side panel for dashboards", async () => {
+    const { MCP_APPS } = await import("../src/mcp/server");
+    for (const app of MCP_APPS) {
+      expect(app.html, app.uri).toContain('<meta name="color-scheme" content="light dark" />');
+      expect(app.html, app.uri).toContain("background: transparent");
+      expect(app.html, app.uri).toContain('availableDisplayModes: ["inline", "fullscreen"]');
+      expect(app.html, app.uri).toContain("ctx.styles && ctx.styles.variables");
+      expect(app.html, app.uri).toContain('id="expand"');
+      expect(app.html, app.uri).toContain('ui/request-display-mode');
+      expect(app.html, app.uri).toMatch(/class="sk"|className: "sk"/);
+      expect(app.html, app.uri).not.toContain("Loading…");
+      const read = (await handle({ jsonrpc: "2.0", id: 2, method: "resources/read", params: { uri: app.uri } }, full))?.result as { contents: { _meta: { ui: { prefersBorder: boolean; preferredDisplayMode?: string } } }[] };
+      const ui = read.contents[0]!._meta.ui;
+      expect(ui.prefersBorder, app.uri).toBe(false);
+      expect(ui.preferredDisplayMode, app.uri).toBe(app.name === "economy" || app.name === "market-depth" ? "fullscreen" : undefined);
+    }
+  });
+
+  it("lists the economy dashboard as an app people can open from Claude's Artifacts page", () => {
+    const economy = TOOLS.find((t) => t.name === "economy_snapshot")!;
+    expect(economy._meta?.["openai/ui"]).toEqual({ entrypoints: [{ type: "global" }] });
+    expect(economy._meta?.ui.resourceUri).toBe("ui://atlas-explain/economy.html");
+    // Opened from the Artifacts page with no request: every input must be optional.
+    expect(economy.inputSchema.required ?? []).toEqual([]);
+    expect(economy.title.length).toBeLessThanOrEqual(60);
+    expect(economy.title).not.toMatch(/claude|anthropic/i);
   });
 });
 

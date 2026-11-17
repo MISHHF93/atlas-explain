@@ -1,12 +1,16 @@
 /**
  * The shared frame for ATLAS Explain's MCP Apps (spec 2026-01-26): the interactive views that
- * hosts supporting MCP Apps (Claude web and desktop, ChatGPT, VS Code) draw inside the chat for
- * price_history, crypto_prices and official_figures. Hosts without it show the text answer.
+ * hosts supporting MCP Apps (Claude web, desktop and mobile, ChatGPT, VS Code) draw inside the
+ * chat for price_history, crypto_prices, official_figures, economy_snapshot and market_depth.
+ * Hosts without it show the text answer.
  *
  * Each app is one self-contained page: no external scripts, styles, fonts or network calls, so
  * the host's default CSP (connect-src 'none') is enough. This frame supplies what every app
- * shares: the theme tokens, the formatting helpers, a line chart, and the postMessage JSON-RPC
- * bridge (ui/initialize, tool input and result notifications, tools/call back to this server).
+ * shares: Claude's style variables applied at runtime (with our own palette as the fallback
+ * outside a host), a transparent background so the view blends into the conversation, skeleton
+ * loading states, the inline and fullscreen display modes with an expand button, the formatting
+ * helpers, a line chart, and the postMessage JSON-RPC bridge (ui/initialize, tool input and
+ * result notifications, tools/call back to this server). docs/NEXT_LEVEL.md item 1.
  *
  * An app's script defines onInput(args) and onResult(structuredContent); the bridge calls them.
  */
@@ -15,25 +19,50 @@ import { EDUCATION_SHORT } from "../core/links";
 export const MCP_APP_MIME = "text/html;profile=mcp-app";
 export const MCP_APP_PROTOCOL = "2026-01-26";
 
+/**
+ * Our palette is only the fallback: when Claude passes its style variables (--color-*, --font-*,
+ * --border-radius-*), applyHost() writes them onto :root and these aliases pick them up.
+ */
 const BASE_CSS = `
-  :root { --bg: #ffffff; --fg: #1c1b19; --muted: #6b675f; --line: #e6e2da; --soft: #f4f1ec; --accent: #0c6b5e; --up: #0c7a5a; --down: #b4432f; color-scheme: light; }
-  :root[data-theme="dark"] { --bg: #1c1a17; --fg: #f1ede6; --muted: #a59f94; --line: #3a3630; --soft: #26231f; --accent: #4fc1a9; --up: #4fc1a9; --down: #ef8a73; color-scheme: dark; }
+  :root {
+    --fg: var(--color-text-primary, #1c1b19);
+    --muted: var(--color-text-tertiary, #6b675f);
+    --line: var(--color-border-tertiary, #e6e2da);
+    --soft: var(--color-background-secondary, #f4f1ec);
+    --card: var(--color-background-primary, #ffffff);
+    --accent: #0c6b5e; --up: var(--color-text-success, #0c7a5a); --down: var(--color-text-danger, #b4432f);
+    --radius: var(--border-radius-md, 8px); --radius-pill: var(--border-radius-full, 999px);
+    --font: var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
+  }
+  :root[data-theme="dark"] {
+    --fg: var(--color-text-primary, #f1ede6); --muted: var(--color-text-tertiary, #a59f94);
+    --line: var(--color-border-tertiary, #3a3630); --soft: var(--color-background-secondary, #26231f);
+    --card: var(--color-background-primary, #1c1a17);
+    --accent: #4fc1a9; --up: var(--color-text-success, #4fc1a9); --down: var(--color-text-danger, #ef8a73);
+  }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { padding: 14px 16px 12px; }
+  /* Transparent, so the conversation shows through; the host sets the colour scheme. */
+  html, body { margin: 0; background: transparent; color: var(--fg); font: 14px/1.4 var(--font); }
+  main { padding: 12px 16px; }
+  main[data-mode="fullscreen"] { max-width: 960px; margin: 0 auto; padding: 20px 24px; }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  h1 { font-size: 15px; margin: 0; font-weight: 650; }
-  h2 { font-size: 14px; margin: 0; font-weight: 650; }
+  h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  h2 { font-size: 14px; margin: 0; font-weight: 600; }
   .sub { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
   .num { font-variant-numeric: tabular-nums; }
   .chg { font-weight: 600; font-variant-numeric: tabular-nums; }
   .chg.up { color: var(--up); } .chg.down { color: var(--down); }
-  .ranges { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
-  .ranges button { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--muted); }
-  .ranges button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
-  .ranges button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tools { display: inline-flex; align-items: center; gap: 8px; }
+  .ranges { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 2px; }
+  .ranges button { all: unset; cursor: pointer; padding: 6px 12px; min-height: 32px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; color: var(--muted); }
+  .ranges button[aria-pressed="true"] { background: var(--fg); color: var(--card); }
+  .ranges button:focus-visible, .expand:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .expand { all: unset; cursor: pointer; display: inline-grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); }
+  .expand[hidden] { display: none; }
+  .expand svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
   .plot { position: relative; margin-top: 10px; touch-action: none; }
   .plot svg.line-chart { display: block; width: 100%; height: 150px; }
+  main[data-mode="fullscreen"] .plot svg.line-chart { height: 280px; }
   .area { fill: var(--accent); opacity: .12; } .line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
   .cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--muted); opacity: .6; pointer-events: none; display: none; }
   .readout { min-height: 20px; margin-top: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -41,6 +70,12 @@ const BASE_CSS = `
   .facts b { color: var(--fg); font-weight: 600; }
   footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
   .msg { color: var(--muted); padding: 24px 0; text-align: center; }
+  /* Skeletons while a result is on its way: the shape of the content, not a spinner. */
+  .sk { display: grid; gap: 10px; margin-top: 10px; }
+  .sk-line, .sk-block { background: var(--soft); border-radius: var(--radius); animation: sk 1.2s ease-in-out infinite; }
+  .sk-line { height: 12px; } .sk-line.short { width: 40%; } .sk-block { height: 150px; }
+  @keyframes sk { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .sk-line, .sk-block { animation: none; } }
 `;
 
 /** Formatting and drawing helpers every app can call. */
@@ -55,6 +90,14 @@ const HELPERS_JS = `
   const day = (t) => new Date(t).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
   const pct = (v) => (v > 0 ? "+" : v < 0 ? "\\u2212" : "") + Math.abs(v).toFixed(2) + "%";
   const trend = (v) => (v > 0 ? "chg up" : v < 0 ? "chg down" : "chg");
+  /** The loading shape: a few lines and a chart-sized block. */
+  function skeleton(lines, block) {
+    const box = Object.assign(document.createElement("div"), { className: "sk" });
+    box.setAttribute("aria-busy", "true"); box.setAttribute("aria-label", "Loading");
+    for (let i = 0; i < lines; i++) box.append(Object.assign(document.createElement("div"), { className: "sk-line" + (i % 2 ? " short" : "") }));
+    if (block) box.append(Object.assign(document.createElement("div"), { className: "sk-block" }));
+    return box;
+  }
 
   /** An area line chart of [{t, c}] in host, with a cursor that reads each point out in readout. */
   function lineChart(host, points, label, readout, format, timeFormat) {
@@ -83,6 +126,7 @@ const HELPERS_JS = `
 const bridgeJs = (name: string) => `
   let nextId = 1;
   const pending = new Map();
+  let hostModes = ["inline"];
   function send(msg) { window.parent.postMessage(Object.assign({ jsonrpc: "2.0" }, msg), "*"); }
   function request(method, params) {
     return new Promise((resolve, reject) => { const id = nextId++; pending.set(id, { resolve, reject }); send({ id, method, params }); });
@@ -100,11 +144,22 @@ const bridgeJs = (name: string) => `
     $("plot").replaceChildren(Object.assign(document.createElement("p"), { className: "msg", textContent: text }));
     reportSize();
   }
-  function applyTheme(ctx) {
-    const theme = ctx && ctx.theme;
-    if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
-    else if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark";
+  /** Claude's theme and style variables, applied at runtime; our palette stays as the fallback. */
+  function applyHost(ctx) {
+    if (!ctx) return;
+    const theme = ctx.theme;
+    if (theme === "dark" || theme === "light") { document.documentElement.dataset.theme = theme; document.documentElement.style.colorScheme = theme; }
+    const vars = ctx.styles && ctx.styles.variables;
+    if (vars && typeof vars === "object") for (const k in vars) if (k.startsWith("--")) document.documentElement.style.setProperty(k, String(vars[k]));
+    if (ctx.displayMode) document.querySelector("main").dataset.mode = ctx.displayMode;
+    if (Array.isArray(ctx.availableDisplayModes)) hostModes = ctx.availableDisplayModes;
+    const expand = $("expand");
+    if (expand) expand.hidden = !hostModes.includes("fullscreen") || ctx.displayMode === "fullscreen" || document.querySelector("main").dataset.mode === "fullscreen";
   }
+  const expandButton = $("expand");
+  if (expandButton) expandButton.addEventListener("click", () => {
+    request("ui/request-display-mode", { mode: "fullscreen" }).then((r) => { if (r && r.mode) { document.querySelector("main").dataset.mode = r.mode; expandButton.hidden = r.mode === "fullscreen"; reportSize(); } }).catch(() => {});
+  });
   window.addEventListener("message", (event) => {
     const m = event.data;
     if (!m || m.jsonrpc !== "2.0") return;
@@ -122,24 +177,27 @@ const bridgeJs = (name: string) => `
         else { onResult(m.params && m.params.structuredContent); reportSize(); }
         break;
       case "ui/notifications/host-context-changed":
-        applyTheme(m.params);
+        applyHost(m.params); reportSize();
         break;
       case "ui/resource-teardown":
         if (m.id !== undefined) send({ id: m.id, result: {} });
         break;
     }
   });
-  applyTheme(null);
+  if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark";
   request("ui/initialize", {
     protocolVersion: "${MCP_APP_PROTOCOL}",
-    clientInfo: { name: "${name}", version: "1.0.0" },
-    appCapabilities: { availableDisplayModes: ["inline"] },
+    clientInfo: { name: "${name}", version: "1.1.0" },
+    appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] },
   }).then((res) => {
-    applyTheme(res && res.hostContext);
+    applyHost(res && res.hostContext);
     send({ method: "ui/notifications/initialized", params: {} });
     reportSize();
   }).catch(() => message("This assistant can't show interactive views; the answer above has the same figures."));
 `;
+
+/** The expand-to-side-panel button, shown only where the host offers fullscreen. */
+export const EXPAND_BUTTON = `<button type="button" class="expand" id="expand" hidden aria-label="Open in the side panel" title="Open in the side panel"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9 2h5v5M14 2 9 7M7 14H2V9m0 5 5-5"/></svg></button>`;
 
 /** One complete MCP App page. footer is the app's own line before the education notice. */
 export function appPage(o: { name: string; title: string; css?: string; body: string; script: string; footer: string }): string {
@@ -148,11 +206,12 @@ export function appPage(o: { name: string; title: string; css?: string; body: st
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
 <title>${o.title}</title>
 <style>${BASE_CSS}${o.css ?? ""}</style>
 </head>
 <body>
-<main>
+<main data-mode="inline">
 ${o.body}
   <footer><span id="source"></span> ${o.footer} ${EDUCATION_SHORT}</footer>
 </main>

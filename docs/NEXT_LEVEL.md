@@ -10,7 +10,7 @@
 
 ## Ranked improvements
 
-### 1. Make the chart views native to Claude (connector; 1–2 days)
+### 1. Make the chart views native to Claude (connector; done in 1.8.0, 17 Nov 2026)
 
 Measured against the MCP Apps design guidelines, our five views break four rules:
 
@@ -23,7 +23,7 @@ Measured against the MCP Apps design guidelines, our five views break four rules
 
 Visible to every user of every chart, and it is what a Verified reviewer would compare against.
 
-### 2. An entry point for the economy dashboard (connector; an hour)
+### 2. An entry point for the economy dashboard (connector; done in 1.8.0, 17 Nov 2026)
 
 Mark `economy_snapshot` (all arguments optional) with `_meta["openai/ui"].entrypoints: [{ "type": "global" }]`. Claude then lists "ATLAS Explain: the economy at a glance" on the Artifacts page, openable and pinnable without a conversation. It works now for the owner's custom connector, and for everyone once the listing is Verified. Harmless where unavailable.
 

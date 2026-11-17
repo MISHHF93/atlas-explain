@@ -4,7 +4,7 @@
  * trend line, and a larger chart of the chosen indicator; below, the next rate decisions.
  * Published figures only, never a forecast.
  */
-import { appPage } from "./app-shell";
+import { appPage, EXPAND_BUTTON } from "./app-shell";
 
 export const ECONOMY_APP_URI = "ui://atlas-explain/economy.html";
 
@@ -28,8 +28,9 @@ export const ECONOMY_APP_HTML = appPage({
   h2.events-title { margin-top: 14px; }`,
   body: `  <header>
     <div><h1 id="title">The economy</h1><p class="sub" id="sub">Choose a card to see its trend.</p></div>
+    ${EXPAND_BUTTON}
   </header>
-  <div id="plot"><p class="msg">Loading…</p></div>
+  <div id="plot"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line"></div></div></div>
   <section id="detail" hidden aria-live="polite">
     <h2 id="dtitle"></h2>
     <p class="note" id="dnote"></p>

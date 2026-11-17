@@ -4,7 +4,7 @@
  * bids stepping down to the left of the middle price and asks stepping up to the right, and what
  * filling a few order sizes against the book would cost in slippage. A snapshot, never a forecast.
  */
-import { appPage } from "./app-shell";
+import { appPage, EXPAND_BUTTON } from "./app-shell";
 
 export const DEPTH_APP_URI = "ui://atlas-explain/market-depth.html";
 
@@ -27,9 +27,10 @@ export const DEPTH_APP_HTML = appPage({
   th { color: var(--muted); font-weight: 600; }`,
   body: `  <header>
     <div><h1 id="title">Market depth</h1><p class="sub" id="sub"></p></div>
+    ${EXPAND_BUTTON}
   </header>
   <div class="quote" id="quote"></div>
-  <div id="plot" class="plot depth"><p class="msg">Loading…</p></div>
+  <div id="plot" class="plot depth"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-block"></div></div></div>
   <div class="readout" id="readout" aria-live="polite"></div>
   <table id="impact" hidden><thead><tr><th>Order size</th><th>Side of the book</th><th>Average price</th><th>Slippage</th></tr></thead><tbody></tbody></table>`,
   footer: "A snapshot of the order book, never a forecast.",

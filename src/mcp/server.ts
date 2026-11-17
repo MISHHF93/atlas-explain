@@ -30,11 +30,12 @@ import { BOARD_APP_HTML, BOARD_APP_URI } from "./board-app";
 import { FIGURES_APP_HTML, FIGURES_APP_URI } from "./figures-app";
 import { ECONOMY_APP_HTML, ECONOMY_APP_URI } from "./economy-app";
 import { DEPTH_APP_HTML, DEPTH_APP_URI } from "./depth-app";
+import { ICON_PNG_64_BASE64 } from "./icon-data";
 import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile, type Indicator } from "../data/economy";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.7.0";
+export const SERVER_VERSION = "1.8.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -68,7 +69,8 @@ interface Tool {
   outputSchema?: Schema;
   annotations: { title: string; readOnlyHint: true; destructiveHint: false; idempotentHint: true; openWorldHint: boolean };
   icons: typeof ICONS;
-  _meta?: { ui: { resourceUri: string } };
+  /** The MCP App this tool draws, and (economy_snapshot) a global entry point on Claude's Artifacts page. */
+  _meta?: { ui: { resourceUri: string }; "openai/ui"?: { entrypoints: { type: "global" }[] } };
 }
 
 const str = (description: string) => ({ type: "string", description });
@@ -79,6 +81,12 @@ export const ICONS = [
   { src: `${MCP_ORIGIN}/icon.png`, mimeType: "image/png", sizes: ["512x512"] },
   { src: `${MCP_ORIGIN}/icon.svg`, mimeType: "image/svg+xml", sizes: ["any"] },
 ] as const;
+/**
+ * The server's own icons: an inline 64 px PNG first, because Claude shows only an inline data: PNG
+ * or JPEG (64–128 px, under 10 KB) as an MCP App's icon and never fetches one from a URL; then the
+ * URLs for other clients. Only in serverInfo, so tools and resources stay small.
+ */
+export const SERVER_ICONS = [{ src: `data:image/png;base64,${ICON_PNG_64_BASE64}`, mimeType: "image/png", sizes: ["64x64"] }, ...ICONS] as const;
 const notice = { notice: { type: "string" } };
 const obj = (properties: Schema, required: string[] = []): Schema => ({ type: "object", properties: { ...properties, ...notice }, required: [...required, "notice"] });
 const FIGURE: Schema = {
@@ -190,8 +198,9 @@ export const TOOLS: readonly Tool[] = [
     annotations: annotations("The economy at a glance", true),
     icons: ICONS,
     outputSchema: obj({ refreshedAt: { type: "string" }, indicators: { type: "array", items: INDICATOR }, nextEvents: { type: "array", items: EVENT } }, ["indicators"]),
-    // Clients that support MCP Apps draw cards and trend charts (src/mcp/economy-app.ts).
-    _meta: { ui: { resourceUri: ECONOMY_APP_URI } },
+    // Clients that support MCP Apps draw cards and trend charts (src/mcp/economy-app.ts). Every input is
+    // optional, so Claude can also list it on the Artifacts page as an app people open themselves.
+    _meta: { ui: { resourceUri: ECONOMY_APP_URI }, "openai/ui": { entrypoints: [{ type: "global" }] } },
   },
   {
     name: "economic_calendar",
@@ -252,7 +261,10 @@ const CAPABILITIES = {
   // The charts (price_history, crypto_prices, official_figures, economy_snapshot, market_depth) are MCP Apps; hosts without them get the text answer.
   extensions: { "io.modelcontextprotocol/ui": { mimeTypes: [MCP_APP_MIME] } },
 };
-const SERVER_INFO = () => ({ name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: ICONS });
+const SERVER_INFO = () => ({ name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: SERVER_ICONS });
+
+/** Dashboards that Claude's guidelines place in the side panel rather than inline in the conversation. */
+const SIDE_PANEL_APPS: ReadonlySet<string> = new Set([ECONOMY_APP_URI, DEPTH_APP_URI]);
 
 /** The interactive views (MCP Apps) the tools above point at with _meta.ui.resourceUri. */
 export const MCP_APPS = [
@@ -920,7 +932,8 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
     case "resources/read": {
       const uri = String(message.params?.uri);
       const app = MCP_APPS.find((a) => a.uri === uri);
-      if (app) return ok({ contents: [{ uri, mimeType: MCP_APP_MIME, text: app.html, _meta: { ui: { prefersBorder: true } } }] }, true);
+      // Borderless, so the transparent view blends into the conversation; the dashboards ask for the side panel.
+      if (app) return ok({ contents: [{ uri, mimeType: MCP_APP_MIME, text: app.html, _meta: { ui: { prefersBorder: false, ...(SIDE_PANEL_APPS.has(uri) ? { preferredDisplayMode: "fullscreen" } : {}) } } }] }, true);
       const doc = readGlossaryResource(uri);
       // Resource not found: -32602 from 2026-07-28 on, -32002 before.
       return doc ? ok({ contents: [doc] }, true) : fail(modern ? -32602 : -32002, `Resource not found: ${uri}`, { uri });

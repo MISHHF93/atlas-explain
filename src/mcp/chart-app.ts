@@ -3,7 +3,7 @@
  * bridge and line chart are in ./app-shell). Its range buttons ask the host to call price_history
  * again. It shows past prices only, with their source.
  */
-import { appPage } from "./app-shell";
+import { appPage, EXPAND_BUTTON } from "./app-shell";
 
 export { MCP_APP_MIME } from "./app-shell";
 export const CHART_APP_URI = "ui://atlas-explain/price-chart.html";
@@ -19,8 +19,9 @@ export const CHART_APP_HTML = appPage({
       <button type="button" data-range="7d" aria-pressed="false">7D</button>
       <button type="button" data-range="30d" aria-pressed="false">30D</button>
     </div>
+    ${EXPAND_BUTTON}
   </header>
-  <div class="plot" id="plot"><p class="msg">Loading the chart…</p></div>
+  <div class="plot" id="plot"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-block"></div></div></div>
   <div class="readout" id="readout" aria-live="polite"></div>
   <div class="facts" id="facts"></div>`,
   footer: "Past prices only, never a forecast.",

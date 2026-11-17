@@ -5,7 +5,7 @@
  * or is inverted. Every figure is also listed as a card with its value, change, date and source.
  * It describes published figures only, never a forecast.
  */
-import { appPage } from "./app-shell";
+import { appPage, EXPAND_BUTTON } from "./app-shell";
 
 export const FIGURES_APP_URI = "ui://atlas-explain/official-figures.html";
 
@@ -17,7 +17,7 @@ export const FIGURES_APP_HTML = appPage({
   .curve .grid { stroke: var(--line); stroke-width: 1; }
   .curve .axis { fill: var(--muted); font-size: 11px; font-family: inherit; }
   .curve .line { fill: none; stroke: var(--accent); stroke-width: 2.5; }
-  .curve .dot { fill: var(--bg); stroke: var(--accent); stroke-width: 2; cursor: pointer; }
+  .curve .dot { fill: var(--card); stroke: var(--accent); stroke-width: 2; cursor: pointer; }
   .curve .dot.on { fill: var(--accent); }
   .note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-top: 12px; }
@@ -28,8 +28,9 @@ export const FIGURES_APP_HTML = appPage({
   .card ul { margin: 4px 0 0; padding-left: 16px; font-size: 12px; }`,
   body: `  <header>
     <div><h1 id="title">Official figures</h1><p class="sub" id="sub"></p></div>
+    ${EXPAND_BUTTON}
   </header>
-  <div id="plot" class="plot curve"></div>
+  <div id="plot" class="plot curve"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-block"></div></div></div>
   <div class="readout" id="readout" aria-live="polite"></div>
   <div id="cards" class="cards"></div>`,
   footer: "Published figures only, never a forecast.",
