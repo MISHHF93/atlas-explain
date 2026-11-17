@@ -72,13 +72,14 @@ describe("one header and one footer for every site page", () => {
 });
 
 describe("the website and the app read as separate places", () => {
-  it("leads into the product one way, Get started, and marks app pages as the app", () => {
+  it("leads into the product one way, Get started, and names the app plainly ATLAS Explain, with no extra badge", () => {
     for (const f of SITE_PAGES) {
       const page = sitePage(f);
       expect(page, f).not.toMatch(/>Open the web app<|>Open the app<|>The app</);
       expect(page, f).toContain('href="/start" data-start-cta>Get started</a>');
     }
-    expect(readFileSync("src/wallet/shell.ts", "utf8")).toContain('el("span", "app-badge", "App")');
+    expect(readFileSync("src/wallet/shell.ts", "utf8")).not.toContain("app-badge");
+    expect(readFileSync("src/app/routes.ts", "utf8")).not.toContain("ATLAS Explain app");
     expect(readFileSync("src/web/app.ts", "utf8")).toMatch(/menu: \[\r?\n\s*\{ label: "ATLAS Explain website", icon: "back"/);
   });
 

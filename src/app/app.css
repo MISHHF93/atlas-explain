@@ -140,7 +140,6 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 
 /* ---------- app identity: separate from the website ---------- */
 .wallet[data-surface="app"] .bar { border-top: 3px solid var(--atlas-accent); background: var(--atlas-card); }
-.app-badge { align-self: center; margin-left: 0.4rem; padding: 0.1rem 0.45rem; border-radius: var(--atlas-radius-pill); background: var(--atlas-accent-soft); color: var(--atlas-accent); font-size: var(--atlas-text-2xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
 /* ---------- sign-in: Google's button and "or" dividers ---------- */
 /* Google's sign-in branding: a neutral button with the four-colour G, in light and dark themes. */

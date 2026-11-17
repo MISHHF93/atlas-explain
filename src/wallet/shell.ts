@@ -111,8 +111,6 @@ export function createWalletShell(options: {
   const wordmark = el("div", "wordmark");
   wordmark.append(el("span", "mark", "ATLAS"), el("span", "name", "Explain"));
   lockup.append(logo, wordmark);
-  // The web app marks itself as the app, so it reads as a product area separate from the website.
-  if (options.surface === "app") lockup.append(el("span", "app-badge", "App"));
 
   const status = el("button", "conn");
   status.type = "button";
