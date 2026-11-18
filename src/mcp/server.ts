@@ -890,7 +890,9 @@ export async function evidenceBrief(key: string, fetcher: Fetcher, now = Date.no
   // 3. The economic backdrop.
   const backdropIds = kind === "other" && /CA|CAD/.test(String(d.symbol)) ? ["ca_policy_rate", "us_fed_funds"] : ["us_fed_funds", "us_cpi"];
   const backdrop = (economy?.indicators ?? []).filter((i) => backdropIds.includes(i.id)).map((i) => ({ name: i.name, value: fmtIndicator(i), period: i.period, source: i.source }));
-  const next = economy ? upcoming(economy.calendar.events, now, 1)[0] : undefined;
+  // The central bank whose decision bears most directly on this asset; the soonest decision of any if it has none coming.
+  const bank = /EUR/.test(String(d.symbol)) ? "European Central Bank" : kind === "other" && /CA|CAD/.test(String(d.symbol)) ? "Bank of Canada" : "Federal Reserve";
+  const next = economy ? (upcoming(economy.calendar.events.filter((e) => e.institution === bank), now, 1)[0] ?? upcoming(economy.calendar.events, now, 1)[0]) : undefined;
   if (backdrop.length || next) {
     lines.push("\nThe backdrop:", ...backdrop.map((b) => `- ${b.name}: ${b.value} for ${b.period} (${b.source})`));
     if (next) lines.push(`- Next rate decision: ${next.institution}, ${next.date}.`);
@@ -991,7 +993,8 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
         source: credit,
         sourceUrl: null,
         rule: `Picked because the 24-hour move is at least ${UNUSUAL_MOVE_MULTIPLE}× the coin's own median daily move over the past month, and at least ${UNUSUAL_MOVE_MIN_PCT}%.`,
-        terms: termRefs("drawdown", "volume", "implied_volatility"),
+        // A fall teaches drawdown; a rise doesn't.
+        terms: st.lastPct < 0 ? termRefs("drawdown", "volume", "implied_volatility") : termRefs("volume", "implied_volatility"),
       });
     }
     if (moves.length && !unusual.length) quiet.push(`None of the ${moves.length} coins moved more than ${UNUSUAL_MOVE_MULTIPLE}× its typical daily move in the last 24 hours.`);

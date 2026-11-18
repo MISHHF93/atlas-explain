@@ -22,7 +22,8 @@ export const BOARD_APP_HTML = appPage({
   .row .chg { text-align: right; font-size: 13px; }
   .spark { width: 88px; height: 26px; display: block; }
   /* One neutral colour: the line covers 24 hours, the change beside it counts from 00:00 UTC, so their directions can differ. */
-  .spark path { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  /* Neutral on purpose: the line covers 24 hours, the change beside it starts at 00:00 UTC, so a colour could contradict the number. */
+  .spark path { fill: none; stroke: var(--muted); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
   #detail { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
   @media (max-width: 420px) { .row { grid-template-columns: minmax(0, 1fr) 64px 60px; } .spark { display: none; } }`,
   body: `  <header>

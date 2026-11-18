@@ -83,7 +83,7 @@ export const DEPTH_APP_HTML = appPage({
     $("impact").hidden = !rows.length;
     $("impact").tBodies[0].replaceChildren(...rows.map((r) => {
       const tr = document.createElement("tr");
-      for (const v of [usd(r.sizeUsd), r.side === "asks" ? "Against the asks" : "Against the bids", r.filled ? usd(r.avgPriceUsd) : "Beyond the levels shown", r.filled ? r.slippagePct.toFixed(4) + "%" : "\\u2013"]) tr.append(Object.assign(document.createElement("td"), { textContent: v }));
+      for (const v of [usd(r.sizeUsd), r.side === "asks" ? "Against the asks" : "Against the bids", r.filled ? usd(r.avgPriceUsd) : "Beyond the levels shown", r.filled ? (r.slippagePct === 0 ? "0%" : r.slippagePct.toFixed(4) + "%") : "\\u2013"]) tr.append(Object.assign(document.createElement("td"), { textContent: v }));
       return tr;
     }));
     $("source").textContent = d.source || "";

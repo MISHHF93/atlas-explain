@@ -90,7 +90,8 @@ export const FIGURES_APP_HTML = appPage({
     if (typeof f.value === "number") {
       const v = Object.assign(document.createElement("p"), { className: "val", textContent: value(f) + " " });
       const ch = change(f);
-      if (ch) v.append(Object.assign(document.createElement("span"), { className: trend(ch.dir), textContent: ch.text }));
+      // Neutral colour: for a rate or an economic figure, up isn't good and down isn't bad, so no green or red.
+      if (ch) v.append(Object.assign(document.createElement("span"), { className: "chg", textContent: ch.text }));
       c.append(v);
     }
     const facts = Array.isArray(f.facts) ? f.facts.slice(0, 4) : [];

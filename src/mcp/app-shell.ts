@@ -64,6 +64,11 @@ const BASE_CSS = `
   .plot svg.line-chart { display: block; width: 100%; height: 150px; }
   main[data-mode="fullscreen"] .plot svg.line-chart { height: 280px; }
   .area { fill: var(--accent); opacity: .12; } .line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .frame { position: relative; }
+  .grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+  .ylab { position: absolute; right: 0; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; padding: 1px 0 1px 4px; background: color-mix(in srgb, var(--card) 88%, transparent); border-radius: 3px; pointer-events: none; }
+  .ylab.hi { top: 0; } .ylab.lo { bottom: 2px; }
+  .xaxis { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--muted); opacity: .6; pointer-events: none; display: none; }
   .readout { min-height: 20px; margin-top: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
   .facts { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; font-size: 12px; color: var(--muted); }
@@ -90,7 +95,8 @@ const HELPERS_JS = `
   const $ = (id) => document.getElementById(id);
   const NS = "http://www.w3.org/2000/svg";
   const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
-  const usd = (v) => "$" + v.toLocaleString("en-US", { minimumFractionDigits: v >= 1 ? 2 : 4, maximumFractionDigits: v >= 1 ? 2 : 6 });
+  /** Dollars: cents from $1 up; below $1, four significant digits ($0.1533, $0.05934, $0.01). */
+  const usd = (v) => "$" + (Math.abs(v) >= 1 ? v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v.toLocaleString("en-US", { maximumSignificantDigits: 4 }));
   const when = (t) => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   /** "2026-09" as "Sep 2026"; a full date as a day. */
   const period = (t) => (/^\\d{4}-\\d{2}$/.test(t) ? new Date(t + "-15T12:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", timeZone: "UTC" }) : day(t));
@@ -113,10 +119,20 @@ const HELPERS_JS = `
     const xy = points.map((p, i) => [pad + (i / (points.length - 1)) * (W - 2 * pad), pad + (1 - (p.c - lo) / span) * (H - 2 * pad)]);
     const line = xy.map(([x, y], i) => (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1)).join(" ");
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, preserveAspectRatio: "none", role: "img", "aria-label": label, class: "line-chart" });
-    svg.append(svgEl("path", { class: "area", d: line + " L" + (W - pad) + " " + H + " L" + pad + " " + H + " Z" }), svgEl("path", { class: "line", d: line }));
+    svg.append(
+      svgEl("line", { class: "grid", x1: 0, x2: W, y1: pad, y2: pad }), svgEl("line", { class: "grid", x1: 0, x2: W, y1: H - pad, y2: H - pad }),
+      svgEl("path", { class: "area", d: line + " L" + (W - pad) + " " + H + " L" + pad + " " + H + " Z" }), svgEl("path", { class: "line", d: line }),
+    );
+    // The scale (highest and lowest value) and the dates at each end, as text so it never stretches with the chart.
+    const tag = (cls, text) => Object.assign(document.createElement("span"), { className: cls, textContent: text });
     const cursor = Object.assign(document.createElement("div"), { className: "cursor" });
-    host.replaceChildren(svg, cursor);
-    readout.textContent = "Move over the chart to read a price.";
+    const frame = Object.assign(document.createElement("div"), { className: "frame" });
+    frame.append(svg, cursor, tag("ylab hi", format(hi)), tag("ylab lo", format(lo)));
+    const axis = Object.assign(document.createElement("div"), { className: "xaxis" });
+    axis.setAttribute("aria-hidden", "true");
+    axis.append(tag("", stamp(points[0].t)), tag("", stamp(points[points.length - 1].t)));
+    host.replaceChildren(frame, axis);
+    readout.textContent = "Move over the chart to read each point.";
     const show = (clientX) => {
       const r = svg.getBoundingClientRect();
       const i = Math.max(0, Math.min(points.length - 1, Math.round(((clientX - r.left) / r.width) * (points.length - 1))));

@@ -76,6 +76,8 @@ describe("what's notable today: descriptive, picked by stated rules, never a for
     expect(moves.map((o) => o.title)).toEqual([expect.stringMatching(/^Bitcoin moved \+6\.00% in 24 hours, about 6\.0× its typical daily move$/)]);
     expect(moves[0]!.rule).toContain(`${UNUSUAL_MOVE_MULTIPLE}×`);
     expect(moves[0]!.source).toMatch(/Kraken/);
+    // A rise doesn't teach "drawdown", which is about falls.
+    expect(moves[0]!.terms.map((t) => t.id)).not.toContain("drawdown");
   });
 
   it("calls an inverted yield curve inverted, and an ordinary one ordinary", async () => {

@@ -84,7 +84,8 @@ export const ECONOMY_APP_HTML = appPage({
         b.type = "button"; b.className = "card"; b.dataset.id = ind.id; b.setAttribute("aria-pressed", "false");
         const v = Object.assign(document.createElement("p"), { className: "val", textContent: fmt(ind, ind.value) + " " });
         const c = chg(ind);
-        if (c) v.append(Object.assign(document.createElement("span"), { className: trend(c.dir), textContent: c.text }));
+        // Neutral colour: for a rate or an economic figure, up isn't good and down isn't bad, so no green or red.
+        if (c) v.append(Object.assign(document.createElement("span"), { className: "chg", textContent: c.text }));
         b.append(
           Object.assign(document.createElement("p"), { className: "name", textContent: ind.name }),
           v,

@@ -184,7 +184,8 @@ describe("market depth", () => {
     expect(t).toContain("Evidence brief: Bitcoin (BTC). Facts with their sources; never a recommendation.");
     expect(t).toContain("How easily it trades: spread 1.54 basis points");
     expect(t).toContain("Effective federal funds rate: 3.88%");
-    expect(t).toContain("Next rate decision: Bank of Canada, 2026-12-09.");
+    // A coin is priced in dollars, so the Fed's decision is the one named, not just the soonest of any.
+    expect(t).toContain("Next rate decision: Federal Reserve, 2026-12-09.");
     expect(t).toContain("What this brief doesn't tell you:");
     expect(t).toContain("It never says whether to trade.");
     expect(t).not.toMatch(/\b(buy|sell)\b/i);
