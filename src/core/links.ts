@@ -36,6 +36,7 @@ export const NEWS_DATA_URL = `${DATA_SITE_URL}/data/v1/news.json`;
 export const CRYPTO_DATA_URL = `${DATA_SITE_URL}/data/v1/crypto.json`;
 export const ECONOMY_DATA_URL = `${DATA_SITE_URL}/data/v1/economy.json`;
 export const WORLD_DATA_URL = `${DATA_SITE_URL}/data/v1/world.json`;
+export const DOCS_DATA_URL = `${DATA_SITE_URL}/data/v1/docs.json`;
 
 /* ---------- the education line ---------- */
 /** The short form, for tight spaces (chart footers, error screens). */

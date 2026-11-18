@@ -5,6 +5,7 @@
  * each source permits, and that the data is for information and education, not for transactions.
  */
 import { EXPLAIN_WEB_URL } from "../core/links";
+import { DOCS_SCHEMA } from "../data/docs";
 import { CRYPTO_SCHEMA } from "../data/crypto";
 import { ECONOMY_SCHEMA } from "../data/economy";
 import { WORLD_SCHEMA } from "../data/world";
@@ -86,6 +87,16 @@ export const DATA_FILES_INDEX: readonly FileEntry[] = [
     holds: "GDP growth, inflation, unemployment and GDP per person for the G20, about eight years each, actual published values only.",
     refresh: "Once a day by schedule.",
     sources: [{ name: "World Bank, World Development Indicators (Data360)", licence: "open", note: "CC BY 4.0; reuse with the World Bank credited." }],
+  },
+  {
+    file: "docs.json",
+    schema: DOCS_SCHEMA,
+    holds: "The Federal Reserve's last two FOMC statements and the Bank of Canada's last two rate announcements (full text, with the decision read from it), and each bank's recent speeches with the bank's own one-line description.",
+    refresh: "Every 3 hours with the news, and every 10 minutes from a scheduled decision to 3 hours after.",
+    sources: [
+      { name: "Federal Reserve Board (RSS and release pages)", licence: "open", note: "US government work." },
+      { name: "Bank of Canada (RSS and release pages)", licence: "review", note: "Text reused as short quotes with links until the Bank's terms for commercial reuse are confirmed." },
+    ],
   },
 ];
 

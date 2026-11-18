@@ -332,7 +332,7 @@ describe("the data index for people and tools", () => {
     const index = (await res.json()) as { schema: string; use: string; files: { file: string; url: string; schema: string; capturedAt: string | null; sources: { licence: string }[] }[] };
     expect(index.schema).toBe("atlas-explain-data-index-v1");
     expect(index.use).toContain("Not for transactions or trading decisions");
-    expect(index.files.map((f) => f.file)).toEqual(["market.json", "crypto.json", "news.json", "economy.json", "world.json"]);
+    expect(index.files.map((f) => f.file)).toEqual(["market.json", "crypto.json", "news.json", "economy.json", "world.json", "docs.json"]);
     const crypto = index.files.find((f) => f.file === "crypto.json")!;
     expect(crypto.url).toBe(`${MCP_ORIGIN}/data/v1/crypto.json`);
     expect(crypto.capturedAt).toBe("2026-11-16T12:00:00.000Z");

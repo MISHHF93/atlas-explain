@@ -20,6 +20,7 @@ import type { Fetcher } from "./server";
 import { captureWorld, CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureEconomy, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
 import { readEconomyFile } from "../data/economy";
 import { readWorldFile } from "../data/world";
+import { captureDocs, decisionWindow, DOC_BANKS, docsChanged, readDocsFile } from "../data/docs";
 import { STRIPE_WEBHOOK_PATH, handleStripeWebhook } from "./billing-webhook";
 import { dataIndex } from "./data-index";
 import { readCryptoFile } from "../data/crypto";
@@ -52,7 +53,7 @@ export interface WaitContext {
 
 /** The only place the data comes from: this Worker's own /data/v1 address. */
 export const DATA_ORIGIN = DATA_SITE_URL;
-export const DATA_FILES = ["market.json", "news.json", "crypto.json", "economy.json", "world.json"] as const;
+export const DATA_FILES = ["market.json", "news.json", "crypto.json", "economy.json", "world.json", "docs.json"] as const;
 export type DataFile = (typeof DATA_FILES)[number];
 const KEY = (file: DataFile) => `data/v1/${file}`;
 const fileOf = (pathname: string): DataFile | null => {
@@ -73,10 +74,12 @@ export const REFRESH_AFTER_MS: Record<DataFile, number> = {
   "economy.json": 6 * 60 * 60_000,
   // Annual figures from the World Bank: once a day is plenty.
   "world.json": 24 * 60 * 60_000,
+  // Statements and speeches (docs/V2_DESIGN.md): with the news; on decision days the 10-minute cron watches too.
+  "docs.json": 3 * 60 * 60_000,
 };
 
 /** Browsers and the edge may keep a copy this long; short, so a refresh shows up quickly. */
-const MAX_AGE_S: Record<DataFile, number> = { "crypto.json": 30, "news.json": 60, "market.json": 120, "economy.json": 600, "world.json": 3600 };
+const MAX_AGE_S: Record<DataFile, number> = { "crypto.json": 30, "news.json": 60, "market.json": 120, "economy.json": 600, "world.json": 3600, "docs.json": 300 };
 
 const DATA_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -204,6 +207,13 @@ async function capture(file: DataFile, env: WorkerEnv, now: number, why: "visit"
   } else if (file === "world.json") {
     const data = await captureWorld(cap, readWorldFile(await stored(env, file)));
     if (data) await save(env, file, data, now);
+  } else if (file === "docs.json") {
+    const prev = readDocsFile(await stored(env, file));
+    const data = await captureDocs(cap, prev);
+    // Most runs find nothing new; writing only on a change keeps the KV writes for when they matter.
+    // Nothing read at all (every feed down) is never stored over, or instead of, a good copy.
+    const any = DOC_BANKS.some((b) => data.statements[b].length || data.speeches[b].length);
+    if (any && (!prev || docsChanged(prev, data))) await save(env, file, data, now);
   } else if (file === "news.json") {
     const data = await captureNews(cap, readNewsFile(await stored(env, file), now), { gdelt: why === "cron" });
     await save(env, file, data, now);
@@ -231,6 +241,17 @@ export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(),
   if (file === "economy.json") {
     const world = await read(env, "world.json", now);
     if (cronDue(world.ageMs, "world.json")) await capture("world.json", env, now, "cron", sleep).catch((e: unknown) => console.log(`world: ${String(e)}`));
+  }
+  // The news cron also reads the banks' statements and speeches.
+  if (file === "news.json") {
+    const docs = await read(env, "docs.json", now);
+    if (cronDue(docs.ageMs, "docs.json")) await capture("docs.json", env, now, "cron", sleep).catch((e: unknown) => console.log(`docs: ${String(e)}`));
+  }
+  // Decision watch: from a scheduled Fed or Bank of Canada decision to three hours after, every 10-minute run
+  // looks for the new statement, so it's in docs.json within one run of being published.
+  if (file === "crypto.json") {
+    const economy = readEconomyFile(await stored(env, "economy.json"));
+    if (economy && decisionWindow(economy, now)) await capture("docs.json", env, now, "cron", sleep).catch((e: unknown) => console.log(`docs watch: ${String(e)}`));
   }
   // News always runs on its cron, because only the cron asks GDELT.
   if (file === "crypto.json") {
