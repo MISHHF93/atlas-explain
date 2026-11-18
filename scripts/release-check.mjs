@@ -31,7 +31,7 @@ const steps = [
   ["build (web)", "npm", ["run", "build"]],
   ["build:mcp", "npm", ["run", "build:mcp"]],
   ["bundle budget", "node", ["scripts/bundle-budget.mjs"]],
-  ["npm audit", "npm", ["audit", "--audit-level=low"]],
+  ["npm audit", "node", ["scripts/audit-check.mjs"]],
   ["trade-word scan", "node", ["scripts/trade-word-scan.mjs"]],
 ];
 
