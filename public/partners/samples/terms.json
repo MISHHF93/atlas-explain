@@ -1,0 +1,40 @@
+{
+  "data": {
+    "terms": [
+      {
+        "id": "yield",
+        "title": "Bond yield",
+        "summary": "The yearly return a bond pays, as a percentage of its price. When a bond's price falls, its yield rises, and the other way round. Government yields show what it costs a government to borrow.",
+        "group": "market"
+      },
+      {
+        "id": "yield_curve",
+        "title": "Yield curve",
+        "summary": "A line joining the yields of government bonds from short terms (one month) to long terms (30 years). It usually slopes up. When short-term yields are higher than long-term ones, the curve is called inverted.",
+        "group": "market"
+      },
+      {
+        "id": "basis_point",
+        "title": "Basis point",
+        "summary": "One hundredth of a percentage point (0.01%). A yield moving from 4.20% to 4.25% has risen 5 basis points. Rate changes are often quoted this way, or in percentage points (pt).",
+        "group": "market"
+      },
+      {
+        "id": "bond",
+        "title": "Bond",
+        "summary": "A loan to a government or company that pays interest and returns the amount lent on a set date. Its price and its yield move in opposite directions: when the price falls, the yield to a new holder rises.",
+        "group": "market"
+      }
+    ]
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-18T16:22:04.823Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "ATLAS Explain glossary"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

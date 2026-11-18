@@ -1,0 +1,110 @@
+{
+  "data": {
+    "asset": {
+      "name": "Apple",
+      "symbol": "AAPL",
+      "assetClass": "stock",
+      "appUrl": "https://atlas-explain.web.app/app/assets/AAPL"
+    },
+    "facts": [
+      {
+        "label": "Revenue",
+        "value": "$478.8 billion",
+        "asOf": "year to 26 Sept 2026",
+        "source": "SEC EDGAR"
+      },
+      {
+        "label": "Net income",
+        "value": "$132.2 billion",
+        "asOf": "year to 26 Sept 2026",
+        "source": "SEC EDGAR"
+      },
+      {
+        "label": "Diluted earnings per share",
+        "value": "$8.98",
+        "asOf": "year to 26 Sept 2026",
+        "source": "SEC EDGAR"
+      },
+      {
+        "label": "Shares outstanding",
+        "value": "14.53 billion",
+        "asOf": "as of 23 Oct 2026",
+        "source": "SEC EDGAR"
+      }
+    ],
+    "recentMove": null,
+    "liquidity": null,
+    "backdrop": [
+      {
+        "name": "US inflation (CPI, over 12 months)",
+        "value": "3.74%",
+        "period": "2026-09",
+        "source": "U.S. Bureau of Labor Statistics"
+      },
+      {
+        "name": "Effective federal funds rate",
+        "value": "3.88%",
+        "period": "2026-11-17",
+        "source": "Federal Reserve Bank of New York"
+      }
+    ],
+    "nextDecision": {
+      "institution": "Federal Reserve",
+      "date": "2026-12-09",
+      "sourceUrl": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+    },
+    "news": [
+      {
+        "title": "Boris Vujčić: Financial Stability Review - November 2026",
+        "publisher": "ecb.europa.eu",
+        "url": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp261118~86f1e8147e.en.pdf",
+        "seenAt": "2026-11-18T09:00:00.000Z"
+      },
+      {
+        "title": "Risks from AI valuations, fiscal imbalances and geoeconomic tensions weigh on financial stability outlook",
+        "publisher": "ecb.europa.eu",
+        "url": "https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr261118~83c5c60158.en.html",
+        "seenAt": "2026-11-18T09:00:00.000Z"
+      }
+    ],
+    "terms": [
+      {
+        "title": "10-K, 10-Q and 8-K",
+        "summary": "Reports US public companies must file with the SEC. A 10-K is the audited annual report, a 10-Q the quarterly report, and an 8-K a notice of a major event such as results, a merger or a leadership change."
+      },
+      {
+        "title": "Market hours",
+        "summary": "The times an exchange is open for regular trading. US stock exchanges open 9:30 am to 4 pm New York time on weekdays. Crypto trades around the clock, and currencies trade around the clock on weekdays."
+      },
+      {
+        "title": "Volume",
+        "summary": "How many shares or contracts changed hands in a period. A move on heavy volume is often read as broader participation than the same move on light volume."
+      },
+      {
+        "title": "Drawdown",
+        "summary": "The fall from a peak to a later low, usually shown as a percent. It describes how deep a decline went, not whether it will recover."
+      }
+    ],
+    "weigh": [
+      "What the company earns and owes, from its filings",
+      "How it fits with the rest of what someone holds",
+      "Fees and taxes"
+    ],
+    "limits": [
+      "It is not a forecast: past moves and today's figures don't say what happens next.",
+      "It doesn't know your situation, goals, time frame or how much risk you can take.",
+      "It never says whether to trade. Decisions are yours, ideally with a licensed adviser.",
+      "No live stock price is shown (free prices aren't licensed for display); the figures are from the company's SEC filings, which are months old by design."
+    ]
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-18T16:22:08.098Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "Each fact names its source; show it with the fact"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

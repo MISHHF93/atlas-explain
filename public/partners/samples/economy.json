@@ -1,0 +1,648 @@
+{
+  "data": {
+    "refreshedAt": "2026-11-18T16:05:52.897Z",
+    "indicators": [
+      {
+        "id": "us_fed_funds",
+        "name": "Effective federal funds rate",
+        "unit": "%",
+        "value": 3.88,
+        "period": "2026-11-17",
+        "change": 0,
+        "changeWindow": "vs the business day before",
+        "note": "The Federal Reserve's target range is 3.75% to 4.00%.",
+        "series": [
+          {
+            "t": "2026-08-21",
+            "v": 3.63
+          },
+          {
+            "t": "2026-08-24",
+            "v": 3.63
+          },
+          {
+            "t": "2026-08-25",
+            "v": 3.63
+          },
+          {
+            "t": "2026-08-26",
+            "v": 3.63
+          },
+          {
+            "t": "2026-08-27",
+            "v": 3.63
+          },
+          {
+            "t": "2026-08-28",
+            "v": 3.63
+          },
+          {
+            "t": "2026-08-31",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-01",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-02",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-03",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-04",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-08",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-09",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-10",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-11",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-14",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-15",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-16",
+            "v": 3.63
+          },
+          {
+            "t": "2026-09-17",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-18",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-21",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-22",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-23",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-24",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-25",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-28",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-29",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-30",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-01",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-02",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-05",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-06",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-07",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-08",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-09",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-13",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-14",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-15",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-16",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-19",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-20",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-21",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-22",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-23",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-26",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-27",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-28",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-29",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-30",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-02",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-03",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-04",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-05",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-06",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-09",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-10",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-12",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-13",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-16",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-17",
+            "v": 3.88
+          }
+        ],
+        "source": "Federal Reserve Bank of New York",
+        "sourceUrl": "https://www.newyorkfed.org/markets/reference-rates/effr",
+        "capturedAt": "2026-11-18T16:05:52.897Z"
+      },
+      {
+        "id": "us_sofr",
+        "name": "SOFR (secured overnight financing rate)",
+        "unit": "%",
+        "value": 3.92,
+        "period": "2026-11-17",
+        "change": -0.01,
+        "changeWindow": "vs the business day before",
+        "note": null,
+        "series": [
+          {
+            "t": "2026-08-21",
+            "v": 3.65
+          },
+          {
+            "t": "2026-08-24",
+            "v": 3.65
+          },
+          {
+            "t": "2026-08-25",
+            "v": 3.66
+          },
+          {
+            "t": "2026-08-26",
+            "v": 3.64
+          },
+          {
+            "t": "2026-08-27",
+            "v": 3.64
+          },
+          {
+            "t": "2026-08-28",
+            "v": 3.65
+          },
+          {
+            "t": "2026-08-31",
+            "v": 3.68
+          },
+          {
+            "t": "2026-09-01",
+            "v": 3.66
+          },
+          {
+            "t": "2026-09-02",
+            "v": 3.65
+          },
+          {
+            "t": "2026-09-03",
+            "v": 3.66
+          },
+          {
+            "t": "2026-09-04",
+            "v": 3.65
+          },
+          {
+            "t": "2026-09-08",
+            "v": 3.64
+          },
+          {
+            "t": "2026-09-09",
+            "v": 3.64
+          },
+          {
+            "t": "2026-09-10",
+            "v": 3.62
+          },
+          {
+            "t": "2026-09-11",
+            "v": 3.62
+          },
+          {
+            "t": "2026-09-14",
+            "v": 3.62
+          },
+          {
+            "t": "2026-09-15",
+            "v": 3.64
+          },
+          {
+            "t": "2026-09-16",
+            "v": 3.62
+          },
+          {
+            "t": "2026-09-17",
+            "v": 3.85
+          },
+          {
+            "t": "2026-09-18",
+            "v": 3.85
+          },
+          {
+            "t": "2026-09-21",
+            "v": 3.85
+          },
+          {
+            "t": "2026-09-22",
+            "v": 3.87
+          },
+          {
+            "t": "2026-09-23",
+            "v": 3.87
+          },
+          {
+            "t": "2026-09-24",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-25",
+            "v": 3.9
+          },
+          {
+            "t": "2026-09-28",
+            "v": 3.9
+          },
+          {
+            "t": "2026-09-29",
+            "v": 3.88
+          },
+          {
+            "t": "2026-09-30",
+            "v": 3.9
+          },
+          {
+            "t": "2026-10-01",
+            "v": 3.87
+          },
+          {
+            "t": "2026-10-02",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-05",
+            "v": 3.89
+          },
+          {
+            "t": "2026-10-06",
+            "v": 3.9
+          },
+          {
+            "t": "2026-10-07",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-08",
+            "v": 3.87
+          },
+          {
+            "t": "2026-10-09",
+            "v": 3.87
+          },
+          {
+            "t": "2026-10-13",
+            "v": 3.89
+          },
+          {
+            "t": "2026-10-14",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-15",
+            "v": 3.89
+          },
+          {
+            "t": "2026-10-16",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-19",
+            "v": 3.87
+          },
+          {
+            "t": "2026-10-20",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-21",
+            "v": 3.88
+          },
+          {
+            "t": "2026-10-22",
+            "v": 3.9
+          },
+          {
+            "t": "2026-10-23",
+            "v": 3.92
+          },
+          {
+            "t": "2026-10-26",
+            "v": 3.93
+          },
+          {
+            "t": "2026-10-27",
+            "v": 3.95
+          },
+          {
+            "t": "2026-10-28",
+            "v": 3.94
+          },
+          {
+            "t": "2026-10-29",
+            "v": 3.94
+          },
+          {
+            "t": "2026-10-30",
+            "v": 3.95
+          },
+          {
+            "t": "2026-11-02",
+            "v": 3.95
+          },
+          {
+            "t": "2026-11-03",
+            "v": 3.97
+          },
+          {
+            "t": "2026-11-04",
+            "v": 3.94
+          },
+          {
+            "t": "2026-11-05",
+            "v": 3.92
+          },
+          {
+            "t": "2026-11-06",
+            "v": 3.89
+          },
+          {
+            "t": "2026-11-09",
+            "v": 3.88
+          },
+          {
+            "t": "2026-11-10",
+            "v": 3.89
+          },
+          {
+            "t": "2026-11-12",
+            "v": 3.9
+          },
+          {
+            "t": "2026-11-13",
+            "v": 3.9
+          },
+          {
+            "t": "2026-11-16",
+            "v": 3.93
+          },
+          {
+            "t": "2026-11-17",
+            "v": 3.92
+          }
+        ],
+        "source": "Federal Reserve Bank of New York",
+        "sourceUrl": "https://www.newyorkfed.org/markets/reference-rates/sofr",
+        "capturedAt": "2026-11-18T16:05:52.897Z"
+      },
+      {
+        "id": "euro_deposit_rate",
+        "name": "ECB deposit facility rate",
+        "unit": "%",
+        "value": 2.5,
+        "period": "2026-11-18",
+        "change": 0.25,
+        "changeWindow": "since the last change",
+        "note": "Last changed on 2026-09-16, from 2.25%.",
+        "series": [
+          {
+            "t": "2025-10-15",
+            "v": 2
+          },
+          {
+            "t": "2026-06-17",
+            "v": 2.25
+          },
+          {
+            "t": "2026-09-16",
+            "v": 2.5
+          },
+          {
+            "t": "2026-11-18",
+            "v": 2.5
+          }
+        ],
+        "source": "European Central Bank",
+        "sourceUrl": "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html",
+        "capturedAt": "2026-11-18T16:05:52.897Z"
+      },
+      {
+        "id": "ca_policy_rate",
+        "name": "Bank of Canada policy rate",
+        "unit": "%",
+        "value": 2.5,
+        "period": "2026-11-17",
+        "change": 0.25,
+        "changeWindow": "since the last change",
+        "note": "Last changed on 2026-10-29, from 2.25%.",
+        "series": [
+          {
+            "t": "2025-11-14",
+            "v": 2.25
+          },
+          {
+            "t": "2026-10-29",
+            "v": 2.5
+          },
+          {
+            "t": "2026-11-17",
+            "v": 2.5
+          }
+        ],
+        "source": "Bank of Canada",
+        "sourceUrl": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+        "capturedAt": "2026-11-18T16:05:52.897Z"
+      },
+      {
+        "id": "uk_bank_rate",
+        "name": "Bank of England Bank Rate",
+        "unit": "%",
+        "value": 4,
+        "period": "2026-11-17",
+        "change": 0.25,
+        "changeWindow": "since the last change",
+        "note": "Last changed on 2026-11-05, from 3.75%.",
+        "series": [
+          {
+            "t": "2025-11-03",
+            "v": 4
+          },
+          {
+            "t": "2025-12-18",
+            "v": 3.75
+          },
+          {
+            "t": "2026-11-05",
+            "v": 4
+          },
+          {
+            "t": "2026-11-17",
+            "v": 4
+          }
+        ],
+        "source": "Bank of England",
+        "sourceUrl": "https://www.bankofengland.co.uk/monetary-policy/the-interest-rate-bank-rate",
+        "capturedAt": "2026-11-18T16:05:52.897Z"
+      }
+    ],
+    "nextEvents": [
+      {
+        "date": "2026-12-09",
+        "startDate": null,
+        "institution": "Bank of Canada",
+        "title": "Bank of Canada interest rate announcement",
+        "about": "The Bank of Canada announces its target for the overnight rate at 9:45 am Eastern time.",
+        "withProjections": false,
+        "daysAway": 21,
+        "sourceUrl": "https://www.bankofcanada.ca/2026/12/interest-rate-announcement-december-9-2026/"
+      },
+      {
+        "date": "2026-12-09",
+        "startDate": "2026-12-08",
+        "institution": "Federal Reserve",
+        "title": "FOMC meeting and rate decision",
+        "about": "The Federal Open Market Committee sets the target range for the federal funds rate; its statement comes out at 2 pm New York time on the last day.",
+        "withProjections": true,
+        "daysAway": 21,
+        "sourceUrl": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+      },
+      {
+        "date": "2026-12-17",
+        "startDate": null,
+        "institution": "Bank of England",
+        "title": "Bank of England Monetary Policy Committee decision",
+        "about": "The Monetary Policy Committee announces Bank Rate at 12 noon UK time, with a summary and minutes.",
+        "withProjections": false,
+        "daysAway": 29,
+        "sourceUrl": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates"
+      }
+    ]
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-18T16:22:07.533Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "Each figure names its source (BLS, New York Fed, ECB, Bank of Canada, Bank of England, US Treasury)"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

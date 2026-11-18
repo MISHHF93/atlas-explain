@@ -7,6 +7,7 @@ const PAGES: Record<string, string> = {
   "how-its-built.html": "/how-its-built",
   "support.html": "/support",
   "connect.html": "/connect",
+  "partners.html": "/partners",
   "privacy.html": "/privacy",
   "terms.html": "/terms",
   "app.html": "/app",

@@ -13,7 +13,7 @@
  */
 import { DATA_SITE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
 
-export type SitePage = "home" | "connect" | "support" | "privacy" | "terms" | "how-its-built" | "404";
+export type SitePage = "home" | "connect" | "partners" | "support" | "privacy" | "terms" | "how-its-built" | "404";
 
 const SOURCE_URL = "https://github.com/MISHHF93/atlas-explain";
 
@@ -28,6 +28,7 @@ const FOOTER_LINKS: readonly { href: string; label: string }[] = [
   { href: "/start", label: "Get started" },
   { href: "/connect", label: "Add to your AI assistant" },
   { href: "/support", label: "Support and FAQ" },
+  { href: "/partners", label: "For businesses" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
 ];

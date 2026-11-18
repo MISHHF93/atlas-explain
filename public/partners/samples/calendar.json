@@ -1,0 +1,277 @@
+{
+  "data": {
+    "refreshedAt": "2026-11-18T16:05:52.897Z",
+    "events": [
+      {
+        "kind": "jobs",
+        "who": "U.S. Bureau of Labor Statistics",
+        "title": "US jobs report (Employment Situation)",
+        "time": "2026-12-04T13:30:00.000Z",
+        "countdown": "in 15 days, 21 hours",
+        "about": "The BLS publishes last month's jobs added and the unemployment rate.",
+        "context": "Now: US unemployment rate 4.10% for 2026-10 (U.S. Bureau of Labor Statistics).",
+        "sourceUrl": "https://www.bls.gov/schedule/news_release/empsit.htm",
+        "scenarios": {
+          "kind": "jobs",
+          "watch": [
+            "Jobs added last month and the revisions to earlier months",
+            "The unemployment rate",
+            "Average hourly earnings, a link between jobs and inflation"
+          ],
+          "outcomes": [
+            {
+              "outcome": "Stronger than recent months",
+              "meaning": "More jobs or lower unemployment point to a firm economy. Fast wage growth can add to inflation pressure."
+            },
+            {
+              "outcome": "Mixed",
+              "meaning": "Jobs and unemployment can point different ways, for example when more people start looking for work. The details explain which."
+            },
+            {
+              "outcome": "Weaker than recent months",
+              "meaning": "Fewer jobs or rising unemployment point to a slowing economy, which central banks weigh when deciding rates."
+            }
+          ],
+          "caution": "Jobs figures are revised for two months after release, sometimes by a lot, so the first number is not the last word."
+        }
+      },
+      {
+        "kind": "rate_decision",
+        "who": "Bank of Canada",
+        "title": "Bank of Canada rate decision",
+        "time": "2026-12-09T14:45:00.000Z",
+        "countdown": "in 20 days, 22 hours",
+        "about": "The Bank of Canada announces its target for the overnight rate at 9:45 am Eastern time.",
+        "context": "Now: Bank of Canada policy rate 2.50% for 2026-11-17, last moved +0.25 pt on 2026-10-29 (Bank of Canada).",
+        "sourceUrl": "https://www.bankofcanada.ca/2026/12/interest-rate-announcement-december-9-2026/",
+        "scenarios": {
+          "kind": "rate_decision",
+          "watch": [
+            "The latest inflation figure next to the bank's target (2% for the Fed, ECB, Bank of Canada and Bank of England)",
+            "The latest jobs and unemployment figures",
+            "What the bank said at its last meeting about what would make it move"
+          ],
+          "outcomes": [
+            {
+              "outcome": "It holds the rate",
+              "meaning": "Borrowing and savings rates linked to it stay where they are for now. The statement and press conference then matter most: they explain what the bank is watching."
+            },
+            {
+              "outcome": "It raises the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets dearer across the economy, from variable-rate loans to new mortgages, and savings rates tend to rise. Banks raise rates to slow inflation."
+            },
+            {
+              "outcome": "It cuts the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets cheaper and savings rates tend to fall. Banks cut to support growth and jobs when inflation is under control."
+            }
+          ],
+          "caution": "How people react often depends less on the decision than on how it compares with what was widely expected, and on the bank's words about what comes next."
+        }
+      },
+      {
+        "kind": "rate_decision",
+        "who": "Federal Reserve",
+        "title": "Federal Reserve rate decision",
+        "time": "2026-12-09T19:00:00.000Z",
+        "countdown": "in 21 days, 2 hours",
+        "about": "The Federal Open Market Committee sets the target range for the federal funds rate; its statement comes out at 2 pm New York time on the last day.",
+        "context": "Now: Effective federal funds rate 3.88% for 2026-11-17 (Federal Reserve Bank of New York).",
+        "sourceUrl": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+        "scenarios": {
+          "kind": "rate_decision",
+          "watch": [
+            "The latest inflation figure next to the bank's target (2% for the Fed, ECB, Bank of Canada and Bank of England)",
+            "The latest jobs and unemployment figures",
+            "What the bank said at its last meeting about what would make it move"
+          ],
+          "outcomes": [
+            {
+              "outcome": "It holds the rate",
+              "meaning": "Borrowing and savings rates linked to it stay where they are for now. The statement and press conference then matter most: they explain what the bank is watching."
+            },
+            {
+              "outcome": "It raises the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets dearer across the economy, from variable-rate loans to new mortgages, and savings rates tend to rise. Banks raise rates to slow inflation."
+            },
+            {
+              "outcome": "It cuts the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets cheaper and savings rates tend to fall. Banks cut to support growth and jobs when inflation is under control."
+            }
+          ],
+          "caution": "How people react often depends less on the decision than on how it compares with what was widely expected, and on the bank's words about what comes next."
+        }
+      },
+      {
+        "kind": "cpi",
+        "who": "U.S. Bureau of Labor Statistics",
+        "title": "US inflation report (Consumer Price Index)",
+        "time": "2026-12-10T13:30:00.000Z",
+        "countdown": "in 21 days, 21 hours",
+        "about": "The BLS publishes last month's consumer prices: the inflation rate over 12 months and its change from the month before.",
+        "context": "Now: US inflation (CPI, over 12 months) 3.74% for 2026-09 (U.S. Bureau of Labor Statistics).",
+        "sourceUrl": "https://www.bls.gov/schedule/news_release/cpi.htm",
+        "scenarios": {
+          "kind": "cpi",
+          "watch": [
+            "Last month's 12-month inflation rate",
+            "Core inflation (without food and energy), which moves less from month to month",
+            "Which prices drove the change: housing, energy, food or services"
+          ],
+          "outcomes": [
+            {
+              "outcome": "Inflation comes in higher than last month",
+              "meaning": "Prices are rising faster. It can make a central bank less likely to cut, or more likely to keep rates high for longer."
+            },
+            {
+              "outcome": "About the same as last month",
+              "meaning": "Price pressure is steady. Attention moves to the details, such as core inflation and services prices."
+            },
+            {
+              "outcome": "Inflation comes in lower than last month",
+              "meaning": "Prices are rising more slowly. It can give a central bank room to cut, if the slowdown lasts."
+            }
+          ],
+          "caution": "One month can be noisy: energy prices swing, and figures are sometimes revised. Several months together say more than one."
+        }
+      },
+      {
+        "kind": "ppi",
+        "who": "U.S. Bureau of Labor Statistics",
+        "title": "US producer prices (Producer Price Index)",
+        "time": "2026-12-15T13:30:00.000Z",
+        "countdown": "in 26 days, 21 hours",
+        "about": "The BLS publishes the prices businesses received last month, an early sign of price pressure.",
+        "context": null,
+        "sourceUrl": "https://www.bls.gov/schedule/news_release/ppi.htm",
+        "scenarios": {
+          "kind": "ppi",
+          "watch": [
+            "Last month's producer price change",
+            "Whether consumer prices (CPI) moved the same way"
+          ],
+          "outcomes": [
+            {
+              "outcome": "Producer prices rise faster",
+              "meaning": "Businesses are charging more for their goods and services; some of it can reach shop prices later."
+            },
+            {
+              "outcome": "Producer prices rise more slowly or fall",
+              "meaning": "Price pressure early in the supply chain is easing, which can show up in consumer prices later."
+            }
+          ],
+          "caution": "Producer prices are only one early signal; many costs never reach consumer prices one for one."
+        }
+      },
+      {
+        "kind": "rate_decision",
+        "who": "Bank of England",
+        "title": "Bank of England rate decision",
+        "time": "2026-12-17T12:00:00.000Z",
+        "countdown": "in 28 days, 19 hours",
+        "about": "The Monetary Policy Committee announces Bank Rate at 12 noon UK time, with a summary and minutes.",
+        "context": "Now: Bank of England Bank Rate 4.00% for 2026-11-17, last moved +0.25 pt on 2026-11-05 (Bank of England).",
+        "sourceUrl": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+        "scenarios": {
+          "kind": "rate_decision",
+          "watch": [
+            "The latest inflation figure next to the bank's target (2% for the Fed, ECB, Bank of Canada and Bank of England)",
+            "The latest jobs and unemployment figures",
+            "What the bank said at its last meeting about what would make it move"
+          ],
+          "outcomes": [
+            {
+              "outcome": "It holds the rate",
+              "meaning": "Borrowing and savings rates linked to it stay where they are for now. The statement and press conference then matter most: they explain what the bank is watching."
+            },
+            {
+              "outcome": "It raises the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets dearer across the economy, from variable-rate loans to new mortgages, and savings rates tend to rise. Banks raise rates to slow inflation."
+            },
+            {
+              "outcome": "It cuts the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets cheaper and savings rates tend to fall. Banks cut to support growth and jobs when inflation is under control."
+            }
+          ],
+          "caution": "How people react often depends less on the decision than on how it compares with what was widely expected, and on the bank's words about what comes next."
+        }
+      },
+      {
+        "kind": "rate_decision",
+        "who": "European Central Bank",
+        "title": "European Central Bank rate decision",
+        "time": "2026-12-17T13:15:00.000Z",
+        "countdown": "in 28 days, 20 hours",
+        "about": "The ECB's Governing Council sets the euro area's key interest rates, then explains the decision at a press conference.",
+        "context": "Now: ECB deposit facility rate 2.50% for 2026-11-18, last moved +0.25 pt on 2026-09-16 (European Central Bank).",
+        "sourceUrl": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+        "scenarios": {
+          "kind": "rate_decision",
+          "watch": [
+            "The latest inflation figure next to the bank's target (2% for the Fed, ECB, Bank of Canada and Bank of England)",
+            "The latest jobs and unemployment figures",
+            "What the bank said at its last meeting about what would make it move"
+          ],
+          "outcomes": [
+            {
+              "outcome": "It holds the rate",
+              "meaning": "Borrowing and savings rates linked to it stay where they are for now. The statement and press conference then matter most: they explain what the bank is watching."
+            },
+            {
+              "outcome": "It raises the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets dearer across the economy, from variable-rate loans to new mortgages, and savings rates tend to rise. Banks raise rates to slow inflation."
+            },
+            {
+              "outcome": "It cuts the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets cheaper and savings rates tend to fall. Banks cut to support growth and jobs when inflation is under control."
+            }
+          ],
+          "caution": "How people react often depends less on the decision than on how it compares with what was widely expected, and on the bank's words about what comes next."
+        }
+      },
+      {
+        "kind": "rate_decision",
+        "who": "Federal Reserve",
+        "title": "Federal Reserve rate decision",
+        "time": "2027-01-27T19:00:00.000Z",
+        "countdown": "in 70 days, 2 hours",
+        "about": "The Federal Open Market Committee sets the target range for the federal funds rate; its statement comes out at 2 pm New York time on the last day.",
+        "context": "Now: Effective federal funds rate 3.88% for 2026-11-17 (Federal Reserve Bank of New York).",
+        "sourceUrl": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+        "scenarios": {
+          "kind": "rate_decision",
+          "watch": [
+            "The latest inflation figure next to the bank's target (2% for the Fed, ECB, Bank of Canada and Bank of England)",
+            "The latest jobs and unemployment figures",
+            "What the bank said at its last meeting about what would make it move"
+          ],
+          "outcomes": [
+            {
+              "outcome": "It holds the rate",
+              "meaning": "Borrowing and savings rates linked to it stay where they are for now. The statement and press conference then matter most: they explain what the bank is watching."
+            },
+            {
+              "outcome": "It raises the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets dearer across the economy, from variable-rate loans to new mortgages, and savings rates tend to rise. Banks raise rates to slow inflation."
+            },
+            {
+              "outcome": "It cuts the rate (usually by 0.25 points)",
+              "meaning": "Borrowing gets cheaper and savings rates tend to fall. Banks cut to support growth and jobs when inflation is under control."
+            }
+          ],
+          "caution": "How people react often depends less on the decision than on how it compares with what was widely expected, and on the bank's words about what comes next."
+        }
+      }
+    ]
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-18T16:22:07.471Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "Federal Reserve, European Central Bank, Bank of Canada and Bank of England calendars",
+      "U.S. Bureau of Labor Statistics release calendar"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

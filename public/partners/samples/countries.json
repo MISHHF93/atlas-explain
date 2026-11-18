@@ -1,0 +1,66 @@
+{
+  "data": {
+    "refreshedAt": "2026-11-18T11:33:56.436Z",
+    "source": "World Bank, World Development Indicators (https://data360.worldbank.org/en/dataset/WB_WDI), CC BY 4.0. Read 2026-11-18 11:33 UTC by ATLAS Explain's data job.",
+    "indicators": [
+      {
+        "id": "inflation",
+        "name": "Inflation",
+        "unit": "%",
+        "about": "Consumer prices, change over the year."
+      }
+    ],
+    "countries": [
+      {
+        "code": "USA",
+        "name": "United States",
+        "values": {
+          "inflation": {
+            "year": "2024",
+            "value": 2.95
+          }
+        }
+      },
+      {
+        "code": "CAN",
+        "name": "Canada",
+        "values": {
+          "inflation": {
+            "year": "2025",
+            "value": 2.07
+          }
+        }
+      },
+      {
+        "code": "DEU",
+        "name": "Germany",
+        "values": {
+          "inflation": {
+            "year": "2025",
+            "value": 2.17
+          }
+        }
+      },
+      {
+        "code": "JPN",
+        "name": "Japan",
+        "values": {
+          "inflation": {
+            "year": "2025",
+            "value": 3.17
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-18T16:22:07.766Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "World Bank, World Development Indicators (CC BY 4.0)"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

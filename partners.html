@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ATLAS Explain for businesses · Partner API</title>
+    <meta name="description" content="Education-only market explanations and sourced official figures for banks, credit unions, brokers and fintech apps, by API or MCP. Free sandbox." />
+    <link rel="canonical" href="https://atlas-explain.web.app/partners" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ATLAS Explain" />
+    <meta property="og:title" content="ATLAS Explain for businesses" />
+    <meta property="og:description" content="Education-only market explanations and sourced official figures for banks, credit unions, brokers and fintech apps, by API or MCP. Free sandbox." />
+    <meta property="og:url" content="https://atlas-explain.web.app/partners" />
+    <meta property="og:image" content="https://atlas-explain.web.app/og/atlas-explain.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ATLAS Explain: market jargon, in plain language." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0c6b5e" />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script type="module" src="/src/site/site.ts"></script>
+  </head>
+  <body class="site">
+    <a class="skip" href="#main">Skip to content</a>
+    <!-- site:header partners -->
+    <main id="main" tabindex="-1">
+      <article class="doc">
+        <h1>ATLAS Explain for businesses</h1>
+        <p class="lede">Plain-language market explanations and sourced official figures for your app and your AI agents: the same content ATLAS Explain gives in Claude, by REST API or MCP. Education only. Every fact names its source and time, and nothing recommends, rates or forecasts anything.</p>
+        <p class="fine">Status: free <b>sandbox</b>, open now. Pilots and paid plans come after a legal review of the partner terms.</p>
+
+        <h2 id="who">Who it's for</h2>
+        <div class="cards two">
+          <article class="card"><h3>Banks and credit unions</h3><p>Investment-scam warning checks, plain-language explainers and a calendar of rate decisions and data releases, inside your own app.</p></article>
+          <article class="card"><h3>Brokers and advisers</h3><p>Evidence briefs with every fact sourced, and client education that never reads as advice.</p></article>
+          <article class="card"><h3>Fintech apps and AI agents</h3><p>A REST API for your app, and an MCP connector your AI assistant can call directly.</p></article>
+          <article class="card"><h3>Financial-wellness and education platforms</h3><p>Money maths, a learning path and live official figures to make lessons real.</p></article>
+        </div>
+
+        <h2 id="what">What's included</h2>
+        <table>
+          <thead><tr><th>Endpoint</th><th>What it returns</th><th>Sample</th></tr></thead>
+          <tbody>
+            <tr><td><code>GET /terms</code></td><td>Market and economics terms in plain language</td><td><a href="/partners/samples/terms.json">terms.json</a></td></tr>
+            <tr><td><code>GET /brief/{asset}</code></td><td>Evidence brief on a stock, ETF, currency, rate or commodity: sourced facts and what they don't tell you</td><td><a href="/partners/samples/brief-AAPL.json">brief-AAPL.json</a></td></tr>
+            <tr><td><code>GET /notable</code></td><td>What stands out in today's official data, each item with the rule that picked it</td><td><a href="/partners/samples/notable.json">notable.json</a></td></tr>
+            <tr><td><code>GET /calendar</code></td><td>Rate decisions and US data releases with exact times, countdowns and "if this happens"; also as one calendar file</td><td><a href="/partners/samples/calendar.json">calendar.json</a></td></tr>
+            <tr><td><code>GET /economy</code></td><td>Inflation, jobs, policy rates and US debt</td><td><a href="/partners/samples/economy.json">economy.json</a></td></tr>
+            <tr><td><code>GET /countries</code></td><td>G20 growth, inflation, unemployment, income (World Bank)</td><td><a href="/partners/samples/countries.json">countries.json</a></td></tr>
+            <tr><td><code>GET /auctions</code></td><td>US Treasury auctions and results</td><td><a href="/partners/samples/auctions.json">auctions.json</a></td></tr>
+            <tr><td><code>GET /figures</code></td><td>Treasury yields, ECB and Bank of Canada rates, energy prices, SEC-filed company figures</td><td><a href="/partners/samples/figures.json">figures.json</a></td></tr>
+            <tr><td><code>POST /scam-check</code></td><td>Which investment-fraud warning signs a message shows, and where to check and report</td><td><a href="/partners/samples/scam-check.json">scam-check.json</a></td></tr>
+            <tr><td><code>POST /money</code></td><td>Compound growth, fees, inflation or diversification from your numbers</td><td><a href="/partners/samples/money.json">money.json</a></td></tr>
+          </tbody>
+        </table>
+        <p class="fine">Samples were captured from live data on 18 Nov 2026. Full description: <a href="/partners/openapi.json">OpenAPI 3.1 spec</a> · <a href="https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md">partner documentation</a>.</p>
+
+        <h2 id="how">How it works</h2>
+        <ol class="flow">
+          <li class="card"><span class="flow-n">1</span><h3>Sandbox (free)</h3><p>A key for 1,000 calls a day. Try every endpoint with live data.</p></li>
+          <li class="card"><span class="flow-n">2</span><h3>Pilot</h3><p>10,000 calls a day, a named contact and alerts before scheduled events.</p></li>
+          <li class="card"><span class="flow-n">3</span><h3>Production</h3><p>A subscription sized to your traffic.</p></li>
+        </ol>
+        <p>Every answer is <code>{ data, meta }</code>. <code>meta.credit</code> says what to show with the data, and <code>meta.educationOnly</code> is always true.</p>
+
+        <h2 id="licensing">What you may show</h2>
+        <table>
+          <thead><tr><th>Content</th><th>Redistribution</th></tr></thead>
+          <tbody>
+            <tr><td>Explanations, "if this happens", scam warning signs, money maths</td><td>ATLAS Explain's own content, under the partner terms</td></tr>
+            <tr><td>US Treasury, BLS, EIA, SEC, Federal Reserve</td><td>Public domain; credit the agency</td></tr>
+            <tr><td>World Bank</td><td>CC BY 4.0; credit the World Bank</td></tr>
+            <tr><td>ECB, Bank of Canada, Bank of England, New York Fed</td><td>Reuse with attribution; credit the bank</td></tr>
+            <tr><td>Crypto prices</td><td>Not offered: their sources don't allow redistribution</td></tr>
+          </tbody>
+        </table>
+        <p class="fine">You stay responsible for how you present the content under the rules that apply to you, for example FINRA's rules on communications with the public, which apply to AI-written messages too.</p>
+
+        <h2 id="key">Ask for a sandbox key</h2>
+        <p>Open a request with your organisation's name and what you'd like to build. Don't post anything confidential: we'll reply there and send the key privately.</p>
+        <p><a class="btn btn-primary" href="https://github.com/MISHHF93/atlas-explain/issues/new?title=Partner%20sandbox%20key%20request&amp;body=Organisation%3A%0AWhat%20you%27d%20like%20to%20build%3A%0AREST%20or%20MCP%3A%0A%0A(Please%20don%27t%20post%20anything%20confidential.)">Request a sandbox key</a></p>
+        <p class="fine">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>
+      </article>
+    </main>
+    <!-- site:footer -->
+  </body>
+</html>

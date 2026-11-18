@@ -47,6 +47,7 @@ export default defineConfig({
         terms: "terms.html",
         support: "support.html",
         connect: "connect.html",
+        partners: "partners.html",
         notFound: "404.html",
         app: "app.html",
       },

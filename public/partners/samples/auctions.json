@@ -1,0 +1,59 @@
+{
+  "data": {
+    "refreshedAt": "2026-11-18T16:05:52.897Z",
+    "upcoming": [
+      {
+        "cusip": "91282CRE3",
+        "type": "Note",
+        "term": "9-Year 8-Month",
+        "auctionDate": "2026-11-19",
+        "issueDate": "2026-11-30",
+        "offeringUsd": 19000000000,
+        "yieldPct": null,
+        "couponPct": 2.375,
+        "bidToCover": null,
+        "indirectPct": null,
+        "sourceUrl": "https://www.treasurydirect.gov/auctions/upcoming/"
+      }
+    ],
+    "recent": [
+      {
+        "cusip": "91282CRX1",
+        "type": "Note",
+        "term": "10-Year",
+        "auctionDate": "2026-11-10",
+        "issueDate": "2026-11-16",
+        "offeringUsd": 42000000000,
+        "yieldPct": 5.02,
+        "couponPct": 5,
+        "bidToCover": 2.46,
+        "indirectPct": 61.23,
+        "sourceUrl": "https://www.treasurydirect.gov/auctions/upcoming/"
+      },
+      {
+        "cusip": "91282CRW3",
+        "type": "Note",
+        "term": "3-Year",
+        "auctionDate": "2026-11-09",
+        "issueDate": "2026-11-16",
+        "offeringUsd": 58000000000,
+        "yieldPct": 4.627,
+        "couponPct": 4.625,
+        "bidToCover": 2.53,
+        "indirectPct": 55.48,
+        "sourceUrl": "https://www.treasurydirect.gov/auctions/upcoming/"
+      }
+    ],
+    "source": "TreasuryDirect, U.S. Department of the Treasury"
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-18T16:22:07.822Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "TreasuryDirect, U.S. Department of the Treasury"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

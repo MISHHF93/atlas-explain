@@ -1,0 +1,98 @@
+{
+  "data": {
+    "matched": [
+      {
+        "id": "guaranteed_returns",
+        "title": "Guaranteed or unusually high returns with little or no risk",
+        "why": "Every investment carries risk, and higher returns come with more of it. A promise of big, steady or certain returns is the most common sign of fraud.",
+        "source": {
+          "name": "SEC Investor.gov, how to avoid fraud",
+          "url": "https://www.investor.gov/protect-your-investments/fraud/how-avoid-fraud"
+        }
+      },
+      {
+        "id": "pressure",
+        "title": "Pressure to act right away",
+        "why": "Fraudsters rush people so they don't stop to check. A real opportunity will still be there after you've looked into it.",
+        "source": {
+          "name": "SEC Investor.gov, how to avoid fraud",
+          "url": "https://www.investor.gov/protect-your-investments/fraud/how-avoid-fraud"
+        }
+      },
+      {
+        "id": "unsolicited",
+        "title": "An unexpected contact, or someone met online",
+        "why": "Many scams start with a message out of the blue, a wrong-number text, a dating app or a group chat, then build trust before any investing comes up.",
+        "source": {
+          "name": "SEC Investor.gov, relationship investment scams",
+          "url": "https://www.investor.gov/protect-your-investments/fraud/types-fraud/relationship-investment-scams"
+        }
+      },
+      {
+        "id": "unusual_payment",
+        "title": "Paying in crypto, gift cards or a wire to a person",
+        "why": "Legitimate firms take payment into accounts in the firm's own name. Requests for crypto, gift cards or a wire to an individual are hard to reverse and common in fraud.",
+        "source": {
+          "name": "FINRA, avoid fraud",
+          "url": "https://www.finra.org/investors/protect-your-money/avoid-fraud"
+        }
+      }
+    ],
+    "allSigns": [
+      "Guaranteed or unusually high returns with little or no risk",
+      "Pressure to act right away",
+      "An unexpected contact, or someone met online",
+      "Paying in crypto, gift cards or a wire to a person",
+      "Secrecy, inside information or an exclusive club",
+      "Someone posing as a firm, an official or a famous person",
+      "Asking for passwords, a recovery phrase or remote access",
+      "A hot tip that's about to take off",
+      "Fees or taxes to get your own money out",
+      "An offer to recover money you've already lost",
+      "No clear way it makes money, or it pays out from new members"
+    ],
+    "check": [
+      {
+        "name": "FINRA BrokerCheck (US brokers)",
+        "url": "https://brokercheck.finra.org/"
+      },
+      {
+        "name": "SEC Investment Adviser Public Disclosure (US advisers)",
+        "url": "https://adviserinfo.sec.gov/"
+      },
+      {
+        "name": "NFA BASIC (US futures and forex firms)",
+        "url": "https://www.nfa.futures.org/basicnet/"
+      },
+      {
+        "name": "Canadian Securities Administrators: aretheyregistered.ca (Canada)",
+        "url": "https://www.aretheyregistered.ca/"
+      }
+    ],
+    "report": [
+      {
+        "name": "SEC tips and complaints (US)",
+        "url": "https://www.sec.gov/tcr"
+      },
+      {
+        "name": "FTC ReportFraud (US)",
+        "url": "https://reportfraud.ftc.gov/"
+      },
+      {
+        "name": "Canadian Anti-Fraud Centre (Canada)",
+        "url": "https://antifraudcentre-centreantifraude.ca/"
+      }
+    ],
+    "recentActions": []
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-18T16:22:08.156Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "SEC Investor.gov and FINRA (linked per warning sign)"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

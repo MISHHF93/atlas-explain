@@ -121,7 +121,7 @@ export async function admit(request: Request, store: PartnerStore, ctx: Ctx | un
 
 /* ---------- REST ---------- */
 
-const ENDPOINTS = [
+export const ENDPOINTS = [
   { method: "GET", path: "/api/v1/terms?q=", what: "Plain-language market and economics terms from the ATLAS Explain glossary." },
   { method: "GET", path: "/api/v1/brief/{asset}", what: "An evidence brief on a stock, ETF, currency, rate or commodity: sourced facts and what they don't tell you. Not crypto." },
   { method: "GET", path: "/api/v1/notable", what: "What stands out in today's official data, each item with the rule that picked it. Crypto moves left out." },

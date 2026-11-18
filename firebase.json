@@ -52,7 +52,7 @@
         ]
       },
       {
-        "source": "/@(app|signin|start|privacy|terms|how-its-built|support|connect){,/**}",
+        "source": "/@(app|signin|start|privacy|terms|how-its-built|support|connect|partners){,/**}",
         "headers": [
           {
             "key": "Cache-Control",
@@ -106,6 +106,10 @@
       {
         "source": "/connect",
         "destination": "/connect.html"
+      },
+      {
+        "source": "/partners",
+        "destination": "/partners.html"
       }
     ],
     "redirects": [
