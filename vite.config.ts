@@ -48,6 +48,7 @@ export default defineConfig({
         support: "support.html",
         connect: "connect.html",
         partners: "partners.html",
+        embedRateImpact: "embed/rate-impact.html",
         notFound: "404.html",
         app: "app.html",
       },

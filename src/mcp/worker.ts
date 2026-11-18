@@ -5,9 +5,11 @@
  * Deployed with `npm run deploy:mcp` (wrangler.toml). See docs/MCP.md.
  */
 import { handleRequest, runCapture, type WaitContext, type WorkerEnv } from "./live-data";
+import { setFeatures } from "./server";
 
 export default {
   fetch(request: Request, env: WorkerEnv, ctx: WaitContext): Promise<Response> {
+    setFeatures(env.V2_TOOLS);
     return handleRequest(request, env, ctx);
   },
   scheduled(event: { cron: string }, env: WorkerEnv, ctx: WaitContext): void {

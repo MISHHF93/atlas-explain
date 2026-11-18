@@ -15,3 +15,8 @@ crons = ["*/10 * * * *", "37 */3 * * *", "47 */6 * * *", "17 */6 * * *"]
 [[kv_namespaces]]
 binding = "DATA"
 id = "3b50fb5cbf73422f89f22cfbbc2d64b9"
+
+# v2 tools switched on (docs/V2_DESIGN.md, feature flags): a comma list, for example "rate_change_impact".
+# Empty keeps the public connector exactly as it is.
+[vars]
+V2_TOOLS = ""

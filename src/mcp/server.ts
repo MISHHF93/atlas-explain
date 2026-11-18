@@ -37,6 +37,7 @@ import { COUNTRIES_APP_HTML, COUNTRIES_APP_URI } from "./countries-app";
 import { EVENTS_APP_HTML, EVENTS_APP_URI } from "./events-app";
 import { SERIES_APP_HTML, SERIES_APP_URI } from "./series-app";
 import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
+import { rateChangeImpact, type ImpactCountry, type ImpactProduct } from "../core/rate-impact";
 import { moneyMaths, type MoneyCalc } from "../core/money-maths";
 import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
 import { comingUp } from "../core/coming-up";
@@ -442,6 +443,60 @@ function readGlossaryResource(uri: string): { uri: string; mimeType: string; tex
   if (!uri.startsWith(GLOSSARY_URI)) return null;
   const term = ALL_TERMS.find((t) => t.id === decodeURIComponent(uri.slice(GLOSSARY_URI.length)));
   return term ? { uri, mimeType: "text/markdown", text: `# ${term.title}\n\n${term.summary}\n\nSource: ATLAS Explain glossary. ${APP_URL}/learn\n\n${EDUCATION_LINE}` } : null;
+}
+
+/* ---------- v2 tools (docs/V2_DESIGN.md), each off until named in the Worker's V2_TOOLS variable ---------- */
+
+export const V2_TOOLS = [
+  {
+    name: "rate_change_impact",
+    title: "What a rate change would do to my numbers",
+    description: "Works out what a change in interest rates would do to someone's own variable-rate mortgage payment, HELOC interest, savings interest or GIC/CD renewal, to the cent, and which central bank drives that product (Canada: Bank of Canada; US: the Federal Reserve). Use it when someone asks what a cut or a rise would mean for them. Pure arithmetic on the numbers they give; it never says whether a change will happen.",
+    inputSchema: { type: "object", properties: {
+      product: { type: "string", enum: ["variable_mortgage", "heloc", "savings", "gic_cd"], description: "What to work out." },
+      balance: { type: "number", description: "Amount owed (mortgage, HELOC) or held (savings, GIC/CD), in dollars." },
+      rate_pct: { type: "number", description: "The rate today, in percent a year." },
+      change_pts: { type: "number", description: "The change to work out, in percentage points: -0.25 for a quarter-point cut, 0.5 for a half-point rise." },
+      months: { type: "number", description: "Mortgage: months left to pay it off (default 300). GIC/CD: the term in months (default 12)." },
+      country: { type: "string", enum: ["CA", "US"], description: "Where the product is. Decides which central bank it follows and, for mortgages, the usual compounding. Ask if unsure." },
+      compounding: { type: "string", enum: ["semi-annual", "monthly"], description: "Mortgage only. Defaults to semi-annual in Canada, monthly in the US." },
+    }, required: ["product", "balance", "rate_pct", "change_pts"], additionalProperties: false },
+    annotations: annotations("What a rate change would do to my numbers", false),
+    icons: ICONS,
+    outputSchema: obj({
+      product: { type: "string" }, country: { type: "string" },
+      inputs: { type: "object" },
+      rows: { type: "array", items: { type: "object", properties: { label: { type: "string" }, before: { type: "number" }, after: { type: "number" }, change: { type: "number" } } } },
+      lines: { type: "array", items: { type: "string" } },
+      follows: { type: "string" },
+      assumptions: { type: "array", items: { type: "string" } },
+    }, ["product", "rows", "lines", "follows"]),
+  },
+];
+
+let enabledV2: ReadonlySet<string> = new Set();
+/** The Worker passes its V2_TOOLS variable (a comma list) on each request; unknown names are ignored. */
+export function setFeatures(v2Tools: string | undefined): void {
+  const names = new Set(V2_TOOLS.map((t) => t.name));
+  enabledV2 = new Set((v2Tools ?? "").split(",").map((w) => w.trim()).filter((w) => names.has(w)));
+}
+/** The tools a client is offered: v1's, plus any v2 tool switched on. */
+export function visibleTools(): readonly ((typeof TOOLS)[number] | (typeof V2_TOOLS)[number])[] {
+  return [...TOOLS, ...V2_TOOLS.filter((t) => enabledV2.has(t.name))];
+}
+
+export function rateChangeImpactTool(args: Record<string, unknown>): ToolResult {
+  const n = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN);
+  const r = rateChangeImpact({
+    product: String(args.product) as ImpactProduct,
+    balance: n(args.balance), ratePct: n(args.rate_pct), changePts: n(args.change_pts),
+    months: args.months == null ? undefined : n(args.months),
+    country: args.country === "US" ? "US" : args.country === "CA" ? "CA" : (undefined as ImpactCountry | undefined),
+    compounding: args.compounding === "monthly" ? "monthly" : args.compounding === "semi-annual" ? "semi-annual" : undefined,
+  });
+  if ("error" in r) return text(r.error, true);
+  const countryNote = args.country == null ? "\nCountry not given, so Canada was assumed; say if it's the US." : "";
+  return data(`${r.lines.join("\n")}\n\nWhich rate it follows: ${r.follows}\nAssumed: ${r.assumptions.join(" ")}${countryNote}`, r as unknown as Record<string, unknown>);
 }
 
 /** One-click starters (MCP prompts). Each asks the assistant to use the tools, education only. */
@@ -1583,7 +1638,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
       // Removed in 2026-07-28; still answered for legacy clients.
       return ok({});
     case "tools/list":
-      return ok({ tools: TOOLS }, true);
+      return ok({ tools: visibleTools() }, true);
     case "resources/list":
       return ok({
         resources: [
@@ -1639,6 +1694,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "evidence_brief": return ok(await evidenceBrief(s(args.asset) ?? "", fetcher));
         case "notable_today": return ok(await notableToday(fetcher));
         case "money_maths": return ok(moneyMathsTool(args));
+        case "rate_change_impact": return enabledV2.has("rate_change_impact") ? ok(rateChangeImpactTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "upcoming_events": return ok(await upcomingEvents(s(args.only), fetcher));
         case "scam_red_flags": return ok(await scamRedFlags(s(args.pitch), fetcher));
         case "treasury_auctions": return ok(await treasuryAuctions(s(args.kind), fetcher));

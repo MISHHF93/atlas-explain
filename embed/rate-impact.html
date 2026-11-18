@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Rate change calculator · ATLAS Explain</title>
+  <meta name="description" content="What a change in interest rates would do to your own mortgage payment, HELOC interest, savings interest or GIC/CD renewal. Arithmetic only, never a forecast." />
+  <style>
+    :root { --fg: #1c1b19; --muted: #6b675f; --line: #e6e2da; --soft: #f4f1ec; --card: #fff; --accent: #0c6b5e; --bg: #fff; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #f1ede6; --muted: #a59f94; --line: #3a3630; --soft: #26231f; --card: #1c1a17; --accent: #4fc1a9; --bg: #161412; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 560px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 16px; margin: 0; }
+    .sub { margin: 2px 0 12px; color: var(--muted); font-size: 12px; }
+    form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+    label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; }
+    label.wide { grid-column: 1 / -1; }
+    [hidden] { display: none !important; }
+    input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); min-height: 40px; width: 100%; }
+    input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .steps { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+    .steps button { all: unset; cursor: pointer; padding: 6px 12px; min-height: 32px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; }
+    .steps button[aria-pressed="true"] { background: var(--fg); color: var(--card); border-color: var(--fg); }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-variant-numeric: tabular-nums; }
+    th, td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    th { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .lines p { margin: 10px 0 0; }
+    .note { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+    .err { margin-top: 12px; color: #b4432f; }
+    footer { margin-top: 14px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+    footer a { color: inherit; }
+    @media (max-width: 420px) { form { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>What a rate change would do to your numbers</h1>
+    <p class="sub">Your own numbers, worked out to the cent. It doesn't say whether rates will change.</p>
+    <form id="form" novalidate>
+      <label>Where
+        <select id="country"><option value="CA">Canada</option><option value="US">United States</option></select>
+      </label>
+      <label>What
+        <select id="product">
+          <option value="variable_mortgage">Variable-rate mortgage</option>
+          <option value="heloc">Home equity line (HELOC)</option>
+          <option value="savings">Savings account</option>
+          <option value="gic_cd">GIC or CD at renewal</option>
+        </select>
+      </label>
+      <label>Balance ($)<input id="balance" type="number" inputmode="decimal" min="1" step="any" value="400000" /></label>
+      <label>Rate today (% a year)<input id="rate" type="number" inputmode="decimal" min="0" max="30" step="0.01" value="4.95" /></label>
+      <label id="months-label">Months left<input id="months" type="number" inputmode="numeric" min="1" max="480" step="1" value="300" /></label>
+      <label>Change (points)<input id="change" type="number" inputmode="decimal" step="0.05" value="-0.25" /></label>
+      <div class="steps" role="group" aria-label="Common changes">
+        <button type="button" data-step="-0.5">-0.50</button>
+        <button type="button" data-step="-0.25">-0.25</button>
+        <button type="button" data-step="0.25">+0.25</button>
+        <button type="button" data-step="0.5">+0.50</button>
+      </div>
+    </form>
+    <div id="out" aria-live="polite"></div>
+    <footer>Educational information, not financial advice. Arithmetic on the numbers entered; no data is sent anywhere. From <a href="https://atlas-explain.web.app/" target="_blank" rel="noopener">ATLAS Explain</a>.</footer>
+  </main>
+  <script type="module" src="/src/embed/rate-impact.ts"></script>
+</body>
+</html>

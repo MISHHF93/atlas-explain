@@ -42,6 +42,8 @@ export interface WorkerEnv {
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_RESTRICTED_KEY?: string;
   FIREBASE_SERVICE_ACCOUNT?: string;
+  /** v2 tools switched on, as a comma list (docs/V2_DESIGN.md, feature flags). Empty: none. */
+  V2_TOOLS?: string;
 }
 
 export interface WaitContext {
