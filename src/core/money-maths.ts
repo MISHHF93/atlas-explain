@@ -69,6 +69,11 @@ export function moneyMaths(input: MoneyInput): MoneyResult | { error: string } {
   };
 
   if (calc === "compound_growth" || calc === "fees") {
+    // A rate outside the range is refused, not quietly capped: capping 3% a day to 30% a year gave a wrong answer.
+    const asked = typeof input.ratePct === "number" && Number.isFinite(input.ratePct) ? input.ratePct : null;
+    if (asked != null && (asked > 30 || asked < -20)) {
+      return { error: `${pct(asked)} a year is outside what this works out (from -20% to 30% a year). No ordinary investment grows faster than about 30% a year, year after year; a promise of returns like that is a common sign of fraud.` };
+    }
     const amount = clamp(input.amount, 0, 1e9, null);
     const rate = clamp(input.ratePct, -20, 30, null);
     const years = clamp(input.years, 1, 60, null);

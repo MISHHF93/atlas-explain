@@ -106,12 +106,12 @@ export interface Auction {
 export const ECONOMY_SOURCES = {
   blsCpi: "https://api.bls.gov/publicAPI/v1/timeseries/data/CUUR0000SA0",
   blsUnemployment: "https://api.bls.gov/publicAPI/v1/timeseries/data/LNS14000000",
-  effr: "https://markets.newyorkfed.org/api/rates/unsecured/effr/last/60.json",
-  sofr: "https://markets.newyorkfed.org/api/rates/secured/sofr/last/60.json",
+  effr: "https://markets.newyorkfed.org/api/rates/unsecured/effr/last/260.json",
+  sofr: "https://markets.newyorkfed.org/api/rates/secured/sofr/last/260.json",
   // The ECB moved euro-area HICP from "ICP" to the new "HICP" dataset in Feb 2026 (method change).
   hicp: "https://data-api.ecb.europa.eu/service/data/HICP/M.U2.N.000000.4D0.ANR?lastNObservations=13&format=jsondata",
   bocPolicy: "https://www.bankofcanada.ca/valet/observations/V39079/json?recent=260",
-  debt: "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?sort=-record_date&page[size]=60&fields=record_date,tot_pub_debt_out_amt",
+  debt: "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?sort=-record_date&page[size]=260&fields=record_date,tot_pub_debt_out_amt",
   fomc: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
   ecbCalendar: "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
   bocEvents: "https://www.bankofcanada.ca/press/upcoming-events/",

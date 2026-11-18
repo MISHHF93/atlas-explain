@@ -110,7 +110,8 @@ describe("money maths (arithmetic on the person's own numbers)", () => {
   it("asks for what's missing instead of guessing, and keeps inputs in sensible limits", () => {
     expect("error" in moneyMaths({ calculation: "compound_growth", amount: 1000 })).toBe(true);
     expect(moneyMathsTool({ calculation: "fees", amount: 1000, rate_pct: 5, years: 10 }).isError).toBe(true);
-    const capped = moneyMaths({ calculation: "compound_growth", amount: 100, ratePct: 500, years: 500 });
+    expect("error" in moneyMaths({ calculation: "compound_growth", amount: 100, ratePct: 500, years: 5 })).toBe(true);
+    const capped = moneyMaths({ calculation: "compound_growth", amount: 100, ratePct: 30, years: 500 });
     if ("error" in capped) throw new Error(capped.error);
     expect(capped.inputs.ratePct).toBe(30);
     expect(capped.inputs.years).toBe(60);

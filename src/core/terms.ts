@@ -5,7 +5,7 @@ import { GLOSSARY, type GlossaryEntry } from "./glossary";
  * no trade instructions, no balances, no accounts.
  */
 export interface TermEntry extends GlossaryEntry {
-  group: "atlas" | "orders" | "market" | "risk" | "economy" | "ai";
+  group: "atlas" | "orders" | "market" | "risk" | "economy" | "saving" | "ai";
 }
 
 export const TRADING_TERMS: readonly TermEntry[] = [
@@ -57,13 +57,6 @@ export const TRADING_TERMS: readonly TermEntry[] = [
     title: "Margin",
     summary:
       "Borrowed money used to hold a larger position than cash alone allows. It magnifies gains and losses, and a falling price can trigger a margin call.",
-  },
-  {
-    id: "drawdown",
-    group: "risk",
-    title: "Drawdown",
-    summary:
-      "The fall from a peak to a later low, usually shown as a percent. It describes how deep a decline went, not whether it will recover.",
   },
   {
     id: "hit_rate",
@@ -268,6 +261,139 @@ export const TRADING_TERMS: readonly TermEntry[] = [
     summary:
       "The difference between the price expected when an order is placed and the average price it actually fills at. A large order can use up the best prices in the order book and fill partly at worse ones.",
   },
+  {
+    id: "index_fund",
+    group: "saving",
+    title: "Index fund",
+    summary:
+      "A fund that holds everything in a market index, such as the S&P 500, in the same proportions, instead of a manager choosing. Because nobody is choosing, its yearly fee is usually low. It comes as a mutual fund or an ETF.",
+  },
+  {
+    id: "mutual_fund",
+    group: "saving",
+    title: "Mutual fund",
+    summary:
+      "A pool of money from many people, invested together in stocks, bonds or both. Its price is set once a day, after markets close, from the value of what it holds. It may follow an index or be run by a manager.",
+  },
+  {
+    id: "expense_ratio",
+    group: "saving",
+    title: "Expense ratio (fund fee)",
+    summary:
+      "What a fund charges each year, as a share of the money in it. 0.2% means $2 a year for every $1,000. It comes out of the fund's value, so it's easy to miss, and over decades it adds up because the fee also stops that money from growing.",
+  },
+  {
+    id: "compound_growth",
+    group: "saving",
+    title: "Compound growth",
+    summary:
+      "Growth on earlier growth. If $1,000 grows 6% to $1,060, the next 6% is on $1,060, not $1,000. Over long periods most of the end balance can come from this, which is why time matters as much as the amount.",
+  },
+  {
+    id: "diversification",
+    group: "saving",
+    title: "Diversification",
+    summary:
+      "Spreading money across many investments that don't all move together, so one doing badly hurts less. It lowers how much the whole mix swings; it can't remove the risk that a whole market falls.",
+  },
+  {
+    id: "asset_allocation",
+    group: "saving",
+    title: "Asset allocation",
+    summary:
+      "How money is split between kinds of investment, such as stocks, bonds and cash. The split sets most of how much the total can swing and grow, more than which single investments are chosen.",
+  },
+  {
+    id: "rebalancing",
+    group: "saving",
+    title: "Rebalancing",
+    summary:
+      "Moving money between investments to bring a mix back to its chosen split after some parts have grown faster than others. It keeps the level of risk where it was meant to be.",
+  },
+  {
+    id: "dollar_cost_averaging",
+    group: "saving",
+    title: "Dollar-cost averaging",
+    summary:
+      "Putting the same amount in on a regular schedule, such as $200 a month, whatever the price. More units are acquired when prices are low and fewer when they are high. It spreads out timing; it doesn't guarantee a gain.",
+  },
+  {
+    id: "risk_tolerance",
+    group: "saving",
+    title: "Risk tolerance",
+    summary:
+      "How much a person can stand to see their money fall in value, both in money (can they afford it) and in nerves (will they stay calm). It depends on goals, income and how soon the money is needed.",
+  },
+  {
+    id: "time_horizon",
+    group: "saving",
+    title: "Time horizon",
+    summary:
+      "How long until the money is needed. Money needed in a year or two has little time to recover from a fall; money for 20 years from now has much more.",
+  },
+  {
+    id: "emergency_fund",
+    group: "saving",
+    title: "Emergency fund",
+    summary:
+      "Cash kept aside for surprises, often a few months of essential costs, in an account that's easy to reach and doesn't swing in value. It means a bad month doesn't force someone to cash out investments at a low point.",
+  },
+  {
+    id: "tax_advantaged_account",
+    group: "saving",
+    title: "Tax-sheltered accounts (TFSA, RRSP, 401(k), IRA, ISA)",
+    summary:
+      "Accounts where investment growth is taxed less or not at all, within yearly limits: the TFSA and RRSP in Canada, the 401(k) and IRA in the US, the ISA in the UK. The rules differ by country and by account.",
+  },
+  {
+    id: "brokerage_account",
+    group: "saving",
+    title: "Brokerage account",
+    summary:
+      "An account at a firm licensed to hold stocks, funds and bonds for a client and to carry out their orders. The investments inside it belong to the client, not the firm.",
+  },
+  {
+    id: "capital_gain",
+    group: "saving",
+    title: "Capital gain",
+    summary:
+      "The rise in value between what was paid for an investment and what it is worth when it is cashed in. Many countries tax it, often only once it is realised, and usually at a different rate from income.",
+  },
+  {
+    id: "bull_market",
+    group: "saving",
+    title: "Bull market",
+    summary:
+      "A long stretch when prices in a market are generally rising, often described as a rise of 20% or more from a low.",
+  },
+  {
+    id: "bear_market",
+    group: "saving",
+    title: "Bear market",
+    summary:
+      "A long stretch when prices in a market are generally falling, often described as a fall of 20% or more from a high.",
+  },
+  {
+    id: "real_return",
+    group: "economy",
+    title: "Real return",
+    summary:
+      "A return after inflation. If an investment grows 6% in a year when prices rise 3%, the real return is about 3%: that's how much more it can actually pay for.",
+  },
+  {
+    id: "apr_apy",
+    group: "saving",
+    title: "APR and APY",
+    summary:
+      "Two ways to state a yearly rate. APR is the simple yearly rate; APY (or AER) includes the effect of interest on interest within the year, so it is a little higher when interest is added often. Compare like with like.",
+  },
+  {
+    id: "drawdown",
+    group: "risk",
+    title: "Drawdown",
+    summary:
+      "How far an investment has fallen from its highest point before recovering, for example from $10,000 to $7,000 is a 30% drawdown. It shows how bad the fall felt, which an average return hides.",
+  },
 ];
 
 /** ATLAS research vocabulary. Kept for desk deep links; never listed in the public glossary. */
@@ -287,6 +413,7 @@ export const TERM_GROUP_LABEL: Record<TermEntry["group"], string> = {
   market: "Market",
   risk: "Risk",
   economy: "Economy",
+  saving: "Saving and investing",
   ai: "How it works",
 };
 

@@ -22,7 +22,7 @@ export const RED_FLAGS: readonly RedFlag[] = [
     id: "guaranteed_returns",
     title: "Guaranteed or unusually high returns with little or no risk",
     why: "Every investment carries risk, and higher returns come with more of it. A promise of big, steady or certain returns is the most common sign of fraud.",
-    patterns: [/guarantee/, /risk[- ]free/, /no risk/, /\b\d{2,3}\s?% (a|per|each|every) (day|week|month)/, /double your (money|investment)/, /can'?t lose/, /passive income/],
+    patterns: [/guarantee/, /risk[- ]free/, /no risk/, /\b\d{1,3}(\.\d+)?\s?% (a|per|each|every) (day|week|month)/, /\b(daily|weekly) (returns?|profits?|interest) of\b/, /double your (money|investment)/, /can'?t lose/, /passive income/],
     source: INVESTOR_GOV,
   },
   {
@@ -43,8 +43,15 @@ export const RED_FLAGS: readonly RedFlag[] = [
     id: "unusual_payment",
     title: "Paying in crypto, gift cards or a wire to a person",
     why: "Legitimate firms take payment into accounts in the firm's own name. Requests for crypto, gift cards or a wire to an individual are hard to reverse and common in fraud.",
-    patterns: [/gift card/, /wire (it|the money|transfer) to/, /send (bitcoin|btc|usdt|crypto|eth)/, /crypto atm|bitcoin atm/, /pay (in|with) (crypto|bitcoin|usdt)/, /personal account/],
+    patterns: [/gift card/, /wire (it|the money|transfer) to/, /send (bitcoin|btc|usdt|crypto|eth)/, /crypto atm|bitcoin atm/, /pay (in|with) (crypto|bitcoin|usdt)/, /personal account/, /\b(usdt|tether|usdc)\b/, /deposit (in|with|via) (crypto|usdt|bitcoin)/],
     source: FINRA,
+  },
+  {
+    id: "proof_screenshots",
+    title: "Screenshots or stories of profits as proof",
+    why: "Screenshots, dashboards and stories of what someone else made are easy to fake, and fake platforms show made-up gains to draw in more money. A real investment can be checked through a registered firm, not a picture.",
+    patterns: [/screenshots?/, /proof of (profit|earnings|payout|withdrawal)/, /look (at )?how much (i|she|he|they) (made|earned)/, /testimonials?/],
+    source: { name: "SEC Investor.gov, relationship investment scams", url: "https://www.investor.gov/protect-your-investments/fraud/types-fraud/relationship-investment-scams" },
   },
   {
     id: "secrecy",
