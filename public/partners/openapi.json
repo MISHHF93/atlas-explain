@@ -5,45 +5,123 @@
     "version": "v1-sandbox",
     "summary": "Education-only market explanations and sourced official figures for apps and AI agents.",
     "description": "Plain-language explanations, evidence briefs, scheduled events with 'if this happens' explainers, and official figures from public sources, each with what must be credited. Education only: nothing here recommends, rates or forecasts anything. Crypto prices are not offered (their sources do not allow redistribution). Terms: https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md",
-    "license": { "name": "Partner terms (draft)", "url": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md" }
+    "license": {
+      "name": "Partner terms (draft)",
+      "url": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+    }
   },
-  "servers": [{ "url": "https://atlas-explain-mcp.atlas-explain.workers.dev/api/v1", "description": "Sandbox" }],
-  "security": [{ "partnerKey": [] }],
+  "servers": [
+    {
+      "url": "https://atlas-explain-mcp.atlas-explain.workers.dev/api/v1",
+      "description": "Sandbox"
+    }
+  ],
+  "security": [
+    {
+      "partnerKey": []
+    }
+  ],
   "components": {
     "securitySchemes": {
-      "partnerKey": { "type": "http", "scheme": "bearer", "description": "A partner key such as atlx_sbx_… . Sandbox keys allow 1,000 calls a day, reset at midnight UTC." }
+      "partnerKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A partner key such as atlx_sbx_… . Sandbox keys allow 1,000 calls a day, reset at midnight UTC."
+      }
     },
     "headers": {
-      "RateLimitRemaining": { "description": "Calls left today for this key.", "schema": { "type": "integer" } }
+      "RateLimitRemaining": {
+        "description": "Calls left today for this key.",
+        "schema": {
+          "type": "integer"
+        }
+      }
     },
     "schemas": {
       "Meta": {
         "type": "object",
-        "required": ["apiVersion", "generatedAt", "educationOnly", "notice", "credit", "terms"],
+        "required": [
+          "apiVersion",
+          "generatedAt",
+          "educationOnly",
+          "notice",
+          "credit",
+          "terms"
+        ],
         "properties": {
-          "apiVersion": { "type": "string", "examples": ["v1-sandbox"] },
-          "generatedAt": { "type": "string", "format": "date-time" },
-          "educationOnly": { "type": "boolean", "const": true },
-          "notice": { "type": "string" },
-          "credit": { "type": "array", "items": { "type": "string" }, "description": "What must be shown wherever the data is shown." },
-          "terms": { "type": "string", "format": "uri" }
+          "apiVersion": {
+            "type": "string",
+            "examples": [
+              "v1-sandbox"
+            ]
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "educationOnly": {
+            "type": "boolean",
+            "const": true
+          },
+          "notice": {
+            "type": "string"
+          },
+          "credit": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What must be shown wherever the data is shown."
+          },
+          "terms": {
+            "type": "string",
+            "format": "uri"
+          }
         }
       },
       "Envelope": {
         "type": "object",
-        "required": ["data", "meta"],
-        "properties": { "data": { "type": "object" }, "meta": { "$ref": "#/components/schemas/Meta" } }
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        }
       },
       "Error": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
-            "required": ["code", "message"],
+            "required": [
+              "code",
+              "message"
+            ],
             "properties": {
-              "code": { "type": "string", "enum": ["missing_key", "invalid_key", "daily_limit", "not_licensed", "not_found", "method_not_allowed", "not_available"] },
-              "message": { "type": "string" }
+              "code": {
+                "type": "string",
+                "enum": [
+                  "missing_key",
+                  "invalid_key",
+                  "daily_limit",
+                  "not_licensed",
+                  "not_found",
+                  "method_not_allowed",
+                  "not_available"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
             }
           }
         }
@@ -52,95 +130,386 @@
     "responses": {
       "Ok": {
         "description": "The data, and what to credit.",
-        "headers": { "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" } },
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Envelope" } } }
+        "headers": {
+          "X-RateLimit-Remaining": {
+            "$ref": "#/components/headers/RateLimitRemaining"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Envelope"
+            }
+          }
+        }
       },
-      "Unauthorized": { "description": "Missing or inactive key.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Unauthorized": {
+        "description": "Missing or inactive key.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
       "TooMany": {
         "description": "Today's limit is used up.",
-        "headers": { "Retry-After": { "description": "Seconds until the limit resets.", "schema": { "type": "integer" } } },
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds until the limit resets.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
       },
-      "NotAvailable": { "description": "Not available or not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+      "NotAvailable": {
+        "description": "Not available or not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
     }
   },
   "paths": {
     "/terms": {
       "get": {
         "summary": "Glossary terms in plain language",
-        "parameters": [{ "name": "q", "in": "query", "schema": { "type": "string" }, "description": "A term or part of one, for example 'yield curve'. Empty: every term." }],
-        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "429": { "$ref": "#/components/responses/TooMany" } }
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "A term or part of one, for example 'yield curve'. Empty: every term."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
       }
     },
     "/brief/{asset}": {
       "get": {
         "summary": "Evidence brief on one asset (not crypto)",
-        "parameters": [{ "name": "asset", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Name or symbol: AAPL, EUR/USD, 10-year, WTI." }],
+        "parameters": [
+          {
+            "name": "asset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name or symbol: AAPL, EUR/USD, 10-year, WTI."
+          }
+        ],
         "responses": {
-          "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "description": "Crypto: not licensed for redistribution.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "404": { "$ref": "#/components/responses/NotAvailable" }, "429": { "$ref": "#/components/responses/TooMany" }
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Crypto: not licensed for redistribution.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
         }
       }
     },
     "/notable": {
       "get": {
         "summary": "What stands out in today's official data, each item with the rule that picked it",
-        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "429": { "$ref": "#/components/responses/TooMany" } }
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
       }
     },
     "/calendar": {
       "get": {
         "summary": "Upcoming rate decisions and US data releases, with exact times and 'if this happens'",
         "parameters": [
-          { "name": "only", "in": "query", "schema": { "type": "string", "enum": ["rates", "data"] } },
-          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["json", "ics"], "default": "json" }, "description": "ics: one iCalendar file." }
+          {
+            "name": "only",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "rates",
+                "data"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "ics"
+              ],
+              "default": "json"
+            },
+            "description": "ics: one iCalendar file."
+          }
         ],
         "responses": {
           "200": {
             "description": "Events, as JSON or one iCalendar file.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Envelope" } }, "text/calendar": { "schema": { "type": "string" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              },
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" }, "429": { "$ref": "#/components/responses/TooMany" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
         }
       }
     },
     "/economy": {
       "get": {
         "summary": "Inflation, jobs, policy rates and US debt from official sources",
-        "parameters": [{ "name": "topic", "in": "query", "schema": { "type": "string" }, "description": "inflation, jobs, rates, debt, euro, canada or uk." }],
-        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotAvailable" }, "429": { "$ref": "#/components/responses/TooMany" } }
+        "parameters": [
+          {
+            "name": "topic",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "inflation, jobs, rates, debt, euro, canada or uk."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
       }
     },
     "/countries": {
       "get": {
         "summary": "G20 GDP growth, inflation, unemployment and GDP per person (World Bank, CC BY 4.0)",
         "parameters": [
-          { "name": "indicator", "in": "query", "schema": { "type": "string" }, "description": "gdp growth, inflation, unemployment or gdp per person." },
-          { "name": "countries", "in": "query", "schema": { "type": "string" }, "description": "Comma-separated names or codes." }
+          {
+            "name": "indicator",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "gdp growth, inflation, unemployment or gdp per person."
+          },
+          {
+            "name": "countries",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated names or codes."
+          }
         ],
-        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotAvailable" }, "429": { "$ref": "#/components/responses/TooMany" } }
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
+      }
+    },
+    "/series": {
+      "get": {
+        "summary": "Dated rows of official economic series, with source, licence and CSV, for charts and reports (no crypto or stock prices)",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "One to four series ids or names, comma-separated: us_cpi, us_unemployment, us_fed_funds, us_sofr, us_debt, euro_hicp, euro_deposit_rate, ca_policy_rate, uk_bank_rate, world_gdp_growth, world_inflation, world_unemployment, world_gdp_per_capita. Empty: the list."
+          },
+          {
+            "name": "countries",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "For world_ series: up to six G20 names or codes. Defaults to the United States."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
       }
     },
     "/auctions": {
       "get": {
         "summary": "US Treasury auctions, announced and recent results (TreasuryDirect)",
-        "parameters": [{ "name": "kind", "in": "query", "schema": { "type": "string", "enum": ["bills", "notes", "bonds", "tips"] } }],
-        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "429": { "$ref": "#/components/responses/TooMany" } }
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bills",
+                "notes",
+                "bonds",
+                "tips"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
       }
     },
     "/figures": {
       "get": {
         "summary": "Official figures: Treasury yields, ECB and Bank of Canada rates, EIA energy, SEC-filed company figures",
-        "parameters": [{ "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Name or symbol, for example 'Treasury', 'EUR', 'AAPL'." }],
-        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "429": { "$ref": "#/components/responses/TooMany" } }
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name or symbol, for example 'Treasury', 'EUR', 'AAPL'."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
       }
     },
     "/scam-check": {
       "post": {
         "summary": "Investment-fraud warning signs in a message, and where to check and report",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "text": { "type": "string", "maxLength": 4000 } } } } } },
-        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "429": { "$ref": "#/components/responses/TooMany" } }
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
       }
     },
     "/money": {
@@ -152,17 +521,65 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["calculation"],
+                "required": [
+                  "calculation"
+                ],
                 "properties": {
-                  "calculation": { "type": "string", "enum": ["compound_growth", "fees", "inflation", "diversification"] },
-                  "amount": { "type": "number" }, "monthly": { "type": "number" }, "rate_pct": { "type": "number" }, "fee_pct": { "type": "number" },
-                  "inflation_pct": { "type": "number" }, "years": { "type": "number" }, "volatility_pct": { "type": "number" }, "correlation": { "type": "number" }, "holdings": { "type": "number" }
+                  "calculation": {
+                    "type": "string",
+                    "enum": [
+                      "compound_growth",
+                      "fees",
+                      "inflation",
+                      "diversification"
+                    ]
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "monthly": {
+                    "type": "number"
+                  },
+                  "rate_pct": {
+                    "type": "number"
+                  },
+                  "fee_pct": {
+                    "type": "number"
+                  },
+                  "inflation_pct": {
+                    "type": "number"
+                  },
+                  "years": {
+                    "type": "number"
+                  },
+                  "volatility_pct": {
+                    "type": "number"
+                  },
+                  "correlation": {
+                    "type": "number"
+                  },
+                  "holdings": {
+                    "type": "number"
+                  }
                 }
               }
             }
           }
         },
-        "responses": { "200": { "$ref": "#/components/responses/Ok" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "404": { "$ref": "#/components/responses/NotAvailable" }, "429": { "$ref": "#/components/responses/TooMany" } }
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
       }
     }
   }

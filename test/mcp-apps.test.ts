@@ -30,6 +30,11 @@ describe("interactive views in the chat (MCP Apps)", () => {
       market_depth: "ui://atlas-explain/market-depth.html",
       notable_today: "ui://atlas-explain/notable-today.html",
       money_maths: "ui://atlas-explain/money-maths.html",
+      evidence_brief: "ui://atlas-explain/evidence-brief.html",
+      upcoming_events: "ui://atlas-explain/coming-up.html",
+      treasury_auctions: "ui://atlas-explain/treasury-auctions.html",
+      compare_countries: "ui://atlas-explain/countries.html",
+      data_series: "ui://atlas-explain/data-series.html",
     });
   });
 

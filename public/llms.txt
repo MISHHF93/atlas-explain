@@ -22,6 +22,7 @@ MCP Registry name: io.github.MISHHF93/atlas-explain
 - scam_red_flags: warning signs of investment fraud in a message or offer, where to check registration and where to report
 - treasury_auctions: upcoming US Treasury auctions and the latest results
 - compare_countries: GDP growth, inflation, unemployment and GDP per person across the G20, from the World Bank
+- data_series: dated rows and CSV of official economic series, with source and licence, for charts, spreadsheets and reports
 - notable_today: what stands out in the data today, each item with the rule that picked it
 - todays_headlines: official press releases and recent market news
 

@@ -18,7 +18,7 @@ describe("ATLAS Explain MCP server", () => {
     expect((old?.result as { protocolVersion: string }).protocolVersion).toBe("2025-11-25");
     const current = await handle({ jsonrpc: "2.0", id: 5, method: "initialize", params: { protocolVersion: "2025-11-25" } }, never);
     expect((current?.result as { protocolVersion: string }).protocolVersion).toBe("2025-11-25");
-    expect(TOOLS.map((t) => t.name)).toEqual(["explain_term", "browse_glossary", "asset_details", "official_figures", "crypto_prices", "price_history", "todays_headlines", "economy_snapshot", "economic_calendar", "market_depth", "evidence_brief", "notable_today", "upcoming_events", "money_maths", "scam_red_flags", "treasury_auctions", "compare_countries"]);
+    expect(TOOLS.map((t) => t.name)).toEqual(["explain_term", "browse_glossary", "asset_details", "official_figures", "crypto_prices", "price_history", "todays_headlines", "economy_snapshot", "economic_calendar", "market_depth", "evidence_brief", "notable_today", "upcoming_events", "money_maths", "scam_red_flags", "treasury_auctions", "compare_countries", "data_series"]);
     expect(TOOLS.every((t) => t.annotations.readOnlyHint)).toBe(true);
   });
 

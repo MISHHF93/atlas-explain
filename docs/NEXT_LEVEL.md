@@ -150,7 +150,7 @@ A 2026 FINRA Foundation and Stanford study found only 18% of US investors show a
 
 ## Where things stand (18 Nov 2026)
 
-**Live:** connector 1.15.0 with 17 tools, 10 prompts and the views; every tool returns structured content with an output schema; the partner sandbox at `/api/v1` and on keyed MCP (crypto hidden). A live sweep of every tool, prompt, view and error path, and an end-to-end partner key test (issue, call every endpoint, revoke), passed on 18 Nov 2026.
+**Live:** connector 1.16.0 with 18 tools, 11 prompts and 12 views (new in 1.16.0: `data_series` with CSV and the `make_a_report` prompt; views for countries, coming up, Treasury auctions, the evidence brief and data series); every tool returns structured content with an output schema; the partner sandbox at `/api/v1` and on keyed MCP (crypto hidden). A live sweep of every tool, prompt, view and error path, and an end-to-end partner key test (issue, call every endpoint, revoke), passed on 18 Nov 2026.
 
 **Next to build, in order:**
 1. Learning hub beside the chat, then spaced review (13, 14).
@@ -166,3 +166,15 @@ A 2026 FINRA Foundation and Stanford study found only 18% of US investors show a
 12 (quick, one release with 11), then 16 (distribution), then 13 + 14 (learning), then 15 and 17.
 
 Sources: claude.com "Interactive connectors and MCP Apps" and "Open your apps in Claude"; @ClaudeDevs on app tools and embedded sites (Nov 2026); MCP blog on the 2026-07-28 spec; sunpeak.ai on app-only tool visibility; reporting on the plugin directory portal (Sep 2026); 11:FS and Gerald on gamification in finance learning; World Bank, IMF and OECD API listings. Third-party claims (for example, that entry points need a Verified listing) to be checked against Anthropic's docs before relying on them.
+
+## Round 5: what institutions want from a data connector (researched 18 Nov 2026)
+
+The big vendors now ship MCP servers (FactSet, LSEG, S&P Global, MSCI), all entitlement-gated, selling licensed prices, fundamentals, estimates and indices. ATLAS Explain can't and shouldn't compete there: it has no licence for prices. What it can sell is what they don't do well, built only from public data:
+
+1. **Exact event times for rule enforcement.** Prop firms commonly bar trading in a window around high-impact releases (some 2 minutes either side). `upcoming_events` already has exact times for BLS releases, FOMC, ECB, BoE, BoC and Treasury auctions; next: a `/calendar?format=windows` view with start and end of each window, as a schedule only.
+2. **Plain-language explanation as a service.** Banks' customer apps need explanations people understand (UK Consumer Duty, FINRA's literacy findings): `/terms`, `/brief` and the "if this happens" text, white-labelled.
+3. **Fraud warning signs.** UK APP-fraud reimbursement (since Oct 2024) gives banks a reason to check messages customers paste in: `/scam-check`.
+4. **Official series with licences attached.** `data_series` / `/series`: every row carries its source and licence, which compliance teams ask for.
+5. **Next to build from public data:** what changed between one central-bank statement and the last (public domain text, a popular paid product elsewhere); point-in-time copies of each release as first published (revisions matter to analysts); CFTC weekly positioning (CC0); 8-K filing events from EDGAR.
+
+Not offered: crypto and stock prices (no redistribution licence), anything that rates, ranks or forecasts.

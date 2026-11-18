@@ -31,17 +31,22 @@ import { FIGURES_APP_HTML, FIGURES_APP_URI } from "./figures-app";
 import { ECONOMY_APP_HTML, ECONOMY_APP_URI } from "./economy-app";
 import { DEPTH_APP_HTML, DEPTH_APP_URI } from "./depth-app";
 import { NOTABLE_APP_HTML, NOTABLE_APP_URI } from "./notable-app";
+import { AUCTIONS_APP_HTML, AUCTIONS_APP_URI } from "./auctions-app";
+import { BRIEF_APP_HTML, BRIEF_APP_URI } from "./brief-app";
+import { COUNTRIES_APP_HTML, COUNTRIES_APP_URI } from "./countries-app";
+import { EVENTS_APP_HTML, EVENTS_APP_URI } from "./events-app";
+import { SERIES_APP_HTML, SERIES_APP_URI } from "./series-app";
 import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
 import { moneyMaths, type MoneyCalc } from "../core/money-maths";
 import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
 import { comingUp } from "../core/coming-up";
 import { countdown } from "../core/scenarios";
 import { ICON_PNG_64_BASE64 } from "./icon-data";
-import { readEconomyFile, upcoming, type Auction, type CalendarEvent, type EconomyFile, type Indicator } from "../data/economy";
+import { readEconomyFile, upcoming, type Auction, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "../data/economy";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.15.0";
+export const SERVER_VERSION = "1.16.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -250,6 +255,7 @@ export const TOOLS: readonly Tool[] = [
     inputSchema: { type: "object", properties: { asset: str("Name or symbol, for example 'Bitcoin', 'AAPL', 'EUR/USD' or '10-year'.") }, required: ["asset"], additionalProperties: false },
     annotations: annotations("Evidence brief on one asset", true),
     icons: ICONS,
+    _meta: { ui: { resourceUri: BRIEF_APP_URI } },
     outputSchema: obj({
       asset: { type: "object", properties: { name: { type: "string" }, symbol: { type: "string" }, assetClass: { type: "string" }, appUrl: nullable("string") } },
       facts: { type: "array", items: { type: "object" } },
@@ -291,6 +297,7 @@ export const TOOLS: readonly Tool[] = [
     inputSchema: { type: "object", properties: { only: { type: "string", enum: ["rates", "data"], description: "Optional: only rate decisions, or only data releases." } }, additionalProperties: false },
     annotations: annotations("Coming up: decisions and data releases", true),
     icons: ICONS,
+    _meta: { ui: { resourceUri: EVENTS_APP_URI } },
     outputSchema: obj({
       refreshedAt: { type: "string" },
       events: { type: "array", items: { type: "object", properties: {
@@ -347,6 +354,7 @@ export const TOOLS: readonly Tool[] = [
     inputSchema: { type: "object", properties: { kind: str("Optional: 'bills', 'notes', 'bonds' or 'TIPS'. Leave empty for all.") }, additionalProperties: false },
     annotations: annotations("US Treasury auctions", true),
     icons: ICONS,
+    _meta: { ui: { resourceUri: AUCTIONS_APP_URI } },
     outputSchema: obj({
       refreshedAt: { type: "string" },
       upcoming: { type: "array", items: { type: "object" } },
@@ -364,22 +372,40 @@ export const TOOLS: readonly Tool[] = [
     }, additionalProperties: false },
     annotations: annotations("Countries compared", true),
     icons: ICONS,
+    _meta: { ui: { resourceUri: COUNTRIES_APP_URI } },
     outputSchema: obj({
       refreshedAt: { type: "string" }, source: { type: "string" },
       indicators: { type: "array", items: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, unit: { type: "string" }, about: { type: "string" } } } },
       countries: { type: "array", items: { type: "object", properties: { code: { type: "string" }, name: { type: "string" }, values: { type: "object" } } } },
     }, ["indicators", "countries"]),
   },
+  {
+    name: "data_series",
+    title: "Data series for charts and reports",
+    description: "Clean dated rows of official economic data, with source and licence, for making a chart, spreadsheet, table or report. Use it when someone wants the numbers themselves, or to build something from them. Covers US inflation, unemployment, the fed funds rate, SOFR and debt, euro-area inflation, the ECB, Bank of Canada and Bank of England rates, and World Bank GDP growth, inflation, unemployment and GDP per person for the G20. Also returns CSV. Leave empty for the list. Never crypto or stock prices.",
+    inputSchema: { type: "object", properties: {
+      series: str("Optional: one to four series ids or names, separated by commas, for example 'us_cpi, uk_bank_rate' or 'world_inflation'. Leave empty to list what's available."),
+      countries: str("For world_ series: up to six G20 country names or codes, for example 'Japan, Germany'. Defaults to the United States."),
+    }, additionalProperties: false },
+    annotations: annotations("Data series for charts and reports", true),
+    icons: ICONS,
+    _meta: { ui: { resourceUri: SERIES_APP_URI } },
+    outputSchema: obj({
+      series: { type: "array", items: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, unit: { type: "string" }, frequency: { type: "string" }, country: nullable("string"), source: { type: "string" }, sourceUrl: { type: "string" }, licence: { type: "string" }, points: { type: "array", items: { type: "object", properties: { date: { type: "string" }, value: { type: "number" } } } } } } },
+      available: { type: "array", items: { type: "object" } },
+      csv: { type: "string" },
+    }, ["series", "csv"]),
+  },
 ];
 
 export const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule; compare_countries for GDP growth, inflation, unemployment and GDP per person across the G20; upcoming_events for the next rate decisions and US data releases with exact times, countdowns and what each possible outcome would mean; treasury_auctions for US Treasury auctions; money_maths for compound growth, fees, inflation and diversification worked out from the person's own numbers; scam_red_flags for the warning signs of investment fraud and where to check and report. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth and notable_today also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule; compare_countries for GDP growth, inflation, unemployment and GDP per person across the G20; data_series for clean dated rows (and CSV) of official economic data to build charts, spreadsheets or reports from; upcoming_events for the next rate decisions and US data releases with exact times, countdowns and what each possible outcome would mean; treasury_auctions for US Treasury auctions; money_maths for compound growth, fees, inflation and diversification worked out from the person's own numbers; scam_red_flags for the warning signs of investment fraud and where to check and report. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth, notable_today, money_maths, evidence_brief, compare_countries, upcoming_events, treasury_auctions and data_series also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
 export const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
   prompts: { listChanged: false },
   completions: {},
-  // The views (price_history, crypto_prices, official_figures, economy_snapshot, market_depth, notable_today) are MCP Apps; hosts without them get the text answer.
+  // The views (see MCP_APPS) are MCP Apps; hosts without them get the text answer.
   extensions: { "io.modelcontextprotocol/ui": { mimeTypes: [MCP_APP_MIME] } },
 };
 const SERVER_INFO = () => ({ name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: SERVER_ICONS });
@@ -395,6 +421,11 @@ export const MCP_APPS = [
   { uri: DEPTH_APP_URI, name: "market-depth", title: "Order book depth chart", description: "The view market_depth draws in clients that support MCP Apps: best bid and ask, the spread, a depth chart of the order book and slippage by order size.", html: DEPTH_APP_HTML },
   { uri: MONEY_APP_URI, name: "money-maths", title: "Money maths", description: "The view money_maths draws in clients that support MCP Apps: the result as a chart, with the inputs as fields to change.", html: MONEY_APP_HTML },
   { uri: NOTABLE_APP_URI, name: "notable-today", title: "What's notable today", description: "The view notable_today draws in clients that support MCP Apps: a card per item with why it was picked and its source, then what was checked and found ordinary.", html: NOTABLE_APP_HTML },
+  { uri: COUNTRIES_APP_URI, name: "countries", title: "Countries compared", description: "The view compare_countries draws in clients that support MCP Apps: a bar per country for one indicator, with the year of each figure.", html: COUNTRIES_APP_HTML },
+  { uri: EVENTS_APP_URI, name: "coming-up", title: "Coming up", description: "The view upcoming_events draws in clients that support MCP Apps: a timeline of rate decisions and data releases, with countdowns and what each outcome would mean.", html: EVENTS_APP_HTML },
+  { uri: AUCTIONS_APP_URI, name: "treasury-auctions", title: "US Treasury auctions", description: "The view treasury_auctions draws in clients that support MCP Apps: auctions announced, and recent results as bars of yield with bid-to-cover.", html: AUCTIONS_APP_HTML },
+  { uri: BRIEF_APP_URI, name: "evidence-brief", title: "Evidence brief", description: "The view evidence_brief draws in clients that support MCP Apps: a one-page fact sheet with sources and what the brief doesn't tell you.", html: BRIEF_APP_HTML },
+  { uri: SERIES_APP_URI, name: "data-series", title: "Data series", description: "The view data_series draws in clients that support MCP Apps: a chart per series with its latest value, period, source and licence.", html: SERIES_APP_HTML },
   { uri: FIGURES_APP_URI, name: "official-figures", title: "Official figures and yield curve", description: "The view official_figures draws in clients that support MCP Apps: figure cards, and a yield curve when the answer holds government bond yields.", html: FIGURES_APP_HTML },
 ] as const;
 
@@ -484,6 +515,13 @@ export const PROMPTS = [
     description: "Three short questions on a learning-path topic, one at a time, each checked and explained.",
     arguments: [{ name: "topic", description: "Optional topic, for example 'orders', 'risk' or 'rates'. Leave empty for the first topic.", required: false }],
     text: (a: Record<string, string>) => `Using ATLAS Explain, quiz me on ${a.topic ? `the "${a.topic}" topic` : "the first topic"} of the learning path (browse_glossary). Ask three short questions one at a time, wait for my answer, then say whether it's right and explain the term. Education only.`,
+  },
+  {
+    name: "make_a_report",
+    title: "Make a chart or report",
+    description: "A chart, table or one-page report built from official data, with every source and licence, to keep or share.",
+    arguments: [{ name: "topic", description: "What it's about, for example 'US inflation this year', 'G20 growth' or 'interest rates in the US, UK and euro area'.", required: true }],
+    text: (a: Record<string, string>) => `Using ATLAS Explain, make a chart and a short report I can keep on ${a.topic || "the economy today"}. Get the numbers from data_series (and compare_countries or economy_snapshot where they help), draw a clear chart with units and periods labelled, add a small table, and explain in plain language what the figures show and the terms they use. Put each source and its licence under the chart. Describe the past only: no forecast and no suggestion to trade.`,
   },
 ] as const;
 
@@ -1404,6 +1442,99 @@ export async function compareCountries(indicator: string | undefined, countries:
   });
 }
 
+/* ---------- data series: clean rows for charts, spreadsheets and reports (government and World Bank data only) ---------- */
+
+/** What each source allows; crypto and stock prices are never offered as data (their sources don't allow it). */
+const SERIES_LICENCE: Record<string, string> = {
+  "U.S. Bureau of Labor Statistics": "Public domain (US government work). Credit the source.",
+  "Federal Reserve Bank of New York": "Free to reuse with credit to the Federal Reserve Bank of New York.",
+  "U.S. Department of the Treasury, Fiscal Data": "Public domain (US government work). Credit the source.",
+  "European Central Bank": "Free to reuse with credit to the European Central Bank.",
+  "Bank of Canada": "Free to reuse with credit to the Bank of Canada.",
+  "Bank of England": "Free to reuse with credit to the Bank of England (its terms apply).",
+};
+const ECON_SERIES_WORDS: Record<string, IndicatorId> = {
+  cpi: "us_cpi", "us cpi": "us_cpi", "us inflation": "us_cpi", inflation: "us_cpi",
+  "us unemployment": "us_unemployment", unemployment: "us_unemployment", jobs: "us_unemployment",
+  "fed funds": "us_fed_funds", "federal funds": "us_fed_funds", fed: "us_fed_funds", sofr: "us_sofr",
+  "euro inflation": "euro_hicp", hicp: "euro_hicp", "euro area inflation": "euro_hicp",
+  ecb: "euro_deposit_rate", "ecb rate": "euro_deposit_rate", "euro deposit rate": "euro_deposit_rate",
+  boc: "ca_policy_rate", "canada rate": "ca_policy_rate", "bank of canada": "ca_policy_rate",
+  boe: "uk_bank_rate", "bank rate": "uk_bank_rate", "uk rate": "uk_bank_rate", "bank of england": "uk_bank_rate",
+  debt: "us_debt", "us debt": "us_debt", "national debt": "us_debt",
+};
+const NOT_DATA = /\b(bitcoin|btc|ether(eum)?|eth|solana|sol|crypto|coins?|stocks?|share prices?|aapl|nvda|msft|s&p|nasdaq)\b/i;
+
+type SeriesOut = { id: string; name: string; unit: string; frequency: string; country: string | null; source: string; sourceUrl: string; licence: string; points: { date: string; value: number }[] };
+
+const frequencyOf = (dates: string[]) => (dates.every((d) => /^\d{4}$/.test(d)) ? "yearly" : dates.every((d) => /^\d{4}-\d{2}$/.test(d)) ? "monthly" : "daily");
+const csvCell = (v: string | number | null) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+
+export async function dataSeries(series: string | undefined, countries: string | undefined, fetcher: Fetcher): Promise<ToolResult> {
+  const [economy, worldBody] = await Promise.all([loadEconomy(fetcher), getJson(WORLD_DATA_URL, fetcher)]);
+  const world: WorldFile | null = worldBody == null ? null : readWorldFile(worldBody);
+  const econ = (economy?.indicators ?? []).filter((i) => i.series.length > 1);
+  const worldMetas = WORLD_INDICATORS.filter((w) => world?.indicators.some((d) => d.id === w.id));
+  const catalog = [
+    ...econ.map((i) => ({ id: i.id as string, name: i.name, unit: i.unit as string, points: i.series.length, source: i.source, needsCountry: false })),
+    ...worldMetas.map((w) => ({ id: `world_${w.id}`, name: `${w.name} by country`, unit: w.unit as string, points: world!.indicators.find((d) => d.id === w.id)!.rows[0]?.series.length ?? 0, source: world!.source.name, needsCountry: true })),
+  ];
+  if (!catalog.length) return text("ATLAS Explain's data series couldn't be loaded right now. Nothing is shown in their place; try again later.", true);
+  const asked = (series ?? "").split(",").map((w) => w.trim()).filter(Boolean);
+  if (!asked.length) {
+    const lines = catalog.map((c) => `- ${c.id}: ${c.name} (${c.unit}), ${c.points} points, ${c.source}${c.needsCountry ? "; give countries" : ""}`);
+    return data(
+      `Data series ATLAS Explain can give as rows, for charts, spreadsheets or reports:\n${lines.join("\n")}\n\nAsk for one to four by id or name, for example "us_cpi, uk_bank_rate", or "world_inflation" with countries "Japan, Germany". Crypto and stock prices aren't offered as data: their sources don't allow it.`,
+      { series: [], available: catalog.map((c) => ({ id: c.id, name: c.name, unit: c.unit, points: c.points, source: c.source })), csv: "" },
+    );
+  }
+  if (asked.length > 4) return text("Ask for at most four series at a time.", true);
+  const blocked = asked.find((w) => NOT_DATA.test(w));
+  if (blocked) return text(`"${blocked}" isn't offered as data: crypto and stock prices come from sources that don't allow redistribution. price_history and crypto_prices show coin prices inside the chat instead.`, true);
+  const wantCountries = (countries ?? "").split(",").map((w) => w.trim()).filter(Boolean);
+  const codes = wantCountries.map(countryCode);
+  const unknownCountry = wantCountries.filter((_, i) => !codes[i]);
+  if (unknownCountry.length) return text(`Not in the G20 list ATLAS Explain covers: ${unknownCountry.join(", ")}.`, true);
+  if (codes.length > 6) return text("Give at most six countries.", true);
+
+  const out: SeriesOut[] = [];
+  const unknown: string[] = [];
+  for (const word of asked) {
+    const w = word.toLowerCase().replace(/\s+/g, " ");
+    // A world_ id, or a plain word like "inflation" when countries are given, means the World Bank series.
+    const worldId = w.startsWith("world_") ? w.slice(6) : codes.length ? (WORLD_WORDS[w] ?? WORLD_INDICATORS.find((i) => i.name.toLowerCase() === w)?.id) : undefined;
+    const meta = worldMetas.find((i) => i.id === worldId);
+    if (meta && world) {
+      const rows = world.indicators.find((d) => d.id === meta.id)?.rows ?? [];
+      for (const code of codes.length ? (codes as string[]) : ["USA"]) {
+        const row = rows.find((r) => r.country === code);
+        if (!row?.series.length) continue;
+        out.push({
+          id: `world_${meta.id}`, name: `${meta.name}, ${WORLD_COUNTRIES.find((c) => c.code === code)?.name ?? code}`, unit: meta.unit, frequency: "yearly", country: code,
+          source: world.source.name, sourceUrl: world.source.url, licence: `${world.source.licence}. Credit the World Bank.`,
+          points: row.series.map((p) => ({ date: p.year, value: p.value })),
+        });
+      }
+      continue;
+    }
+    const ind = econ.find((i) => i.id === w) ?? econ.find((i) => i.id === ECON_SERIES_WORDS[w]);
+    if (!ind) {
+      unknown.push(word);
+      continue;
+    }
+    const points = ind.series.map((p) => ({ date: p.t, value: p.v }));
+    out.push({ id: ind.id, name: ind.name, unit: ind.unit, frequency: frequencyOf(points.map((p) => p.date)), country: null, source: ind.source, sourceUrl: ind.sourceUrl, licence: SERIES_LICENCE[ind.source] ?? `Credit ${ind.source}.`, points });
+  }
+  if (unknown.length) return text(`No data series called ${unknown.map((u) => `"${u}"`).join(", ")}. Leave the series empty to list them all.`, true);
+  if (!out.length) return text("No figures were published for those countries.", true);
+  const csv = ["series,name,country,date,value,unit", ...out.flatMap((s) => s.points.map((p) => [s.id, s.name, s.country, p.date, p.value, s.unit].map(csvCell).join(",")))].join("\n");
+  const heads = out.map((s) => `- ${s.name} (${s.unit === "USD" ? "US dollars" : "%"}, ${s.frequency}): ${s.points.length} points, ${s.points[0]!.date} to ${s.points[s.points.length - 1]!.date}. Source: ${s.source} (${s.sourceUrl}). ${s.licence}`);
+  return data(
+    `Data series, actual published values only (never a projection):\n${heads.join("\n")}\n\nAs CSV, ready for a chart, spreadsheet or report (keep the source lines with it):\n\`\`\`csv\n${csv}\n\`\`\``,
+    { series: out, csv },
+  );
+}
+
 const text_of = (r: ToolResult) => r.content[0]?.text.split("\n\n")[0] ?? "";
 
 /* ---------- JSON-RPC (the HTTP transport is in src/mcp/http.ts) ---------- */
@@ -1512,6 +1643,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "scam_red_flags": return ok(await scamRedFlags(s(args.pitch), fetcher));
         case "treasury_auctions": return ok(await treasuryAuctions(s(args.kind), fetcher));
         case "compare_countries": return ok(await compareCountries(s(args.indicator), s(args.countries), fetcher));
+        case "data_series": return ok(await dataSeries(s(args.series), s(args.countries), fetcher));
         default: return fail(-32602, `Unknown tool: ${String(name)}`);
       }
     }

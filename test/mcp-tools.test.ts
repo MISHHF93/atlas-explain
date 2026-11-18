@@ -50,8 +50,8 @@ const net = (opts: { cryptoAsOf?: string; cryptoDown?: boolean } = {}): Fetcher 
 const body = (r: { content: { text: string }[] }) => r.content[0]!.text;
 
 describe("the connector covers what the app shows", () => {
-  it("lists seventeen read-only tools, each with a description and an input schema", () => {
-    expect(TOOLS).toHaveLength(17);
+  it("lists eighteen read-only tools, each with a description and an input schema", () => {
+    expect(TOOLS).toHaveLength(18);
     for (const t of TOOLS) {
       expect(t.annotations.readOnlyHint).toBe(true);
       expect(t.description.length).toBeGreaterThan(40);
@@ -196,7 +196,7 @@ describe("structured output, prompts, icons and the chart app", () => {
 
   it("offers ten education-only prompts that fill in their arguments", async () => {
     const list = (await handle({ jsonrpc: "2.0", id: 1, method: "prompts/list" }, full))?.result as { prompts: { name: string }[] };
-    expect(list.prompts.map((p) => p.name)).toEqual(["market_brief", "explain_asset", "learn_next", "brief_on_asset", "economy_today", "whats_notable", "check_an_offer", "money_lesson", "whats_coming_up", "quiz_me"]);
+    expect(list.prompts.map((p) => p.name)).toEqual(["market_brief", "explain_asset", "learn_next", "brief_on_asset", "economy_today", "whats_notable", "check_an_offer", "money_lesson", "whats_coming_up", "quiz_me", "make_a_report"]);
     const got = (await handle({ jsonrpc: "2.0", id: 2, method: "prompts/get", params: { name: "explain_asset", arguments: { asset: "Solana" } } }, full))?.result as { messages: { content: { text: string } }[] };
     const text = got.messages[0]!.content.text;
     expect(text).toContain("explain Solana");

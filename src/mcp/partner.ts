@@ -12,7 +12,7 @@
  * 5 minutes, so usage stays inside the free plan's 1,000 KV writes a day; the limit is approximate by design.
  */
 import { searchTerms } from "../core/terms";
-import { EDUCATION_LINE, compareCountries, economySnapshot, evidenceBrief, moneyMathsTool, notableToday, officialFigures, scamRedFlags, treasuryAuctions, upcomingEvents, type Fetcher, type ToolResult } from "./server";
+import { EDUCATION_LINE, compareCountries, dataSeries, economySnapshot, evidenceBrief, moneyMathsTool, notableToday, officialFigures, scamRedFlags, treasuryAuctions, upcomingEvents, type Fetcher, type ToolResult } from "./server";
 import { comingUp } from "../core/coming-up";
 import { eventIcs } from "../core/scenarios";
 import { readEconomyFile } from "../data/economy";
@@ -128,6 +128,7 @@ export const ENDPOINTS = [
   { method: "GET", path: "/api/v1/calendar?only=rates|data&format=json|ics", what: "Upcoming rate decisions and US data releases with exact times and 'if this happens' explainers." },
   { method: "GET", path: "/api/v1/economy?topic=", what: "Inflation, jobs, policy rates and US debt from official sources." },
   { method: "GET", path: "/api/v1/countries?indicator=&countries=", what: "GDP growth, inflation, unemployment and GDP per person for the G20 (World Bank, CC BY 4.0)." },
+  { method: "GET", path: "/api/v1/series?ids=&countries=", what: "Dated rows (and CSV) of official economic series with source and licence, for charts and reports. No crypto or stock prices." },
   { method: "GET", path: "/api/v1/auctions?kind=", what: "US Treasury auctions, announced and recent results (TreasuryDirect)." },
   { method: "GET", path: "/api/v1/figures?q=", what: "Official figures: Treasury yields, ECB and Bank of Canada rates, EIA energy, SEC-filed company figures." },
   { method: "POST", path: "/api/v1/scam-check", what: "Body {\"text\": \"…\"}: which investment-fraud warning signs a message shows, where to check and report." },
@@ -142,6 +143,7 @@ const CREDIT: Record<string, string[]> = {
   economy: ["Each figure names its source (BLS, New York Fed, ECB, Bank of Canada, Bank of England, US Treasury)"],
   countries: ["World Bank, World Development Indicators (CC BY 4.0)"],
   auctions: ["TreasuryDirect, U.S. Department of the Treasury"],
+  series: ["Each series names its source and licence; show them with the data"],
   figures: ["Each figure names its source"],
   "scam-check": ["SEC Investor.gov and FINRA (linked per warning sign)"],
   money: ["Arithmetic on the numbers given"],
@@ -223,6 +225,9 @@ export async function handlePartnerApi(request: Request, store: PartnerStore, fe
       break;
     case "countries":
       if (want("GET")) return envelope("countries", await compareCountries(q("indicator"), q("countries"), fetcher), left);
+      break;
+    case "series":
+      if (want("GET")) return envelope("series", await dataSeries(q("ids"), q("countries"), fetcher), left);
       break;
     case "auctions":
       if (want("GET")) return envelope("auctions", await treasuryAuctions(q("kind"), fetcher, now), left);
