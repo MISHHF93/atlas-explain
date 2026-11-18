@@ -733,7 +733,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   async function startAccount(b: WebBackend): Promise<void> {
     try {
       await b.watchAccount((view) => {
+        const wasSignedIn = Boolean(account?.signedIn);
         account = view;
+        // The sign-in state arrives a moment after the page: a page drawn before it must follow it.
+        // Signed in while the Sign in page shows (its hint was missing): go on into the app.
+        if (view?.signedIn && route.kind === "signin" && signInPage.open) window.setTimeout(() => afterSignIn(), 0);
+        // The account sheet opened at /app/account was drawn signed out: draw it again for this account.
+        else if (route.kind === "tab" && route.tab === "settings" && wasSignedIn !== Boolean(view?.signedIn)) openAccount();
         shell.setAccount(view);
         shell.setMenuItemHidden("account", !view?.signedIn);
         shell.setMenuItemHidden("signout", !view?.signedIn);
