@@ -109,3 +109,21 @@ describe("what's notable today: descriptive, picked by stated rules, never a for
     expect(JSON.stringify(prompt?.result)).toContain("notable_today");
   });
 });
+
+describe("a central bank's move is notable only while it is recent", () => {
+  it("flags the Bank of England's 5 Nov move on 18 Nov, but not the ECB's from 16 Sep", async () => {
+    const { parseBoeBankRate, parseEcbDepositRate } = await import("../src/data/economy");
+    const at = "2026-11-18T15:00:00.000Z";
+    const file = { ...economy, indicators: [parseBoeBankRate(fx("boe-bank-rate.csv"), at)!, parseEcbDepositRate(fx("ecb-deposit-rate.csv"), at)!] };
+    const fetcher: Fetcher = async (url) => {
+      if (url.includes("news")) return new Response("gone", { status: 404 });
+      const body = url.includes("crypto") ? crypto : url.includes("economy") ? file : market(5.4);
+      return new Response(JSON.stringify(body), { status: 200 });
+    };
+    const r = (await notableToday(fetcher, Date.parse(at))).structuredContent as { observations: Obs[] };
+    const titles = r.observations.filter((o) => o.kind === "economic_change").map((o) => o.title);
+    expect(titles.some((t) => t.startsWith("Bank of England Bank Rate rose"))).toBe(true);
+    expect(titles.some((t) => t.startsWith("ECB deposit facility rate"))).toBe(false);
+    expect(r.observations.find((o) => o.title.startsWith("Bank of England"))!.rule).toMatch(/within the last 14 days/);
+  });
+});

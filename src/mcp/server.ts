@@ -1036,6 +1036,8 @@ export const ECONOMIC_CHANGE_MIN_PT = 0.2;
 /** A yield curve this close to flat (10-year minus 3-month, in percentage points) is called flat. */
 export const FLAT_CURVE_PT = 0.25;
 const NOTABLE_DAYS_AHEAD = 7;
+/** A central bank's move counts as notable for this many days after it takes effect. */
+export const POLICY_MOVE_DAYS = 14;
 const RELEASE_HOURS = 24;
 
 type Observation = { kind: string; title: string; detail: string; asOf: string | null; source: string; sourceUrl: string | null; rule: string; terms: { id: string; title: string }[] };
@@ -1142,7 +1144,19 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
       });
     }
     if (!soon.length) quiet.push(`No Fed, ECB, Bank of Canada or Bank of England rate decision in the next ${NOTABLE_DAYS_AHEAD} days.`);
-    const changed = economy.indicators.filter((i) => i.unit === "%" && i.change != null && Math.abs(i.change) >= ECONOMIC_CHANGE_MIN_PT);
+    // A policy rate's "change since the last move" stays the same for months; it only counts while the
+    // move itself is recent (the day it took effect is the last step in its series).
+    const movedOn = (i: Indicator): string | null => {
+      const s = i.series;
+      for (let k = s.length - 1; k > 0; k--) if (s[k]!.v !== s[k - 1]!.v) return s[k]!.t;
+      return null;
+    };
+    const recentEnough = (i: Indicator) => {
+      if (i.changeWindow !== "since the last change") return true;
+      const day = movedOn(i);
+      return day != null && now - Date.parse(`${day.slice(0, 10)}T12:00:00Z`) <= POLICY_MOVE_DAYS * 86_400_000;
+    };
+    const changed = economy.indicators.filter((i) => i.unit === "%" && i.change != null && Math.abs(i.change) >= ECONOMIC_CHANGE_MIN_PT && recentEnough(i));
     for (const i of changed) {
       observations.push({
         kind: "economic_change",
@@ -1151,7 +1165,7 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
         asOf: economy.generatedAt,
         source: i.source,
         sourceUrl: i.sourceUrl,
-        rule: `Picked because it changed by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points since the previous figure.`,
+        rule: i.changeWindow === "since the last change" ? `Picked because the rate moved by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points within the last ${POLICY_MOVE_DAYS} days.` : `Picked because it changed by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points since the previous figure.`,
         terms: termRefs("basis_point", "rates"),
       });
     }

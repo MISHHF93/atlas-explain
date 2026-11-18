@@ -456,12 +456,19 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   atlasBlock.append(marketCard, brief.node, el("h2", "section-label", "Paper signal light"), signal.node);
   // In the news: real headlines (GDELT and official releases), each one tap from a plain explanation.
   let headlines: HTMLElement = headlinesCard({ kind: "loading" }, (title) => sendToExplain(title));
+  // What stands out (the connector's notable_today) and the central banks' rates, loaded after start.
+  const briefSlot = el("div", "stack today-brief");
   shell.panels.today.append(
     todayHead,
     liveCard,
+    briefSlot,
     headlines,
     atlasBlock,
   );
+  void Promise.all([import("../core/today-brief"), import("../wallet/today-brief")]).then(([data, ui]) => {
+    briefSlot.replaceChildren(...ui.todayBriefCards("loading", (text) => sendToExplain(text)));
+    return data.loadTodayBrief().then((brief) => briefSlot.replaceChildren(...ui.todayBriefCards(brief, (text) => sendToExplain(text))));
+  }).catch(() => briefSlot.replaceChildren());
   void import("../core/catalog")
     .then((mod) => mod.loadHeadlines())
     .catch(() => ({ kind: "unavailable" as const }))

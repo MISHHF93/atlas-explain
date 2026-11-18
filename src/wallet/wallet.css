@@ -1224,3 +1224,19 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .term-diagram text { fill: currentColor; font-family: inherit; }
 .term-diagram .dg-label { font-size: var(--atlas-text-xs); font-weight: 700; }
 .term-diagram .dg-note { font-size: var(--atlas-text-2xs); opacity: 0.75; }
+
+/* Today: what stands out, and the central banks' rates (src/wallet/today-brief.ts). */
+.notable-list { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.notable-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 0.6rem 0.7rem; border-radius: var(--atlas-radius); background: color-mix(in srgb, var(--atlas-ink) 4%, transparent); }
+.notable-text { display: grid; gap: 0.2rem; min-width: 0; }
+.notable-kind { font-size: var(--atlas-text-2xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--atlas-muted); }
+.notable-title { margin: 0; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.notable-text .fine { margin: 0; overflow-wrap: anywhere; }
+.notable-why summary, .notable-quiet summary { cursor: pointer; font-size: var(--atlas-text-xs); color: var(--atlas-muted); min-height: 1.75rem; display: flex; align-items: center; }
+.notable-quiet ul { margin: 0.25rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.2rem; }
+.rates-next { margin: 0; line-height: 1.45; }
+.rates-table { width: 100%; border-collapse: collapse; font-size: var(--atlas-text-sm); }
+.rates-table th, .rates-table td { text-align: left; padding: 0.4rem 0.25rem; border-bottom: 1px solid color-mix(in srgb, var(--atlas-ink) 10%, transparent); }
+.rates-table th { font-size: var(--atlas-text-xs); color: var(--atlas-muted); font-weight: 600; }
+.rates-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rates-table th:not(:first-child) { text-align: right; }

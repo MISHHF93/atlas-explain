@@ -6,7 +6,7 @@
 import { assetFromLiveRow, validateAsset, type Asset, type AssetClass } from "./asset-schema";
 import { MARKET_DATA_URL, NEWS_DATA_URL } from "./links";
 import { formatChange as formatPctChange, type CatalogView } from "./assets";
-import { readNewsFile, type NewsFile, type NewsItem } from "./news";
+import { oneOfEachStory, readNewsFile, type NewsFile, type NewsItem } from "./news";
 
 export interface ClassInfo {
   label: string;
@@ -167,11 +167,10 @@ export async function loadHeadlines(
 }
 
 export function headlinesFrom(file: NewsFile, max = 6): HeadlinesView {
-  const seen = new Set<string>();
-  const items = Object.values(file.items)
+  // One story once, even when several outlets carried it (src/core/news.ts).
+  const items = oneOfEachStory(Object.values(file.items)
     .flat()
-    .sort((a, b) => b.seenAt.localeCompare(a.seenAt))
-    .filter((n) => (seen.has(n.url) ? false : (seen.add(n.url), true)))
+    .sort((a, b) => b.seenAt.localeCompare(a.seenAt)))
     .slice(0, max);
   return items.length ? { kind: "ready", items } : { kind: "none", generatedAt: file.generatedAt };
 }
