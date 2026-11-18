@@ -13,7 +13,8 @@
  * The minimum gaps keep KV inside its free 1,000 writes a day and the sources inside their limits.
  * Deployed with `npm run deploy:mcp` (wrangler.toml). See docs/MCP.md.
  */
-import { handleHttp } from "./http";
+import { handleHttp, MCP_PATH } from "./http";
+import { API_PREFIX, bearer, handlePartnerApi, handlePartnerMcp } from "./partner";
 import { DATA_SITE_URL } from "../core/links";
 import type { Fetcher } from "./server";
 import { captureWorld, CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureEconomy, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
@@ -29,7 +30,7 @@ import { readNewsFile } from "../core/news";
 export interface DataStore {
   get(key: string): Promise<string | null>;
   getWithMetadata<M>(key: string): Promise<{ value: string | null; metadata: M | null }>;
-  put(key: string, value: string, options?: { metadata?: unknown }): Promise<void>;
+  put(key: string, value: string, options?: { metadata?: unknown; expirationTtl?: number }): Promise<void>;
 }
 
 export interface WorkerEnv {
@@ -262,5 +263,8 @@ export function handleRequest(request: Request, env: WorkerEnv, ctx?: WaitContex
   if (path === "/data/v1/" || path === "/data/v1" || path === "/data/v1/index.json") return serveDataIndex(request, env);
   const file = fileOf(path);
   if (file) return serveData(request, env, file, ctx);
+  // The partner sandbox (src/mcp/partner.ts): REST under /api/v1, and the connector under a partner key.
+  if (path === API_PREFIX || path.startsWith(`${API_PREFIX}/`)) return handlePartnerApi(request, env.DATA, ownDataFetch(env, ctx), ctx);
+  if (path === MCP_PATH && bearer(request)?.startsWith("atlx_")) return handlePartnerMcp(request, env.DATA, ctx, (r) => handleHttp(r, ownDataFetch(env, ctx)));
   return handleHttp(request, ownDataFetch(env, ctx));
 }

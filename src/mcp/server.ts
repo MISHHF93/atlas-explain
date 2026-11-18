@@ -495,7 +495,7 @@ export function completePromptArgument(prompt: string, argument: string, typed: 
   return q ? unique.filter((v) => v.toLowerCase().startsWith(q)).concat(unique.filter((v) => !v.toLowerCase().startsWith(q) && v.toLowerCase().includes(q))) : unique;
 }
 
-type ToolResult = { content: { type: "text"; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean };
+export type ToolResult = { content: { type: "text"; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean };
 
 /** The readable answer, always ending with the education line. */
 const text = (body: string, isError = false): ToolResult => ({ content: [{ type: "text", text: `${body}\n\n${EDUCATION_LINE}` }], ...(isError ? { isError } : {}) });
