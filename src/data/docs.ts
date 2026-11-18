@@ -75,8 +75,13 @@ export function plain(html: string): string {
     .replace(/&#x([0-9a-f]+);/gi, (_, n: string) => String.fromCharCode(parseInt(n, 16)))
     .replace(/&([a-z]+\d*);/gi, (m, n: string) => ENTITIES[n.toLowerCase()] ?? m)
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .replace(/ ([,.;:!?%)\]])/g, "$1")
+    .replace(/([([]) /g, "$1");
 }
+
+/** The same spacing rule for text stored before it existed. */
+const tidy = (p: string) => p.replace(/ ([,.;:!?%)\]])/g, "$1").replace(/([([]) /g, "$1");
 
 export interface FeedItem { title: string; link: string; date: string | null; description: string }
 
@@ -215,7 +220,7 @@ export function readDocsFile(body: unknown): DocsFile | null {
   const okP = (s: Speech) => DOC_BANKS.includes(s.bank) && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && /^https:\/\//.test(s.url) && typeof s.title === "string";
   const statements = empty<Statement>(), speeches = empty<Speech>();
   for (const bank of DOC_BANKS) {
-    statements[bank] = (Array.isArray(b.statements[bank]) ? b.statements[bank] : []).filter(okS);
+    statements[bank] = (Array.isArray(b.statements[bank]) ? b.statements[bank] : []).filter(okS).map((st) => ({ ...st, paragraphs: st.paragraphs.map(tidy) }));
     speeches[bank] = (Array.isArray(b.speeches[bank]) ? b.speeches[bank] : []).filter(okP);
   }
   return { schema: DOCS_SCHEMA, generatedAt: b.generatedAt, statements, speeches };
@@ -289,4 +294,38 @@ export function decisionWindow(economy: EconomyFile, now: number): boolean {
 export function docsChanged(prev: DocsFile, next: DocsFile): boolean {
   const key = (f: DocsFile) => DOC_BANKS.map((b) => [...f.statements[b], ...f.speeches[b]].map((d) => d.url).join("|")).join("#");
   return key(prev) !== key(next);
+}
+
+export interface Comparison {
+  /** "words" when the wording was edited; "sentences" when most of it was rewritten. */
+  mode: "words" | "sentences";
+  /** Share of all words (old and new) that were removed or added, 0 to 1. */
+  changedShare: number;
+  /** Word mode: each change with a little context. */
+  changes: { before: string; removed: string; added: string }[];
+  /** Sentence mode: sentences in the new statement that weren't in the old one, in order. */
+  newSentences: string[];
+  /** Sentence mode: how many of the old statement's sentences no longer appear. */
+  droppedCount: number;
+}
+
+const sentencesOf = (paragraphs: string[]) => paragraphs.flatMap((p) => p.split(/(?<=[.!?])\s+(?=[A-Z“"])/)).map((x) => x.trim()).filter(Boolean);
+const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9%.]+/g, " ").trim();
+
+/** Compares two statements word by word, or sentence by sentence when more than a third of the words changed. */
+export function compareStatements(before: string[], after: string[], rewriteShare = 1 / 3): Comparison {
+  const parts = diffWords(before.join(" "), after.join(" "));
+  const count = (op: DiffPart["op"]) => parts.filter((p) => p.op === op).reduce((n, p) => n + p.text.split(" ").length, 0);
+  const same = count("same"), changed = count("added") + count("removed");
+  const changedShare = same + changed ? Math.round((changed / (2 * same + changed)) * 100) / 100 : 0;
+  if (changedShare <= rewriteShare) return { mode: "words", changedShare, changes: changesInContext(parts), newSentences: [], droppedCount: 0 };
+  const old = new Set(sentencesOf(before).map(norm));
+  const now = new Set(sentencesOf(after).map(norm));
+  return {
+    mode: "sentences",
+    changedShare,
+    changes: [],
+    newSentences: sentencesOf(after).filter((x) => !old.has(norm(x))),
+    droppedCount: sentencesOf(before).filter((x) => !now.has(norm(x))).length,
+  };
 }

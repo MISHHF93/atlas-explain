@@ -37,7 +37,7 @@ import { COUNTRIES_APP_HTML, COUNTRIES_APP_URI } from "./countries-app";
 import { EVENTS_APP_HTML, EVENTS_APP_URI } from "./events-app";
 import { SERIES_APP_HTML, SERIES_APP_URI } from "./series-app";
 import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
-import { BANK_LICENCE, BANK_NAME, changesInContext, diffWords, readDocsFile, watchingSentences, type DocBank, type Statement } from "../data/docs";
+import { BANK_LICENCE, BANK_NAME, compareStatements, readDocsFile, watchingSentences, type DocBank, type Statement } from "../data/docs";
 import { rateChangeImpact, type ImpactCountry, type ImpactProduct } from "../core/rate-impact";
 import { moneyMaths, type MoneyCalc } from "../core/money-maths";
 import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
@@ -569,8 +569,10 @@ export async function decisionExplainer(bankArg: unknown, date: string | undefin
   const i = date ? list.findIndex((s) => s.date === date.trim()) : 0;
   if (i < 0) return text(`Only the last two ${BANK_NAME[bank]} decisions are kept: ${list.map((s) => s.date).join(" and ")}.`, true);
   const cur = list[i]!, prev = list[i + 1] ?? null;
-  const changes = prev ? changesInContext(diffWords(prev.paragraphs.join(" "), cur.paragraphs.join(" "))) : [];
+  const cmp = prev ? compareStatements(prev.paragraphs, cur.paragraphs) : null;
+  const changes = cmp?.changes ?? [];
   const shown = changes.slice(0, 12).map((c) => ({ before: quote(bank, c.before, 8), removed: quote(bank, c.removed), added: quote(bank, c.added) }));
+  const newSentences = (cmp?.newSentences ?? []).slice(0, 6).map((x) => quote(bank, x));
   const src = (s: Statement) => ({ name: `${BANK_NAME[bank]}, ${s.title}`, url: s.url, asOf: s.date });
   const watching = watchingSentences(cur.paragraphs, BANK_LICENCE[bank] === "public_domain" ? 5 : 3).map((t) => ({ text: quote(bank, t, 40), source: { name: BANK_NAME[bank], url: cur.url }, asOf: cur.date }));
   const economy = await loadEconomy(fetcher);
@@ -579,9 +581,12 @@ export async function decisionExplainer(bankArg: unknown, date: string | undefin
   const lines = [
     `${describe(bank, cur)}.${prev ? ` Before that, ${describe(bank, prev).replace(/^On /, "on ")}.` : ""}`,
   ];
-  if (prev) {
+  if (prev && cmp?.mode === "words") {
     lines.push("", `How the statement's wording changed from ${prev.date} (${changes.length} change${changes.length === 1 ? "" : "s"}${changes.length > shown.length ? `, first ${shown.length} shown` : ""}):`);
     for (const c of shown) lines.push(`- after "…${c.before}":${c.removed ? ` removed "${c.removed}"` : ""}${c.removed && c.added ? ";" : ""}${c.added ? ` added "${c.added}"` : ""}`);
+  } else if (prev && cmp) {
+    lines.push("", `Most of the statement was rewritten since ${prev.date}: about ${Math.round(cmp.changedShare * 100)}% of its words changed, and ${cmp.droppedCount} of the earlier statement's sentences no longer appear. Its new sentences, in order${cmp.newSentences.length > newSentences.length ? ` (first ${newSentences.length} of ${cmp.newSentences.length})` : ""}:`);
+    for (const x of newSentences) lines.push(`- "${x}"`);
   }
   if (watching.length) lines.push("", "What the statement says the bank is weighing (its own words):", ...watching.map((w) => `- "${w.text}"`));
   if (next) lines.push("", `Next scheduled decision: ${next.date} (${utc(next.time)}). This says when, never what.`);
@@ -590,7 +595,8 @@ export async function decisionExplainer(bankArg: unknown, date: string | undefin
     bank, institution: BANK_NAME[bank],
     decision: { ...cur.decision, date: cur.date, url: cur.url },
     previous: prev ? { ...prev.decision, date: prev.date, url: prev.url } : null,
-    changes: shown, watching, next,
+    comparison: cmp ? { mode: cmp.mode, changedShare: cmp.changedShare, newSentenceCount: cmp.newSentences.length, droppedCount: cmp.droppedCount } : null,
+    changes: shown, newSentences, watching, next,
     sources: [src(cur), ...(prev ? [src(prev)] : [])],
   });
 }

@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { CaptureEnv } from "../src/data/capture";
 import {
-  captureDocs, changesInContext, decisionWindow, diffWords, DOC_SOURCES, docsChanged, extractBocStatement, extractFedStatement,
-  fracNumber, parseBocDecision, parseFedDecision, parseFeed, readDocsFile, watchingSentences, type DocsFile,
+  captureDocs, changesInContext, compareStatements, decisionWindow, diffWords, DOC_SOURCES, docsChanged, extractBocStatement, extractFedStatement,
+  fracNumber, parseBocDecision, parseFedDecision, parseFeed, plain, readDocsFile, watchingSentences, type DocsFile,
 } from "../src/data/docs";
 import type { EconomyFile } from "../src/data/economy";
 import { decisionExplainer, EDUCATION_LINE, handle, setFeatures, speechTracker, type Fetcher } from "../src/mcp/server";
@@ -153,5 +153,36 @@ describe("decision_explainer and speech_tracker", () => {
     } finally {
       setFeatures(undefined);
     }
+  });
+});
+
+describe("readable comparisons (found on live data, 18 Nov 2026)", () => {
+  it("keeps punctuation tight where a link was removed, also in text stored before the fix", () => {
+    expect(plain('the July <a href="/mpr">Monetary Policy Report</a>, global activity (<em>GDP</em>) rose 3%.')).toBe("the July Monetary Policy Report, global activity (GDP) rose 3%.");
+    const stored = { schema: "atlas-explain-docs-v1", generatedAt: "2026-11-18T22:00:00.000Z", statements: { fed: [], boc: [{ bank: "boc", date: "2026-10-28", title: "t", url: "https://x.ca/a", paragraphs: ["the July Monetary Policy Report , global"], decision: null, capturedAt: "x" }] }, speeches: { fed: [], boc: [] } };
+    expect(readDocsFile(stored)!.statements.boc[0]!.paragraphs[0]).toBe("the July Monetary Policy Report, global");
+  });
+
+  it("compares an edited statement word by word, and a rewritten one sentence by sentence", () => {
+    const fed = compareStatements(extractFedStatement(fx("fed-stmt-0916.html")), extractFedStatement(fx("fed-stmt-1028.html")));
+    expect(fed.mode).toBe("words");
+    expect(fed.changes.length).toBe(10);
+    const boc = compareStatements(extractBocStatement(fx("boc-stmt-0902.html")), extractBocStatement(fx("boc-stmt-1028.html")));
+    expect(boc.mode).toBe("sentences");
+    expect(boc.changedShare).toBeGreaterThan(0.5);
+    expect(boc.newSentences[0]).toMatch(/^The Bank of Canada today increased its target/);
+    expect(boc.droppedCount).toBeGreaterThan(10);
+  });
+
+  it("says plainly when a statement was mostly rewritten, with short quotes of its new sentences", async () => {
+    const docs = await captureDocs(env(), null);
+    const r = await decisionExplainer("boc", undefined, async (url) => (url.endsWith("/docs.json") ? new Response(JSON.stringify(docs)) : new Response("no", { status: 404 })), NOW);
+    const t = r.content[0]!.text;
+    expect(t).toMatch(/Most of the statement was rewritten since 2026-09-02: about \d+% of its words changed/);
+    expect(t).not.toContain("How the statement's wording changed");
+    const s = r.structuredContent as { comparison: { mode: string }; newSentences: string[] };
+    expect(s.comparison.mode).toBe("sentences");
+    expect(s.newSentences.length).toBeLessThanOrEqual(6);
+    for (const x of s.newSentences) expect(words(x)).toBeLessThanOrEqual(26);
   });
 });
