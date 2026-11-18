@@ -12,7 +12,7 @@ import {
 import type { FirebaseApp } from "firebase/app";
 import { OnDeviceUnavailableError } from "../../core/run-explanation";
 import { SYSTEM_INSTRUCTION } from "../../core/prompt";
-import { DEVICE_INIT_DEADLINE_MS, withDeadline } from "../../core/timeouts";
+import { isTemporaryCloudError, DEVICE_INIT_DEADLINE_MS, withDeadline } from "../../core/timeouts";
 import type {
   ExplainHooks,
   HybridExplainRequest,
@@ -97,6 +97,9 @@ export function twoSidedSchema(): ObjectSchema {
   });
 }
 
+/** Retry only when the first try failed this soon, so two tries stay inside the answer's 70-second deadline. */
+export const RETRY_IF_FAILED_WITHIN_MS = 25_000;
+
 export async function explainWithHybridModel(
   ai: AI,
   request: HybridExplainRequest,
@@ -160,13 +163,22 @@ export async function explainWithHybridModel(
     }
   }
 
-  try {
+  const started = Date.now();
+  const attempt = async () => {
     const result = await model.generateContent(request.prompt);
-    const rawText = result.response.text();
-    return {
-      rawText,
-      inferenceSource: normalizeSource(result.response.inferenceSource, mode),
-    };
+    return { rawText: result.response.text(), inferenceSource: normalizeSource(result.response.inferenceSource, mode) };
+  };
+  try {
+    try {
+      return await attempt();
+    } catch (first) {
+      // One quiet retry when Google's side failed for a moment (a 500 or 503), if there is time
+      // left before the answer's deadline; anything else is shown at once.
+      const message = first instanceof Error ? first.message : String(first);
+      if (mode === InferenceMode.ONLY_ON_DEVICE || !isTemporaryCloudError(message) || Date.now() - started > RETRY_IF_FAILED_WITHIN_MS) throw first;
+      await new Promise((r) => setTimeout(r, 1_000));
+      return await attempt();
+    }
   } catch (error) {
     if (mode === InferenceMode.ONLY_ON_DEVICE) {
       const message = error instanceof Error ? error.message : "On-device inference failed.";

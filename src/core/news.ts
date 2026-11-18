@@ -83,9 +83,38 @@ export function gdeltUrl(query: string): string {
   return `https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&mode=artlist&maxrecords=250&format=json&timespan=1d&sort=datedesc`;
 }
 
-/** Assigns headlines to assets by name, newest first, at most NEWS_MAX_PER_ASSET each. */
+/**
+ * A headline without the outlet's name tacked on ("Story | News Radio 101.9", "Story - Reuters"): the
+ * publisher is shown beside every headline already, and syndicated copies then read the same.
+ */
+export function withoutSiteName(title: string): string {
+  const pipe = title.lastIndexOf(" | ");
+  let t = pipe > 20 ? title.slice(0, pipe) : title;
+  const dash = /^(.{20,}?) [-–—] ([^-–—|]{2,40})$/.exec(t);
+  // An outlet's name has no digits ("Reuters", "CNBC"); "November 2026" is part of the story.
+  if (dash && !/\d/.test(dash[2]!) && dash[2]!.split(" ").length <= 5) t = dash[1]!;
+  return t.trim();
+}
+
+/** The same story told by different outlets: case, punctuation and the outlet's name don't count. */
+export function storyKey(title: string): string {
+  return withoutSiteName(title).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** Keeps the newest copy of each story (items newest first). */
+export function oneOfEachStory(items: readonly NewsItem[]): NewsItem[] {
+  const seen = new Set<string>();
+  return items.filter((n) => {
+    const k = storyKey(n.title);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/** Assigns headlines to assets by name, newest first, at most NEWS_MAX_PER_ASSET each, each story once. */
 export function assignNews(items: readonly NewsItem[]): Record<string, NewsItem[]> {
-  const sorted = [...items].sort((a, b) => b.seenAt.localeCompare(a.seenAt));
+  const sorted = oneOfEachStory([...items].sort((a, b) => b.seenAt.localeCompare(a.seenAt)));
   const out: Record<string, NewsItem[]> = {};
   for (const t of NEWS_TARGETS) {
     const hits = sorted.filter((n) => t.match.test(n.title)).slice(0, NEWS_MAX_PER_ASSET);
@@ -131,14 +160,14 @@ export function parseGdelt(body: string, now: number = Date.now()): NewsItem[] {
   const out: NewsItem[] = [];
   const seen = new Set<string>();
   for (const a of data.articles ?? []) {
-    const title = typeof a.title === "string" ? cleanTitle(a.title) : "";
+    const title = typeof a.title === "string" ? withoutSiteName(cleanTitle(a.title)) : "";
     const url = typeof a.url === "string" ? a.url : "";
     const seenAt = gdeltTime(a.seendate);
     if (title.length < 12 || !/^https?:\/\/[^\s]{4,500}$/.test(url) || !seenAt) continue;
     const t = Date.parse(seenAt);
     if (now - t > NEWS_MAX_AGE_MS || t > now + 600_000) continue;
     if (INSTRUCTION.test(title)) continue;
-    const key = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const key = storyKey(title);
     if (seen.has(key)) continue;
     seen.add(key);
     let domain = typeof a.domain === "string" ? a.domain : "";
