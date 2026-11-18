@@ -104,3 +104,43 @@ Each tool call adds another live copy of a view. With 6 and 7 in place, older co
 ### Suggested order for round 2
 
 6 + 7 + 9 together (one connector release), then 8 (plugin), then 11, then 10 when app tools reach more organizations.
+
+## Round 3: after launch readiness (researched 18 Nov 2026)
+
+Already shipped in 1.10.0: `notable_today`, the server card, `/health`, an installable web app, `llms.txt` and `security.txt`. What's new outside: on 10 Nov 2026 Claude began opening interactive connectors as full apps beside the chat or in full screen, and added more of the MCP Apps extension (app tools, embedded sites). The plugin directory has taken submissions (connectors plus Skills, from a GitHub repo) since 25 Sep 2026. The 2026-07-28 spec moved live updates to an opt-in `subscriptions/listen` stream.
+
+### 12. A view for `notable_today` (connector; half a day)
+
+The one data tool without a view. Each item as a card with its rule and source, the "checked, nothing unusual" list below, and two Ask Claude buttons ("Explain the first item", "Teach me the term"). Inline, not the side panel.
+
+### 13. A learning hub that opens beside the chat (connector; 1–2 days)
+
+One MCP App, opened from an entry point, that runs as a full app in the side panel: the learning path, a term's card with a live example from the data, "Check yourself" questions, and today's notable items. Uses app-only tools (`_meta.ui.visibility: ["app"]`) for its own plumbing (next question, mark a topic done), so Claude's tool list stays short. Progress lives in the view's own storage on the device; nothing about the person is sent anywhere. The entry point only shows on the Artifacts page once the listing is Verified, but the app works from a tool call before that.
+
+### 14. Review terms just before they're forgotten (web app, then connector; 2 days)
+
+Retrieval practice on a spaced schedule (1, 3, 7, 21 days) for terms a person has looked up or got wrong. Research on finance-learning apps: streaks bring people back but don't make knowledge last, and confidence can rise faster than knowledge. So: short checks, no streak pressure, no badges, and a plain score of what was right. Stored with the person's own history (already synced for signed-in users); the connector gets a `review_due` tool only after OAuth (PRICING.md), since it never stores anything today.
+
+### 15. Countries compared (connector and data; 2 days)
+
+`compare_countries`: inflation, GDP growth, unemployment and policy rates for the G20, with source and year, from keyless official sources (World Bank Indicators, CC BY 4.0; IMF DataMapper; OECD SDMX). Captured by a new daily cron into `world.json` on the data site; licences checked first and recorded in DATA_SOURCES.md. Today the economy covers only the US, the euro area and Canada.
+
+### 16. The Claude plugin, submitted (repo + portal; 1 day)
+
+Item 8, now that the portal is open: this repo (or a small one) with `.claude-plugin`, the connector and four Skills (learn a term properly, today's market brief, explain a market move, understand trading costs). Submitted at claude.ai/directory/manage → Submit new → Plugin.
+
+### 17. The Today section in the web app (web app; 1 day)
+
+The other half of item 4: `notable_today`'s items in Today, from the same rules, with the term each one teaches linked to the glossary.
+
+### Later
+
+- **Live prices in the chat** through `subscriptions/listen`: when Claude supports it for connectors.
+- **Tasks extension:** not needed; every tool answers in well under a second.
+- **Practice simulator:** needs the owner's wording decision (PLATFORM_PLAN.md phase B).
+
+### Suggested order for round 3
+
+12 (quick, one release with 11), then 16 (distribution), then 13 + 14 (learning), then 15 and 17.
+
+Sources: claude.com "Interactive connectors and MCP Apps" and "Open your apps in Claude"; @ClaudeDevs on app tools and embedded sites (Nov 2026); MCP blog on the 2026-07-28 spec; sunpeak.ai on app-only tool visibility; reporting on the plugin directory portal (Sep 2026); 11:FS and Gerald on gamification in finance learning; World Bank, IMF and OECD API listings. Third-party claims (for example, that entry points need a Verified listing) to be checked against Anthropic's docs before relying on them.
