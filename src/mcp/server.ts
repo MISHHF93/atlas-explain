@@ -31,12 +31,15 @@ import { FIGURES_APP_HTML, FIGURES_APP_URI } from "./figures-app";
 import { ECONOMY_APP_HTML, ECONOMY_APP_URI } from "./economy-app";
 import { DEPTH_APP_HTML, DEPTH_APP_URI } from "./depth-app";
 import { NOTABLE_APP_HTML, NOTABLE_APP_URI } from "./notable-app";
+import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
+import { moneyMaths, type MoneyCalc } from "../core/money-maths";
+import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
 import { ICON_PNG_64_BASE64 } from "./icon-data";
-import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile, type Indicator } from "../data/economy";
+import { readEconomyFile, upcoming, type Auction, type CalendarEvent, type EconomyFile, type Indicator } from "../data/economy";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.12.0";
+export const SERVER_VERSION = "1.13.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -195,7 +198,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "economy_snapshot",
     title: "The economy at a glance",
-    description: "Headline economic figures with period, change and source: inflation, unemployment, policy rates and US public debt, plus the next rate decisions. Use it for how the economy is doing, or one topic. Covers US CPI over 12 months and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation (ECB), Canada's policy rate (Bank of Canada) and US public debt (Treasury), each with about a year of history. Optional filter by topic.",
+    description: "Headline economic figures with period, change and source: inflation, unemployment, policy rates and US public debt, plus the next rate decisions. Use it for how the economy is doing, or one topic. Covers US CPI over 12 months and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation and the ECB deposit rate (ECB), Canada's policy rate (Bank of Canada), the UK's Bank Rate (Bank of England) and US public debt (Treasury), each with about a year of history. Optional filter by topic.",
     inputSchema: { type: "object", properties: { topic: str("Optional topic, for example 'inflation', 'jobs', 'rates', 'debt', 'euro' or 'canada'. Leave empty for all.") }, additionalProperties: false },
     annotations: annotations("The economy at a glance", true),
     icons: ICONS,
@@ -207,8 +210,8 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "economic_calendar",
     title: "Upcoming rate decisions",
-    description: "Dates of the next interest-rate decisions by the Federal Reserve, the European Central Bank and the Bank of Canada, with what happens on the day. Use it for when the next Fed, ECB or Bank of Canada meeting is. From each bank's own published calendar. Dates only: it never guesses the outcome. Optional filter by central bank.",
-    inputSchema: { type: "object", properties: { bank: str("Optional: 'Fed', 'ECB' or 'Bank of Canada'. Leave empty for all.") }, additionalProperties: false },
+    description: "Dates of the next interest-rate decisions by the Federal Reserve, the European Central Bank, the Bank of Canada and the Bank of England, with what happens on the day. Use it for when the next Fed, ECB, Bank of Canada or Bank of England meeting is. From each bank's own published calendar. Dates only: it never guesses the outcome. Optional filter by central bank.",
+    inputSchema: { type: "object", properties: { bank: str("Optional: 'Fed', 'ECB', 'Bank of Canada' or 'Bank of England'. Leave empty for all.") }, additionalProperties: false },
     annotations: annotations("Upcoming rate decisions", true),
     icons: ICONS,
     outputSchema: obj({ refreshedAt: { type: "string" }, events: { type: "array", items: EVENT } }, ["events"]),
@@ -273,6 +276,61 @@ export const TOOLS: readonly Tool[] = [
     _meta: { ui: { resourceUri: NOTABLE_APP_URI } },
   },
   {
+    name: "money_maths",
+    title: "Money maths",
+    description: "Works out compound growth, what a fee costs over the years, what inflation does to cash, or how holding more things changes how much a mix swings, from numbers the person gives. Use it to show how money grows or shrinks over time with their own example. Pure arithmetic, drawn as a chart they can change in Claude; the rate is their assumption, never a forecast or a suggestion.",
+    inputSchema: { type: "object", properties: {
+      calculation: { type: "string", enum: ["compound_growth", "fees", "inflation", "diversification"], description: "Which calculation." },
+      amount: { type: "number", description: "Starting amount (compound_growth, fees, inflation)." },
+      monthly: { type: "number", description: "Optional amount added each month (compound_growth, fees)." },
+      rate_pct: { type: "number", description: "Yearly return the person wants to assume, in percent (compound_growth, fees)." },
+      fee_pct: { type: "number", description: "Yearly fee in percent of the balance (fees)." },
+      inflation_pct: { type: "number", description: "Yearly inflation to assume, in percent (inflation)." },
+      years: { type: "number", description: "Number of years, 1 to 60." },
+      volatility_pct: { type: "number", description: "How much one holding swings in a year, in percent (diversification)." },
+      correlation: { type: "number", description: "How closely holdings move together, -1 to 1 (diversification)." },
+      holdings: { type: "number", description: "Show up to this many holdings, 2 to 100 (diversification; default 20)." },
+    }, required: ["calculation"], additionalProperties: false },
+    annotations: annotations("Money maths", false),
+    icons: ICONS,
+    outputSchema: obj({
+      calculation: { type: "string" }, inputs: { type: "object" },
+      series: { type: "array", items: { type: "object", properties: { name: { type: "string" }, points: { type: "array" } } } },
+      lines: { type: "array", items: { type: "string" } }, xLabel: { type: "string" }, yLabel: { type: "string" },
+    }, ["calculation", "series", "lines"]),
+    // Clients that support MCP Apps draw the chart with the inputs as fields to change (src/mcp/money-app.ts).
+    _meta: { ui: { resourceUri: MONEY_APP_URI } },
+  },
+  {
+    name: "scam_red_flags",
+    title: "Investment scam warning signs",
+    description: "The warning signs of investment fraud regulators describe, which of them a message or offer shows, where to check a seller's registration and where to report, plus recent official fraud actions. Use it when someone asks whether an offer, message or 'opportunity' looks like a scam. It points out warning signs; it never says something is or isn't a scam, and the text given is not kept.",
+    inputSchema: { type: "object", properties: { pitch: str("Optional: the message, ad or offer the person received, in their words or pasted. Leave empty for the full list of warning signs.") }, additionalProperties: false },
+    annotations: annotations("Investment scam warning signs", true),
+    icons: ICONS,
+    outputSchema: obj({
+      matched: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, why: { type: "string" }, source: { type: "object" } } } },
+      allSigns: { type: "array", items: { type: "string" } },
+      check: { type: "array", items: { type: "object" } },
+      report: { type: "array", items: { type: "object" } },
+      recentActions: { type: "array", items: { type: "object" } },
+    }, ["matched", "check", "report"]),
+  },
+  {
+    name: "treasury_auctions",
+    title: "US Treasury auctions",
+    description: "Upcoming US Treasury auctions and the latest results: what is sold, how much, the yield it set and how much demand there was. Use it to explain how the US government borrows, or what bid-to-cover and auction yields mean. From TreasuryDirect, refreshed every 6 hours. Describes auctions that are announced or done; never predicts a result. Optional filter: bills, notes, bonds or TIPS.",
+    inputSchema: { type: "object", properties: { kind: str("Optional: 'bills', 'notes', 'bonds' or 'TIPS'. Leave empty for all.") }, additionalProperties: false },
+    annotations: annotations("US Treasury auctions", true),
+    icons: ICONS,
+    outputSchema: obj({
+      refreshedAt: { type: "string" },
+      upcoming: { type: "array", items: { type: "object" } },
+      recent: { type: "array", items: { type: "object" } },
+      source: { type: "string" },
+    }, ["upcoming", "recent"]),
+  },
+  {
     name: "compare_countries",
     title: "Countries compared",
     description: "GDP growth, inflation, unemployment and GDP per person for the G20 countries and the EU, with the year of each figure, from the World Bank. Use it to compare economies or put one country's figures in context. Actual published values only (World Development Indicators, CC BY 4.0), updated daily; never a projection. Optional: one indicator and a list of countries.",
@@ -291,7 +349,7 @@ export const TOOLS: readonly Tool[] = [
 ];
 
 export const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule; compare_countries for GDP growth, inflation, unemployment and GDP per person across the G20. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth and notable_today also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule; compare_countries for GDP growth, inflation, unemployment and GDP per person across the G20; treasury_auctions for US Treasury auctions; money_maths for compound growth, fees, inflation and diversification worked out from the person's own numbers; scam_red_flags for the warning signs of investment fraud and where to check and report. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth and notable_today also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
 export const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
@@ -311,6 +369,7 @@ export const MCP_APPS = [
   { uri: BOARD_APP_URI, name: "crypto-board", title: "Crypto price board", description: "The board crypto_prices draws in clients that support MCP Apps: prices, changes and 24-hour sparklines; a coin opens its chart.", html: BOARD_APP_HTML },
   { uri: ECONOMY_APP_URI, name: "economy", title: "The economy at a glance", description: "The view economy_snapshot draws in clients that support MCP Apps: a card per indicator, its trend over about a year, and the next rate decisions.", html: ECONOMY_APP_HTML },
   { uri: DEPTH_APP_URI, name: "market-depth", title: "Order book depth chart", description: "The view market_depth draws in clients that support MCP Apps: best bid and ask, the spread, a depth chart of the order book and slippage by order size.", html: DEPTH_APP_HTML },
+  { uri: MONEY_APP_URI, name: "money-maths", title: "Money maths", description: "The view money_maths draws in clients that support MCP Apps: the result as a chart, with the inputs as fields to change.", html: MONEY_APP_HTML },
   { uri: NOTABLE_APP_URI, name: "notable-today", title: "What's notable today", description: "The view notable_today draws in clients that support MCP Apps: a card per item with why it was picked and its source, then what was checked and found ordinary.", html: NOTABLE_APP_HTML },
   { uri: FIGURES_APP_URI, name: "official-figures", title: "Official figures and yield curve", description: "The view official_figures draws in clients that support MCP Apps: figure cards, and a yield curve when the answer holds government bond yields.", html: FIGURES_APP_HTML },
 ] as const;
@@ -373,6 +432,20 @@ export const PROMPTS = [
     description: "What stands out in today's market and economic data, each with its source and why it was picked.",
     arguments: [],
     text: () => "Using ATLAS Explain, tell me what's notable today (notable_today). For each item, explain in plain language what it means and the term behind it, keep its source and time, and say why it was picked. Describe only what has happened; don't forecast or suggest anything.",
+  },
+  {
+    name: "check_an_offer",
+    title: "Check an offer for scam warning signs",
+    description: "Which of the warning signs regulators describe appear in a message or offer, and where to check and report.",
+    arguments: [{ name: "offer", description: "The message, ad or offer, pasted or described.", required: true }],
+    text: (a: Record<string, string>) => "Using ATLAS Explain, check this offer for investment scam warning signs (scam_red_flags), explain each sign it shows in plain language, and tell me where to check the seller's registration and how to report it. Don't say whether it is or isn't a scam: " + (a.offer || "(no text given)"),
+  },
+  {
+    name: "money_lesson",
+    title: "A money maths lesson",
+    description: "Compound growth, fees, inflation or diversification, worked through with numbers you can change.",
+    arguments: [{ name: "topic", description: "compounding, fees, inflation or diversification.", required: false }],
+    text: (a: Record<string, string>) => `Using ATLAS Explain's money_maths, teach me ${a.topic ? `about ${a.topic}` : "how compounding works"} with a simple example I can change. Explain what the result shows and the one idea to remember, without suggesting what I should do with my money.`,
   },
   {
     name: "quiz_me",
@@ -702,8 +775,10 @@ async function loadEconomy(fetcher: Fetcher): Promise<EconomyFile | null> {
 const TOPICS: Record<string, readonly Indicator["id"][]> = {
   inflation: ["us_cpi", "euro_hicp"], prices: ["us_cpi", "euro_hicp"], cpi: ["us_cpi"], hicp: ["euro_hicp"],
   jobs: ["us_unemployment"], unemployment: ["us_unemployment"], employment: ["us_unemployment"], labour: ["us_unemployment"], labor: ["us_unemployment"],
-  rates: ["us_fed_funds", "us_sofr", "ca_policy_rate"], fed: ["us_fed_funds", "us_sofr"], sofr: ["us_sofr"], "interest rates": ["us_fed_funds", "us_sofr", "ca_policy_rate"],
-  debt: ["us_debt"], deficit: ["us_debt"], euro: ["euro_hicp"], ecb: ["euro_hicp"], europe: ["euro_hicp"], canada: ["ca_policy_rate"], boc: ["ca_policy_rate"],
+  rates: ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"], fed: ["us_fed_funds", "us_sofr"], sofr: ["us_sofr"],
+  "interest rates": ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"], "policy rates": ["us_fed_funds", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"],
+  debt: ["us_debt"], deficit: ["us_debt"], euro: ["euro_hicp", "euro_deposit_rate"], ecb: ["euro_hicp", "euro_deposit_rate"], europe: ["euro_hicp", "euro_deposit_rate"], canada: ["ca_policy_rate"], boc: ["ca_policy_rate"],
+  uk: ["uk_bank_rate"], britain: ["uk_bank_rate"], "united kingdom": ["uk_bank_rate"], boe: ["uk_bank_rate"], "bank of england": ["uk_bank_rate"],
   us: ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "us_debt"],
 };
 
@@ -745,6 +820,7 @@ const BANKS: Record<string, CalendarEvent["institution"]> = {
   fed: "Federal Reserve", fomc: "Federal Reserve", "federal reserve": "Federal Reserve", us: "Federal Reserve",
   ecb: "European Central Bank", "european central bank": "European Central Bank", euro: "European Central Bank",
   boc: "Bank of Canada", "bank of canada": "Bank of Canada", canada: "Bank of Canada",
+  boe: "Bank of England", "bank of england": "Bank of England", uk: "Bank of England", britain: "Bank of England", mpc: "Bank of England",
 };
 
 export async function economicCalendar(bank: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
@@ -752,7 +828,7 @@ export async function economicCalendar(bank: string | undefined, fetcher: Fetche
   if (!file) return text(NO_ECONOMY, true);
   const q = bank?.trim().toLowerCase() ?? "";
   const institution = q ? BANKS[q] : undefined;
-  if (q && !institution) return text(`"${bank}" isn't one of the central banks ATLAS Explain follows: the Federal Reserve, the European Central Bank and the Bank of Canada.`, true);
+  if (q && !institution) return text(`"${bank}" isn't one of the central banks ATLAS Explain follows: the Federal Reserve, the European Central Bank, the Bank of Canada and the Bank of England.`, true);
   const events = upcoming(file.calendar.events.filter((e) => !institution || e.institution === institution), now, institution ? 8 : 12);
   const body = events.length
     ? `Upcoming rate decisions, soonest first:\n${events.map((e) => `- ${eventLine(e, now)}`).join("\n")}\n\nDates from each central bank's published calendar, read ${utc(file.calendar.capturedAt)}. ATLAS Explain lists the dates only and never guesses a decision.`
@@ -917,7 +993,7 @@ export async function evidenceBrief(key: string, fetcher: Fetcher, now = Date.no
   const backdropIds = kind === "other" && /CA|CAD/.test(String(d.symbol)) ? ["ca_policy_rate", "us_fed_funds"] : ["us_fed_funds", "us_cpi"];
   const backdrop = (economy?.indicators ?? []).filter((i) => backdropIds.includes(i.id)).map((i) => ({ name: i.name, value: fmtIndicator(i), period: i.period, source: i.source }));
   // The central bank whose decision bears most directly on this asset; the soonest decision of any if it has none coming.
-  const bank = /EUR/.test(String(d.symbol)) ? "European Central Bank" : kind === "other" && /CA|CAD/.test(String(d.symbol)) ? "Bank of Canada" : "Federal Reserve";
+  const bank = /EUR/.test(String(d.symbol)) ? "European Central Bank" : /GBP/.test(String(d.symbol)) ? "Bank of England" : kind === "other" && /CA|CAD/.test(String(d.symbol)) ? "Bank of Canada" : "Federal Reserve";
   const next = economy ? (upcoming(economy.calendar.events.filter((e) => e.institution === bank), now, 1)[0] ?? upcoming(economy.calendar.events, now, 1)[0]) : undefined;
   if (backdrop.length || next) {
     lines.push("\nThe backdrop:", ...backdrop.map((b) => `- ${b.name}: ${b.value} for ${b.period} (${b.source})`));
@@ -1065,7 +1141,7 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
         terms: termRefs("rates_fed", "reference_rate", "basis_point"),
       });
     }
-    if (!soon.length) quiet.push(`No Fed, ECB or Bank of Canada rate decision in the next ${NOTABLE_DAYS_AHEAD} days.`);
+    if (!soon.length) quiet.push(`No Fed, ECB, Bank of Canada or Bank of England rate decision in the next ${NOTABLE_DAYS_AHEAD} days.`);
     const changed = economy.indicators.filter((i) => i.unit === "%" && i.change != null && Math.abs(i.change) >= ECONOMIC_CHANGE_MIN_PT);
     for (const i of changed) {
       observations.push({
@@ -1104,6 +1180,82 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
     "\nLimits:", ...limits.map((l) => `- ${l}`),
   ];
   return data(lines.join("\n"), { asOf: new Date(now).toISOString(), observations, quiet, unavailable, limits });
+}
+
+/* ---------- investment scam warning signs ---------- */
+
+/** Official releases that are about fraud (SEC, CFTC and others), from the headlines ATLAS Explain already reads. */
+const FRAUD_WORDS = /fraud|scam|ponzi|scheme|misappropriat|deceiv|pump-and-dump|unregistered|impersonat/i;
+
+export async function scamRedFlags(pitch: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
+  const text_ = (pitch ?? "").slice(0, 4000);
+  const matched = text_.trim() ? matchRedFlags(text_) : [];
+  const body = await getJson(NEWS_DATA_URL, fetcher);
+  const news = body == null ? null : readNewsFile(body, now);
+  const actions = (news?.items["market:official"] ?? []).filter((n) => FRAUD_WORDS.test(n.title)).slice(0, 4);
+  const lines: string[] = [];
+  if (text_.trim()) {
+    lines.push(matched.length
+      ? `This shows ${matched.length} of the warning signs regulators describe:`
+      : "None of the common warning signs ATLAS Explain looks for appear in this text. That doesn't make it safe: check who is behind it before anything else.");
+    for (const f of matched) lines.push(`- ${f.title}. ${f.why} (${f.source.name}: ${f.source.url})`);
+  } else {
+    lines.push("Warning signs of investment fraud, as regulators describe them:");
+    for (const f of RED_FLAGS) lines.push(`- ${f.title}. ${f.why}`);
+  }
+  lines.push("\nCheck the seller or adviser is registered, using the regulator's own site:", ...CHECKS.map((x) => `- ${x.name}: ${x.url}`));
+  lines.push("\nReport it:", ...REPORT.map((x) => `- ${x.name}: ${x.url}`));
+  if (actions.length) lines.push("\nRecent official fraud actions:", ...actions.map((n) => `- ${n.title} (${n.domain}, ${utc(n.seenAt)}): ${n.url}`));
+  lines.push("\nThis points out warning signs only; it can't say whether something is a scam. ATLAS Explain doesn't keep the text it was given.");
+  return data(lines.join("\n"), {
+    matched: matched.map(({ id, title, why, source }) => ({ id, title, why, source })),
+    allSigns: RED_FLAGS.map((f) => f.title),
+    check: CHECKS,
+    report: REPORT,
+    recentActions: actions.map((n) => ({ title: n.title, publisher: n.domain, url: n.url, seenAt: n.seenAt })),
+  });
+}
+
+/* ---------- money maths (pure arithmetic on the person's numbers) ---------- */
+
+export function moneyMathsTool(args: Record<string, unknown>): ToolResult {
+  const n = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : undefined);
+  const r = moneyMaths({
+    calculation: String(args.calculation) as MoneyCalc,
+    amount: n(args.amount), monthly: n(args.monthly), ratePct: n(args.rate_pct), feePct: n(args.fee_pct), inflationPct: n(args.inflation_pct),
+    years: n(args.years), volatilityPct: n(args.volatility_pct), correlation: n(args.correlation), holdings: n(args.holdings),
+  });
+  if ("error" in r) return text(r.error, true);
+  return data(`${r.lines.join("\n")}\n\nArithmetic on the numbers given; never a forecast.`, r as unknown as Record<string, unknown>);
+}
+
+/* ---------- US Treasury auctions (TreasuryDirect, from ATLAS Explain's own data site) ---------- */
+
+const KINDS: Record<string, readonly string[]> = { bill: ["Bill", "CMB"], bills: ["Bill", "CMB"], note: ["Note"], notes: ["Note"], bond: ["Bond"], bonds: ["Bond"], tips: ["TIPS"], frn: ["FRN"], frns: ["FRN"] };
+const billions = (usd: number) => "$" + `${(usd / 1e9).toFixed(usd % 1e9 ? 1 : 0)} billion`;
+const auctionName = (a: Auction) => `${a.term} ${a.type === "Bill" ? "bill" : a.type === "Note" ? "note" : a.type === "Bond" ? "bond" : a.type}`;
+
+export async function treasuryAuctions(kind: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
+  const file = await loadEconomy(fetcher);
+  if (!file) return text(NO_ECONOMY, true);
+  const au = file.auctions;
+  if (!au) return text("Treasury auctions haven't been captured yet. Nothing is shown in their place; try again in a few hours.", true);
+  const k = kind?.trim().toLowerCase() ?? "";
+  const types = k ? KINDS[k] : undefined;
+  if (k && !types) return text(`"${kind}" isn't a kind of Treasury security ATLAS Explain lists. Try bills, notes, bonds or TIPS, or leave it empty.`, true);
+  const keep = (a: Auction) => !types || types.includes(a.type);
+  const today = new Date(now).toISOString().slice(0, 10);
+  const upcomingList = au.upcoming.filter((a) => keep(a) && a.auctionDate >= today);
+  const recent = au.recent.filter(keep).slice(0, 8);
+  const lines = [
+    upcomingList.length ? "Announced, not yet auctioned:" : "No announced auction is waiting to be held in the lists ATLAS Explain read.",
+    ...upcomingList.map((a) => `- ${a.auctionDate}: ${auctionName(a)}, ${billions(a.offeringUsd)}, issued ${a.issueDate}${a.couponPct != null ? ` (coupon ${a.couponPct.toFixed(3)}%)` : ""}`),
+    recent.length ? "\nLatest results:" : "",
+    ...recent.map((a) => `- ${a.auctionDate}: ${auctionName(a)}, ${billions(a.offeringUsd)}${a.yieldPct != null ? `, ${a.type === "Bill" || a.type === "CMB" ? "investment rate" : "high yield"} ${a.yieldPct.toFixed(3)}%` : ""}${a.bidToCover != null ? `, bid-to-cover ${a.bidToCover.toFixed(2)}` : ""}${a.indirectPct != null ? `, ${a.indirectPct.toFixed(0)}% to indirect bidders` : ""}`),
+    "\nBid-to-cover is how many dollars were bid for each dollar sold; a higher figure means more demand at that auction. The yield is the rate the auction set for that security.",
+    `Source: TreasuryDirect (U.S. Department of the Treasury), read ${utc(au.capturedAt)} by ATLAS Explain's data job. Describes auctions that are announced or done; it never predicts a result.`,
+  ].filter(Boolean);
+  return data(lines.join("\n"), { refreshedAt: au.capturedAt, upcoming: upcomingList, recent, source: "TreasuryDirect, U.S. Department of the Treasury" });
 }
 
 /* ---------- countries compared (World Bank, from ATLAS Explain's own data site) ---------- */
@@ -1262,6 +1414,9 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "market_depth": return ok(await marketDepth(s(args.coin) ?? "", fetcher));
         case "evidence_brief": return ok(await evidenceBrief(s(args.asset) ?? "", fetcher));
         case "notable_today": return ok(await notableToday(fetcher));
+        case "money_maths": return ok(moneyMathsTool(args));
+        case "scam_red_flags": return ok(await scamRedFlags(s(args.pitch), fetcher));
+        case "treasury_auctions": return ok(await treasuryAuctions(s(args.kind), fetcher));
         case "compare_countries": return ok(await compareCountries(s(args.indicator), s(args.countries), fetcher));
         default: return fail(-32602, `Unknown tool: ${String(name)}`);
       }

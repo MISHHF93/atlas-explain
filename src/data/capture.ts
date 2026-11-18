@@ -28,6 +28,7 @@ import {
   type CryptoSource,
 } from "./crypto.ts";
 import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
+import { boeBankRateUrl, parseBoeBankRate, parseBoeMpcDates, parseEcbDepositRate, parseTreasuryAuctions, type Auction } from "./economy.ts";
 import { ECONOMY_SCHEMA, ECONOMY_SOURCES, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
 import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, parseData360, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
 import { SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, readTickerMap, stockFromSec } from "./sec.ts";
@@ -328,10 +329,25 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
     if (!fresh) env.log(`economy ${id}: ${kept ? `kept the value captured ${kept.capturedAt}` : "no data"}`);
     if (kept) indicators.push(kept);
   }
+  // Policy rates published as CSV (Bank of England database, ECB data portal).
+  const csvReads: [IndicatorId, string, (csv: string, at: string) => Indicator | null][] = [
+    ["euro_deposit_rate", ECONOMY_SOURCES.ecbDeposit, parseEcbDepositRate],
+    ["uk_bank_rate", boeBankRateUrl(env.now), parseBoeBankRate],
+  ];
+  for (const [id, url, parse] of csvReads) {
+    const fresh = parse(await env.get(url).catch(() => ""), at);
+    const kept = fresh ?? prev?.indicators.find((i) => i.id === id) ?? null;
+    if (!fresh) env.log(`economy ${id}: ${kept ? `kept the value captured ${kept.capturedAt}` : "no data"}`);
+    if (kept) indicators.push(kept);
+  }
+  // Keep the published order: each bank's rates together.
+  const ORDER: IndicatorId[] = ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "euro_hicp", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate", "us_debt"];
+  indicators.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
   const pages: [string, (html: string) => CalendarEvent[], CalendarEvent["institution"]][] = [
     [ECONOMY_SOURCES.fomc, parseFomcCalendar, "Federal Reserve"],
     [ECONOMY_SOURCES.ecbCalendar, parseEcbCalendar, "European Central Bank"],
     [ECONOMY_SOURCES.bocEvents, parseBocEvents, "Bank of Canada"],
+    [ECONOMY_SOURCES.boeMpc, parseBoeMpcDates, "Bank of England"],
   ];
   const events: CalendarEvent[] = [];
   for (const [url, parse, institution] of pages) {
@@ -340,9 +356,19 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
     if (!fresh.length) env.log(`economy calendar ${institution}: ${kept.length ? "kept the last dates" : "no dates"}`);
     events.push(...kept);
   }
+  // Treasury auctions: what is announced and not yet run, and the latest results. Each keeps its last good list.
+  const today = at.slice(0, 10);
+  const announced = parseTreasuryAuctions(await env.get(ECONOMY_SOURCES.auctionsAnnounced).then((t) => JSON.parse(t) as unknown).catch(() => null));
+  const results = parseTreasuryAuctions(await env.get(ECONOMY_SOURCES.auctionsResults).then((t) => JSON.parse(t) as unknown).catch(() => null));
+  const upcomingAuctions: Auction[] = announced.filter((a) => a.bidToCover == null && a.auctionDate >= today).sort((a, b) => a.auctionDate.localeCompare(b.auctionDate));
+  const recentAuctions: Auction[] = results.filter((a) => a.bidToCover != null).sort((a, b) => b.auctionDate.localeCompare(a.auctionDate)).slice(0, 15);
+  const auctions = announced.length || results.length
+    ? { capturedAt: at, upcoming: upcomingAuctions, recent: recentAuctions.length ? recentAuctions : prev?.auctions?.recent ?? [] }
+    : prev?.auctions;
+  if (!announced.length && !results.length) env.log(`economy auctions: ${auctions ? "kept the last lists" : "none"}`);
   if (!indicators.length && !events.length) return null;
-  env.log(`economy: ${indicators.length} indicators, ${events.length} calendar dates`);
-  return { schema: ECONOMY_SCHEMA, generatedAt: at, indicators, calendar: { capturedAt: at, events } };
+  env.log(`economy: ${indicators.length} indicators, ${events.length} calendar dates, ${auctions?.upcoming.length ?? 0} upcoming auctions`);
+  return { schema: ECONOMY_SCHEMA, generatedAt: at, indicators, calendar: { capturedAt: at, events }, ...(auctions ? { auctions } : {}) };
 }
 
 /**

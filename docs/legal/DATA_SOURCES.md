@@ -37,6 +37,9 @@ Added 2026-11-13; moved 2026-11-16. Fetched on a schedule by the connector's Clo
 | Bank of Canada Valet (series V39079) | Canada's policy rate (target for the overnight rate) | Free to use with attribution ⚑ | "Bank of Canada" with a link |
 | US Treasury Fiscal Data (Debt to the Penny) | Total public debt outstanding | US government works, public domain | "U.S. Department of the Treasury, Fiscal Data" with a link |
 | Fed, ECB and Bank of Canada calendar pages | Dates of upcoming rate decisions (`economic_calendar`) | Public schedules; dates and titles only | Each bank's page linked on every date |
+| Bank of England database (Bank Rate, series IUDBEDR) and MPC dates page | The UK's Bank Rate and the Monetary Policy Committee's decision dates | Bank of England content may be reused with attribution ⚑ | "Bank of England" with a link |
+| ECB data portal (FM dataset, deposit facility rate) | The ECB deposit facility rate | Free use if reproduced accurately with the ECB cited | "European Central Bank" with a link |
+| TreasuryDirect securities API (announced and auctioned) | Upcoming US Treasury auctions and recent results (`treasury_auctions`) | US government works, public domain | "TreasuryDirect, U.S. Department of the Treasury" |
 | World Bank Data360 API, World Development Indicators (keyless) | GDP growth, inflation, unemployment (ILO modelled estimate) and GDP per person for the G20 and the EU (`compare_countries`) | CC BY 4.0: reuse with attribution | "World Bank, World Development Indicators" with a link and licence on every answer |
 | Kraken public Ticker and Depth | Best bid and ask, and the best 25 levels of each coin's order book (`market_depth`) | Same terms as Kraken prices above (legal review item 12) ⚑ | "Kraken public market data" with the capture times |
 

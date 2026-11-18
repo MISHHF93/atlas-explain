@@ -18,6 +18,9 @@ MCP Registry name: io.github.MISHHF93/atlas-explain
 - official_figures: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, SEC-filed company figures
 - crypto_prices, price_history, market_depth: ten major coins, charts over 24 hours to 30 days, spreads and order-book depth
 - economy_snapshot, economic_calendar: inflation, jobs, policy rates, US debt, and the next central-bank rate decisions
+- money_maths: compound growth, fees, inflation and diversification from the person's own numbers, as a chart they can change
+- scam_red_flags: warning signs of investment fraud in a message or offer, where to check registration and where to report
+- treasury_auctions: upcoming US Treasury auctions and the latest results
 - compare_countries: GDP growth, inflation, unemployment and GDP per person across the G20, from the World Bank
 - notable_today: what stands out in the data today, each item with the rule that picked it
 - todays_headlines: official press releases and recent market news

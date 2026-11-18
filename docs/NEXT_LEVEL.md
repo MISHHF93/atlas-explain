@@ -139,6 +139,14 @@ The other half of item 4: `notable_today`'s items in Today, from the same rules,
 - **Tasks extension:** not needed; every tool answers in well under a second.
 - **Practice simulator:** needs the owner's wording decision (PLATFORM_PLAN.md phase B).
 
+## Round 4: risk, fraud and more central banks (researched 18 Nov 2026; batch 1 done in 1.13.0)
+
+A 2026 FINRA Foundation and Stanford study found only 18% of US investors show advanced investment literacy, mostly for lack of risk knowledge; a July 2026 FINRA report tied literacy to recognising fraud. So batch 1 teaches risk and fraud, and adds the central banks people asked about.
+
+- **Done (1.13.0):** `money_maths` with an interactive view (compound growth, fees, inflation, diversification); `scam_red_flags` (SEC and FINRA warning signs, where to check and report, recent official fraud actions); Bank of England Bank Rate and MPC dates, and the ECB deposit rate, in `economy_snapshot` and `economic_calendar`; `treasury_auctions` from TreasuryDirect; prompts `check_an_offer` and `money_lesson`.
+- **Batch 2:** the learning hub and spaced review (13, 14), the Today section (17), weekly futures positioning from the CFTC (keyless, CC0; descriptive only), euro-area unemployment from Eurostat (keyless), supersession and view control (11, 10).
+- **Not now:** DefiLlama stablecoins (terms to read first), Statistics Canada (blocks automated reads), stock prices (no free display licence). Fiscal Data's `upcoming_auctions` lagged a month on 18 Nov 2026, so auctions come from TreasuryDirect; the SEC's investor-alerts feed refuses automated readers, so recent fraud actions come from the official releases already captured.
+
 ### Suggested order for round 3
 
 12 (quick, one release with 11), then 16 (distribution), then 13 + 14 (learning), then 15 and 17.
