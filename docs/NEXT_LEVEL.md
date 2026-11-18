@@ -109,7 +109,7 @@ Each tool call adds another live copy of a view. With 6 and 7 in place, older co
 
 Already shipped in 1.10.0: `notable_today`, the server card, `/health`, an installable web app, `llms.txt` and `security.txt`. What's new outside: on 10 Nov 2026 Claude began opening interactive connectors as full apps beside the chat or in full screen, and added more of the MCP Apps extension (app tools, embedded sites). The plugin directory has taken submissions (connectors plus Skills, from a GitHub repo) since 25 Sep 2026. The 2026-07-28 spec moved live updates to an opt-in `subscriptions/listen` stream.
 
-### 12. A view for `notable_today` (connector; half a day)
+### 12. A view for `notable_today` (connector; half a day; done in 1.11.0, 18 Nov 2026)
 
 The one data tool without a view. Each item as a card with its rule and source, the "checked, nothing unusual" list below, and two Ask Claude buttons ("Explain the first item", "Teach me the term"). Inline, not the side panel.
 
@@ -125,7 +125,7 @@ Retrieval practice on a spaced schedule (1, 3, 7, 21 days) for terms a person ha
 
 `compare_countries`: inflation, GDP growth, unemployment and policy rates for the G20, with source and year, from keyless official sources (World Bank Indicators, CC BY 4.0; IMF DataMapper; OECD SDMX). Captured by a new daily cron into `world.json` on the data site; licences checked first and recorded in DATA_SOURCES.md. Today the economy covers only the US, the euro area and Canada.
 
-### 16. The Claude plugin, submitted (repo + portal; 1 day)
+### 16. The Claude plugin, submitted (repo + portal; 1 day; built 18 Nov 2026 in `plugins/atlas-explain`, submission is the owner's step)
 
 Item 8, now that the portal is open: this repo (or a small one) with `.claude-plugin`, the connector and four Skills (learn a term properly, today's market brief, explain a market move, understand trading costs). Submitted at claude.ai/directory/manage → Submit new → Plugin.
 

@@ -28,6 +28,7 @@ describe("interactive views in the chat (MCP Apps)", () => {
       official_figures: "ui://atlas-explain/official-figures.html",
       economy_snapshot: "ui://atlas-explain/economy.html",
       market_depth: "ui://atlas-explain/market-depth.html",
+      notable_today: "ui://atlas-explain/notable-today.html",
     });
   });
 

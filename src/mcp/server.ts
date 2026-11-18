@@ -30,12 +30,13 @@ import { BOARD_APP_HTML, BOARD_APP_URI } from "./board-app";
 import { FIGURES_APP_HTML, FIGURES_APP_URI } from "./figures-app";
 import { ECONOMY_APP_HTML, ECONOMY_APP_URI } from "./economy-app";
 import { DEPTH_APP_HTML, DEPTH_APP_URI } from "./depth-app";
+import { NOTABLE_APP_HTML, NOTABLE_APP_URI } from "./notable-app";
 import { ICON_PNG_64_BASE64 } from "./icon-data";
 import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile, type Indicator } from "../data/economy";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.10.0";
+export const SERVER_VERSION = "1.11.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -267,17 +268,19 @@ export const TOOLS: readonly Tool[] = [
       unavailable: { type: "array", items: { type: "string" } },
       limits: { type: "array", items: { type: "string" } },
     }, ["observations", "limits"]),
+    // Clients that support MCP Apps draw a card per item (src/mcp/notable-app.ts).
+    _meta: { ui: { resourceUri: NOTABLE_APP_URI } },
   },
 ];
 
 export const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot and market_depth also draw interactive charts. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth and notable_today also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
 export const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
   prompts: { listChanged: false },
   completions: {},
-  // The charts (price_history, crypto_prices, official_figures, economy_snapshot, market_depth) are MCP Apps; hosts without them get the text answer.
+  // The views (price_history, crypto_prices, official_figures, economy_snapshot, market_depth, notable_today) are MCP Apps; hosts without them get the text answer.
   extensions: { "io.modelcontextprotocol/ui": { mimeTypes: [MCP_APP_MIME] } },
 };
 const SERVER_INFO = () => ({ name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION, websiteUrl: EXPLAIN_WEB_URL, icons: SERVER_ICONS });
@@ -291,6 +294,7 @@ export const MCP_APPS = [
   { uri: BOARD_APP_URI, name: "crypto-board", title: "Crypto price board", description: "The board crypto_prices draws in clients that support MCP Apps: prices, changes and 24-hour sparklines; a coin opens its chart.", html: BOARD_APP_HTML },
   { uri: ECONOMY_APP_URI, name: "economy", title: "The economy at a glance", description: "The view economy_snapshot draws in clients that support MCP Apps: a card per indicator, its trend over about a year, and the next rate decisions.", html: ECONOMY_APP_HTML },
   { uri: DEPTH_APP_URI, name: "market-depth", title: "Order book depth chart", description: "The view market_depth draws in clients that support MCP Apps: best bid and ask, the spread, a depth chart of the order book and slippage by order size.", html: DEPTH_APP_HTML },
+  { uri: NOTABLE_APP_URI, name: "notable-today", title: "What's notable today", description: "The view notable_today draws in clients that support MCP Apps: a card per item with why it was picked and its source, then what was checked and found ordinary.", html: NOTABLE_APP_HTML },
   { uri: FIGURES_APP_URI, name: "official-figures", title: "Official figures and yield curve", description: "The view official_figures draws in clients that support MCP Apps: figure cards, and a yield curve when the answer holds government bond yields.", html: FIGURES_APP_HTML },
 ] as const;
 

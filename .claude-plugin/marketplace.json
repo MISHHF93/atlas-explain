@@ -1,0 +1,15 @@
+{
+  "name": "atlas-explain",
+  "description": "ATLAS Explain: market jargon explained in plain language inside Claude, education only.",
+  "owner": {
+    "name": "ATLAS Explain",
+    "url": "https://atlas-explain.web.app"
+  },
+  "plugins": [
+    {
+      "name": "atlas-explain",
+      "source": "./plugins/atlas-explain",
+      "description": "Market jargon explained in plain language, with official figures, crypto prices and charts, economic data and headlines, each with its source and time. Education only."
+    }
+  ]
+}

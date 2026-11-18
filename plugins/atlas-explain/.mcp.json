@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "atlas-explain": {
+      "type": "http",
+      "url": "https://atlas-explain-mcp.atlas-explain.workers.dev/mcp"
+    }
+  }
+}
