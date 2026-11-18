@@ -11,7 +11,7 @@
  */
 import { validateAsset, type Asset } from "../core/asset-schema.ts";
 import { EXPLAIN_WEB_URL } from "../core/links.ts";
-import { NEWS_GROUPS, NEWS_SCHEMA, NEWS_TARGETS, OFFICIAL_FEEDS, OFFICIAL_MAX, OFFICIAL_NEWS_ID, assignNews, gdeltUrl, isRateLimitNotice, parseGdelt, parseRss, type NewsFile, type NewsItem } from "../core/news.ts";
+import { oneOfEachStory, withoutSiteName, NEWS_GROUPS, NEWS_SCHEMA, NEWS_TARGETS, OFFICIAL_FEEDS, OFFICIAL_MAX, OFFICIAL_NEWS_ID, assignNews, gdeltUrl, isRateLimitNotice, parseGdelt, parseRss, type NewsFile, type NewsItem } from "../core/news.ts";
 import {
   COINGECKO_PUBLIC_API,
   CRYPTO_COINS,
@@ -199,7 +199,8 @@ export async function captureNews(env: CaptureEnv, prev: NewsFile | null, option
   const items: Record<string, NewsItem[]> = {};
   for (const t of NEWS_TARGETS) {
     // An asset with no fresh match keeps its last headlines.
-    const list = fresh[t.assetId] ?? prev?.items[t.assetId] ?? [];
+    // Kept lists get the same clean-up as fresh ones (they may predate it): outlet names off, each story once.
+    const list = fresh[t.assetId] ?? oneOfEachStory((prev?.items[t.assetId] ?? []).map((n) => ({ ...n, title: withoutSiteName(n.title) })));
     if (list.length) items[t.assetId] = list;
   }
   // Market-wide: the newest releases across the feeds; the last ones if every feed failed.

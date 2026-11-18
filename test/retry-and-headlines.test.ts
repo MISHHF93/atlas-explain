@@ -45,3 +45,23 @@ describe("cloud errors: honest words, and one retry only for a temporary failure
     expect(cloudErrorCopy("AI: Error fetching from https://x/models/m:generateContent: [418 ] teapot")).toMatch(/Something went wrong/);
   });
 });
+
+describe("headlines kept from the last capture get the same clean-up", () => {
+  it("a quick refresh that finds nothing new for a company still shows each story once, without outlet names", async () => {
+    const { captureNews } = await import("../src/data/capture");
+    const { NEWS_SCHEMA } = await import("../src/core/news");
+    const prev = {
+      schema: NEWS_SCHEMA,
+      generatedAt: "2026-11-18T14:23:50Z",
+      items: {
+        "stock:US:NVDA": [
+          item("Nvidia Exceeds Q3 Expectations Amid CEO Huang Exit | News Radio 101.9 Big WAAX", "1019bigwaax.iheart.com", "2026-11-18T01:10:00Z"),
+          item("Nvidia Exceeds Q3 Expectations Amid CEO Huang Exit | PowerTalk 1460 AM & 101.1 FM", "powertalk1460.iheart.com", "2026-11-18T01:05:00Z"),
+        ],
+      },
+    };
+    const env = { get: async () => "", sleep: async () => {}, now: Date.parse("2026-11-18T14:38:00Z"), log: () => {} } as unknown as Parameters<typeof captureNews>[0];
+    const out = await captureNews(env, prev as Parameters<typeof captureNews>[1], { gdelt: false });
+    expect(out.items["stock:US:NVDA"]!.map((n) => n.title)).toEqual(["Nvidia Exceeds Q3 Expectations Amid CEO Huang Exit"]);
+  });
+});
