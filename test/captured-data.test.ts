@@ -8,7 +8,7 @@ import { captureCrypto, captureMarket, mergeCloses, WORKER_MARKET_PARTS, type Ca
 import { CRYPTO_COINS, CRYPTO_SCHEMA, type CryptoFile } from "../src/data/crypto";
 import { MARKET_SCHEMA, type MarketFile } from "../src/data/market-sources";
 import worker from "../src/mcp/worker";
-import { CRONS, REFRESH_AFTER_MS, ownDataFetch, runCapture, serveData, setPauseForTests, type WorkerEnv } from "../src/mcp/live-data";
+import { CRONS, cronDue, REFRESH_AFTER_MS, ownDataFetch, runCapture, serveData, setPauseForTests, type WorkerEnv } from "../src/mcp/live-data";
 
 const NOW = Date.parse("2026-11-16T12:00:00Z");
 const sec = (iso: string) => Date.parse(iso) / 1000;
@@ -230,6 +230,21 @@ describe("the Worker serves and stores the data", () => {
     const M = kv({ [market]: "{}" }, { [market]: { capturedAt: new Date(NOW - 60_000).toISOString() } });
     await runCapture(CRONS.market, { DATA: M }, NOW, async () => undefined);
     expect(M.writes).toBe(0);
+  });
+
+  it("a cron run still refreshes a part its own last run captured a few seconds into the hour (no skipped runs)", () => {
+    // economy.json captured at 12:17:11 by one run; the next run fires at 18:17:00, 11 seconds short of 6 hours.
+    const age = Date.parse("2026-11-18T18:17:00Z") - Date.parse("2026-11-18T12:17:11Z");
+    expect(age).toBeLessThan(REFRESH_AFTER_MS["economy.json"]);
+    expect(cronDue(age, "economy.json")).toBe(true);
+    // A part a visit refreshed a moment ago is still skipped.
+    expect(cronDue(60_000, "economy.json")).toBe(false);
+    expect(cronDue(60_000, "market.json")).toBe(false);
+    // The margin is small next to each gap: at most a tenth of it, and never more than 10 minutes.
+    for (const file of Object.keys(REFRESH_AFTER_MS) as (keyof typeof REFRESH_AFTER_MS)[]) {
+      const gap = REFRESH_AFTER_MS[file];
+      expect(cronDue(gap - Math.min(600_000, gap / 10) - 1, file)).toBe(false);
+    }
   });
 
   it("the economy's cron also refreshes world.json once a day, from the World Bank only", async () => {

@@ -212,6 +212,14 @@ async function capture(file: DataFile, env: WorkerEnv, now: number, why: "visit"
   }
 }
 
+/**
+ * A cron fires on the minute, but a capture is stamped a few seconds into its own run, so a file refreshed
+ * by the last run of a cron is a little younger than the cron's interval when the next run comes. Without
+ * this margin every other run skipped (economy.json went 12 hours between refreshes). A tenth of the
+ * refresh gap, at most 10 minutes; a visit still waits the full gap.
+ */
+export const cronDue = (ageMs: number, file: DataFile): boolean => ageMs >= REFRESH_AFTER_MS[file] - Math.min(10 * 60_000, REFRESH_AFTER_MS[file] / 10);
+
 /** Runs the part a cron belongs to, unless a visit refreshed it moments ago. */
 export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(), sleep?: (ms: number) => Promise<void>): Promise<void> {
   const file = CRON_FILE[cron];
@@ -219,17 +227,17 @@ export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(),
   // The free plan allows few crons, so the economy's cron also refreshes world.json once a day.
   if (file === "economy.json") {
     const world = await read(env, "world.json", now);
-    if (world.ageMs >= REFRESH_AFTER_MS["world.json"]) await capture("world.json", env, now, "cron", sleep).catch((e: unknown) => console.log(`world: ${String(e)}`));
+    if (cronDue(world.ageMs, "world.json")) await capture("world.json", env, now, "cron", sleep).catch((e: unknown) => console.log(`world: ${String(e)}`));
   }
   // News always runs on its cron, because only the cron asks GDELT.
   if (file === "crypto.json") {
     // Visits refresh prices only, so the cron goes by the age of the history, which only it updates.
     const history = readCryptoFile(await stored(env, file))?.history;
     const historyAge = history ? now - Date.parse(history.asOf) : Infinity;
-    if (historyAge < REFRESH_AFTER_MS[file]) return;
+    if (!cronDue(historyAge, file)) return;
   } else if (file !== "news.json") {
     const { ageMs } = await read(env, file, now);
-    if (ageMs < REFRESH_AFTER_MS[file]) return;
+    if (!cronDue(ageMs, file)) return;
   }
   await capture(file, env, now, "cron", sleep);
 }
