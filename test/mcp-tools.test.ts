@@ -275,3 +275,18 @@ describe("the server's own icons", () => {
     for (const icon of ICONS) expect(icon.src.startsWith(`${MCP_ORIGIN}/`)).toBe(true);
   });
 });
+
+describe("every tool answers in structured form too", () => {
+  it("declares an output schema, and the glossary tools return structured terms", async () => {
+    const { TOOLS: all, explainTerm: explain, browseGlossary: browse } = await import("../src/mcp/server");
+    expect(all.filter((t) => !t.outputSchema).map((t) => t.name)).toEqual([]);
+    const hit = explain("inflation").structuredContent as { found: boolean; terms: { id: string; group: string }[] };
+    expect(hit.found).toBe(true);
+    expect(hit.terms[0]).toMatchObject({ id: "inflation", group: "economy" });
+    expect((explain("zzzz").structuredContent as { found: boolean }).found).toBe(false);
+    const path = browse(undefined).structuredContent as { steps: { id: string; terms: unknown[] }[]; totalTerms: number; groups: { id: string; count: number }[] };
+    expect(path.steps.length).toBeGreaterThan(5);
+    expect(path.totalTerms).toBe(path.groups.reduce((n, g) => n + g.count, 0));
+    expect((browse("economy").structuredContent as { topic: string }).topic).toBe("economy");
+  });
+});

@@ -36,3 +36,19 @@ describe("today's headlines", () => {
   });
 });
 
+
+describe("todays_headlines: asking about an institution finds its own releases", () => {
+  it("'Fed' finds federalreserve.gov releases even when the title doesn't say 'Fed'", async () => {
+    const { todaysHeadlines } = await import("../src/mcp/server");
+    const now = Date.parse("2026-11-18T15:00:00Z");
+    const news = { schema: "atlas-explain-news-v1", generatedAt: "2026-11-18T14:00:00Z", items: { "market:official": [
+      { title: "Minutes of the Board's discount rate meetings", url: "https://www.federalreserve.gov/x", domain: "federalreserve.gov", seenAt: "2026-11-18T13:00:00Z" },
+      { title: "ECB publishes Financial Stability Review", url: "https://www.ecb.europa.eu/y", domain: "ecb.europa.eu", seenAt: "2026-11-18T12:00:00Z" },
+    ] } };
+    const serve = async () => new Response(JSON.stringify(news));
+    const fed = (await todaysHeadlines("Fed", serve, now)).structuredContent as { headlines: { publisher: string }[] };
+    expect(fed.headlines.map((h) => h.publisher)).toEqual(["federalreserve.gov"]);
+    const ecb = (await todaysHeadlines("ECB", serve, now)).structuredContent as { headlines: { publisher: string }[] };
+    expect(ecb.headlines.map((h) => h.publisher)).toEqual(["ecb.europa.eu"]);
+  });
+});

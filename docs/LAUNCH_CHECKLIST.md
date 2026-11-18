@@ -45,10 +45,19 @@ Education only: no buy/sell wording, never reads balances or account details.
 - [ ] **Analytics (optional)**: link Google Analytics to the Firebase project, set data retention to 2 months, then set Remote Config `analytics_enabled` = `true`. The web app then asks each visitor once; nothing loads before that.
 - [ ] **Legal**: add the operator's legal name and a privacy/support email to `/privacy` and `/terms`, then go through docs/legal/REVIEW_NOTES.md with a lawyer.
 - [x] **MCP Registry**: published 15 Nov 2026 as `io.github.MISHHF93/atlas-explain` (`docs/MCP.md`, "Getting listed").
-- [ ] **Claude connectors directory**: submitted by the owner on 15 Nov 2026 and updated 16 Nov (correct answers, carousel); track it at https://claude.ai/directory/manage (answers in `docs/CONNECTOR_SUBMISSION.md`). Its tool list still shows the 7 tools captured on 16 Nov: "Sync from server" there picks up the 12 tools of 1.10.0.
+- [ ] **Claude connectors directory**: submitted by the owner on 15 Nov 2026 and updated 16 Nov (correct answers, carousel); track it at https://claude.ai/directory/manage (answers in `docs/CONNECTOR_SUBMISSION.md`). Its tool list still shows the 7 tools captured on 16 Nov: "Sync from server" there picks up the 17 tools of 1.15.0.
 - [x] **Hosted MCP server** (live 15 Nov 2026 at https://atlas-explain-mcp.atlas-explain.workers.dev/mcp, verified in Claude) (free Cloudflare account, no card): `npx wrangler@4 login`, `npm run deploy:mcp`, then set `MCP_URL` in `src/core/links.ts` (`docs/MCP.md`).
 - [x] **Blaze plan**: decided against on 14 Nov 2026 (no card on file). Paid plans run without it; see `docs/MONETIZATION.md`.
 - [ ] **Gemini free tier and Europe**: decide how to handle the EEA, Switzerland and the UK, where the free tier may not be used for the cloud fallback (`docs/legal/REVIEW_NOTES.md` point 11).
+
+- [ ] **Claude plugin**: submit `plugins/atlas-explain` at claude.ai/directory/manage → Submit new → Plugin (built 18 Nov 2026; `docs/NEXT_LEVEL.md` item 16).
+- [ ] **MCP Registry**: publish each new version after deploy (`docs/MCP.md`, "Getting listed"; needs a GitHub device code approved by the owner).
+
+### Partners (sandbox live 18 Nov 2026, `docs/PARTNER_API.md`)
+- [x] Sandbox keys: `node scripts/partners/issue-key.mjs --name "…" --apply`, revoke with `--revoke <hash> --apply`. Fixed 18 Nov 2026: on Windows the record is now written through a file, so its JSON keeps its quotes (before, keys issued from Windows never worked).
+- [ ] A business email for partner requests, to replace the GitHub issue link on `/partners`.
+- [ ] Lawyer review of the partner terms in `docs/PARTNER_API.md` (and the bank attribution terms marked ⚑ in `docs/legal/DATA_SOURCES.md`).
+- [ ] Only if partner traffic outgrows the free Workers plan (100,000 requests and 1,000 KV writes a day): the paid Workers plan. It costs money, so it waits for revenue.
 
 ### Before charging money
 - [ ] A commercial licence for crypto prices (CoinGecko paid plan) if crypto stays part of what Pro sells; see docs/ux/MULTI_ASSET_CATALOG.md §9.

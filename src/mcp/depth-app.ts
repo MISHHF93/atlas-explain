@@ -74,7 +74,7 @@ export const DEPTH_APP_HTML = appPage({
     $("title").textContent = d.name + " (" + d.symbol + ") order book";
     $("sub").textContent = "Best bid and ask as of " + when(d.quoteAsOf) + (d.book ? "; order book as of " + when(d.book.asOf) : "");
     $("quote").replaceChildren(cell("Best bid", usd(d.bidUsd)), cell("Best ask", usd(d.askUsd)), cell("Spread", usd(d.spreadUsd) + " (" + d.spreadBps.toFixed(2) + " bp)"), cell("Middle price", usd(d.midUsd)));
-    if (d.book && d.book.bids.length && d.book.asks.length) draw(d.book, d.midUsd); else message("The order book itself isn't available right now; the spread above is current.");
+    if (d.book && d.book.bids.length && d.book.asks.length) draw(d.book, d.bookMidUsd || d.midUsd); else message("The order book itself isn't available right now; the spread above is current.");
     askButtons($("asks"), [
       { label: "Explain these costs", prompt: "Using ATLAS Explain, explain " + d.name + "'s bid-ask spread of " + d.spreadBps.toFixed(2) + " basis points and the slippage numbers in plain language." },
       { label: "Brief on " + d.symbol, prompt: "Using ATLAS Explain, give me an evidence brief on " + d.name + "." },

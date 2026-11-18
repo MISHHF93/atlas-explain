@@ -41,7 +41,7 @@ import { readEconomyFile, upcoming, type Auction, type CalendarEvent, type Econo
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.14.0";
+export const SERVER_VERSION = "1.15.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -128,10 +128,11 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "explain_term",
     title: "Explain a market term",
-    description: "Look up a trading or market term (for example 'stop-limit order', 'bid-ask spread', 'yield curve') in ATLAS Explain's plain-language glossary. Education only.",
+    description: "The plain-language meaning of a market or economics term from ATLAS Explain's glossary, such as stop-limit order, yield curve, inflation or P/E. Use it when someone asks what a term means. Up to three closest terms, each with its glossary group. Education only.",
     inputSchema: { type: "object", properties: { term: str("The term or phrase to look up.") }, required: ["term"], additionalProperties: false },
     annotations: annotations("Explain a market term", false),
     icons: ICONS,
+    outputSchema: obj({ query: { type: "string" }, found: { type: "boolean" }, terms: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, summary: { type: "string" }, group: { type: "string" } } } }, learnUrl: { type: "string" } }, ["query", "found", "terms"]),
   },
   {
     name: "browse_glossary",
@@ -140,6 +141,12 @@ export const TOOLS: readonly Tool[] = [
     inputSchema: { type: "object", properties: { topic: str("Optional learning-path topic or glossary group, for example 'orders', 'risk', 'rates', 'futures'. Leave empty for the whole path.") }, additionalProperties: false },
     annotations: annotations("Browse the glossary and learning path", false),
     icons: ICONS,
+    outputSchema: obj({
+      topic: nullable("string"),
+      steps: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, terms: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, summary: { type: "string" }, group: { type: "string" } } } } } } },
+      groups: { type: "array", items: { type: "object", properties: { id: { type: "string" }, label: { type: "string" }, count: { type: "number" } } } },
+      totalTerms: { type: "number" },
+    }, ["steps", "totalTerms"]),
   },
   {
     name: "asset_details",
@@ -227,7 +234,7 @@ export const TOOLS: readonly Tool[] = [
     icons: ICONS,
     outputSchema: obj({
       name: { type: "string" }, symbol: { type: "string" }, bidUsd: { type: "number" }, askUsd: { type: "number" }, midUsd: { type: "number" },
-      spreadUsd: { type: "number" }, spreadPct: { type: "number" }, spreadBps: { type: "number" }, quoteAsOf: { type: "string" },
+      spreadUsd: { type: "number" }, spreadPct: { type: "number" }, spreadBps: { type: "number" }, quoteAsOf: { type: "string" }, bookMidUsd: nullable("number"),
       book: { type: ["object", "null"], properties: { asOf: { type: "string" }, bids: { type: "array" }, asks: { type: "array" } } },
       depth: { type: "array", items: { type: "object", properties: { bandPct: { type: "number" }, bidsUsd: { type: "number" }, asksUsd: { type: "number" }, complete: { type: "boolean" } } } },
       impact: { type: "array", items: { type: "object", properties: { sizeUsd: { type: "number" }, side: { type: "string", enum: ["asks", "bids"] }, filled: { type: "boolean" }, avgPriceUsd: nullable("number"), slippagePct: nullable("number") } } },
@@ -518,30 +525,36 @@ async function getJson(url: string, fetcher: Fetcher): Promise<unknown | null> {
 
 /* ---------- glossary and learning path ---------- */
 
+const termRecord = (t: (typeof ALL_TERMS)[number]) => ({ id: t.id, title: t.title, summary: t.summary, group: t.group });
+
 export function explainTerm(term: string): ToolResult {
   const query = term.trim();
   if (!query) return text("Give a term to look up, for example 'stop-limit order'.", true);
   const hits = searchTerms(query).slice(0, 3);
   if (!hits.length) {
-    return text(`"${query}" is not in the ATLAS Explain glossary. The ATLAS Explain web app can explain any term, sentence or headline in plain language, with both sides: ${APP_URL}`);
+    return data(`"${query}" is not in the ATLAS Explain glossary. The ATLAS Explain web app can explain any term, sentence or headline in plain language, with both sides: ${APP_URL}`, { query, found: false, terms: [], learnUrl: `${APP_URL}/learn` });
   }
-  return text(hits.map((t) => `${t.title}\n${t.summary}`).join("\n\n") + `\n\nSource: ATLAS Explain glossary. More: ${APP_URL}/learn`);
+  return data(hits.map((t) => `${t.title}\n${t.summary}`).join("\n\n") + `\n\nSource: ATLAS Explain glossary. More: ${APP_URL}/learn`, { query, found: true, terms: hits.map(termRecord), learnUrl: `${APP_URL}/learn` });
 }
 
 export function browseGlossary(topic: string | undefined): ToolResult {
   const q = topic?.trim().toLowerCase() ?? "";
   const step = q ? LEARN_PATH.find((s) => s.id === q || s.title.toLowerCase().includes(q)) : undefined;
   const group = q ? (Object.entries(TERM_GROUP_LABEL) as [keyof typeof TERM_GROUP_LABEL, string][]).find(([id, label]) => id === q || label.toLowerCase() === q) : undefined;
+  const groups = (Object.entries(TERM_GROUP_LABEL) as [keyof typeof TERM_GROUP_LABEL, string][])
+    .map(([id, label]) => ({ id, label, count: ALL_TERMS.filter((t) => t.group === id).length }))
+    .filter((g) => g.count > 0);
+  const stepRecord = (s: (typeof LEARN_PATH)[number]) => ({ id: s.id, title: s.title, terms: learnTerms(s).map(termRecord) });
   if (step) {
-    return text(`${step.title}\n` + learnTerms(step).map((t) => `- ${t.title}: ${t.summary}`).join("\n") + `\n\nSource: ATLAS Explain learning path. ${APP_URL}/learn`);
+    return data(`${step.title}\n` + learnTerms(step).map((t) => `- ${t.title}: ${t.summary}`).join("\n") + `\n\nSource: ATLAS Explain learning path. ${APP_URL}/learn`, { topic: step.id, steps: [stepRecord(step)], groups, totalTerms: ALL_TERMS.length });
   }
   if (group) {
     const terms = ALL_TERMS.filter((t) => t.group === group[0]);
-    return text(`${group[1]} terms\n` + terms.map((t) => `- ${t.title}: ${t.summary}`).join("\n") + `\n\nSource: ATLAS Explain glossary. ${APP_URL}/learn`);
+    return data(`${group[1]} terms\n` + terms.map((t) => `- ${t.title}: ${t.summary}`).join("\n") + `\n\nSource: ATLAS Explain glossary. ${APP_URL}/learn`, { topic: group[0], steps: [{ id: group[0], title: `${group[1]} terms`, terms: terms.map(termRecord) }], groups, totalTerms: ALL_TERMS.length });
   }
   const path = LEARN_PATH.map((s, i) => `${i + 1}. ${s.title}: ${learnTerms(s).map((t) => t.title).join(", ")}`).join("\n");
   const lead = q ? `No topic called "${topic}". ` : "";
-  return text(`${lead}The ATLAS Explain learning path, in order:\n${path}\n\nGlossary groups: ${Object.values(TERM_GROUP_LABEL).join(", ")} (${ALL_TERMS.length} terms). Ask explain_term for any term. ${APP_URL}/learn`);
+  return data(`${lead}The ATLAS Explain learning path, in order:\n${path}\n\nGlossary groups: ${Object.values(TERM_GROUP_LABEL).join(", ")} (${ALL_TERMS.length} terms). Ask explain_term for any term. ${APP_URL}/learn`, { topic: null, steps: LEARN_PATH.map(stepRecord), groups, totalTerms: ALL_TERMS.length });
 }
 
 /* ---------- assets and official figures ---------- */
@@ -761,16 +774,26 @@ export async function priceHistory(coinKey: string, range: string | undefined, f
 
 /* ---------- headlines ---------- */
 
+const PUBLISHER_WORDS: Record<string, string> = {
+  fed: "federalreserve.gov", "federal reserve": "federalreserve.gov", fomc: "federalreserve.gov",
+  ecb: "ecb.europa.eu", "european central bank": "ecb.europa.eu",
+  sec: "sec.gov", cftc: "cftc.gov",
+  boc: "bankofcanada.ca", "bank of canada": "bankofcanada.ca",
+  boe: "bankofengland.co.uk", "bank of england": "bankofengland.co.uk",
+};
+
 export async function todaysHeadlines(about: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
   const body = await getJson(NEWS_DATA_URL, fetcher);
   const file = body == null ? null : readNewsFile(body, now);
   if (!file) return text("Headlines couldn't be loaded right now. Try again in a few minutes.", true);
   const seen = new Set<string>();
   const q = about?.trim().toLowerCase() ?? "";
+  // "Fed", "ECB" or "SEC" also find that institution's own releases, whose titles rarely name it.
+  const publisher = PUBLISHER_WORDS[q];
   const items = Object.values(file.items)
     .flat()
     .filter((n: NewsItem) => (seen.has(n.url) ? false : (seen.add(n.url), true)))
-    .filter((n) => !q || n.title.toLowerCase().includes(q))
+    .filter((n) => !q || n.title.toLowerCase().includes(q) || (publisher != null && n.domain.endsWith(publisher)))
     .sort((a, b) => b.seenAt.localeCompare(a.seenAt))
     .slice(0, 10);
   if (!items.length) {
@@ -912,10 +935,13 @@ export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<To
   const mid = (bid + ask) / 2;
   const spread = ask - bid;
   const spreadPct = (spread / mid) * 100;
-  const depth = book
+  // The bands are measured around the book's own middle price: the ticker can be a few minutes newer than the
+  // book, and centring an older book on a newer price can leave a whole side outside a band (seen live on ETH).
+  const bookMid = book?.bids[0] && book.asks[0] ? (book.bids[0][0] + book.asks[0][0]) / 2 : null;
+  const depth = book && bookMid
     ? DEPTH_BANDS.map((band) => {
-        const lo = mid * (1 - band / 100);
-        const hi = mid * (1 + band / 100);
+        const lo = bookMid * (1 - band / 100);
+        const hi = bookMid * (1 + band / 100);
         const bidsUsd = book.bids.filter(([p]) => p >= lo).reduce((s, [p, q]) => s + p * q, 0);
         const asksUsd = book.asks.filter(([p]) => p <= hi).reduce((s, [p, q]) => s + p * q, 0);
         // If the last level shown is still inside the band, the book goes further than ATLAS Explain keeps.
@@ -928,7 +954,7 @@ export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<To
   const lines = [
     `${coin.name} (${coin.symbol}) on Kraken:`,
     `Best bid ${formatPrice(bid)}, best ask ${formatPrice(ask)}. Spread ${formatPrice(spread)} (${(spreadPct * 100).toFixed(2)} basis points of the middle price, ${formatPrice(mid)}).`,
-    ...depthLines(depth, book, mid),
+    ...depthLines(depth, book, bookMid ?? mid),
     ...(book ? [`In the order book captured ${utc(file.books!.asOf)}:`] : []),
     ...impact.filter((r) => r.sizeUsd === 10_000).map((r) => r.filled
       ? `- filling $10,000 against the ${r.side} would average ${formatPrice(r.avgPriceUsd!)}, ${r.slippagePct!.toFixed(4)}% from the best ${r.side === "asks" ? "ask" : "bid"} in that book (that gap is called slippage).`
@@ -938,7 +964,7 @@ export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<To
     credit,
   ].filter(Boolean);
   return data(lines.join("\n"), {
-    name: coin.name, symbol: coin.symbol, bidUsd: bid, askUsd: ask, midUsd: Number(mid.toPrecision(10)),
+    name: coin.name, symbol: coin.symbol, bidUsd: bid, askUsd: ask, midUsd: Number(mid.toPrecision(10)), bookMidUsd: bookMid == null ? null : Number(bookMid.toPrecision(10)),
     spreadUsd: Number(spread.toPrecision(8)), spreadPct: Number(spreadPct.toFixed(5)), spreadBps: Number((spreadPct * 100).toFixed(2)), quoteAsOf,
     book: book ? { asOf: file.books!.asOf, bids: book.bids, asks: book.asks } : null,
     depth, impact, source: credit,

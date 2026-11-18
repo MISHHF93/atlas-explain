@@ -129,7 +129,7 @@ Retrieval practice on a spaced schedule (1, 3, 7, 21 days) for terms a person ha
 
 Item 8, now that the portal is open: this repo (or a small one) with `.claude-plugin`, the connector and four Skills (learn a term properly, today's market brief, explain a market move, understand trading costs). Submitted at claude.ai/directory/manage → Submit new → Plugin.
 
-### 17. The Today section in the web app (web app; 1 day)
+### 17. The Today section in the web app (web app; 1 day; done 18 Nov 2026, with Coming up countdowns and "if this happens")
 
 The other half of item 4: `notable_today`'s items in Today, from the same rules, with the term each one teaches linked to the glossary.
 
@@ -144,8 +144,22 @@ The other half of item 4: `notable_today`'s items in Today, from the same rules,
 A 2026 FINRA Foundation and Stanford study found only 18% of US investors show advanced investment literacy, mostly for lack of risk knowledge; a July 2026 FINRA report tied literacy to recognising fraud. So batch 1 teaches risk and fraud, and adds the central banks people asked about.
 
 - **Done (1.13.0):** `money_maths` with an interactive view (compound growth, fees, inflation, diversification); `scam_red_flags` (SEC and FINRA warning signs, where to check and report, recent official fraud actions); Bank of England Bank Rate and MPC dates, and the ECB deposit rate, in `economy_snapshot` and `economic_calendar`; `treasury_auctions` from TreasuryDirect; prompts `check_an_offer` and `money_lesson`.
-- **Batch 2:** the learning hub and spaced review (13, 14), the Today section (17), weekly futures positioning from the CFTC (keyless, CC0; descriptive only), euro-area unemployment from Eurostat (keyless), supersession and view control (11, 10).
+- **Done since:** the Today section (17), countdowns and scenarios (1.14.0), keyless energy prices from the EIA's history pages, the partner sandbox (REST and keyed MCP, `docs/PARTNER_API.md`) with its page, OpenAPI spec and samples, and structured answers from every tool (1.15.0).
+- **Batch 2:** the learning hub and spaced review (13, 14), weekly futures positioning from the CFTC (keyless, CC0; descriptive only), euro-area unemployment from Eurostat (keyless), supersession and view control (11, 10).
 - **Not now:** DefiLlama stablecoins (terms to read first), Statistics Canada (blocks automated reads), stock prices (no free display licence). Fiscal Data's `upcoming_auctions` lagged a month on 18 Nov 2026, so auctions come from TreasuryDirect; the SEC's investor-alerts feed refuses automated readers, so recent fraud actions come from the official releases already captured.
+
+## Where things stand (18 Nov 2026)
+
+**Live:** connector 1.15.0 with 17 tools, 10 prompts and the views; every tool returns structured content with an output schema; the partner sandbox at `/api/v1` and on keyed MCP (crypto hidden). A live sweep of every tool, prompt, view and error path, and an end-to-end partner key test (issue, call every endpoint, revoke), passed on 18 Nov 2026.
+
+**Next to build, in order:**
+1. Learning hub beside the chat, then spaced review (13, 14).
+2. CFTC weekly positioning (descriptive only) and Eurostat unemployment.
+3. Only the newest copy stays live, and view control (11, 10).
+4. Partner self-serve: a sign-up form that issues sandbox keys, usage shown to the partner, and webhooks for scheduled releases.
+5. A shared counter for partner limits (today each Cloudflare isolate counts on its own between flushes to KV, so the daily limit is approximate).
+
+**Owner steps** are in `docs/LAUNCH_CHECKLIST.md`.
 
 ### Suggested order for round 3
 

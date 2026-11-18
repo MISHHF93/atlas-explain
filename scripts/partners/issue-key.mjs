@@ -5,6 +5,9 @@
 //   node scripts/partners/issue-key.mjs --revoke <hash> --apply                                             (turns a key off)
 import { createHash, randomInt } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const args = process.argv.slice(2);
 const opt = (name, fallback = null) => {
@@ -12,14 +15,23 @@ const opt = (name, fallback = null) => {
   return i >= 0 && args[i + 1] && !args[i + 1].startsWith("--") ? args[i + 1] : fallback;
 };
 const apply = args.includes("--apply");
+// The value goes through a file (--path), never the command line: on Windows the shell strips the JSON's
+// double quotes, which once stored {name:...} and left the key dead.
 const kvPut = (key, value) => {
-  const cmd = ["npx", "wrangler@4", "kv", "key", "put", "--binding", "DATA", key, value, "--remote"];
   if (!apply) {
-    console.log(`\nNot written (add --apply to write it):\n  ${cmd.map((c) => (/[\s"{}]/.test(c) ? `'${c}'` : c)).join(" ")}`);
+    console.log(`\nNot written (add --apply to write it). Value for ${key}:\n  ${value}`);
     return;
   }
-  const r = spawnSync(cmd[0], cmd.slice(1), { stdio: "inherit", shell: process.platform === "win32" });
-  if (r.status !== 0) process.exit(r.status ?? 1);
+  const dir = mkdtempSync(join(tmpdir(), "atlx-key-"));
+  const file = join(dir, "value.json");
+  try {
+    writeFileSync(file, value);
+    const cmd = ["npx", "wrangler@4", "kv", "key", "put", "--binding", "DATA", key, "--path", file, "--remote"];
+    const r = spawnSync(cmd[0], cmd.slice(1), { stdio: "inherit", shell: process.platform === "win32" });
+    if (r.status !== 0) process.exit(r.status ?? 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 };
 
 const revoke = opt("revoke");

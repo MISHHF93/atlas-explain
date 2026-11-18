@@ -140,6 +140,17 @@ describe("market depth", () => {
     books: { source: "kraken", asOf: AT, books: { BTC: parseKrakenDepth(depth)! } },
   });
 
+  it("measures depth around the book's own middle price when the ticker is newer (seen live on ETH)", async () => {
+    // The ticker moved up after the book was captured: its middle price is above every bid in the book.
+    const moved = cryptoFile();
+    moved.prices.coins = moved.prices.coins.map((c) => (c.symbol === "BTC" ? { ...c, bidUsd: 65200, askUsd: 65210 } : c));
+    const r = (await marketDepth("BTC", serve(moved))).structuredContent as { midUsd: number; bookMidUsd: number; depth: { bandPct: number; bidsUsd: number }[] };
+    expect(r.midUsd).toBe(65205);
+    expect(r.bookMidUsd).toBe(65005);
+    // Measured around the ticker it would be 0; around the book it isn't.
+    expect(r.depth.find((d) => d.bandPct === 0.1)!.bidsUsd).toBeGreaterThan(0);
+  });
+
   it("keeps bid, ask and books through the published file", () => {
     const read = readCryptoFile(JSON.parse(JSON.stringify(cryptoFile())))!;
     expect(read.prices.coins[0]).toMatchObject({ bidUsd: 65000, askUsd: 65010 });
