@@ -39,7 +39,7 @@ describe("files a public launch needs", () => {
 
   it("describes the connector for AI tools in llms.txt, with the live address and education-only wording", () => {
     const txt = read("public/llms.txt");
-    expect(txt.startsWith("# ATLAS Explain\n")).toBe(true);
+    expect(txt).toMatch(/^# ATLAS Explain\r?\n/);
     expect(txt).toContain("https://atlas-explain-mcp.atlas-explain.workers.dev/mcp");
     expect(txt).toMatch(/Education only/);
     expect(txt).not.toMatch(/\b(buy|sell)\b/i);
