@@ -50,8 +50,8 @@ const net = (opts: { cryptoAsOf?: string; cryptoDown?: boolean } = {}): Fetcher 
 const body = (r: { content: { text: string }[] }) => r.content[0]!.text;
 
 describe("the connector covers what the app shows", () => {
-  it("lists twelve read-only tools, each with a description and an input schema", () => {
-    expect(TOOLS).toHaveLength(12);
+  it("lists thirteen read-only tools, each with a description and an input schema", () => {
+    expect(TOOLS).toHaveLength(13);
     for (const t of TOOLS) {
       expect(t.annotations.readOnlyHint).toBe(true);
       expect(t.description.length).toBeGreaterThan(40);

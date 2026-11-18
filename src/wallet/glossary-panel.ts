@@ -24,7 +24,7 @@ export function glossaryPanel(options: {
   filters.setAttribute("aria-label", "Term groups");
   let group: TermEntry["group"] | "all" = "all";
   const groupButtons: HTMLButtonElement[] = [];
-  for (const id of ["all", "orders", "market", "risk"] as const) {
+  for (const id of ["all", "orders", "market", "risk", "economy"] as const) {
     const button = el("button", "filter", id === "all" ? "All" : TERM_GROUP_LABEL[id]);
     button.type = "button";
     button.setAttribute("aria-pressed", id === "all" ? "true" : "false");

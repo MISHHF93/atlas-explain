@@ -33,7 +33,7 @@ describe("helping people use the connector at its best (docs/NEXT_LEVEL.md round
       expect(first.length, t.name).toBeLessThanOrEqual(200);
       expect(t.description.slice(0, 200), t.name).not.toMatch(/\b(buy|sell)\b/i);
     }
-    for (const name of ["asset_details", "official_figures", "crypto_prices", "price_history", "todays_headlines", "economy_snapshot", "economic_calendar", "market_depth", "evidence_brief", "notable_today"]) {
+    for (const name of ["asset_details", "official_figures", "crypto_prices", "price_history", "todays_headlines", "economy_snapshot", "economic_calendar", "market_depth", "evidence_brief", "notable_today", "compare_countries"]) {
       const t = TOOLS.find((x) => x.name === name)!;
       expect(t.description.slice(0, 260), name).toContain("Use it ");
     }

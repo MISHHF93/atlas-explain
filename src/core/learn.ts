@@ -16,6 +16,9 @@ export const LEARN_PATH: readonly LearnStep[] = [
   { id: "risk", title: "Measuring risk", terms: ["margin", "drawdown", "hit_rate"] },
   { id: "markets", title: "How markets work", terms: ["market_hours", "index", "etf", "filings"] },
   { id: "rates", title: "Rates and currencies", terms: ["yield", "yield_curve", "basis_point", "pip", "reference_rate"] },
+  { id: "economy", title: "The economy", terms: ["inflation", "cpi", "central_bank", "policy_rate", "gdp", "recession", "unemployment_rate"] },
+  { id: "companies", title: "Companies and bonds", terms: ["market_cap", "dividend", "pe_ratio", "bond"] },
+  { id: "liquidity", title: "Liquidity and costs", terms: ["order_book", "liquidity", "slippage"] },
   { id: "derivatives", title: "Futures and options", terms: ["futures_contract", "expiry", "strike", "call_put", "greeks"] },
   { id: "explain", title: "How answers are made", terms: ["hybrid_inference"] },
 ];

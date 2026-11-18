@@ -29,6 +29,7 @@ import {
 } from "./crypto.ts";
 import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
 import { ECONOMY_SCHEMA, ECONOMY_SOURCES, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
+import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, parseData360, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
 import { SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, readTickerMap, stockFromSec } from "./sec.ts";
 
 export const CAPTURE_UA = `ATLAS Explain data capture (+${EXPLAIN_WEB_URL}/how-its-built)`;
@@ -342,4 +343,24 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
   if (!indicators.length && !events.length) return null;
   env.log(`economy: ${indicators.length} indicators, ${events.length} calendar dates`);
   return { schema: ECONOMY_SCHEMA, generatedAt: at, indicators, calendar: { capturedAt: at, events } };
+}
+
+/**
+ * Countries compared (world.json): one World Bank Data360 request per indicator, all G20 members at once.
+ * Each indicator keeps its last good values when its request fails; nothing is ever filled in.
+ */
+export async function captureWorld(env: CaptureEnv, prev: WorldFile | null): Promise<WorldFile | null> {
+  const at = new Date(env.now).toISOString();
+  const year = new Date(env.now).getUTCFullYear();
+  const indicators: WorldIndicatorData[] = [];
+  for (const ind of WORLD_INDICATORS) {
+    const fresh = parseData360(await env.get(worldUrl(ind.code, year)).then((t) => JSON.parse(t) as unknown).catch(() => null), ind.id, at);
+    const kept = fresh ?? prev?.indicators.find((i) => i.id === ind.id) ?? null;
+    if (!fresh) env.log(`world ${ind.id}: ${kept ? `kept the values captured ${kept.capturedAt}` : "no data"}`);
+    if (kept) indicators.push(kept);
+    await env.sleep(500);
+  }
+  if (!indicators.length) return null;
+  env.log(`world: ${indicators.length} indicators`);
+  return { schema: WORLD_SCHEMA, generatedAt: at, source: WORLD_SOURCE, indicators };
 }

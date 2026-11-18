@@ -40,7 +40,10 @@ import type { HistoryEntry as RecentEntry } from "../core/history";
 import { marketDigestCard } from "../wallet/market-digest";
 import { buildMarketDigest } from "../core/market-digest";
 import type { CatalogView } from "../core/assets";
-import { relatedTerms } from "../core/related-terms";
+// The glossary (for the related-term chips under an answer) loads just after start, off the first-load budget;
+// an answer takes seconds, so it is always there by then. Until it is, an answer simply shows no chips.
+let relatedTerms: typeof import("../core/related-terms").relatedTerms | null = null;
+void import("../core/related-terms").then((m) => { relatedTerms = m.relatedTerms; });
 import { isEngineState } from "../core/hybrid-engine";
 import { TEXT_HISTORY_KEY, readTextHistory, type TextHistoryEntry } from "../core/text-history";
 import { parseTwoSided } from "../core/two-sided";
@@ -367,7 +370,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       // True on the web: Recent is this browser's list, but market-move answers are also saved to the account.
       note: "Kept in this browser. Market-move answers are also saved to your account, never with private notes.",
     },
-    relatedTerms,
+    relatedTerms: (text, topic) => (relatedTerms ? relatedTerms(text, topic) : []),
     announce: (text) => shell.announce(text),
   });
   const engine = panel.engine;

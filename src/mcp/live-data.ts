@@ -16,8 +16,9 @@
 import { handleHttp } from "./http";
 import { DATA_SITE_URL } from "../core/links";
 import type { Fetcher } from "./server";
-import { CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureEconomy, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
+import { captureWorld, CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureEconomy, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
 import { readEconomyFile } from "../data/economy";
+import { readWorldFile } from "../data/world";
 import { STRIPE_WEBHOOK_PATH, handleStripeWebhook } from "./billing-webhook";
 import { dataIndex } from "./data-index";
 import { readCryptoFile } from "../data/crypto";
@@ -48,7 +49,7 @@ export interface WaitContext {
 
 /** The only place the data comes from: this Worker's own /data/v1 address. */
 export const DATA_ORIGIN = DATA_SITE_URL;
-export const DATA_FILES = ["market.json", "news.json", "crypto.json", "economy.json"] as const;
+export const DATA_FILES = ["market.json", "news.json", "crypto.json", "economy.json", "world.json"] as const;
 export type DataFile = (typeof DATA_FILES)[number];
 const KEY = (file: DataFile) => `data/v1/${file}`;
 const fileOf = (pathname: string): DataFile | null => {
@@ -67,10 +68,12 @@ export const REFRESH_AFTER_MS: Record<DataFile, number> = {
   "market.json": 60 * 60_000,
   // Monthly and daily official figures: four captures a day is plenty (and BLS allows 25 keyless reads).
   "economy.json": 6 * 60 * 60_000,
+  // Annual figures from the World Bank: once a day is plenty.
+  "world.json": 24 * 60 * 60_000,
 };
 
 /** Browsers and the edge may keep a copy this long; short, so a refresh shows up quickly. */
-const MAX_AGE_S: Record<DataFile, number> = { "crypto.json": 30, "news.json": 60, "market.json": 120, "economy.json": 600 };
+const MAX_AGE_S: Record<DataFile, number> = { "crypto.json": 30, "news.json": 60, "market.json": 120, "economy.json": 600, "world.json": 3600 };
 
 const DATA_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -96,6 +99,7 @@ async function read(env: WorkerEnv, file: DataFile, now: number): Promise<{ body
 /** Starts a background capture of `file` when its copy is too old and none is running here. */
 function refreshIfStale(file: DataFile, ageMs: number, env: WorkerEnv, ctx: WaitContext | undefined, now: number): void {
   // The economy reads ten official sources, too many for a visit's ~30 seconds: only its cron captures it.
+  // world.json is four quick requests, so a visit may refresh it (and the first visit fills it).
   if (!ctx || file === "economy.json" || ageMs < REFRESH_AFTER_MS[file] || inFlight.has(file)) return;
   const run = capture(file, env, now, "visit").finally(() => inFlight.delete(file));
   inFlight.set(file, run);
@@ -194,6 +198,9 @@ async function capture(file: DataFile, env: WorkerEnv, now: number, why: "visit"
   } else if (file === "economy.json") {
     const data = await captureEconomy(cap, readEconomyFile(await stored(env, file)));
     if (data) await save(env, file, data, now);
+  } else if (file === "world.json") {
+    const data = await captureWorld(cap, readWorldFile(await stored(env, file)));
+    if (data) await save(env, file, data, now);
   } else if (file === "news.json") {
     const data = await captureNews(cap, readNewsFile(await stored(env, file), now), { gdelt: why === "cron" });
     await save(env, file, data, now);
@@ -209,6 +216,11 @@ async function capture(file: DataFile, env: WorkerEnv, now: number, why: "visit"
 export async function runCapture(cron: string, env: WorkerEnv, now = Date.now(), sleep?: (ms: number) => Promise<void>): Promise<void> {
   const file = CRON_FILE[cron];
   if (!file) return;
+  // The free plan allows few crons, so the economy's cron also refreshes world.json once a day.
+  if (file === "economy.json") {
+    const world = await read(env, "world.json", now);
+    if (world.ageMs >= REFRESH_AFTER_MS["world.json"]) await capture("world.json", env, now, "cron", sleep).catch((e: unknown) => console.log(`world: ${String(e)}`));
+  }
   // News always runs on its cron, because only the cron asks GDELT.
   if (file === "crypto.json") {
     // Visits refresh prices only, so the cron goes by the age of the history, which only it updates.

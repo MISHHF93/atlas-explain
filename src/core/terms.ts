@@ -5,7 +5,7 @@ import { GLOSSARY, type GlossaryEntry } from "./glossary";
  * no trade instructions, no balances, no accounts.
  */
 export interface TermEntry extends GlossaryEntry {
-  group: "atlas" | "orders" | "market" | "risk" | "ai";
+  group: "atlas" | "orders" | "market" | "risk" | "economy" | "ai";
 }
 
 export const TRADING_TERMS: readonly TermEntry[] = [
@@ -170,6 +170,104 @@ export const TRADING_TERMS: readonly TermEntry[] = [
     summary:
       "An exchange rate published once a day by a central bank, such as the European Central Bank or the Bank of Canada, from market prices at a set time. It is for information, not a price anyone can trade at.",
   },
+  {
+    id: "inflation",
+    group: "economy",
+    title: "Inflation",
+    summary:
+      "How fast prices rise on average, usually given as the change over 12 months. 3% inflation means a basket of everyday goods and services costs about 3% more than a year earlier, so the same money goes a little less far.",
+  },
+  {
+    id: "cpi",
+    group: "economy",
+    title: "Consumer price index (CPI)",
+    summary:
+      "An index that tracks the price of a fixed basket of goods and services households pay for. Its change over 12 months is the most quoted inflation figure. In the US it comes from the Bureau of Labor Statistics; the euro area's version is called HICP.",
+  },
+  {
+    id: "policy_rate",
+    group: "economy",
+    title: "Policy interest rate",
+    summary:
+      "The short-term rate a central bank sets, such as the Federal Reserve's federal funds target, the ECB's deposit rate or the Bank of Canada's overnight rate. Raising it makes borrowing dearer across the economy; cutting it makes borrowing cheaper.",
+  },
+  {
+    id: "central_bank",
+    group: "economy",
+    title: "Central bank",
+    summary:
+      "The public institution that runs a country's or region's money: it sets the policy interest rate, aims to keep inflation low and stable, and supervises banks. Examples are the Federal Reserve, the European Central Bank and the Bank of Canada.",
+  },
+  {
+    id: "gdp",
+    group: "economy",
+    title: "GDP (gross domestic product)",
+    summary:
+      "The value of everything an economy produces in a period. GDP growth is its change after removing inflation (real growth), usually quoted per year or per quarter. GDP per person divides it by the population.",
+  },
+  {
+    id: "recession",
+    group: "economy",
+    title: "Recession",
+    summary:
+      "A broad fall in economic activity lasting more than a few months, seen in output, jobs, income and spending. A common shorthand is two quarters in a row of falling real GDP, though official bodies weigh more measures than that.",
+  },
+  {
+    id: "unemployment_rate",
+    group: "economy",
+    title: "Unemployment rate",
+    summary:
+      "The share of people who want a job and are looking for one but don't have one, out of everyone working or looking. People not looking for work aren't counted, so the rate can fall when people give up searching.",
+  },
+  {
+    id: "bond",
+    group: "market",
+    title: "Bond",
+    summary:
+      "A loan to a government or company that pays interest and returns the amount lent on a set date. Its price and its yield move in opposite directions: when the price falls, the yield to a new holder rises.",
+  },
+  {
+    id: "dividend",
+    group: "market",
+    title: "Dividend",
+    summary:
+      "A payment a company makes to its shareholders from its profits, usually a fixed amount per share several times a year. Companies can raise, cut or stop dividends; many pay none.",
+  },
+  {
+    id: "market_cap",
+    group: "market",
+    title: "Market capitalisation",
+    summary:
+      "A company's share price times the number of its shares outstanding: what the market values the whole company at, at that moment. It changes with every move in the share price.",
+  },
+  {
+    id: "pe_ratio",
+    group: "market",
+    title: "Price-to-earnings ratio (P/E)",
+    summary:
+      "A share price divided by the company's earnings per share over a year. It shows how many years of current earnings the price equals. It says nothing on its own about whether a share is cheap or dear: growth, debt and the industry matter.",
+  },
+  {
+    id: "liquidity",
+    group: "market",
+    title: "Liquidity",
+    summary:
+      "How easily something can be traded quickly without moving its price much. A liquid market has many orders close to the current price and narrow spreads; an illiquid one has few, so larger orders move the price.",
+  },
+  {
+    id: "order_book",
+    group: "orders",
+    title: "Order book",
+    summary:
+      "The list of waiting orders for an asset on an exchange: bids (what buyers offer) below the current price and asks (what sellers ask) above it, each with a price and a quantity. The gap between the best bid and the best ask is the spread.",
+  },
+  {
+    id: "slippage",
+    group: "orders",
+    title: "Slippage",
+    summary:
+      "The difference between the price expected when an order is placed and the average price it actually fills at. A large order can use up the best prices in the order book and fill partly at worse ones.",
+  },
 ];
 
 /** ATLAS research vocabulary. Kept for desk deep links; never listed in the public glossary. */
@@ -188,11 +286,24 @@ export const TERM_GROUP_LABEL: Record<TermEntry["group"], string> = {
   orders: "Orders",
   market: "Market",
   risk: "Risk",
+  economy: "Economy",
   ai: "How it works",
 };
 
+/**
+ * Terms matching a query, best first: the term itself (its id or title, or the title without its
+ * bracketed abbreviation), then titles that contain the query, then terms that only mention it.
+ */
 export function searchTerms(query: string, entries: readonly TermEntry[] = ALL_TERMS): TermEntry[] {
   const q = query.trim().toLowerCase();
   if (!q) return [...entries];
-  return entries.filter((entry) => `${entry.title} ${entry.summary}`.toLowerCase().includes(q));
+  const key = q.replace(/[\s-]+/g, "_");
+  const rank = (e: TermEntry): number => {
+    const title = e.title.toLowerCase();
+    const short = /\(([^)]+)\)/.exec(title)?.[1];
+    if (e.id === key || title === q || title.replace(/\s*\([^)]*\)/, "") === q || short === q) return 0;
+    if (title.includes(q)) return 1;
+    return e.summary.toLowerCase().includes(q) ? 2 : 3;
+  };
+  return entries.map((e) => [e, rank(e)] as const).filter(([, r]) => r < 3).sort((a, b) => a[1] - b[1]).map(([e]) => e);
 }

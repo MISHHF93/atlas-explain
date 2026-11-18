@@ -232,6 +232,32 @@ describe("the Worker serves and stores the data", () => {
     expect(M.writes).toBe(0);
   });
 
+  it("the economy's cron also refreshes world.json once a day, from the World Bank only", async () => {
+    const urls: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("data360api.worldbank.org")) return json({ value: [{ REF_AREA: "USA", TIME_PERIOD: "2025", OBS_VALUE: "2.1", OBS_STATUS: "A" }] });
+      return json({}, 503);
+    }) as typeof fetch;
+    try {
+      const fresh = "data/v1/economy.json";
+      // The economy itself was just refreshed, so only the world file (missing) is captured.
+      const DATA = kv({ [fresh]: "{}" }, { [fresh]: { capturedAt: new Date(NOW - 60_000).toISOString() } });
+      await runCapture(CRONS.economy, { DATA }, NOW, async () => undefined);
+      expect(urls.length).toBe(4);
+      expect(urls.every((u) => u.startsWith("https://data360api.worldbank.org/"))).toBe(true);
+      expect(JSON.parse(DATA.data["data/v1/world.json"]!).schema).toBe("atlas-explain-world-v1");
+      // A day later is the next time; an hour later nothing is asked.
+      urls.length = 0;
+      await runCapture(CRONS.economy, { DATA }, NOW + 3_600_000, async () => undefined);
+      expect(urls.length).toBe(0);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
   it("a visit refreshes crypto prices only, inside its ~30 seconds; the cron still brings the history up to date", async () => {
     const key = "data/v1/crypto.json";
     const old = file("2026-11-16T11:00:00Z");
@@ -291,7 +317,7 @@ describe("the data index for people and tools", () => {
     const index = (await res.json()) as { schema: string; use: string; files: { file: string; url: string; schema: string; capturedAt: string | null; sources: { licence: string }[] }[] };
     expect(index.schema).toBe("atlas-explain-data-index-v1");
     expect(index.use).toContain("Not for transactions or trading decisions");
-    expect(index.files.map((f) => f.file)).toEqual(["market.json", "crypto.json", "news.json", "economy.json"]);
+    expect(index.files.map((f) => f.file)).toEqual(["market.json", "crypto.json", "news.json", "economy.json", "world.json"]);
     const crypto = index.files.find((f) => f.file === "crypto.json")!;
     expect(crypto.url).toBe(`${MCP_ORIGIN}/data/v1/crypto.json`);
     expect(crypto.capturedAt).toBe("2026-11-16T12:00:00.000Z");

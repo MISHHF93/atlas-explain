@@ -121,7 +121,7 @@ One MCP App, opened from an entry point, that runs as a full app in the side pan
 
 Retrieval practice on a spaced schedule (1, 3, 7, 21 days) for terms a person has looked up or got wrong. Research on finance-learning apps: streaks bring people back but don't make knowledge last, and confidence can rise faster than knowledge. So: short checks, no streak pressure, no badges, and a plain score of what was right. Stored with the person's own history (already synced for signed-in users); the connector gets a `review_due` tool only after OAuth (PRICING.md), since it never stores anything today.
 
-### 15. Countries compared (connector and data; 2 days)
+### 15. Countries compared (connector and data; 2 days; done in 1.12.0, 18 Nov 2026, from the World Bank only: IMF DataMapper mixes in projections)
 
 `compare_countries`: inflation, GDP growth, unemployment and policy rates for the G20, with source and year, from keyless official sources (World Bank Indicators, CC BY 4.0; IMF DataMapper; OECD SDMX). Captured by a new daily cron into `world.json` on the data site; licences checked first and recorded in DATA_SOURCES.md. Today the economy covers only the US, the euro area and Canada.
 

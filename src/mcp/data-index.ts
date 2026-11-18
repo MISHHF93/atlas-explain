@@ -7,6 +7,7 @@
 import { EXPLAIN_WEB_URL } from "../core/links";
 import { CRYPTO_SCHEMA } from "../data/crypto";
 import { ECONOMY_SCHEMA } from "../data/economy";
+import { WORLD_SCHEMA } from "../data/world";
 import { MARKET_SCHEMA } from "../data/market-sources";
 import { NEWS_SCHEMA } from "../core/news";
 
@@ -78,6 +79,13 @@ export const DATA_FILES_INDEX: readonly FileEntry[] = [
       OFFICIAL("U.S. Department of the Treasury, Fiscal Data"),
       OFFICIAL("Federal Reserve, ECB and Bank of Canada calendars", "Public schedules; dates and titles only."),
     ],
+  },
+  {
+    file: "world.json",
+    schema: WORLD_SCHEMA,
+    holds: "GDP growth, inflation, unemployment and GDP per person for the G20, about eight years each, actual published values only.",
+    refresh: "Once a day by schedule.",
+    sources: [{ name: "World Bank, World Development Indicators (Data360)", licence: "open", note: "CC BY 4.0; reuse with the World Bank credited." }],
   },
 ];
 

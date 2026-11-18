@@ -36,7 +36,7 @@ import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile, type I
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.11.0";
+export const SERVER_VERSION = "1.12.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -53,7 +53,8 @@ export const META = {
 } as const;
 /** How long clients and caches may reuse list and read results (MCP 2026-07-28 CacheableResult). */
 const CACHE = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-import { APP_URL, CRYPTO_DATA_URL, ECONOMY_DATA_URL, EDUCATION_LINE, EXPLAIN_WEB_URL, MARKET_DATA_URL, MCP_ORIGIN, NEWS_DATA_URL } from "../core/links";
+import { WORLD_COUNTRIES, WORLD_INDICATORS, readWorldFile, type WorldFile, type WorldIndicatorId } from "../data/world";
+import { APP_URL, CRYPTO_DATA_URL, ECONOMY_DATA_URL, EDUCATION_LINE, EXPLAIN_WEB_URL, MARKET_DATA_URL, MCP_ORIGIN, NEWS_DATA_URL, WORLD_DATA_URL } from "../core/links";
 export { EDUCATION_LINE, MCP_ORIGIN };
 
 /** The platform fetch (Cloudflare Workers, Node or a test double). */
@@ -271,10 +272,26 @@ export const TOOLS: readonly Tool[] = [
     // Clients that support MCP Apps draw a card per item (src/mcp/notable-app.ts).
     _meta: { ui: { resourceUri: NOTABLE_APP_URI } },
   },
+  {
+    name: "compare_countries",
+    title: "Countries compared",
+    description: "GDP growth, inflation, unemployment and GDP per person for the G20 countries and the EU, with the year of each figure, from the World Bank. Use it to compare economies or put one country's figures in context. Actual published values only (World Development Indicators, CC BY 4.0), updated daily; never a projection. Optional: one indicator and a list of countries.",
+    inputSchema: { type: "object", properties: {
+      indicator: str("Optional: 'gdp growth', 'inflation', 'unemployment' or 'gdp per person'. Leave empty for all four."),
+      countries: str("Optional: country names or codes separated by commas, for example 'Canada, Japan, Germany'. Leave empty for the whole G20."),
+    }, additionalProperties: false },
+    annotations: annotations("Countries compared", true),
+    icons: ICONS,
+    outputSchema: obj({
+      refreshedAt: { type: "string" }, source: { type: "string" },
+      indicators: { type: "array", items: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, unit: { type: "string" }, about: { type: "string" } } } },
+      countries: { type: "array", items: { type: "object", properties: { code: { type: "string" }, name: { type: "string" }, values: { type: "object" } } } },
+    }, ["indicators", "countries"]),
+  },
 ];
 
 export const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth and notable_today also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule; compare_countries for GDP growth, inflation, unemployment and GDP per person across the G20. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth and notable_today also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
 export const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
@@ -541,9 +558,18 @@ export async function assetDetails(key: string, fetcher: Fetcher, now = Date.now
   }
   const official = (await loadOfficial(fetcher, now)) ?? [];
   const all = [...official, ...EDUCATION_ASSETS];
-  const asset = findAsset(all, q) ?? searchAssets(all, q, { klass: "all" })[0];
+  // A search hit counts only when every word of the query is a whole word of the name or symbol, so
+  // "gold" never answers with Goldman Sachs; near misses are offered instead.
+  const words = q.toLowerCase().split(/[^a-z0-9&]+/).filter(Boolean);
+  const whole = (x: Asset) => {
+    const hay = ` ${x.name} ${x.symbol} ${x.symbol.replace("/", "")} `.toLowerCase().replace(/[^a-z0-9&]+/g, " ");
+    return words.every((w) => hay.includes(` ${w} `));
+  };
+  const hits = searchAssets(all, q, { klass: "all" });
+  const asset = findAsset(all, q) ?? hits.find(whole);
   if (!asset) {
-    return data(`"${q}" isn't in the ATLAS Explain catalog. It covers the ten major coins, about 30 large US companies and ETFs, major currencies, Treasury and government bond yields, energy prices, and explainers for indices, futures and options.`, { found: false });
+    const near = hits.slice(0, 3).map((x) => `${x.name} (${x.symbol})`);
+    return data(`"${q}" isn't in the ATLAS Explain catalog.${near.length ? ` Closest names: ${near.join(", ")}.` : ""} It covers the ten major coins, about 30 large US companies and ETFs, major currencies, Treasury and government bond yields, energy prices, and explainers for indices, futures and options.`, { found: false, closest: near });
   }
   const info = CLASS_INFO[asset.class];
   const lines = [
@@ -1080,6 +1106,59 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
   return data(lines.join("\n"), { asOf: new Date(now).toISOString(), observations, quiet, unavailable, limits });
 }
 
+/* ---------- countries compared (World Bank, from ATLAS Explain's own data site) ---------- */
+
+const WORLD_WORDS: Record<string, WorldIndicatorId> = {
+  gdp: "gdp_growth", growth: "gdp_growth", "gdp growth": "gdp_growth", "economic growth": "gdp_growth",
+  inflation: "inflation", prices: "inflation", cpi: "inflation",
+  unemployment: "unemployment", jobs: "unemployment", jobless: "unemployment",
+  "gdp per person": "gdp_per_capita", "gdp per capita": "gdp_per_capita", "per capita": "gdp_per_capita", income: "gdp_per_capita", "per person": "gdp_per_capita",
+};
+const COUNTRY_WORDS: Record<string, string> = { us: "USA", usa: "USA", america: "USA", uk: "GBR", britain: "GBR", eu: "EUU", europe: "EUU", "euro area": "EUU", korea: "KOR", turkey: "TUR", saudi: "SAU" };
+const NO_WORLD = "ATLAS Explain's country figures couldn't be loaded right now. Nothing is shown in their place; try again later.";
+
+function countryCode(word: string): string | null {
+  const w = word.trim().toLowerCase();
+  if (!w) return null;
+  return COUNTRY_WORDS[w] ?? WORLD_COUNTRIES.find((c) => c.code.toLowerCase() === w || c.name.toLowerCase() === w)?.code ?? WORLD_COUNTRIES.find((c) => c.name.toLowerCase().startsWith(w))?.code ?? null;
+}
+const worldValue = (unit: string, v: number) => (unit === "USD" ? "$" + Math.round(v).toLocaleString("en-US") : `${v.toFixed(1)}%`);
+
+export async function compareCountries(indicator: string | undefined, countries: string | undefined, fetcher: Fetcher): Promise<ToolResult> {
+  const body = await getJson(WORLD_DATA_URL, fetcher);
+  const file: WorldFile | null = body == null ? null : readWorldFile(body);
+  if (!file) return text(NO_WORLD, true);
+  const iq = indicator?.trim().toLowerCase() ?? "";
+  const one = iq ? WORLD_WORDS[iq] ?? WORLD_INDICATORS.find((i) => i.id === iq || i.name.toLowerCase() === iq)?.id : undefined;
+  if (iq && !one) return text(`No indicator called "${indicator}". Try GDP growth, inflation, unemployment or GDP per person, or leave it empty for all four.`, true);
+  const asked = (countries ?? "").split(",").map((w) => w.trim()).filter(Boolean);
+  const codes = asked.map(countryCode);
+  const unknown = asked.filter((_, i) => !codes[i]);
+  if (unknown.length) return text(`Not in the G20 list ATLAS Explain covers: ${unknown.join(", ")}. It covers ${WORLD_COUNTRIES.map((c) => c.name).join(", ")}.`, true);
+  const pick = asked.length ? WORLD_COUNTRIES.filter((c) => codes.includes(c.code)) : WORLD_COUNTRIES;
+  const inds = WORLD_INDICATORS.filter((i) => !one || i.id === one).filter((i) => file.indicators.some((d) => d.id === i.id));
+  const latestOf = (id: WorldIndicatorId, code: string) => {
+    const sr = file.indicators.find((d) => d.id === id)?.rows.find((r) => r.country === code)?.series;
+    return sr?.length ? sr[sr.length - 1]! : null;
+  };
+  const rows = pick.map((c) => ({ code: c.code, name: c.name, values: Object.fromEntries(inds.map((i) => [i.id, latestOf(i.id, c.code)])) }));
+  let lines: string[];
+  if (inds.length === 1) {
+    const i = inds[0]!;
+    const sorted = [...rows].sort((a, b) => (b.values[i.id]?.value ?? -Infinity) - (a.values[i.id]?.value ?? -Infinity));
+    lines = [`${i.name} (${i.about.replace(/\.$/, "")}), highest first:`, ...sorted.map((r) => { const v = r.values[i.id]; return `- ${r.name}: ${v ? `${worldValue(i.unit, v.value)} (${v.year})` : "no figure published"}`; })];
+  } else {
+    lines = rows.map((r) => `${r.name}: ${inds.map((i) => { const v = r.values[i.id]; return `${i.name.toLowerCase()} ${v ? `${worldValue(i.unit, v.value)} (${v.year})` : "not published"}`; }).join("; ")}`);
+  }
+  const source = `${file.source.name} (${file.source.url}), ${file.source.licence}. Read ${utc(file.generatedAt)} by ATLAS Explain's data job.`;
+  return data(`${lines.join("\n")}\n\nYears differ by country: each figure shows the latest year the World Bank has published. Actual values only, never a projection.\nSource: ${source}`, {
+    refreshedAt: file.generatedAt,
+    source,
+    indicators: inds.map(({ id, name, unit, about }) => ({ id, name, unit, about })),
+    countries: rows,
+  });
+}
+
 const text_of = (r: ToolResult) => r.content[0]?.text.split("\n\n")[0] ?? "";
 
 /* ---------- JSON-RPC (the HTTP transport is in src/mcp/http.ts) ---------- */
@@ -1183,6 +1262,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "market_depth": return ok(await marketDepth(s(args.coin) ?? "", fetcher));
         case "evidence_brief": return ok(await evidenceBrief(s(args.asset) ?? "", fetcher));
         case "notable_today": return ok(await notableToday(fetcher));
+        case "compare_countries": return ok(await compareCountries(s(args.indicator), s(args.countries), fetcher));
         default: return fail(-32602, `Unknown tool: ${String(name)}`);
       }
     }

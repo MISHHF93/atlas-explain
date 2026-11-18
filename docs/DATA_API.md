@@ -14,6 +14,7 @@ The index (`atlas-explain-data-index-v1`) lists every file with its address, sch
 | `crypto.json` | `atlas-explain-crypto-v1` | Ten coins: price, change, best bid and ask; 30 days of hourly closes; the best 100 order-book levels a side | Prices every few minutes; history and books every 10 minutes |
 | `news.json` | `atlas-explain-news-v1` | Headline, link, publisher and time of market news and official releases | Every 15 minutes; GDELT every 3 hours |
 | `economy.json` | `atlas-explain-economy-v1` | US CPI and unemployment, fed funds and SOFR, euro HICP, Canada's policy rate, US public debt, and upcoming rate decisions | Every 6 hours |
+| `world.json` | `atlas-explain-world-v1` | GDP growth, inflation, unemployment and GDP per person for the G20 and the EU, about eight years each, from the World Bank (CC BY 4.0); actual values only | Once a day |
 
 Readers for each schema live in the repository (`src/data/crypto.ts`, `src/data/economy.ts`, `src/data/market-sources.ts`, `src/core/news.ts`). A schema changes name (`-v2`) only when a change would break a reader; new optional fields can appear within a version.
 
