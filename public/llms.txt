@@ -23,6 +23,7 @@ MCP Registry name: io.github.MISHHF93/atlas-explain
 - treasury_auctions: upcoming US Treasury auctions and the latest results
 - compare_countries: GDP growth, inflation, unemployment and GDP per person across the G20, from the World Bank
 - data_series: dated rows and CSV of official economic series, with source and licence, for charts, spreadsheets and reports
+- rate_change_impact: what a rate change would do to your own mortgage payment, HELOC, savings or GIC/CD, to the cent; never a forecast
 - notable_today: what stands out in the data today, each item with the rule that picked it
 - todays_headlines: official press releases and recent market news
 

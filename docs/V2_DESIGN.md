@@ -149,7 +149,7 @@ Every tool returns `structuredContent` with an `outputSchema`. Every claim objec
 - `wrangler.toml [vars] V2_TOOLS = ""`: a comma list (`decision_explainer,whats_changed,rate_change_impact,speech_tracker,article_context`). Tools not listed are absent from `tools/list` and refused if called.
 - `V2_CAPTURE = "0"|"1"`: document capture and decision watch.
 - Partner record `features[]`: per-partner opt-in for white-label and widgets.
-- Every flag is off by default; the public connector keeps its 18 tools until a flag is turned on.
+- Every flag is off by default; the public connector keeps its 18 tools until a flag is turned on. `rate_change_impact` was switched on 18 Nov 2026 (1.17.0).
 
 ## 8. Phases
 

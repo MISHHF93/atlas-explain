@@ -5,7 +5,7 @@
  * Hosted on Cloudflare Workers' free plan (src/mcp/worker.ts); see docs/MCP.md.
  */
 import { ICON_PNG_512_BASE64, ICON_PNG_64_BASE64, ICON_SVG } from "./icon-data";
-import { ALL_PROTOCOLS, CAPABILITIES, EDUCATION_LINE, handle, ICONS, INSTRUCTIONS, modernVersion, PROMPTS, SERVER_NAME, SERVER_VERSION, TOOLS, type Fetcher } from "./server";
+import { ALL_PROTOCOLS, CAPABILITIES, EDUCATION_LINE, handle, ICONS, INSTRUCTIONS, modernVersion, PROMPTS, SERVER_NAME, SERVER_VERSION, visibleTools, type Fetcher } from "./server";
 
 export const MCP_PATH = "/mcp";
 
@@ -35,11 +35,11 @@ import { CONNECT_URL } from "../core/links";
 /** The connector's page on the website: setup steps for each assistant. */
 export const CONNECT_PAGE = CONNECT_URL;
 
-const ABOUT = [
+const about = (): string => [
   "ATLAS Explain MCP server",
   "",
   `Add this address to an AI assistant that supports MCP connectors: <this host>${MCP_PATH}`,
-  `Tools: ${TOOLS.map((t) => t.name).join(", ")}. Read-only, free, no sign-in.`,
+  `Tools: ${visibleTools().map((t) => t.name).join(", ")}. Read-only, free, no sign-in.`,
   `Setup: ${CONNECT_PAGE}`,
   "",
   EDUCATION_LINE,
@@ -69,7 +69,7 @@ export function serverCard(origin: string) {
     authentication: { required: false },
     capabilities: CAPABILITIES,
     instructions: INSTRUCTIONS,
-    tools: TOOLS.map((t) => ({ name: t.name, title: t.title, description: t.description, annotations: t.annotations })),
+    tools: visibleTools().map((t) => ({ name: t.name, title: t.title, description: t.description, annotations: t.annotations })),
     prompts: PROMPTS.map((p) => ({ name: p.name, title: p.title, description: p.description })),
   };
 }
@@ -142,7 +142,7 @@ export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Re
 
   if (url.pathname !== MCP_PATH) {
     if (request.method === "GET" && url.pathname === "/") {
-      return new Response(ABOUT.replace("<this host>", url.origin), { headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" } });
+      return new Response(about().replace("<this host>", url.origin), { headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" } });
     }
     return new Response("Not found", { status: 404, headers: CORS });
   }

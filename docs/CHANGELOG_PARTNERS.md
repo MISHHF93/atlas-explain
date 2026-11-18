@@ -5,7 +5,7 @@ Each entry says what's new, where its numbers come from, under what licence, and
 ## 2026-11-18: rate-change impact (v2, phase 1)
 
 **What's new**
-- **`rate_change_impact`**, an MCP tool. It works out what a change in interest rates would do to a person's own variable-rate mortgage payment, HELOC interest, savings interest or GIC/CD renewal. It's off by default: it is listed only when the Worker's `V2_TOOLS` variable names it.
+- **`rate_change_impact`**, an MCP tool. It works out what a change in interest rates would do to a person's own variable-rate mortgage payment, HELOC interest, savings interest or GIC/CD renewal. It's off by default: it is listed only when the Worker's `V2_TOOLS` variable names it. **Switched on in the public connector on 18 Nov 2026 (1.17.0).**
 - **Rate-change calculator widget** at `https://atlas-explain.web.app/embed/rate-impact.html`, for partner pages. It can be framed by any HTTPS site. Query parameters prefill it (`country`, `product`, `balance`, `rate`, `change`, `months`).
 
 **Where the numbers come from**
