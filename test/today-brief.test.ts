@@ -44,7 +44,7 @@ describe("Today: what stands out, and the central banks' rates", () => {
     expect(ok.rates).toHaveLength(2);
     expect(ok.next?.institution).toBe("Bank of England");
     const down = await loadTodayBrief(async () => new Response("down", { status: 503 }), NOW);
-    expect(down).toEqual({ notable: null, quiet: [], rates: [], next: null, economyAsOf: null });
+    expect(down).toEqual({ notable: null, quiet: [], rates: [], next: null, events: [], economyAsOf: null });
   });
 
   it("the news list in the app shows each story once, even when several outlets carried it", () => {

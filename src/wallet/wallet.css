@@ -1240,3 +1240,15 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .rates-table th { font-size: var(--atlas-text-xs); color: var(--atlas-muted); font-weight: 600; }
 .rates-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rates-table th:not(:first-child) { text-align: right; }
+
+/* Today: Coming up (src/wallet/today-brief.ts). */
+.coming-list { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.coming-row { display: grid; gap: 0.25rem; padding: 0.6rem 0.7rem; border-radius: var(--atlas-radius); background: color-mix(in srgb, var(--atlas-ink) 4%, transparent); }
+.coming-row > p { margin: 0; }
+.coming-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.coming-title { margin: 0; font-weight: 650; }
+.coming-count { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--atlas-accent); white-space: nowrap; }
+.coming-more summary { cursor: pointer; font-size: var(--atlas-text-xs); color: var(--atlas-muted); min-height: 1.75rem; display: flex; align-items: center; }
+.coming-outcomes { margin: 0.25rem 0; padding-left: 1.1rem; display: grid; gap: 0.35rem; font-size: var(--atlas-text-sm); line-height: 1.45; }
+.coming-more .fine { margin: 0.25rem 0 0; }
+.coming-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }

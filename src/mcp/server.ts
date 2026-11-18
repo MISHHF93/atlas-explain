@@ -34,12 +34,14 @@ import { NOTABLE_APP_HTML, NOTABLE_APP_URI } from "./notable-app";
 import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
 import { moneyMaths, type MoneyCalc } from "../core/money-maths";
 import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
+import { comingUp } from "../core/coming-up";
+import { countdown } from "../core/scenarios";
 import { ICON_PNG_64_BASE64 } from "./icon-data";
 import { readEconomyFile, upcoming, type Auction, type CalendarEvent, type EconomyFile, type Indicator } from "../data/economy";
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.13.0";
+export const SERVER_VERSION = "1.14.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -276,6 +278,21 @@ export const TOOLS: readonly Tool[] = [
     _meta: { ui: { resourceUri: NOTABLE_APP_URI } },
   },
   {
+    name: "upcoming_events",
+    title: "Coming up: decisions and data releases",
+    description: "The next scheduled market events with exact times and a countdown: Fed, ECB, Bank of Canada and Bank of England rate decisions and the US inflation, jobs and producer-price releases. Use it for what's coming up, or when the next CPI or jobs report or rate decision is. Each event has the latest related figure and 'if this happens' explainers for each possible outcome, from the banks' and the BLS's own calendars. It never says which outcome will happen. Optional filter: 'rates' or 'data'.",
+    inputSchema: { type: "object", properties: { only: { type: "string", enum: ["rates", "data"], description: "Optional: only rate decisions, or only data releases." } }, additionalProperties: false },
+    annotations: annotations("Coming up: decisions and data releases", true),
+    icons: ICONS,
+    outputSchema: obj({
+      refreshedAt: { type: "string" },
+      events: { type: "array", items: { type: "object", properties: {
+        kind: { type: "string" }, who: { type: "string" }, title: { type: "string" }, time: { type: "string" }, countdown: { type: "string" },
+        about: { type: "string" }, context: nullable("string"), sourceUrl: { type: "string" }, scenarios: { type: "object" },
+      } } },
+    }, ["events"]),
+  },
+  {
     name: "money_maths",
     title: "Money maths",
     description: "Works out compound growth, what a fee costs over the years, what inflation does to cash, or how holding more things changes how much a mix swings, from numbers the person gives. Use it to show how money grows or shrinks over time with their own example. Pure arithmetic, drawn as a chart they can change in Claude; the rate is their assumption, never a forecast or a suggestion.",
@@ -349,7 +366,7 @@ export const TOOLS: readonly Tool[] = [
 ];
 
 export const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule; compare_countries for GDP growth, inflation, unemployment and GDP per person across the G20; treasury_auctions for US Treasury auctions; money_maths for compound growth, fees, inflation and diversification worked out from the person's own numbers; scam_red_flags for the warning signs of investment fraud and where to check and report. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth and notable_today also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule; compare_countries for GDP growth, inflation, unemployment and GDP per person across the G20; upcoming_events for the next rate decisions and US data releases with exact times, countdowns and what each possible outcome would mean; treasury_auctions for US Treasury auctions; money_maths for compound growth, fees, inflation and diversification worked out from the person's own numbers; scam_red_flags for the warning signs of investment fraud and where to check and report. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot, market_depth and notable_today also draw interactive views. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
 export const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
@@ -446,6 +463,13 @@ export const PROMPTS = [
     description: "Compound growth, fees, inflation or diversification, worked through with numbers you can change.",
     arguments: [{ name: "topic", description: "compounding, fees, inflation or diversification.", required: false }],
     text: (a: Record<string, string>) => `Using ATLAS Explain's money_maths, teach me ${a.topic ? `about ${a.topic}` : "how compounding works"} with a simple example I can change. Explain what the result shows and the one idea to remember, without suggesting what I should do with my money.`,
+  },
+  {
+    name: "whats_coming_up",
+    title: "What's coming up",
+    description: "The next rate decisions and data releases, with countdowns and what each outcome would mean.",
+    arguments: [],
+    text: () => "Using ATLAS Explain, what market events are coming up (upcoming_events)? For the next two or three, give the time and countdown, the latest related figure, and what each possible outcome would mean in plain language. Don't predict which outcome will happen.",
   },
   {
     name: "quiz_me",
@@ -1196,6 +1220,24 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
   return data(lines.join("\n"), { asOf: new Date(now).toISOString(), observations, quiet, unavailable, limits });
 }
 
+/* ---------- coming up: decisions and data releases, with countdowns and "if this happens" ---------- */
+
+export async function upcomingEvents(only: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
+  const file = await loadEconomy(fetcher);
+  if (!file) return text(NO_ECONOMY, true);
+  const events = comingUp(file, now, 12).filter((e) => !only || (only === "rates" ? e.kind === "rate_decision" : e.kind !== "rate_decision")).slice(0, 8);
+  if (!events.length) return data(`No scheduled ${only === "data" ? "data release" : only === "rates" ? "rate decision" : "event"} is in the calendars ATLAS Explain read. Nothing is shown in its place.`, { refreshedAt: file.generatedAt, events: [] });
+  const lines = events.map((e) => {
+    const when = `${utc(e.time)} (${countdown(e.time, now)})`;
+    const outs = e.scenarios.outcomes.map((o) => `    - If ${o.outcome.charAt(0).toLowerCase()}${o.outcome.slice(1)}: ${o.meaning}`).join("\n");
+    return `- ${e.title}, ${when}.${e.context ? ` ${e.context}` : ""}\n  People watch: ${e.scenarios.watch.join("; ")}.\n  If this happens:\n${outs}\n  ${e.scenarios.caution} Source: ${e.sourceUrl}`;
+  });
+  return data(`Coming up, soonest first:\n${lines.join("\n\n")}\n\nTimes from each central bank's and the BLS's own calendars. These explain each possible outcome; they never say which will happen.`, {
+    refreshedAt: file.generatedAt,
+    events: events.map((e) => ({ kind: e.kind, who: e.who, title: e.title, time: e.time, countdown: countdown(e.time, now), about: e.about, context: e.context, sourceUrl: e.sourceUrl, scenarios: e.scenarios })),
+  });
+}
+
 /* ---------- investment scam warning signs ---------- */
 
 /** Official releases that are about fraud (SEC, CFTC and others), from the headlines ATLAS Explain already reads. */
@@ -1429,6 +1471,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "evidence_brief": return ok(await evidenceBrief(s(args.asset) ?? "", fetcher));
         case "notable_today": return ok(await notableToday(fetcher));
         case "money_maths": return ok(moneyMathsTool(args));
+        case "upcoming_events": return ok(await upcomingEvents(s(args.only), fetcher));
         case "scam_red_flags": return ok(await scamRedFlags(s(args.pitch), fetcher));
         case "treasury_auctions": return ok(await treasuryAuctions(s(args.kind), fetcher));
         case "compare_countries": return ok(await compareCountries(s(args.indicator), s(args.countries), fetcher));

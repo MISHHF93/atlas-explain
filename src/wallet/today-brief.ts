@@ -3,6 +3,8 @@
  * Each notable item shows why it was picked and its source, and one tap explains it in plain language.
  * Missing data says so; nothing is filled in. Describes the past and the calendar only, never a forecast.
  */
+import type { ComingUpEvent } from "../core/coming-up";
+import { countdown, eventIcs } from "../core/scenarios";
 import type { TodayBrief } from "../core/today-brief";
 import { el, labelledButton } from "./dom";
 
@@ -17,7 +19,81 @@ const KIND: Record<string, string> = {
 };
 
 export function todayBriefCards(brief: TodayBrief | "loading", onExplain: (text: string) => void): HTMLElement[] {
-  return [notableCard(brief, onExplain), ratesCard(brief)];
+  return [notableCard(brief, onExplain), comingUpCard(brief), ratesCard(brief)];
+}
+
+/** Countdowns on the page tick together, once every 30 seconds, while any is shown. */
+const ticking = new Set<{ node: HTMLElement; time: string }>();
+let timer: number | undefined;
+function tick(): void {
+  const now = Date.now();
+  for (const t of ticking) {
+    if (!t.node.isConnected) ticking.delete(t);
+    else t.node.textContent = countdown(t.time, now);
+  }
+  if (!ticking.size && timer !== undefined) {
+    clearInterval(timer);
+    timer = undefined;
+  }
+}
+
+function comingUpCard(brief: TodayBrief | "loading"): HTMLElement {
+  const card = el("section", "card today-coming");
+  card.setAttribute("aria-labelledby", "coming-title");
+  const title = el("h2", "card-title", "Coming up");
+  title.id = "coming-title";
+  card.append(title);
+  if (brief === "loading") {
+    card.append(el("p", "fine", "Loading the calendar…"));
+    return card;
+  }
+  if (!brief.events.length) {
+    card.append(el("p", "fine", "The calendars couldn't be loaded right now. Nothing is shown in their place."));
+    return card;
+  }
+  card.append(el("p", "fine", "Scheduled rate decisions and data releases, with what each possible outcome would mean. Nobody knows the outcome in advance."));
+  const list = el("ul", "coming-list");
+  for (const e of brief.events) list.append(eventRow(e));
+  card.append(list);
+  if (timer === undefined) timer = window.setInterval(tick, 30_000);
+  return card;
+}
+
+function eventRow(e: ComingUpEvent): HTMLElement {
+  const li = el("li", "coming-row");
+  const when = new Date(e.time).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const count = el("span", "coming-count", countdown(e.time, Date.now()));
+  count.setAttribute("aria-live", "off");
+  ticking.add({ node: count, time: e.time });
+  const head = el("div", "coming-head");
+  head.append(el("p", "coming-title", e.title), count);
+  const meta = el("p", "fine", `${when} your time`);
+  li.append(head, meta);
+  if (e.context) li.append(el("p", "fine coming-context", e.context));
+  const more = el("details", "coming-more");
+  more.append(el("summary", undefined, "If this happens"));
+  const outs = el("ul", "coming-outcomes");
+  for (const o of e.scenarios.outcomes) {
+    const item = el("li");
+    item.append(el("strong", undefined, `${o.outcome}. `), o.meaning);
+    outs.append(item);
+  }
+  more.append(outs, el("p", "fine", `People watch: ${e.scenarios.watch.join("; ")}.`), el("p", "fine", e.scenarios.caution));
+  const actions = el("div", "coming-actions");
+  const add = labelledButton("calendar", "Add to calendar", "secondary small");
+  add.addEventListener("click", () => {
+    const blob = new Blob([eventIcs({ title: e.title, time: e.time, about: e.about, sourceUrl: e.sourceUrl, uid: e.id })], { type: "text/calendar" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${e.id}.ics` });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1_000);
+  });
+  const src = el("a", "fine", "Official calendar") as HTMLAnchorElement;
+  src.href = e.sourceUrl;
+  src.target = "_blank";
+  src.rel = "noreferrer";
+  actions.append(add, src);
+  li.append(more, actions);
+  return li;
 }
 
 function notableCard(brief: TodayBrief | "loading", onExplain: (text: string) => void): HTMLElement {

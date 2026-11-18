@@ -5,6 +5,7 @@
  * nothing here forecasts or suggests anything. Loaded after the first paint, off the first-load budget.
  */
 import { readEconomyFile, upcoming, type EconomyFile, type IndicatorId } from "../data/economy";
+import { comingUp, type ComingUpEvent } from "./coming-up";
 import { ECONOMY_DATA_URL, MCP_URL } from "./links";
 
 export interface NotableItem {
@@ -36,6 +37,8 @@ export interface TodayBrief {
   quiet: string[];
   rates: PolicyRate[];
   next: NextDecision | null;
+  /** Scheduled decisions and data releases with exact times, soonest first. */
+  events: ComingUpEvent[];
   economyAsOf: string | null;
 }
 
@@ -98,5 +101,5 @@ export async function loadTodayBrief(fetcher: Fetcher = fetch, now = Date.now())
   const notable = readNotable(notableBody);
   const economy = economyBody == null ? null : readEconomyFile(economyBody);
   const { rates, next } = economy ? ratesFrom(economy, now) : { rates: [], next: null };
-  return { notable: notable?.items ?? null, quiet: notable?.quiet ?? [], rates, next, economyAsOf: economy?.generatedAt ?? null };
+  return { notable: notable?.items ?? null, quiet: notable?.quiet ?? [], rates, next, events: economy ? comingUp(economy, now, 4) : [], economyAsOf: economy?.generatedAt ?? null };
 }

@@ -65,8 +65,23 @@ export interface EconomyFile {
   generatedAt: string;
   indicators: Indicator[];
   calendar: { capturedAt: string; events: CalendarEvent[] };
+  /** Scheduled US data releases (BLS) with their exact times; absent in files captured before 18 Nov 2026. */
+  releases?: { capturedAt: string; events: DataRelease[] };
   /** US Treasury auctions from TreasuryDirect; absent in files captured before 18 Nov 2026. */
   auctions?: { capturedAt: string; upcoming: Auction[]; recent: Auction[] };
+}
+
+/** A scheduled data release, from the agency's own published calendar. */
+export interface DataRelease {
+  kind: "cpi" | "jobs" | "ppi";
+  title: string;
+  agency: "U.S. Bureau of Labor Statistics";
+  /** The release instant, UTC (ISO). */
+  time: string;
+  /** YYYY-MM-DD in the agency's own time zone. */
+  date: string;
+  about: string;
+  sourceUrl: string;
 }
 
 /** One US Treasury auction, as TreasuryDirect publishes it. Results are null until the auction has run. */
@@ -104,6 +119,7 @@ export const ECONOMY_SOURCES = {
   boeMpc: "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
   auctionsAnnounced: "https://www.treasurydirect.gov/TA_WS/securities/announced?format=json&days=14",
   auctionsResults: "https://www.treasurydirect.gov/TA_WS/securities/auctioned?format=json&days=21",
+  blsSchedule: "https://www.bls.gov/schedule/news_release/bls.ics",
 } as const;
 
 const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -429,6 +445,54 @@ export function parseTreasuryAuctions(body: unknown): Auction[] {
   });
 }
 
+/**
+ * The UTC instant of a wall-clock time in a time zone (daylight saving included), using the platform's own
+ * time-zone data, so it runs the same in the Worker, a browser and tests. Returns ISO.
+ */
+export function zonedTime(date: string, hh: number, mm: number, timeZone: string): string {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const guess = Date.UTC(y, m - 1, d, hh, mm);
+  const offsetAt = (t: number) => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(new Date(t)).map((p) => [p.type, p.value]));
+    return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute)) - t;
+  };
+  const first = guess - offsetAt(guess);
+  return new Date(guess - offsetAt(first)).toISOString();
+}
+
+const BLS_RELEASES: { summary: string; kind: DataRelease["kind"]; title: string; about: string; url: string }[] = [
+  { summary: "Consumer Price Index", kind: "cpi", title: "US inflation report (Consumer Price Index)", about: "The BLS publishes last month's consumer prices: the inflation rate over 12 months and its change from the month before.", url: "https://www.bls.gov/schedule/news_release/cpi.htm" },
+  { summary: "Employment Situation", kind: "jobs", title: "US jobs report (Employment Situation)", about: "The BLS publishes last month's jobs added and the unemployment rate.", url: "https://www.bls.gov/schedule/news_release/empsit.htm" },
+  { summary: "Producer Price Index", kind: "ppi", title: "US producer prices (Producer Price Index)", about: "The BLS publishes the prices businesses received last month, an early sign of price pressure.", url: "https://www.bls.gov/schedule/news_release/ppi.htm" },
+];
+
+/** BLS release calendar (iCalendar) → the CPI, jobs and PPI releases with their exact times (US Eastern). */
+export function parseBlsSchedule(ics: string): DataRelease[] {
+  const out: DataRelease[] = [];
+  for (const block of ics.replace(/\r\n/g, "\n").split("BEGIN:VEVENT").slice(1)) {
+    const summary = /^SUMMARY:(.+)$/m.exec(block)?.[1]?.trim();
+    const start = /^DTSTART(?:;TZID=[^:]+)?:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/m.exec(block);
+    const rel = BLS_RELEASES.find((r) => r.summary === summary);
+    if (!rel || !start) continue;
+    const date = `${start[1]}-${start[2]}-${start[3]}`;
+    out.push({ kind: rel.kind, title: rel.title, agency: "U.S. Bureau of Labor Statistics", time: zonedTime(date, Number(start[4]), Number(start[5]), "America/New_York"), date, about: rel.about, sourceUrl: rel.url });
+  }
+  return out.sort((a, b) => a.time.localeCompare(b.time));
+}
+
+/** When each central bank announces, in its own time zone (from each bank's published practice). */
+export const DECISION_TIMES: Record<CalendarEvent["institution"], { hh: number; mm: number; tz: string }> = {
+  "Federal Reserve": { hh: 14, mm: 0, tz: "America/New_York" },
+  "European Central Bank": { hh: 14, mm: 15, tz: "Europe/Berlin" },
+  "Bank of Canada": { hh: 9, mm: 45, tz: "America/Toronto" },
+  "Bank of England": { hh: 12, mm: 0, tz: "Europe/London" },
+};
+/** The UTC instant a rate decision is announced. */
+export const decisionTime = (e: CalendarEvent): string => {
+  const t = DECISION_TIMES[e.institution];
+  return zonedTime(e.date, t.hh, t.mm, t.tz);
+};
+
 /** Upcoming events only (from today), soonest first, one per institution and day. */
 export function upcoming(events: CalendarEvent[], now: number, limit = 12): CalendarEvent[] {
   const today = new Date(now).toISOString().slice(0, 10);
@@ -459,8 +523,12 @@ export function readEconomyFile(body: unknown): EconomyFile | null {
   const events = Array.isArray(cal.events)
     ? cal.events.filter((e): e is CalendarEvent => isRec(e) && isDay(e.date) && INSTITUTIONS.includes(e.institution as string) && typeof e.title === "string" && typeof e.sourceUrl === "string" && /^https:\/\//.test(e.sourceUrl))
     : [];
+  const isRelease = (r: unknown): r is DataRelease => isRec(r) && ["cpi", "jobs", "ppi"].includes(r.kind as string) && isTime(r.time) && isDay(r.date) && typeof r.title === "string" && typeof r.sourceUrl === "string" && /^https:\/\//.test(r.sourceUrl);
+  const rel = isRec(body.releases) && isTime(body.releases.capturedAt) && Array.isArray(body.releases.events)
+    ? { capturedAt: body.releases.capturedAt, events: body.releases.events.filter(isRelease) }
+    : undefined;
   const au = isRec(body.auctions) && isTime(body.auctions.capturedAt) && Array.isArray(body.auctions.upcoming) && Array.isArray(body.auctions.recent)
     ? { capturedAt: body.auctions.capturedAt, upcoming: body.auctions.upcoming.filter(isAuction), recent: body.auctions.recent.filter(isAuction) }
     : undefined;
-  return { schema: ECONOMY_SCHEMA, generatedAt: body.generatedAt, indicators, calendar: { capturedAt: isTime(cal.capturedAt) ? cal.capturedAt : body.generatedAt, events }, ...(au ? { auctions: au } : {}) };
+  return { schema: ECONOMY_SCHEMA, generatedAt: body.generatedAt, indicators, calendar: { capturedAt: isTime(cal.capturedAt) ? cal.capturedAt : body.generatedAt, events }, ...(rel ? { releases: rel } : {}), ...(au ? { auctions: au } : {}) };
 }

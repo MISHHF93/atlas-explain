@@ -28,6 +28,7 @@ import {
   type CryptoSource,
 } from "./crypto.ts";
 import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
+import { parseBlsSchedule } from "./economy.ts";
 import { boeBankRateUrl, parseBoeBankRate, parseBoeMpcDates, parseEcbDepositRate, parseTreasuryAuctions, type Auction } from "./economy.ts";
 import { ECONOMY_SCHEMA, ECONOMY_SOURCES, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
 import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, parseData360, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
@@ -357,6 +358,10 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
     if (!fresh.length) env.log(`economy calendar ${institution}: ${kept.length ? "kept the last dates" : "no dates"}`);
     events.push(...kept);
   }
+  // Scheduled data releases (CPI, jobs, PPI) with exact times, from the BLS's own calendar; the last list if it fails.
+  const blsFresh = parseBlsSchedule(await env.get(ECONOMY_SOURCES.blsSchedule).catch(() => ""));
+  const releases = blsFresh.length ? { capturedAt: at, events: blsFresh } : prev?.releases;
+  if (!blsFresh.length) env.log(`economy releases: ${releases ? "kept the last schedule" : "none"}`);
   // Treasury auctions: what is announced and not yet run, and the latest results. Each keeps its last good list.
   const today = at.slice(0, 10);
   const announced = parseTreasuryAuctions(await env.get(ECONOMY_SOURCES.auctionsAnnounced).then((t) => JSON.parse(t) as unknown).catch(() => null));
@@ -369,7 +374,7 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
   if (!announced.length && !results.length) env.log(`economy auctions: ${auctions ? "kept the last lists" : "none"}`);
   if (!indicators.length && !events.length) return null;
   env.log(`economy: ${indicators.length} indicators, ${events.length} calendar dates, ${auctions?.upcoming.length ?? 0} upcoming auctions`);
-  return { schema: ECONOMY_SCHEMA, generatedAt: at, indicators, calendar: { capturedAt: at, events }, ...(auctions ? { auctions } : {}) };
+  return { schema: ECONOMY_SCHEMA, generatedAt: at, indicators, calendar: { capturedAt: at, events }, ...(releases ? { releases } : {}), ...(auctions ? { auctions } : {}) };
 }
 
 /**
