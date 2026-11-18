@@ -1,0 +1,31 @@
+# ATLAS Explain
+
+> Market jargon explained in plain language, inside your AI assistant. A free, read-only MCP connector (no account, no key) with official figures, crypto prices and charts, economic data and headlines, each with its source and time. Education only: it never recommends a trade or forecasts a price.
+
+Connector address (Streamable HTTP, no auth): https://atlas-explain-mcp.atlas-explain.workers.dev/mcp
+MCP Registry name: io.github.MISHHF93/atlas-explain
+
+## Start here
+
+- [Add it to your assistant](https://atlas-explain.web.app/connect): steps for Claude, ChatGPT, Cursor and VS Code, plus every tool and prompt
+- [Support and FAQ](https://atlas-explain.web.app/support)
+- [How it's built](https://atlas-explain.web.app/how-its-built): sources, refresh times and what is never collected
+
+## Tools
+
+- explain_term, browse_glossary: market terms in plain language, and a learning path
+- asset_details, evidence_brief: one asset with every fact sourced, plus what the facts don't tell you
+- official_figures: US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, SEC-filed company figures
+- crypto_prices, price_history, market_depth: ten major coins, charts over 24 hours to 30 days, spreads and order-book depth
+- economy_snapshot, economic_calendar: inflation, jobs, policy rates, US debt, and the next central-bank rate decisions
+- todays_headlines: official press releases and recent market news
+
+## Data
+
+- [Data index](https://atlas-explain-mcp.atlas-explain.workers.dev/data/v1/): the public JSON files, their sources, licences and refresh times
+- [Data API docs](https://github.com/MISHHF93/atlas-explain/blob/main/docs/DATA_API.md)
+
+## Policies
+
+- [Privacy](https://atlas-explain.web.app/privacy)
+- [Terms](https://atlas-explain.web.app/terms)

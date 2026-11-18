@@ -176,6 +176,9 @@ tr:last-child td { border-bottom: 0; }
 .flow { display: grid; gap: 0.85rem; padding: 0; list-style: none; }
 .flow-n { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--atlas-accent-soft); color: var(--atlas-accent); font-weight: 800; }
 .shots { display: grid; gap: 1.25rem; }
+.ask-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 0.85rem; padding: 0; margin: 0 0 1.25rem; list-style: none; }
+.shots-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: start; }
+.shots-2 img { width: 100%; height: auto; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius-lg); }
 .shots figure { margin: 0; display: grid; gap: 0.6rem; justify-items: center; }
 .shots figcaption { max-width: 22rem; text-align: center; font-size: var(--atlas-text-sm); color: var(--atlas-muted); }
 .faq { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }

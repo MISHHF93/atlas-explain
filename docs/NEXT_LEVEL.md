@@ -27,7 +27,7 @@ Visible to every user of every chart, and it is what a Verified reviewer would c
 
 Mark `economy_snapshot` (all arguments optional) with `_meta["openai/ui"].entrypoints: [{ "type": "global" }]`. Claude then lists "ATLAS Explain: the economy at a glance" on the Artifacts page, openable and pinnable without a conversation. It works now for the owner's custom connector, and for everyone once the listing is Verified. Harmless where unavailable.
 
-### 3. One clear front door on the website (site; half a day)
+### 3. One clear front door on the website (site; half a day; partly done 18 Nov 2026: the home page now shows what people can ask, with the views)
 
 A fresh read of the landing page found: two competing calls to action (Get started vs Add to your AI assistant) with no guidance; "no account" in the hero next to a Get started that leads to Sign in; "connector", "address" and "Gemini Nano" never explained; "official sources" never named; trust claims with no evidence beyond the repo link; the disclaimer three times; no list of which assistants are supported.
 
@@ -40,7 +40,7 @@ What finance-education users consistently like: bite-sized lessons, a check at t
 - **Sync learning progress to the account** (the web app's history already syncs), so "7 of 23 terms" follows the person to every device and into the connector.
 - **"Check yourself"**: three questions per topic drawn from the glossary, answered on-device; the result marks the topic done. Also a connector tool, `learning_progress`, so Claude can say "you're on Rates; here's the next term".
 - **Your account** shows topics done, terms learned, and the next topic, next to the plan card.
-- **What's notable today** (descriptive signals, never predictions): "the yield curve is inverted", "Bitcoin moved more than usual this week", "a Fed decision is in 3 days", each with its source and a one-line explanation. A section in Today and a connector tool. ATLAS model leans stay withheld unless `clearedForPublic`.
+- **What's notable today** (descriptive signals, never predictions): "the yield curve is inverted", "Bitcoin moved more than usual this week", "a Fed decision is in 3 days", each with its source and a one-line explanation. A section in Today and a connector tool. ATLAS model leans stay withheld unless `clearedForPublic`. **Connector tool done in 1.10.0 (18 Nov 2026): `notable_today`, with each item's rule stated; the Today section in the web app is still to do.**
 
 ### 5. Later, bigger
 

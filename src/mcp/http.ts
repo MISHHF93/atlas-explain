@@ -5,7 +5,7 @@
  * Hosted on Cloudflare Workers' free plan (src/mcp/worker.ts); see docs/MCP.md.
  */
 import { ICON_PNG_512_BASE64, ICON_PNG_64_BASE64, ICON_SVG } from "./icon-data";
-import { EDUCATION_LINE, handle, modernVersion, type Fetcher } from "./server";
+import { ALL_PROTOCOLS, CAPABILITIES, EDUCATION_LINE, handle, ICONS, INSTRUCTIONS, modernVersion, PROMPTS, SERVER_NAME, SERVER_VERSION, TOOLS, type Fetcher } from "./server";
 
 export const MCP_PATH = "/mcp";
 
@@ -39,11 +39,41 @@ const ABOUT = [
   "ATLAS Explain MCP server",
   "",
   `Add this address to an AI assistant that supports MCP connectors: <this host>${MCP_PATH}`,
-  "Tools: explain_term, browse_glossary, asset_details, official_figures, crypto_prices, price_history, todays_headlines. Read-only, free, no sign-in.",
+  `Tools: ${TOOLS.map((t) => t.name).join(", ")}. Read-only, free, no sign-in.`,
   `Setup: ${CONNECT_PAGE}`,
   "",
   EDUCATION_LINE,
 ].join("\n");
+
+/** The registry name, as in server.json. */
+export const REGISTRY_NAME = "io.github.MISHHF93/atlas-explain";
+
+/**
+ * A server card: what this server is and offers, readable without connecting (MCP server cards, SEP-1649 and
+ * SEP-2127, still drafts; served at the paths those drafts and current deployments use). Built from the same
+ * TOOLS and PROMPTS the server answers with, so it can never disagree with them.
+ */
+export function serverCard(origin: string) {
+  return {
+    $schema: "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+    name: REGISTRY_NAME,
+    title: "ATLAS Explain",
+    description: "Market jargon in plain language: terms, official figures, crypto prices and charts, headlines.",
+    version: SERVER_VERSION,
+    websiteUrl: CONNECT_PAGE,
+    repository: { url: "https://github.com/MISHHF93/atlas-explain", source: "github" },
+    icons: ICONS,
+    remotes: [{ type: "streamable-http", url: `${origin}${MCP_PATH}` }],
+    serverInfo: { name: SERVER_NAME, title: "ATLAS Explain", version: SERVER_VERSION },
+    protocolVersions: ALL_PROTOCOLS,
+    authentication: { required: false },
+    capabilities: CAPABILITIES,
+    instructions: INSTRUCTIONS,
+    tools: TOOLS.map((t) => ({ name: t.name, title: t.title, description: t.description, annotations: t.annotations })),
+    prompts: PROMPTS.map((p) => ({ name: p.name, title: p.title, description: p.description })),
+  };
+}
+const CARD_PATHS = new Set(["/.well-known/mcp/server-card.json", "/.well-known/mcp.json", `${MCP_PATH}/server-card`]);
 
 /**
  * Origin check against DNS rebinding (required by the transport spec). The server is public and
@@ -92,6 +122,15 @@ export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Re
   const icon = ICON_FILES[url.pathname];
   if (icon && (request.method === "GET" || request.method === "HEAD")) {
     return new Response(request.method === "HEAD" ? null : icon.body(), { headers: { ...CORS, "Content-Type": icon.type, "Cache-Control": "public, max-age=86400" } });
+  }
+
+  if (request.method === "GET" || request.method === "HEAD") {
+    if (CARD_PATHS.has(url.pathname)) {
+      const body = request.method === "HEAD" ? null : JSON.stringify(serverCard(url.origin), null, 2);
+      return new Response(body, { headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": "public, max-age=3600" } });
+    }
+    // For uptime monitors: answers without touching any data source.
+    if (url.pathname === "/health") return json({ ok: true, name: SERVER_NAME, version: SERVER_VERSION });
   }
 
   // A person opening the address in a browser gets the setup page, not protocol text. MCP clients

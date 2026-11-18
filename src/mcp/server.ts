@@ -35,7 +35,7 @@ import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile, type I
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.9.0";
+export const SERVER_VERSION = "1.10.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -249,11 +249,30 @@ export const TOOLS: readonly Tool[] = [
       limits: { type: "array", items: { type: "string" } },
     }, ["asset", "facts", "limits"]),
   },
+  {
+    name: "notable_today",
+    title: "What's notable today",
+    description: "What stands out in today's data, each with its source and the rule that picked it: unusual crypto moves, a flat or inverted yield curve, rate decisions this week, changed economic figures. Use it for what's happening or what's worth knowing today. Also lists new official releases and what was checked but found ordinary. Describes the past only; never a forecast or a suggestion.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: annotations("What's notable today", true),
+    icons: ICONS,
+    outputSchema: obj({
+      asOf: { type: "string" },
+      observations: { type: "array", items: { type: "object", properties: {
+        kind: { type: "string", enum: ["crypto_move", "yield_curve", "rate_decision", "economic_change", "official_release"] },
+        title: { type: "string" }, detail: { type: "string" }, asOf: nullable("string"), source: { type: "string" }, sourceUrl: nullable("string"),
+        rule: { type: "string" }, terms: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" } } } },
+      } } },
+      quiet: { type: "array", items: { type: "string" } },
+      unavailable: { type: "array", items: { type: "string" } },
+      limits: { type: "array", items: { type: "string" } },
+    }, ["observations", "limits"]),
+  },
 ];
 
-const INSTRUCTIONS =
-  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot and market_depth also draw interactive charts. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
-const CAPABILITIES = {
+export const INSTRUCTIONS =
+  "Read-only look-ups from ATLAS Explain, an education-only market explainer: explain_term and browse_glossary for plain-language terms and the learning path; asset_details and official_figures for what an asset is and its official numbers with sources; crypto_prices and price_history for recent crypto prices (refreshed about every 10 minutes) and past moves; todays_headlines for recent news and official releases; economy_snapshot for inflation, jobs, policy rates and debt; economic_calendar for upcoming central-bank rate decisions; market_depth for a coin's bid-ask spread, order book and slippage; evidence_brief for all of these on one asset at once, with what the facts don't tell you; notable_today for what stands out across all the data today, each picked by a stated rule. In clients that support MCP Apps, crypto_prices, price_history, official_figures, economy_snapshot and market_depth also draw interactive charts. Glossary terms are also readable as resources. Every result names its source and time. Education only: never present results as trade advice or a forecast.";
+export const CAPABILITIES = {
   tools: { listChanged: false },
   resources: { listChanged: false },
   prompts: { listChanged: false },
@@ -326,6 +345,13 @@ export const PROMPTS = [
     description: "Inflation, jobs, policy rates and the next rate decisions, in plain language with sources.",
     arguments: [],
     text: () => "Using ATLAS Explain, tell me how the economy looks today (economy_snapshot) and when the next central-bank rate decisions are (economic_calendar). Explain each figure in plain language, name its source and period, and don't forecast anything.",
+  },
+  {
+    name: "whats_notable",
+    title: "What's notable today",
+    description: "What stands out in today's market and economic data, each with its source and why it was picked.",
+    arguments: [],
+    text: () => "Using ATLAS Explain, tell me what's notable today (notable_today). For each item, explain in plain language what it means and the term behind it, keep its source and time, and say why it was picked. Describe only what has happened; don't forecast or suggest anything.",
   },
   {
     name: "quiz_me",
@@ -891,6 +917,162 @@ export async function evidenceBrief(key: string, fetcher: Fetcher, now = Date.no
   });
 }
 
+/* ---------- what's notable today (descriptive, never predictive) ---------- */
+
+/** A coin's last 24 hours count as unusual at this many times its typical (median) daily move over the past month… */
+export const UNUSUAL_MOVE_MULTIPLE = 2;
+/** …and only if the move is at least this many percent, so a calm market's tiny moves never qualify. */
+export const UNUSUAL_MOVE_MIN_PCT = 1;
+/** A rate in percent counts as changed when it moved at least this many percentage points since the previous figure. */
+export const ECONOMIC_CHANGE_MIN_PT = 0.2;
+/** A yield curve this close to flat (10-year minus 3-month, in percentage points) is called flat. */
+export const FLAT_CURVE_PT = 0.25;
+const NOTABLE_DAYS_AHEAD = 7;
+const RELEASE_HOURS = 24;
+
+type Observation = { kind: string; title: string; detail: string; asOf: string | null; source: string; sourceUrl: string | null; rule: string; terms: { id: string; title: string }[] };
+const termRefs = (...ids: string[]) => ids.map((id) => ALL_TERMS.find((t) => t.id === id)).filter((t): t is (typeof ALL_TERMS)[number] => !!t).map((t) => ({ id: t.id, title: t.title }));
+const signedPt = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(2)}`;
+
+/** The close at or just before `t` (seconds), from hourly closes oldest first. */
+function closeAt(series: readonly (readonly [number, number])[], t: number): number | null {
+  let found: number | null = null;
+  for (const [ts, c] of series) {
+    if (ts > t) break;
+    found = c;
+  }
+  return found;
+}
+
+/** The last 24 hours' move, and the median absolute daily move over the days before it (needs about two weeks). */
+export function dailyMoveStats(series: readonly (readonly [number, number])[]): { lastPct: number; typicalPct: number; days: number } | null {
+  if (series.length < 2) return null;
+  const end = series[series.length - 1]![0];
+  const moves: number[] = [];
+  for (let k = 0; ; k++) {
+    const to = closeAt(series, end - k * 86_400);
+    const from = closeAt(series, end - (k + 1) * 86_400);
+    if (to == null || from == null || from === 0) break;
+    moves.push(((to - from) / from) * 100);
+  }
+  if (moves.length < 15) return null;
+  const past = moves.slice(1).map(Math.abs).sort((a, b) => a - b);
+  const mid = past.length >> 1;
+  const typical = past.length % 2 ? past[mid]! : (past[mid - 1]! + past[mid]!) / 2;
+  return { lastPct: moves[0]!, typicalPct: typical, days: past.length };
+}
+
+export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
+  const [crypto, official, economy, newsBody] = await Promise.all([loadCrypto(fetcher), loadOfficial(fetcher, now), loadEconomy(fetcher), getJson(NEWS_DATA_URL, fetcher)]);
+  const news = newsBody == null ? null : readNewsFile(newsBody, now);
+  const observations: Observation[] = [];
+  const quiet: string[] = [];
+  const unavailable: string[] = [];
+
+  // 1. Crypto: a 24-hour move well outside the coin's own typical daily move.
+  if (crypto) {
+    const credit = cryptoCredit(crypto.history.source, crypto.history.asOf, now);
+    const moves = crypto.prices.coins
+      .map((c) => ({ c, st: dailyMoveStats(crypto.history.series[c.symbol] ?? []) }))
+      .filter((m): m is { c: (typeof m)["c"]; st: NonNullable<(typeof m)["st"]> } => m.st !== null);
+    const unusual = moves
+      .filter(({ st }) => Math.abs(st.lastPct) >= UNUSUAL_MOVE_MIN_PCT && Math.abs(st.lastPct) >= UNUSUAL_MOVE_MULTIPLE * st.typicalPct)
+      .sort((a, b) => Math.abs(b.st.lastPct) / b.st.typicalPct - Math.abs(a.st.lastPct) / a.st.typicalPct);
+    for (const { c, st } of unusual.slice(0, 4)) {
+      observations.push({
+        kind: "crypto_move",
+        title: `${c.name} moved ${formatChange(st.lastPct).text} in 24 hours, about ${(Math.abs(st.lastPct) / st.typicalPct).toFixed(1)}× its typical daily move`,
+        detail: `Its median daily move over the previous ${st.days} days was ${st.typicalPct.toFixed(2)}%. Price now ${formatPrice(c.priceUsd)}.`,
+        asOf: crypto.history.asOf,
+        source: credit,
+        sourceUrl: null,
+        rule: `Picked because the 24-hour move is at least ${UNUSUAL_MOVE_MULTIPLE}× the coin's own median daily move over the past month, and at least ${UNUSUAL_MOVE_MIN_PCT}%.`,
+        terms: termRefs("drawdown", "volume", "implied_volatility"),
+      });
+    }
+    if (moves.length && !unusual.length) quiet.push(`None of the ${moves.length} coins moved more than ${UNUSUAL_MOVE_MULTIPLE}× its typical daily move in the last 24 hours.`);
+  } else unavailable.push("Crypto prices couldn't be loaded, so crypto moves weren't checked.");
+
+  // 2. The US Treasury yield curve: inverted or flat.
+  if (official) {
+    const y = (sym: string) => official.find((a) => a.symbol === sym && a.quote && typeof a.quote.value === "number");
+    const long = y("US10Y");
+    const short = y("US3M");
+    if (long?.quote && short?.quote) {
+      const gap = long.quote.value - short.quote.value;
+      const shape = gap < 0 ? "inverted" : gap < FLAT_CURVE_PT ? "flat" : null;
+      if (shape) {
+        observations.push({
+          kind: "yield_curve",
+          title: shape === "inverted" ? `The US Treasury yield curve is inverted: the 10-year yields ${Math.abs(gap * 100).toFixed(0)} basis points less than the 3-month` : `The US Treasury yield curve is nearly flat: the 10-year yields only ${(gap * 100).toFixed(0)} basis points more than the 3-month`,
+          detail: `10-year ${long.quote.value.toFixed(2)}%, 3-month ${short.quote.value.toFixed(2)}% (${long.quote.asOf.slice(0, 10)}). Normally longer loans pay more than shorter ones.`,
+          asOf: long.quote.asOf,
+          source: long.quote.source.attribution.text,
+          sourceUrl: long.quote.source.attribution.href,
+          rule: `Picked because the 10-year minus 3-month gap is below zero (inverted) or below ${FLAT_CURVE_PT} percentage points (flat).`,
+          terms: termRefs("yield_curve", "yield", "basis_point"),
+        });
+      } else quiet.push(`The US Treasury yield curve slopes upward as usual: 10-year ${long.quote.value.toFixed(2)}%, 3-month ${short.quote.value.toFixed(2)}%.`);
+    } else unavailable.push("US Treasury yields weren't available, so the yield curve wasn't checked.");
+  } else unavailable.push("Official figures couldn't be loaded, so the yield curve wasn't checked.");
+
+  // 3. Rate decisions in the next week, and 4. economic figures that changed.
+  if (economy) {
+    const soon = upcoming(economy.calendar.events, now, 6).filter((e) => Number(eventRecord(e, now).daysAway) <= NOTABLE_DAYS_AHEAD);
+    for (const e of soon) {
+      const days = Number(eventRecord(e, now).daysAway);
+      observations.push({
+        kind: "rate_decision",
+        title: `${e.institution} rate decision ${days <= 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`} (${e.date})`,
+        detail: `${e.about}${e.withProjections ? " With the Summary of Economic Projections." : ""}`,
+        asOf: economy.calendar.capturedAt,
+        source: `${e.institution}'s published calendar`,
+        sourceUrl: e.sourceUrl,
+        rule: `Picked because the decision is within ${NOTABLE_DAYS_AHEAD} days. The date only: ATLAS Explain never guesses the outcome.`,
+        terms: termRefs("rates_fed", "reference_rate", "basis_point"),
+      });
+    }
+    if (!soon.length) quiet.push(`No Fed, ECB or Bank of Canada rate decision in the next ${NOTABLE_DAYS_AHEAD} days.`);
+    const changed = economy.indicators.filter((i) => i.unit === "%" && i.change != null && Math.abs(i.change) >= ECONOMIC_CHANGE_MIN_PT);
+    for (const i of changed) {
+      observations.push({
+        kind: "economic_change",
+        title: `${i.name} ${i.change! > 0 ? "rose" : "fell"} ${Math.abs(i.change!).toFixed(2)} percentage points to ${i.value.toFixed(2)}%`,
+        detail: `For ${i.period}, ${i.changeWindow} (${signedPt(i.change!)} pt).${i.note ? ` ${i.note}` : ""}`,
+        asOf: economy.generatedAt,
+        source: i.source,
+        sourceUrl: i.sourceUrl,
+        rule: `Picked because it changed by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points since the previous figure.`,
+        terms: termRefs("basis_point", "rates"),
+      });
+    }
+    if (economy.indicators.length && !changed.length) quiet.push(`No inflation, jobs or rate figure changed by ${ECONOMIC_CHANGE_MIN_PT} percentage points or more in its latest release.`);
+  } else unavailable.push("Economic data couldn't be loaded, so rate decisions and economic figures weren't checked.");
+
+  // 5. Official releases from the last day.
+  if (news) {
+    const recent = (news.items["market:official"] ?? []).filter((n) => now - Date.parse(n.seenAt) <= RELEASE_HOURS * 3_600_000).sort((a, b) => b.seenAt.localeCompare(a.seenAt));
+    for (const n of recent.slice(0, 3)) {
+      observations.push({ kind: "official_release", title: n.title, detail: `Published by ${n.domain}.`, asOf: n.seenAt, source: n.domain, sourceUrl: n.url, rule: `Picked because it is an official press release from the last ${RELEASE_HOURS} hours.`, terms: [] });
+    }
+    if (!recent.length) quiet.push(`No official press release in the last ${RELEASE_HOURS} hours.`);
+  } else unavailable.push("Headlines couldn't be loaded, so official releases weren't checked.");
+
+  const limits = [
+    "Each item was picked by the fixed rule shown with it, from data that has already happened. None of it says what happens next.",
+    "Unusual is measured against each coin's own past month only; a longer history could tell a different story.",
+    "These are observations to learn from, never a suggestion to act.",
+  ];
+  const lines = [
+    `What stands out in ATLAS Explain's data, ${utc(new Date(now).toISOString())}:`,
+    ...(observations.length ? observations.map((o) => `\n- ${o.title}.\n  ${o.detail}\n  Why it's here: ${o.rule}\n  Source: ${o.source}${o.sourceUrl ? ` (${o.sourceUrl})` : ""}${o.terms.length ? `\n  Terms: ${o.terms.map((t) => t.title).join(", ")}` : ""}`) : ["\nNothing passed the rules today."]),
+    ...(quiet.length ? ["\nChecked, nothing unusual:", ...quiet.map((q) => `- ${q}`)] : []),
+    ...(unavailable.length ? ["\nNot checked:", ...unavailable.map((u) => `- ${u}`)] : []),
+    "\nLimits:", ...limits.map((l) => `- ${l}`),
+  ];
+  return data(lines.join("\n"), { asOf: new Date(now).toISOString(), observations, quiet, unavailable, limits });
+}
+
 const text_of = (r: ToolResult) => r.content[0]?.text.split("\n\n")[0] ?? "";
 
 /* ---------- JSON-RPC (the HTTP transport is in src/mcp/http.ts) ---------- */
@@ -993,6 +1175,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "economic_calendar": return ok(await economicCalendar(s(args.bank), fetcher));
         case "market_depth": return ok(await marketDepth(s(args.coin) ?? "", fetcher));
         case "evidence_brief": return ok(await evidenceBrief(s(args.asset) ?? "", fetcher));
+        case "notable_today": return ok(await notableToday(fetcher));
         default: return fail(-32602, `Unknown tool: ${String(name)}`);
       }
     }
