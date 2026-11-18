@@ -431,8 +431,11 @@ export function createWalletShell(options: {
   function setSignal(view: SignalView): void {
     const copy = signalCopy(view);
     status.dataset.light = view.colour;
-    if (hiddenTabs.has("signal")) {
-      status.setAttribute("aria-label", `${statusLabel.textContent}. Open Assets.`);
+    // Public visitors have no ATLAS desk: describe the live-prices status only, without desk jargon.
+    if (hiddenTabs.has("signal") || !view.connected) {
+      const label = statusLabel.textContent?.trim() || connectionCopy((status.dataset.state ?? "none") as ConnectionState).label;
+      // Where it leads depends on the app (Today on the web, Assets elsewhere), so the label names the state only.
+      status.setAttribute("aria-label", label);
       status.title = connectionCopy((status.dataset.state ?? "none") as ConnectionState).title;
     } else {
       status.setAttribute("aria-label", `Signal light: ${copy.headline}. ${statusLabel.textContent}. Open the Signal tab.`);

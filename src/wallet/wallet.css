@@ -328,7 +328,8 @@ a.primary, a.secondary { text-decoration: none; }
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
-button.chip { cursor: pointer; }
+/* Tappable chips meet the 24 px minimum target size (WCAG 2.2, 2.5.8) with room to spare. */
+button.chip { cursor: pointer; min-height: 2rem; padding-inline: 0.7rem; }
 button.chip[aria-pressed="true"] { background: var(--atlas-accent); color: var(--atlas-accent-ink); }
 .chip-gate { background: color-mix(in srgb, var(--tone) 16%, transparent); color: var(--atlas-ink); }
 .paper { font-size: var(--atlas-text-2xs); color: var(--atlas-muted); }
