@@ -433,9 +433,8 @@ export function createWalletShell(options: {
     status.dataset.light = view.colour;
     // Public visitors have no ATLAS desk: describe the live-prices status only, without desk jargon.
     if (hiddenTabs.has("signal") || !view.connected) {
-      const label = statusLabel.textContent?.trim() || connectionCopy((status.dataset.state ?? "none") as ConnectionState).label;
-      // Where it leads depends on the app (Today on the web, Assets elsewhere), so the label names the state only.
-      status.setAttribute("aria-label", label);
+      // The chip's visible text ("Live prices") names it; no separate label to fall out of step with it.
+      status.removeAttribute("aria-label");
       status.title = connectionCopy((status.dataset.state ?? "none") as ConnectionState).title;
     } else {
       status.setAttribute("aria-label", `Signal light: ${copy.headline}. ${statusLabel.textContent}. Open the Signal tab.`);
