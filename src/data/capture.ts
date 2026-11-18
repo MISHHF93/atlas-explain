@@ -27,7 +27,7 @@ import {
   type CryptoFile,
   type CryptoSource,
 } from "./crypto.ts";
-import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
+import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseEiaSpotPage, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
 import { parseBlsSchedule } from "./economy.ts";
 import { boeBankRateUrl, parseBoeBankRate, parseBoeMpcDates, parseEcbDepositRate, parseTreasuryAuctions, type Auction } from "./economy.ts";
 import { ECONOMY_SCHEMA, ECONOMY_SOURCES, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
@@ -76,11 +76,13 @@ async function runPart(part: MarketPart, env: CaptureEnv): Promise<Asset[]> {
     case "boc_bonds":
       return parseBocBonds(await env.get("https://www.bankofcanada.ca/valet/observations/group/bond_yields_benchmark/json?recent=5"), env.now);
     case "eia": {
+      // With a key, the EIA API; without one, the same public-domain series from the EIA's own history pages.
       const key = env.eiaKey?.trim();
-      if (!key) throw new Error("EIA_API_KEY is not set; skipped");
       const out: Asset[] = [];
       for (const meta of EIA_SERIES) {
-        const asset = parseEiaSeries(await env.get(`https://api.eia.gov/v2/seriesid/${meta.seriesId}?api_key=${encodeURIComponent(key)}&length=10`), meta, env.now);
+        const asset = key
+          ? parseEiaSeries(await env.get(`https://api.eia.gov/v2/seriesid/${meta.seriesId}?api_key=${encodeURIComponent(key)}&length=10`), meta, env.now)
+          : parseEiaSpotPage(await env.get(meta.page), meta, env.now);
         if (asset) out.push(asset);
       }
       return out;

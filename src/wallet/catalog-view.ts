@@ -284,7 +284,13 @@ function assetRow(a: Asset, showClass: boolean, open: () => void): HTMLElement {
     if (change) ch.dataset.tone = change.tone;
     nums.append(el("span", "asset-price", value), ch);
   } else {
-    nums.append(el("span", "no-price", "Price not shown"));
+    // No licensed price: show the latest official figure instead of the same note on every row.
+    const fig = a.facts.find((f) => f.kind === "figure");
+    if (fig) {
+      nums.append(el("span", "asset-price asset-figure", fig.value), el("span", "asset-change", `${fig.label}${fig.period ? `, ${fig.period}` : ""}`));
+    } else {
+      nums.append(el("span", "no-price", "Price not shown"));
+    }
   }
   btn.append(badge(a), who, nums);
   btn.addEventListener("click", open);

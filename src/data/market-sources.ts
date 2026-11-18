@@ -271,19 +271,48 @@ export function parseBocBonds(json: string, now: number = Date.now()): Asset[] {
 
 /* ---------- EIA: daily energy spot prices (API v2, values are strings) ---------- */
 
-export const EIA_SERIES: readonly { seriesId: string; id: string; symbol: string; name: string; unit: string; benchmark: string }[] = [
-  { seriesId: "PET.RWTC.D", id: "commodity:WTI", symbol: "WTI", name: "WTI crude oil", unit: "barrel", benchmark: "WTI, Cushing, Oklahoma spot" },
-  { seriesId: "PET.RBRTE.D", id: "commodity:BRENT", symbol: "BRENT", name: "Brent crude oil", unit: "barrel", benchmark: "Brent, Europe spot" },
-  { seriesId: "NG.RNGWHHD.D", id: "commodity:HENRYHUB", symbol: "NATGAS", name: "Natural gas (Henry Hub)", unit: "million BTU", benchmark: "Henry Hub, Louisiana spot" },
+export const EIA_SERIES: readonly { seriesId: string; page: string; id: string; symbol: string; name: string; unit: string; benchmark: string }[] = [
+  { seriesId: "PET.RWTC.D", page: "https://www.eia.gov/dnav/pet/hist/RWTCD.htm", id: "commodity:WTI", symbol: "WTI", name: "WTI crude oil", unit: "barrel", benchmark: "WTI, Cushing, Oklahoma spot" },
+  { seriesId: "PET.RBRTE.D", page: "https://www.eia.gov/dnav/pet/hist/RBRTED.htm", id: "commodity:BRENT", symbol: "BRENT", name: "Brent crude oil", unit: "barrel", benchmark: "Brent, Europe spot" },
+  { seriesId: "NG.RNGWHHD.D", page: "https://www.eia.gov/dnav/ng/hist/rngwhhdD.htm", id: "commodity:HENRYHUB", symbol: "NATGAS", name: "Natural gas (Henry Hub)", unit: "million BTU", benchmark: "Henry Hub, Louisiana spot" },
 ];
+
+const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * The EIA's own daily history page (keyless, public domain): weekly rows "2026 Nov- 9 to Nov-13" followed
+ * by five cells, Monday to Friday, empty on holidays and days not yet published. Only the end of the page
+ * is read (the latest weeks), so a capture stays well inside the Worker's CPU limit.
+ */
+export function parseEiaSpotPage(html: string, meta: (typeof EIA_SERIES)[number], now: number = Date.now()): Asset | null {
+  const tail = html.slice(-30_000);
+  const rows: { date: string; value: number }[] = [];
+  const week = /<td class=['"]B6['"]>(?:&nbsp;|\s)*(\d{4}) ([A-Z][a-z]{2})-\s?(\d{1,2}) to [^<]*<\/td>((?:\s*<td class=['"]B3['"]>[^<]*<\/td>){1,5})/g;
+  for (const m of tail.matchAll(week)) {
+    const month = MON3.indexOf(m[2]!);
+    if (month < 0) continue;
+    const monday = Date.UTC(Number(m[1]), month, Number(m[3]));
+    const cells = [...m[4]!.matchAll(/<td class=['"]B3['"]>([^<]*)<\/td>/g)].map((c) => c[1]!.trim());
+    cells.forEach((cell, k) => {
+      const value = positive(cell);
+      if (value != null) rows.push({ date: new Date(monday + k * DAY_MS).toISOString().slice(0, 10), value });
+    });
+  }
+  return eiaAsset(rows, meta, now);
+}
 
 /** One EIA series response: rows of { period: "YYYY-MM-DD", value: "71.4" }, newest first or not. */
 export function parseEiaSeries(json: string, meta: (typeof EIA_SERIES)[number], now: number = Date.now()): Asset | null {
   const body = JSON.parse(json) as { response?: { data?: Array<Record<string, unknown>> } };
   const rows = (body.response?.data ?? [])
     .map((r) => ({ date: typeof r.period === "string" ? r.period : "", value: positive(r.value) }))
-    .filter((r): r is { date: string; value: number } => r.value != null && /^\d{4}-\d{2}-\d{2}$/.test(r.date))
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .filter((r): r is { date: string; value: number } => r.value != null && /^\d{4}-\d{2}-\d{2}$/.test(r.date));
+  return eiaAsset(rows, meta, now);
+}
+
+/** Daily spot values (any order) → the asset, with the change from the previous trading day. */
+function eiaAsset(daily: { date: string; value: number }[], meta: (typeof EIA_SERIES)[number], now: number): Asset | null {
+  const rows = [...daily].sort((a, b) => b.date.localeCompare(a.date));
   const [latest, previous] = rows;
   // EIA spot prices are published weekly, so allow a little longer than other daily series.
   if (!latest || now - Date.parse(`${latest.date}T12:00:00Z`) > 21 * DAY_MS) return null;
