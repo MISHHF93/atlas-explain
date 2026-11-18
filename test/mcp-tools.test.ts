@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assetDetails, browseGlossary, cryptoPrices, EDUCATION_LINE, handle, officialFigures, priceHistory, TOOLS, type Fetcher } from "../src/mcp/server";
+import { assetDetails, browseGlossary, cryptoPrices, EDUCATION_LINE, evidenceBrief, handle, officialFigures, priceHistory, TOOLS, type Fetcher } from "../src/mcp/server";
 import { DATA_SITE_URL } from "../src/core/links";
 
 const NOW = Date.parse("2026-11-15T12:00:00Z");
@@ -288,5 +288,14 @@ describe("every tool answers in structured form too", () => {
     expect(path.steps.length).toBeGreaterThan(5);
     expect(path.totalTerms).toBe(path.groups.reduce((n, g) => n + g.count, 0));
     expect((browse("economy").structuredContent as { topic: string }).topic).toBe("economy");
+  });
+});
+
+describe("evidence brief periods", () => {
+  it("keeps a filing's whole period, not its first ten characters (seen live as 'year to 26')", async () => {
+    const onlyMarket: Fetcher = async (url) =>
+      url.endsWith("/data/v1/market.json") ? new Response(JSON.stringify(market), { status: 200 }) : new Response("none", { status: 404 });
+    const t = body(await evidenceBrief("AAPL", onlyMarket));
+    expect(t).toContain("Revenue: $478.8 billion (year to 26 Sept 2026)");
   });
 });

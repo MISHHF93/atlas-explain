@@ -568,7 +568,9 @@ function figureLines(a: Asset): string[] {
   const value = formatValue(a);
   if (value && a.quote) {
     const change = assetChange(a);
-    return [`${a.name} (${a.symbol}): ${value}${change ? `, ${change.text} ${a.quote.changeWindow}` : ""}, as of ${a.quote.asOf.slice(0, 10)}. ${sourceLine(a.quote.source)}`];
+    // The EIA publishes spot prices once a week, so a date a week back is expected, not stale.
+    const weekly = a.venue === "EIA" ? " (the EIA publishes these once a week)" : "";
+    return [`${a.name} (${a.symbol}): ${value}${change ? `, ${change.text} ${a.quote.changeWindow}` : ""}, as of ${a.quote.asOf.slice(0, 10)}${weekly}. ${sourceLine(a.quote.source)}`];
   }
   const facts = a.facts.filter((f) => f.kind !== "filing").slice(0, 4);
   if (facts.length) {
@@ -920,6 +922,15 @@ function depthLines(depth: { bandPct: number; bidsUsd: number; asksUsd: number; 
   return lines;
 }
 
+/** The book can be older than the quote; when it is, say so with the book's own best prices, so its averages make sense. */
+function bookHeading(book: { bids: [number, number][]; asks: [number, number][] }, bookAsOf: string, quoteAsOf: string): string {
+  const minutes = Math.round((Date.parse(quoteAsOf) - Date.parse(bookAsOf)) / 60_000);
+  const best = book.bids[0] && book.asks[0] ? `best bid then ${formatPrice(book.bids[0][0])}, best ask then ${formatPrice(book.asks[0][0])}; ` : "";
+  return minutes >= 1
+    ? `In the order book captured ${utc(bookAsOf)}, ${minutes} minute${minutes === 1 ? "" : "s"} before the bid and ask above (${best}prices moved in between):`
+    : `In the order book captured ${utc(bookAsOf)}:`;
+}
+
 export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<ToolResult> {
   const coin = coinFor(coinKey);
   if (!coin) return text(`"${coinKey}" isn't one of the ten coins ATLAS Explain follows: ${COIN_NAMES}.`, true);
@@ -955,7 +966,7 @@ export async function marketDepth(coinKey: string, fetcher: Fetcher): Promise<To
     `${coin.name} (${coin.symbol}) on Kraken:`,
     `Best bid ${formatPrice(bid)}, best ask ${formatPrice(ask)}. Spread ${formatPrice(spread)} (${(spreadPct * 100).toFixed(2)} basis points of the middle price, ${formatPrice(mid)}).`,
     ...depthLines(depth, book, bookMid ?? mid),
-    ...(book ? [`In the order book captured ${utc(file.books!.asOf)}:`] : []),
+    ...(book ? [bookHeading(book, file.books!.asOf, quoteAsOf)] : []),
     ...impact.filter((r) => r.sizeUsd === 10_000).map((r) => r.filled
       ? `- filling $10,000 against the ${r.side} would average ${formatPrice(r.avgPriceUsd!)}, ${r.slippagePct!.toFixed(4)}% from the best ${r.side === "asks" ? "ask" : "bid"} in that book (that gap is called slippage).`
       : `- $10,000 is more than the ${r.side} in the levels shown.`),
@@ -1027,7 +1038,7 @@ export async function evidenceBrief(key: string, fetcher: Fetcher, now = Date.no
   else if (typeof d.value === "number") facts.push({ label: "Latest value", value: `${d.value}${d.currency === "%" ? "%" : ` ${d.currency ?? ""}`}`.trim(), asOf: d.asOf ?? null, source: d.source ?? null });
   for (const f of (Array.isArray(d.facts) ? d.facts : []) as Rec[]) facts.push({ label: f.label, value: f.value, asOf: f.period ?? d.asOf ?? null, source: d.source ?? null });
   lines.push("\nWhat it is:", String(d.about ?? ""), ...(d.tradingHours ? [`Trading hours: ${d.tradingHours}.`] : []));
-  lines.push("\nLatest figures:", ...(facts.length ? facts.map((f) => `- ${f.label}: ${f.value}${f.asOf ? ` (${String(f.asOf).slice(0, 10)})` : ""}`) : [`- None shown. ${d.noPriceReason ?? ""}`.trim()]));
+  lines.push("\nLatest figures:", ...(facts.length ? facts.map((f) => `- ${f.label}: ${f.value}${f.asOf ? ` (${/^\d{4}-\d{2}-\d{2}T/.test(String(f.asOf)) ? String(f.asOf).slice(0, 10) : String(f.asOf)})` : ""}`) : [`- None shown. ${d.noPriceReason ?? ""}`.trim()]));
   // A crypto source line already ends with a full stop; an official source's does not.
   if (d.source) lines.push(`Source: ${d.source}${d.sourceUrl ? ` (${d.sourceUrl})` : ""}${String(d.source).endsWith(".") ? "" : "."}`);
 

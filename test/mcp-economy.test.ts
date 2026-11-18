@@ -187,6 +187,13 @@ describe("market depth", () => {
     expect(t).toContain("In the order book captured 2026-11-16 21:00 UTC:");
   });
 
+  it("says when the order book is older than the quote, with the book's own best prices, so its averages make sense", async () => {
+    const later = cryptoFile();
+    later.prices.asOf = new Date(Date.parse(later.books!.asOf) + 8 * 60_000).toISOString();
+    const t = text(await marketDepth("BTC", serve(later)));
+    expect(t).toContain("In the order book captured 2026-11-16 21:00 UTC, 8 minutes before the bid and ask above (best bid then $65,000.00, best ask then $65,010.00; prices moved in between):");
+  });
+
   it("evidence_brief puts the facts on one page, each with its source, and says what it doesn't tell you", async () => {
     const news = { schema: "atlas-explain-news-v1", generatedAt: AT, items: { "market:official": [{ title: "Federal Reserve issues FOMC statement on policy", url: "https://www.federalreserve.gov/x", domain: "federalreserve.gov", seenAt: "2026-11-16T19:00:00.000Z" }] } };
     const route: Fetcher = async (url) => new Response(JSON.stringify(url.includes("crypto") ? cryptoFile() : url.includes("economy") ? economyFile() : url.includes("news") ? news : {}), { status: 200 });
