@@ -74,7 +74,7 @@ Never sold at any price: crypto prices (their licence doesn't allow redistributi
 
 ## 5. What has to be built (in order, behind flags)
 
-1. **Count credits, not calls.**
+1. **Count credits, not calls.** Built 19 Nov 2026, off (`CREDITS_ENABLED = "0"` in `wrangler.toml`). With it on, the daily limit is in credits, and answers carry `X-Credits-Used`, `X-Credits-Remaining` and `meta.credits` (REST) or `_meta["io.atlas-explain/credits"]` (MCP). Errors, refusals and non-tool requests cost nothing (`test/credits.test.ts`).
    - A weight table in `src/mcp/partner.ts`; partner records gain `plan`, `monthlyCredits` and `prepaidBalance`.
    - Every answer carries `X-Credits-Remaining` and `meta.credits`.
    - Errors cost nothing.

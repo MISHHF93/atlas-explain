@@ -45,6 +45,8 @@ export interface WorkerEnv {
   FIREBASE_SERVICE_ACCOUNT?: string;
   /** v2 tools switched on, as a comma list (docs/V2_DESIGN.md, feature flags). Empty: none. */
   V2_TOOLS?: string;
+  /** "1" counts partner usage in ATLAS credits (docs/USAGE_PRICING.md). Anything else: one call per request. */
+  CREDITS_ENABLED?: string;
 }
 
 export interface WaitContext {

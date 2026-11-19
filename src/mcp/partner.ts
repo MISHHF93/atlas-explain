@@ -23,6 +23,22 @@ export const API_VERSION = "v1-sandbox";
 const KEY_PATTERN = /^atlx_(sbx|live)_[A-Za-z0-9]{32}$/;
 /** Tools a partner key can't use: crypto prices aren't licensed for redistribution. */
 export const PARTNER_HIDDEN_TOOLS: ReadonlySet<string> = new Set(["crypto_prices", "price_history", "market_depth"]);
+/**
+ * ATLAS credits (docs/USAGE_PRICING.md, section 3). With credits on, a key's daily limit is counted in credits:
+ * a simple answer costs 1, a series or the notable list 2, a brief or a decision explanation 3, and an
+ * error, a refusal or a non-tool request (initialize, tools/list) costs nothing. With credits off (the default),
+ * every request counts as one call, exactly as before.
+ */
+export const TOOL_CREDITS: Readonly<Record<string, number>> = { evidence_brief: 3, decision_explainer: 3, data_series: 2, notable_today: 2 };
+export const REST_CREDITS: Readonly<Record<string, number>> = { brief: 3, series: 2, notable: 2 };
+export const creditCost = (name: string, kind: "tool" | "rest"): number => (kind === "tool" ? TOOL_CREDITS : REST_CREDITS)[name] ?? 1;
+let creditsOn = false;
+/** The Worker passes its CREDITS_ENABLED variable on each request ("1" or "true" turns credits on). */
+export function setPartnerCredits(flag: string | undefined): void {
+  creditsOn = flag === "1" || flag === "true";
+}
+export const creditsEnabled = (): boolean => creditsOn;
+
 const FLUSH_EVERY = 25;
 const FLUSH_AFTER_MS = 5 * 60_000;
 
@@ -89,7 +105,8 @@ async function lookup(store: PartnerStore, hash: string, now: number): Promise<P
   return record;
 }
 
-export type Admission = { ok: true; partner: PartnerRecord; hash: string; remaining: number } | { ok: false; response: Response };
+/** charge(cost) adds what an answer cost and returns what is left today; with credits off it adds nothing (the call was counted on entry). */
+export type Admission = { ok: true; partner: PartnerRecord; hash: string; remaining: number; charge: (cost: number) => number } | { ok: false; response: Response };
 
 /** Checks the key and counts the call against today's limit. */
 export async function admit(request: Request, store: PartnerStore, ctx: Ctx | undefined, now = Date.now()): Promise<Admission> {
@@ -107,16 +124,26 @@ export async function admit(request: Request, store: PartnerStore, ctx: Ctx | un
     usage.set(hash, u);
   }
   if (u.count >= partner.dailyLimit) {
-    return { ok: false, response: json({ error: { code: "daily_limit", message: `This key's limit of ${partner.dailyLimit} calls a day is used up. It resets at midnight UTC.` } }, 429, { "Retry-After": String(Math.ceil((Date.parse(`${day}T00:00:00Z`) + 86_400_000 - now) / 1000)) }) };
+    const unit = creditsOn ? "credits" : "calls";
+    return { ok: false, response: json({ error: { code: "daily_limit", message: `This key's limit of ${partner.dailyLimit} ${unit} a day is used up. It resets at midnight UTC.` } }, 429, { "Retry-After": String(Math.ceil((Date.parse(`${day}T00:00:00Z`) + 86_400_000 - now) / 1000)) }) };
   }
-  u.count += 1;
-  if (u.count - u.flushed >= FLUSH_EVERY || now - u.at >= FLUSH_AFTER_MS) {
-    const write = store.put(`partners/usage/${hash}/${day}`, String(u.count), { expirationTtl: 40 * 86_400 }).catch(() => undefined);
-    u.flushed = u.count;
-    u.at = now;
-    if (ctx) ctx.waitUntil(write);
+  const used = u;
+  const add = (n: number) => {
+    if (n <= 0) return;
+    used.count += n;
+    if (used.count - used.flushed >= FLUSH_EVERY || now - used.at >= FLUSH_AFTER_MS) {
+      const write = store.put(`partners/usage/${hash}/${day}`, String(used.count), { expirationTtl: 40 * 86_400 }).catch(() => undefined);
+      used.flushed = used.count;
+      used.at = now;
+      if (ctx) ctx.waitUntil(write);
+    }
+  };
+  const left = () => Math.max(0, partner.dailyLimit - used.count);
+  if (!creditsOn) {
+    add(1);
+    return { ok: true, partner, hash, remaining: left(), charge: () => left() };
   }
-  return { ok: true, partner, hash, remaining: partner.dailyLimit - u.count };
+  return { ok: true, partner, hash, remaining: left(), charge: (cost) => { add(cost); return left(); } };
 }
 
 /* ---------- REST ---------- */
@@ -149,10 +176,20 @@ const CREDIT: Record<string, string[]> = {
   money: ["Arithmetic on the numbers given"],
 };
 
-function envelope(name: string, result: ToolResult, remaining: number): Response {
+/** Charges an answer (nothing for an error) and returns its headers and meta.credits. */
+function bill(gate: Extract<Admission, { ok: true }>, name: string, failed: boolean): { headers: Record<string, string>; credits: Record<string, unknown> | null } {
+  if (!creditsOn) return { headers: { "X-RateLimit-Remaining": String(gate.remaining) }, credits: null };
+  const cost = failed ? 0 : creditCost(name, "rest");
+  const left = gate.charge(cost);
+  return { headers: { "X-RateLimit-Remaining": String(left), "X-Credits-Used": String(cost), "X-Credits-Remaining": String(left) }, credits: { used: cost, remainingToday: left, unit: "credit" } };
+}
+
+function envelope(name: string, result: ToolResult, gate: Extract<Admission, { ok: true }>): Response {
   const { notice: _n, ...data } = (result.structuredContent ?? {}) as Record<string, unknown>;
-  if (result.isError) return json({ error: { code: "not_available", message: result.content[0]?.text.split("\n\n")[0] ?? "Not available." }, meta: meta(name) }, 404, { "X-RateLimit-Remaining": String(remaining) });
-  return json({ data, meta: meta(name) }, 200, { "X-RateLimit-Remaining": String(remaining) });
+  const b = bill(gate, name, !!result.isError);
+  const m = { ...meta(name), ...(b.credits ? { credits: b.credits } : {}) };
+  if (result.isError) return json({ error: { code: "not_available", message: result.content[0]?.text.split("\n\n")[0] ?? "Not available." }, meta: m }, 404, b.headers);
+  return json({ data, meta: m }, 200, b.headers);
 }
 function meta(name: string) {
   return {
@@ -176,7 +213,6 @@ export async function handlePartnerApi(request: Request, store: PartnerStore, fe
   if (!gate.ok) return gate.response;
   const q = (k: string) => url.searchParams.get(k) ?? undefined;
   const [name, arg] = route.split("/", 2) as [string, string | undefined];
-  const left = gate.remaining;
   const body = async (): Promise<Record<string, unknown>> => {
     try {
       const b = (await request.json()) as unknown;
@@ -190,59 +226,64 @@ export async function handlePartnerApi(request: Request, store: PartnerStore, fe
     case "terms": {
       if (!want("GET")) break;
       const hits = searchTerms(q("q") ?? "").slice(0, q("q") ? 10 : 100).map(({ id, title, summary, group }) => ({ id, title, summary, group }));
-      return json({ data: { terms: hits }, meta: meta("terms") }, 200, { "X-RateLimit-Remaining": String(left) });
+      const b = bill(gate, "terms", false);
+      return json({ data: { terms: hits }, meta: { ...meta("terms"), ...(b.credits ? { credits: b.credits } : {}) } }, 200, b.headers);
     }
     case "brief": {
       if (!want("GET") || !arg) break;
       const r = await evidenceBrief(decodeURIComponent(arg), fetcher, now);
       const cls = (r.structuredContent?.asset as { assetClass?: string } | undefined)?.assetClass;
       if (cls === "crypto") return problem(403, "not_licensed", "Crypto prices come from sources that don't allow redistribution, so briefs on coins aren't offered here.");
-      return envelope("brief", r, left);
+      return envelope("brief", r, gate);
     }
     case "notable": {
       if (!want("GET")) break;
       const r = await notableToday(fetcher, now);
       const sc = r.structuredContent as { observations?: { kind: string }[] } | undefined;
       if (sc?.observations) sc.observations = sc.observations.filter((o) => o.kind !== "crypto_move");
-      return envelope("notable", r, left);
+      return envelope("notable", r, gate);
     }
     case "calendar": {
       if (!want("GET")) break;
       if (q("format") === "ics") {
         const raw = await fetcher(ECONOMY_DATA_URL).then((res) => (res.ok ? res.json() : null)).catch(() => null);
         const file = raw ? readEconomyFile(raw) : null;
-        if (!file) return problem(503, "not_available", "The calendar couldn't be loaded right now.");
+        if (!file) {
+          bill(gate, "calendar", true);
+          return problem(503, "not_available", "The calendar couldn't be loaded right now.");
+        }
         const events = comingUp(file, now, 20).filter((e) => !q("only") || (q("only") === "rates" ? e.kind === "rate_decision" : e.kind !== "rate_decision"));
         const ics = events.map((e) => eventIcs({ title: e.title, time: e.time, about: e.about, sourceUrl: e.sourceUrl, uid: e.id }))
           .map((one) => one.replace(/^BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:[^\r]*\r\n|END:VCALENDAR\r\n$/g, ""))
           .join("");
-        return new Response(`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ATLAS Explain//Partner calendar//EN\r\n${ics}END:VCALENDAR\r\n`, { headers: { ...CORS, "Content-Type": "text/calendar; charset=utf-8", "X-RateLimit-Remaining": String(left) } });
+        const b = bill(gate, "calendar", false);
+        return new Response(`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ATLAS Explain//Partner calendar//EN\r\n${ics}END:VCALENDAR\r\n`, { headers: { ...CORS, "Content-Type": "text/calendar; charset=utf-8", ...b.headers } });
       }
-      return envelope("calendar", await upcomingEvents(q("only"), fetcher, now), left);
+      return envelope("calendar", await upcomingEvents(q("only"), fetcher, now), gate);
     }
     case "economy":
-      if (want("GET")) return envelope("economy", await economySnapshot(q("topic"), fetcher, now), left);
+      if (want("GET")) return envelope("economy", await economySnapshot(q("topic"), fetcher, now), gate);
       break;
     case "countries":
-      if (want("GET")) return envelope("countries", await compareCountries(q("indicator"), q("countries"), fetcher), left);
+      if (want("GET")) return envelope("countries", await compareCountries(q("indicator"), q("countries"), fetcher), gate);
       break;
     case "series":
-      if (want("GET")) return envelope("series", await dataSeries(q("ids"), q("countries"), fetcher), left);
+      if (want("GET")) return envelope("series", await dataSeries(q("ids"), q("countries"), fetcher), gate);
       break;
     case "auctions":
-      if (want("GET")) return envelope("auctions", await treasuryAuctions(q("kind"), fetcher, now), left);
+      if (want("GET")) return envelope("auctions", await treasuryAuctions(q("kind"), fetcher, now), gate);
       break;
     case "figures":
-      if (want("GET")) return envelope("figures", await officialFigures(q("q"), fetcher, now), left);
+      if (want("GET")) return envelope("figures", await officialFigures(q("q"), fetcher, now), gate);
       break;
     case "scam-check":
       if (want("POST")) {
         const b = await body();
-        return envelope("scam-check", await scamRedFlags(typeof b.text === "string" ? b.text : undefined, fetcher, now), left);
+        return envelope("scam-check", await scamRedFlags(typeof b.text === "string" ? b.text : undefined, fetcher, now), gate);
       }
       break;
     case "money":
-      if (want("POST")) return envelope("money", moneyMathsTool(await body()), left);
+      if (want("POST")) return envelope("money", moneyMathsTool(await body()), gate);
       break;
     default:
       return problem(404, "not_found", `No endpoint ${API_PREFIX}/${name}. See ${API_PREFIX} for the list.`);
@@ -275,8 +316,33 @@ export async function handlePartnerMcp(request: Request, store: PartnerStore, ct
     return json({ jsonrpc: "2.0", id: msg.id ?? null, error: { code: -32602, message: `${msg.params.name} isn't available to partner keys: crypto prices aren't licensed for redistribution.` } });
   }
   const res = await next(new Request(request.url, { method: "POST", headers: request.headers, body: raw }));
+  if (creditsOn) return chargeMcp(res, msg, gate);
   if (msg?.method !== "tools/list" || !res.ok) return res;
   const out = (await res.json()) as { result?: { tools?: { name: string }[] } };
   if (out.result?.tools) out.result.tools = out.result.tools.filter((t) => !PARTNER_HIDDEN_TOOLS.has(t.name));
   return new Response(JSON.stringify(out), { status: res.status, headers: res.headers });
+}
+
+/**
+ * Credits on: a tool call costs its weight when it answers, nothing when it errs; any other request costs
+ * nothing. The answer carries what it cost and what is left, in headers and in the result's _meta.
+ */
+async function chargeMcp(res: Response, msg: { method?: string; params?: { name?: string } } | null, gate: Extract<Admission, { ok: true }>): Promise<Response> {
+  const isJson = (res.headers.get("Content-Type") ?? "").includes("application/json");
+  type Out = { result?: { tools?: { name: string }[]; isError?: boolean; _meta?: Record<string, unknown> }; error?: unknown };
+  let out: Out | null = null;
+  if (isJson && res.ok) out = (await res.clone().json().catch(() => null)) as Out | null;
+  if (out?.result?.tools) out.result.tools = out.result.tools.filter((t) => !PARTNER_HIDDEN_TOOLS.has(t.name));
+  const isCall = msg?.method === "tools/call" && !!msg.params?.name;
+  const failed = !res.ok || !out || !!out.error || !!out.result?.isError;
+  const cost = isCall && !failed ? creditCost(msg!.params!.name!, "tool") : 0;
+  const left = gate.charge(cost);
+  const headers = new Headers(res.headers);
+  headers.set("X-Credits-Used", String(cost));
+  headers.set("X-Credits-Remaining", String(left));
+  headers.set("X-RateLimit-Remaining", String(left));
+  if (!out) return new Response(res.body, { status: res.status, headers });
+  if (isCall && out.result) out.result._meta = { ...(out.result._meta ?? {}), "io.atlas-explain/credits": { used: cost, remainingToday: left, unit: "credit" } };
+  headers.delete("Content-Length");
+  return new Response(JSON.stringify(out), { status: res.status, headers });
 }

@@ -2,6 +2,18 @@
 
 Each entry says what's new, where its numbers come from, under what licence, and what it will never do. The design is in `docs/V2_DESIGN.md`.
 
+## 2026-11-19: ATLAS credits, built and switched off
+
+**What's new**
+- Usage can be counted in credits instead of calls (`docs/USAGE_PRICING.md`):
+  - 1 credit for a simple answer;
+  - 2 for a data series or the notable list;
+  - 3 for an evidence brief or a decision explanation.
+- Errors, refusals and requests that aren't tool calls cost nothing.
+- With credits on, every answer says what it cost and what is left today: in the `X-Credits-Used` and `X-Credits-Remaining` headers, in `meta.credits` for REST, and in the result's `_meta` for MCP.
+
+**Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
+
 ## 2026-11-19: links to official prices, and OECD share-price indices (1.20.0)
 
 **What's new**

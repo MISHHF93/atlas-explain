@@ -6,10 +6,12 @@
  */
 import { handleRequest, runCapture, type WaitContext, type WorkerEnv } from "./live-data";
 import { setFeatures } from "./server";
+import { setPartnerCredits } from "./partner";
 
 export default {
   fetch(request: Request, env: WorkerEnv, ctx: WaitContext): Promise<Response> {
     setFeatures(env.V2_TOOLS);
+    setPartnerCredits(env.CREDITS_ENABLED);
     return handleRequest(request, env, ctx);
   },
   scheduled(event: { cron: string }, env: WorkerEnv, ctx: WaitContext): void {
