@@ -24,7 +24,7 @@ describe("SEC company figures", () => {
   it("builds Apple's page from its latest annual report, each figure linked to the filing", () => {
     const asset = stockFromSec({ ticker: "AAPL", name: "Apple", cik: 320193, submissions, facts, now: NOW })!;
     expect(asset).toMatchObject({ id: "stock:US:AAPL", class: "stock", venue: "Nasdaq", quote: null });
-    expect(asset.noQuoteReason).toMatch(/aren't licensed for public display/);
+    expect(asset.noQuoteReason).toMatch(/^Shown here: the company's official figures from its SEC filings. Its live share price isn't shown/);
     const byLabel = Object.fromEntries(asset.facts.filter((f) => f.kind === "figure").map((f) => [f.label, f]));
     expect(byLabel.Revenue?.value).toBe("$478.8 billion");
     expect(byLabel.Revenue?.period).toBe("year to 26 Sept 2026");

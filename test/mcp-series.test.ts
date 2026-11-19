@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ECONOMY_SCHEMA } from "../src/data/economy";
-import { WORLD_SCHEMA } from "../src/data/world";
+import { readFileSync } from "node:fs";
+import { oecdSharesUrl, parseOecdShares, WORLD_SCHEMA } from "../src/data/world";
 import { dataSeries, EDUCATION_LINE, handle, type Fetcher } from "../src/mcp/server";
 
 const AT = "2026-11-18T12:00:00.000Z";
@@ -78,5 +79,33 @@ describe("data_series: rows for charts, spreadsheets and reports", () => {
   it("is reachable through the JSON-RPC handler", async () => {
     const reply = await handle({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "data_series", arguments: { series: "us_cpi" } } }, net);
     expect((reply?.result as { structuredContent: { series: unknown[] } }).structuredContent.series).toHaveLength(1);
+  });
+});
+
+describe("OECD share prices: an official, freely reusable measure of each stock market", () => {
+  const csv = readFileSync("test/fixtures/world/oecd-shares.csv", "utf8");
+
+  it("reads the OECD's monthly indices for the G20 members it covers", () => {
+    const sp = parseOecdShares(csv, AT)!;
+    expect(sp.rows.length).toBe(17);
+    const usa = sp.rows.find((r) => r.country === "USA")!;
+    expect(usa.series.at(-1)).toEqual({ t: "2026-10", v: 225.03 });
+    expect(usa.series.map((p) => p.t)).toEqual([...usa.series.map((p) => p.t)].sort());
+    expect(oecdSharesUrl("2024-11")).toContain("USA+CAN+");
+    expect(oecdSharesUrl("2024-11")).not.toContain("EUU");
+    expect(parseOecdShares("not,a,csv", AT)).toBeNull();
+  });
+
+  it("serves them as data_series even though 'stock market' is otherwise refused", async () => {
+    const withShares = { ...world, sharePrices: parseOecdShares(csv, AT) };
+    const net2: Fetcher = async (url) => new Response(JSON.stringify(url.includes("world") ? withShares : url.includes("economy") ? economy : {}), { status: url.includes("world") || url.includes("economy") ? 200 : 404 });
+    const r = await dataSeries("stock market", "Canada, Japan", net2);
+    const s = r.structuredContent!.series as { id: string; country: string; unit: string; frequency: string; licence: string; points: unknown[] }[];
+    expect(s.map((x) => [x.id, x.country, x.unit, x.frequency])).toEqual([["world_share_prices", "CAN", "index", "monthly"], ["world_share_prices", "JPN", "index", "monthly"]]);
+    expect(s[0]!.licence).toContain("commercial");
+    expect(body(r)).toContain("index, 2015 = 100");
+    expect(((await dataSeries(undefined, undefined, net2)).structuredContent!.available as { id: string }[]).map((a) => a.id)).toContain("world_share_prices");
+    // A single stock's price is still refused.
+    expect((await dataSeries("AAPL", undefined, net2)).isError).toBe(true);
   });
 });

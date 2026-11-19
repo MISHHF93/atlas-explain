@@ -261,13 +261,13 @@ export function route(
 /** Plain reasons shown when a class has no source we may display (§3.3). */
 export const NO_QUOTE_REASON: Record<AssetClass, string> = {
   crypto: "This price is unavailable right now. We'll try again shortly.",
-  stock: "Price not shown. Free stock prices aren't licensed for public display. The company's official figures from its SEC filings are below.",
-  etf: "Price not shown. Free fund prices aren't licensed for public display. The fund's official filings are below.",
-  index: "Index levels are owned by the index provider and need its permission to show. Here's what the index measures and how it's built.",
+  stock: "Shown here: the company's official figures from its SEC filings. Its live share price isn't shown, because exchange prices need a licence ATLAS Explain doesn't have; the link opens it on the exchange's own site.",
+  etf: "Shown here: the fund's official filings. Its live price isn't shown, because exchange prices need a licence ATLAS Explain doesn't have; the link opens it on the exchange's own site.",
+  index: "Shown here: what the index measures and how it's built. Its level isn't shown, because the index provider licenses it; the link opens it on the provider's own site.",
   forex: "This rate is unavailable right now. We'll try again shortly.",
   commodity: "Price not shown. This benchmark price is licensed. Here's how this market works.",
-  future: "Live contract prices need an exchange licence. Here are the contract's official specs and how it works.",
-  option: "Live option prices need an exchange licence. Here's how options work.",
+  future: "Shown here: the contract's official specs and how it works. Live contract prices need an exchange licence; the link opens them on the exchange's own site.",
+  option: "Shown here: how these options work. Live option prices need an exchange licence ATLAS Explain doesn't have.",
   rate: "This rate is unavailable right now. We'll try again shortly.",
 };
 

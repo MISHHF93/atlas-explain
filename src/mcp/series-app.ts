@@ -28,7 +28,7 @@ export const SERIES_APP_HTML = appPage({
   script: `
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   const big = (v) => Math.abs(v) >= 1e12 ? "$" + (v / 1e12).toFixed(2) + " trillion" : Math.abs(v) >= 1e9 ? "$" + (v / 1e9).toFixed(1) + " billion" : "$" + Math.round(v).toLocaleString("en-US");
-  const fmt = (unit) => (v) => unit === "USD" ? big(v) : v.toFixed(2) + "%";
+  const fmt = (unit) => (v) => unit === "USD" ? big(v) : unit === "index" ? v.toFixed(1) : v.toFixed(2) + "%";
   const stamp = (t) => /^\\d{4}$/.test(t) ? t : period(t);
   function draw(s) {
     const box = el("section", "series");

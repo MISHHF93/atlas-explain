@@ -247,7 +247,7 @@ describe("the Worker serves and stores the data", () => {
     }
   });
 
-  it("the economy's cron also refreshes world.json once a day, from the World Bank only", async () => {
+  it("the economy's cron also refreshes world.json once a day, from the World Bank and the OECD only", async () => {
     const urls: string[] = [];
     const realFetch = globalThis.fetch;
     globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -261,8 +261,10 @@ describe("the Worker serves and stores the data", () => {
       // The economy itself was just refreshed, so only the world file (missing) is captured.
       const DATA = kv({ [fresh]: "{}" }, { [fresh]: { capturedAt: new Date(NOW - 60_000).toISOString() } });
       await runCapture(CRONS.economy, { DATA }, NOW, async () => undefined);
-      expect(urls.length).toBe(4);
-      expect(urls.every((u) => u.startsWith("https://data360api.worldbank.org/"))).toBe(true);
+      // Four World Bank indicators, then one OECD request for the share-price indices (refused here, so skipped).
+      expect(urls.length).toBe(5);
+      expect(urls.slice(0, 4).every((u) => u.startsWith("https://data360api.worldbank.org/"))).toBe(true);
+      expect(urls[4]).toMatch(/^https:\/\/sdmx\.oecd\.org\/public\/rest\/data\/OECD\.SDD\.STES,DSD_STES@DF_FINMARK/);
       expect(JSON.parse(DATA.data["data/v1/world.json"]!).schema).toBe("atlas-explain-world-v1");
       // A day later is the next time; an hour later nothing is asked.
       urls.length = 0;

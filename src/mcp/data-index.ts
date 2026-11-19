@@ -86,7 +86,10 @@ export const DATA_FILES_INDEX: readonly FileEntry[] = [
     schema: WORLD_SCHEMA,
     holds: "GDP growth, inflation, unemployment and GDP per person for the G20, about eight years each, actual published values only.",
     refresh: "Once a day by schedule.",
-    sources: [{ name: "World Bank, World Development Indicators (Data360)", licence: "open", note: "CC BY 4.0; reuse with the World Bank credited." }],
+    sources: [
+      { name: "World Bank, World Development Indicators (Data360)", licence: "open", note: "CC BY 4.0; reuse with the World Bank credited." },
+      { name: "OECD, Financial market (Main Economic Indicators): share prices", licence: "open", note: "Monthly share-price indices, 2015 = 100. OECD terms: any use, including commercial, with credit to the OECD." },
+    ],
   },
   {
     file: "docs.json",

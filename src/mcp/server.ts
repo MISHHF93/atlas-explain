@@ -38,6 +38,7 @@ import { EVENTS_APP_HTML, EVENTS_APP_URI } from "./events-app";
 import { SERIES_APP_HTML, SERIES_APP_URI } from "./series-app";
 import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
 import { BANK_LICENCE, BANK_NAME, compareStatements, readDocsFile, watchingSentences, type DocBank, type Statement } from "../data/docs";
+import { noPriceNote, officialPriceLink } from "../core/price-links";
 import { rateChangeImpact, type ImpactCountry, type ImpactProduct } from "../core/rate-impact";
 import { moneyMaths, type MoneyCalc } from "../core/money-maths";
 import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
@@ -48,7 +49,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.19.0";
+export const SERVER_VERSION = "1.20.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -65,7 +66,7 @@ export const META = {
 } as const;
 /** How long clients and caches may reuse list and read results (MCP 2026-07-28 CacheableResult). */
 const CACHE = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-import { WORLD_COUNTRIES, WORLD_INDICATORS, readWorldFile, type WorldFile, type WorldIndicatorId } from "../data/world";
+import { OECD_SHARES_SOURCE, WORLD_COUNTRIES, WORLD_INDICATORS, readWorldFile, type WorldFile, type WorldIndicatorId } from "../data/world";
 import { APP_URL, CRYPTO_DATA_URL, ECONOMY_DATA_URL, EDUCATION_LINE, EXPLAIN_WEB_URL, MARKET_DATA_URL, MCP_ORIGIN, NEWS_DATA_URL, WORLD_DATA_URL, DOCS_DATA_URL } from "../core/links";
 export { EDUCATION_LINE, MCP_ORIGIN };
 
@@ -783,10 +784,14 @@ function figureLines(a: Asset): string[] {
     return [`${a.name} (${a.symbol}): ${value}${change ? `, ${change.text} ${a.quote.changeWindow}` : ""}, as of ${a.quote.asOf.slice(0, 10)}${weekly}. ${sourceLine(a.quote.source)}`];
   }
   const facts = a.facts.filter((f) => f.kind !== "filing").slice(0, 4);
+  const link = officialPriceLink(a);
+  // For a US or Canadian index, the OECD's monthly share-price index is an official measure of the same market.
+  const market = a.class === "index" && (a.country === "US" || a.country === "CA") ? ` For an official monthly measure of the whole ${a.country === "US" ? "US" : "Canadian"} stock market, data_series has world_share_prices (OECD).` : "";
+  const live = (link ? ` Live price: ${link.label} (${link.url}).` : "") + market;
   if (facts.length) {
-    return [`${a.name} (${a.symbol}): ` + facts.map((f) => `${f.label} ${f.value}${f.period ? ` (${f.period})` : ""}`).join("; ") + `. ${sourceLine(facts[0]!.source)}, ${facts[0]!.source.label}`];
+    return [`${a.name} (${a.symbol}): ` + facts.map((f) => `${f.label} ${f.value}${f.period ? ` (${f.period})` : ""}`).join("; ") + `. ${sourceLine(facts[0]!.source)}, ${facts[0]!.source.label}.${live}`];
   }
-  return [`${a.name} (${a.symbol}): no figure shown. ${a.noQuoteReason ?? ""}`.trim()];
+  return [`${a.name} (${a.symbol}): no figure shown. ${noPriceNote(a)}${live}`.trim()];
 }
 
 /** One asset's official numbers as typed JSON. */
@@ -805,7 +810,8 @@ function figureRecord(a: Asset): Record<string, unknown> {
     facts: a.facts.filter((f) => f.kind !== "filing").slice(0, 6).map((f) => ({ label: f.label, value: f.value, period: f.period })),
     source: source ? source.attribution.text.replace(/^source:\s*/i, "") : null,
     sourceUrl: source?.attribution.href ?? null,
-    noPriceReason: a.quote ? null : a.noQuoteReason,
+    noPriceReason: a.quote ? null : noPriceNote(a),
+    priceLink: a.quote ? null : officialPriceLink(a),
     tenor: a.classData?.class === "rate" ? a.classData.tenor : null,
   };
 }
@@ -1650,6 +1656,7 @@ export async function dataSeries(series: string | undefined, countries: string |
   const catalog = [
     ...econ.map((i) => ({ id: i.id as string, name: i.name, unit: i.unit as string, points: i.series.length, source: i.source, needsCountry: false })),
     ...worldMetas.map((w) => ({ id: `world_${w.id}`, name: `${w.name} by country`, unit: w.unit as string, points: world!.indicators.find((d) => d.id === w.id)!.rows[0]?.series.length ?? 0, source: world!.source.name, needsCountry: true })),
+    ...(world?.sharePrices ? [{ id: "world_share_prices", name: "Share prices by country (OECD, all shares, 2015 = 100)", unit: "index", points: world.sharePrices.rows[0]?.series.length ?? 0, source: OECD_SHARES_SOURCE.name, needsCountry: true }] : []),
   ];
   if (!catalog.length) return text("ATLAS Explain's data series couldn't be loaded right now. Nothing is shown in their place; try again later.", true);
   const asked = (series ?? "").split(",").map((w) => w.trim()).filter(Boolean);
@@ -1661,7 +1668,9 @@ export async function dataSeries(series: string | undefined, countries: string |
     );
   }
   if (asked.length > 4) return text("Ask for at most four series at a time.", true);
-  const blocked = asked.find((w) => NOT_DATA.test(w));
+  // The OECD's share-price index is an official, freely reusable measure of a whole market, not a stock's price.
+  const SHARE_WORDS = /^(world_share_prices|share prices?|stock market|stock markets|equity prices|share price index)$/i;
+  const blocked = asked.find((w) => !SHARE_WORDS.test(w.trim()) && NOT_DATA.test(w));
   if (blocked) return text(`"${blocked}" isn't offered as data: crypto and stock prices come from sources that don't allow redistribution. price_history and crypto_prices show coin prices inside the chat instead.`, true);
   const wantCountries = (countries ?? "").split(",").map((w) => w.trim()).filter(Boolean);
   const codes = wantCountries.map(countryCode);
@@ -1673,6 +1682,19 @@ export async function dataSeries(series: string | undefined, countries: string |
   const unknown: string[] = [];
   for (const word of asked) {
     const w = word.toLowerCase().replace(/\s+/g, " ");
+    if (SHARE_WORDS.test(w)) {
+      if (!world?.sharePrices) { unknown.push(word); continue; }
+      for (const code of codes.length ? (codes as string[]) : ["USA"]) {
+        const row = world.sharePrices.rows.find((r) => r.country === code);
+        if (!row) continue;
+        out.push({
+          id: "world_share_prices", name: `Share prices, ${WORLD_COUNTRIES.find((c) => c.code === code)?.name ?? code} (all shares, 2015 = 100)`, unit: "index", frequency: "monthly", country: code,
+          source: OECD_SHARES_SOURCE.name, sourceUrl: OECD_SHARES_SOURCE.url, licence: `${OECD_SHARES_SOURCE.licence}. Cite: OECD (2026), Financial market, OECD Data Explorer.`,
+          points: row.series.map((p) => ({ date: p.t, value: p.v })),
+        });
+      }
+      continue;
+    }
     // A world_ id, or a plain word like "inflation" when countries are given, means the World Bank series.
     const worldId = w.startsWith("world_") ? w.slice(6) : codes.length ? (WORLD_WORDS[w] ?? WORLD_INDICATORS.find((i) => i.name.toLowerCase() === w)?.id) : undefined;
     const meta = worldMetas.find((i) => i.id === worldId);
@@ -1700,7 +1722,7 @@ export async function dataSeries(series: string | undefined, countries: string |
   if (unknown.length) return text(`No data series called ${unknown.map((u) => `"${u}"`).join(", ")}. Leave the series empty to list them all.`, true);
   if (!out.length) return text("No figures were published for those countries.", true);
   const csv = ["series,name,country,date,value,unit", ...out.flatMap((s) => s.points.map((p) => [s.id, s.name, s.country, p.date, p.value, s.unit].map(csvCell).join(",")))].join("\n");
-  const heads = out.map((s) => `- ${s.name} (${s.unit === "USD" ? "US dollars" : "%"}, ${s.frequency}): ${s.points.length} points, ${s.points[0]!.date} to ${s.points[s.points.length - 1]!.date}. Source: ${s.source} (${s.sourceUrl}). ${s.licence}`);
+  const heads = out.map((s) => `- ${s.name} (${s.unit === "USD" ? "US dollars" : s.unit === "index" ? "index, 2015 = 100" : "%"}, ${s.frequency}): ${s.points.length} points, ${s.points[0]!.date} to ${s.points[s.points.length - 1]!.date}. Source: ${s.source} (${s.sourceUrl}). ${s.licence}`);
   return data(
     `Data series, actual published values only (never a projection):\n${heads.join("\n")}\n\nAs CSV, ready for a chart, spreadsheet or report (keep the source lines with it):\n\`\`\`csv\n${csv}\n\`\`\``,
     { series: out, csv },

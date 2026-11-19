@@ -2,6 +2,22 @@
 
 Each entry says what's new, where its numbers come from, under what licence, and what it will never do. The design is in `docs/V2_DESIGN.md`.
 
+## 2026-11-19: links to official prices, and OECD share-price indices (1.20.0)
+
+**What's new**
+- **Links to the official live price.** Stocks, funds, indices and futures whose prices ATLAS Explain may not show now link to the official page:
+  - stocks and funds: the listing exchange (Nasdaq.com or NYSE.com);
+  - indices: the index provider (S&P Dow Jones Indices, Nasdaq, FTSE Russell, Cboe);
+  - futures: CME Group.
+
+  These are links only: no third-party price is copied, stored or shown.
+- **Clearer wording.** The note on an unpriced asset now leads with what is shown (for example, the company's figures from its SEC filings), then gives the reason in one line.
+- **`data_series` adds `world_share_prices`.** It holds the OECD's monthly share-price index (all shares, 2015 = 100) for 17 G20 members, a broad official measure of each stock market.
+
+**Licence:** the OECD's terms allow its data to be downloaded, shared and distributed "for any purpose, even for commercial use", with credit to the OECD. Each answer carries the credit.
+
+**Still not offered:** prices of individual stocks, funds, index levels or futures. No free source licenses them for display.
+
 ## 2026-11-18: the ECB and the Bank of England (v2, phase 2b, 1.19.0)
 
 **What's new:** `decision_explainer` and `speech_tracker` also cover the European Central Bank (deposit facility rate) and the Bank of England (Bank Rate). Their decision days are watched like the Fed's and the Bank of Canada's.

@@ -31,7 +31,7 @@ import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, pars
 import { parseBlsSchedule } from "./economy.ts";
 import { boeBankRateUrl, parseBoeBankRate, parseBoeMpcDates, parseEcbDepositRate, parseTreasuryAuctions, type Auction } from "./economy.ts";
 import { ECONOMY_SCHEMA, ECONOMY_SOURCES, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
-import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, parseData360, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
+import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, oecdSharesUrl, parseData360, parseOecdShares, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
 import { SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, readTickerMap, stockFromSec } from "./sec.ts";
 
 export const CAPTURE_UA = `ATLAS Explain data capture (+${EXPLAIN_WEB_URL}/how-its-built)`;
@@ -395,6 +395,9 @@ export async function captureWorld(env: CaptureEnv, prev: WorldFile | null): Pro
     await env.sleep(500);
   }
   if (!indicators.length) return null;
-  env.log(`world: ${indicators.length} indicators`);
-  return { schema: WORLD_SCHEMA, generatedAt: at, source: WORLD_SOURCE, indicators };
+  // OECD monthly share prices, the last 24 months; kept from the last capture if the OECD doesn't answer.
+  const from = new Date(Date.UTC(year - 2, new Date(env.now).getUTCMonth(), 1)).toISOString().slice(0, 7);
+  const shares = parseOecdShares(await env.get(oecdSharesUrl(from)).catch(() => ""), at) ?? prev?.sharePrices ?? null;
+  env.log(`world: ${indicators.length} indicators, share prices for ${shares?.rows.length ?? 0} countries`);
+  return { schema: WORLD_SCHEMA, generatedAt: at, source: WORLD_SOURCE, indicators, ...(shares ? { sharePrices: shares } : {}) };
 }

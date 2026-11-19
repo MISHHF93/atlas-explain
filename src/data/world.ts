@@ -57,6 +57,57 @@ export interface WorldFile {
   generatedAt: string;
   source: typeof WORLD_SOURCE;
   indicators: WorldIndicatorData[];
+  /** OECD monthly share-price indices (2015 = 100), when captured. */
+  sharePrices?: SharePrices;
+}
+
+/* ---------- OECD share prices: a broad, official measure of each stock market, monthly ---------- */
+
+/**
+ * The OECD's terms (oecd.org/en/about/terms-conditions, "Data", read 19 Nov 2026): Data may be downloaded,
+ * copied, shared and distributed "for any purpose, even for commercial use", with credit to the OECD in the
+ * form OECD (year), (dataset name), (data source) DOI or URL. The dataset lists no third-party restriction.
+ */
+export const OECD_SHARES_SOURCE = {
+  name: "OECD, Financial market (Main Economic Indicators): share prices",
+  url: "https://data-explorer.oecd.org/",
+  licence: "OECD terms: any use, including commercial, with credit to the OECD",
+} as const;
+
+export interface SharePrices {
+  capturedAt: string;
+  /** Index, 2015 = 100, monthly averages; oldest first. */
+  rows: { country: string; series: { t: string; v: number }[] }[];
+}
+
+/** The OECD request: every G20 member it covers, monthly, from `fromMonth` (YYYY-MM). */
+export function oecdSharesUrl(fromMonth: string): string {
+  const areas = WORLD_COUNTRIES.map((c) => c.code).filter((c) => c !== "EUU").join("+");
+  return `https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_FINMARK,4.0/${areas}.M.SHARE......?startPeriod=${fromMonth}&format=csv`;
+}
+
+/** The OECD's CSV → one monthly series per country, index 2015 = 100 only. */
+export function parseOecdShares(csv: string, capturedAt: string): SharePrices | null {
+  const lines = csv.trim().split(/\r?\n/);
+  const head = lines[0]?.split(",") ?? [];
+  const col = (name: string) => head.indexOf(name);
+  const [ia, it, iv, iu, ib] = [col("REF_AREA"), col("TIME_PERIOD"), col("OBS_VALUE"), col("UNIT_MEASURE"), col("BASE_PER")];
+  if (ia < 0 || it < 0 || iv < 0) return null;
+  const by = new Map<string, Map<string, number>>();
+  for (const line of lines.slice(1)) {
+    const c = line.split(",");
+    const country = c[ia]!, t = c[it]!, v = Number(c[iv]);
+    if (!KNOWN.has(country) || !/^\d{4}-\d{2}$/.test(t) || !Number.isFinite(v) || v <= 0) continue;
+    if (iu >= 0 && c[iu] !== "IX") continue;
+    if (ib >= 0 && c[ib] && c[ib] !== "2015") continue;
+    if (!by.has(country)) by.set(country, new Map());
+    by.get(country)!.set(t, v);
+  }
+  const rows = WORLD_COUNTRIES.filter((w) => by.has(w.code)).map((w) => ({
+    country: w.code,
+    series: [...by.get(w.code)!.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([t, v]) => ({ t, v: Math.round(v * 100) / 100 })),
+  })).filter((r) => r.series.length >= 2);
+  return rows.length ? { capturedAt, rows } : null;
 }
 
 const isRec = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
@@ -90,7 +141,10 @@ export function readWorldFile(body: unknown): WorldFile | null {
     (i): i is WorldIndicatorData => isRec(i) && ids.has(i.id as WorldIndicatorId) && typeof i.capturedAt === "string" && Array.isArray(i.rows) &&
       i.rows.every((r) => isRec(r) && KNOWN.has(String(r.country)) && Array.isArray(r.series) && r.series.every((p) => isRec(p) && /^\d{4}$/.test(String(p.year)) && Number.isFinite(p.value))),
   );
-  return indicators.length ? { schema: WORLD_SCHEMA, generatedAt: String(body.generatedAt), source: WORLD_SOURCE, indicators } : null;
+  const sp = isRec(body.sharePrices) && typeof body.sharePrices.capturedAt === "string" && Array.isArray(body.sharePrices.rows) ? body.sharePrices : null;
+  const shareRows = sp ? (sp.rows as unknown[]).filter((r): r is SharePrices["rows"][number] => isRec(r) && KNOWN.has(String(r.country)) && Array.isArray(r.series) && r.series.every((p) => isRec(p) && /^\d{4}-\d{2}$/.test(String(p.t)) && Number.isFinite(p.v))) : [];
+  const sharePrices = sp && shareRows.length ? { capturedAt: String(sp.capturedAt), rows: shareRows } : undefined;
+  return indicators.length ? { schema: WORLD_SCHEMA, generatedAt: String(body.generatedAt), source: WORLD_SOURCE, indicators, ...(sharePrices ? { sharePrices } : {}) } : null;
 }
 
 /** The latest actual value of one indicator for one country, or null. */

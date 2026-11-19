@@ -28,6 +28,7 @@ import { LOGO_CREDIT } from "../core/catalog";
 import { recentFilingLines } from "../core/catalog";
 import { NEWS_TARGET_IDS, newsQuestion, type NewsItem } from "../core/news";
 import { SOURCES } from "../core/asset-schema";
+import { noPriceNote, officialPriceLink } from "../core/price-links";
 export { RECENT_KEY, addRecent, assetsFromLiveCatalog, explainAssetPrompt, findAsset, loadMarketData, readRecent } from "../core/catalog";
 import { el, labelledButton } from "./dom";
 import { icon } from "./icons";
@@ -268,7 +269,7 @@ function assetRow(a: Asset, showClass: boolean, open: () => void): HTMLElement {
   const change = formatChange(a);
   const spoken = value
     ? `${a.name}, ${a.symbol}. ${value}${change ? `, ${change.text} ${a.quote!.changeWindow}` : ""}. ${MODE_LABEL[a.quote!.mode]}, ${a.quote!.source.label}.`
-    : `${a.name}, ${a.symbol}. Price not shown. ${a.noQuoteReason ?? ""}`;
+    : `${a.name}, ${a.symbol}. Price not shown. ${noPriceNote(a)}`;
   btn.setAttribute("aria-label", spoken);
   const who = el("span", "asset-who");
   const sub = el("span", "asset-sub");
@@ -461,7 +462,13 @@ export function assetPage(start: Asset, options: {
       src.append(link(a.quote.source.attribution.text, a.quote.source.attribution.href));
       hero.append(el("p", "hero-price", value), line, mode, src);
     } else {
-      hero.append(el("p", "no-price-reason", a.noQuoteReason ?? "Price not shown."));
+      hero.append(el("p", "no-price-reason", noPriceNote(a)));
+      const live = officialPriceLink(a);
+      if (live) {
+        const p = el("p", "fine price-link");
+        p.append(link(`${live.label} ↗`, live.url));
+        hero.append(p);
+      }
     }
     hero.append(spark, rangeBar);
 
