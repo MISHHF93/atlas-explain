@@ -787,7 +787,7 @@ function figureLines(a: Asset): string[] {
   const link = officialPriceLink(a);
   // For a US or Canadian index, the OECD's monthly share-price index is an official measure of the same market.
   const market = a.class === "index" && (a.country === "US" || a.country === "CA") ? ` For an official monthly measure of the whole ${a.country === "US" ? "US" : "Canadian"} stock market, data_series has world_share_prices (OECD).` : "";
-  const live = (link ? ` Live price: ${link.label} (${link.url}).` : "") + market;
+  const live = (link ? ` ${link.label}: ${link.url}.` : "") + market;
   if (facts.length) {
     return [`${a.name} (${a.symbol}): ` + facts.map((f) => `${f.label} ${f.value}${f.period ? ` (${f.period})` : ""}`).join("; ") + `. ${sourceLine(facts[0]!.source)}, ${facts[0]!.source.label}.${live}`];
   }
@@ -894,7 +894,16 @@ export async function assetDetails(key: string, fetcher: Fetcher, now = Date.now
     return words.every((w) => hay.includes(` ${w} `));
   };
   const hits = searchAssets(all, q, { klass: "all" });
-  const asset = findAsset(all, q) ?? hits.find(whole);
+  // An exact name wins ("S&P 500" is the index, not the fund that tracks it); "S&P 500 index", "… futures" and
+  // "… options" pick that kind of asset.
+  const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9&]+/g, " ").trim();
+  const nq = norm(q);
+  const kind = /\bfutures?\b/.test(nq) ? "future" : /\boptions?\b/.test(nq) ? "option" : /\bindex\b/.test(nq) ? "index" : /\b(etf|fund)\b/.test(nq) ? "etf" : null;
+  const bare = nq.replace(/\b(index|etf|fund|futures?|options?)\b/g, " ").replace(/\s+/g, " ").trim();
+  const exact = all.find((x) => norm(x.name) === nq) ?? (kind ? all.find((x) => x.class === kind && norm(x.name).startsWith(bare)) : undefined);
+  // With no kind given, a name an index starts with means the index ("Dow Jones" is the index, not DIA).
+  const indexByStart = !kind && nq.length >= 3 ? all.find((x) => x.class === "index" && norm(x.name).startsWith(nq)) : undefined;
+  const asset = findAsset(all, q) ?? exact ?? indexByStart ?? hits.find(whole);
   if (!asset) {
     const near = hits.slice(0, 3).map((x) => `${x.name} (${x.symbol})`);
     return data(`"${q}" isn't in the ATLAS Explain catalog.${near.length ? ` Closest names: ${near.join(", ")}.` : ""} It covers the ten major coins, about 30 large US companies and ETFs, major currencies, Treasury and government bond yields, energy prices, and explainers for indices, futures and options.`, { found: false, closest: near });
