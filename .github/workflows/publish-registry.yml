@@ -1,0 +1,86 @@
+# Publishes the connector's server.json to the official MCP Registry (docs/MCP.md, "Getting listed").
+# Run it after deploying a new version: Actions → "Publish to MCP Registry" → Run workflow
+# (or `gh workflow run publish-registry.yml`). It logs in with GitHub Actions' own identity token (OIDC),
+# so no device code or personal token is needed, and it never publishes a version the live connector
+# isn't serving yet.
+name: Publish to MCP Registry
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # lets mcp-publisher prove this repository's identity to the registry
+
+concurrency:
+  group: publish-registry
+  cancel-in-progress: false
+
+env:
+  PUBLISHER_VERSION: "1.8.9"
+  # SHA-256 of mcp-publisher_linux_amd64.tar.gz from the release's own checksums file (registry_1.8.9_checksums.txt).
+  PUBLISHER_SHA256: "4d527ca8f1ced0394c962dc925c2a4a4addef441cbefd62501c875e9481823a8"
+  MCP_URL: "https://atlas-explain-mcp.atlas-explain.workers.dev/mcp"
+  REGISTRY_NAME: "io.github.MISHHF93/atlas-explain"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versions agree, and the live connector already serves this one
+        id: version
+        run: |
+          set -euo pipefail
+          json=$(jq -r .version server.json)
+          code=$(grep -oE 'SERVER_VERSION = "[^"]+"' src/mcp/server.ts | cut -d'"' -f2)
+          live=$(curl -sS --max-time 30 -X POST "$MCP_URL" \
+            -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"publish-registry","version":"1"}}}' \
+            | jq -r .result.serverInfo.version)
+          echo "server.json $json, code $code, live $live"
+          [ "$json" = "$code" ] || { echo "::error::server.json ($json) and SERVER_VERSION ($code) differ"; exit 1; }
+          [ "$json" = "$live" ] || { echo "::error::The live connector serves $live, not $json. Deploy first (npm run deploy:mcp)."; exit 1; }
+          echo "version=$json" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if this version is already published
+        id: check
+        run: |
+          set -euo pipefail
+          published=$(curl -sS --max-time 30 "https://registry.modelcontextprotocol.io/v0.1/servers?search=$REGISTRY_NAME" \
+            | jq -r --arg n "$REGISTRY_NAME" '[.servers[] | select(.server.name == $n) | .server.version] | join(" ")')
+          echo "already published: $published"
+          if printf ' %s ' "$published" | grep -q " ${{ steps.version.outputs.version }} "; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${{ steps.version.outputs.version }} is already in the registry; nothing to do."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download mcp-publisher and check its checksum
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          curl -sSL -o publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/v${PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${PUBLISHER_SHA256}  publisher.tar.gz" | sha256sum -c -
+          tar -xzf publisher.tar.gz mcp-publisher
+          ./mcp-publisher --version
+
+      - name: Validate, log in with GitHub Actions' identity, publish
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          ./mcp-publisher validate
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
+
+      - name: Confirm
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          latest=$(curl -sS --max-time 30 "https://registry.modelcontextprotocol.io/v0.1/servers?search=$REGISTRY_NAME" \
+            | jq -r --arg n "$REGISTRY_NAME" '.servers[] | select(.server.name == $n and ._meta["io.modelcontextprotocol.registry/official"].isLatest) | .server.version')
+          echo "latest in the registry: $latest"
+          [ "$latest" = "${{ steps.version.outputs.version }}" ]
