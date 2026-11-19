@@ -4,7 +4,7 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 ## 2026-11-18: rate decisions and speeches from the banks' own statements (v2, phase 2)
 
-**What's new** (both off until the Worker's `V2_TOOLS` variable names them)
+**What's new** (both behind the Worker's `V2_TOOLS` variable; **switched on in the public connector on 18 Nov 2026, 1.18.0**)
 - **`decision_explainer(bank, date?)`**: what the Federal Reserve or the Bank of Canada decided at its latest decision (or the one before), how the statement's wording changed from the previous one, word by word, and the sentences in which the bank says what it is weighing, quoted with links. Also gives the next scheduled date.
 - **`speech_tracker(bank, days?)`**: recent speeches and remarks, with the speaker, title, date, the bank's own one-line description and a link.
 

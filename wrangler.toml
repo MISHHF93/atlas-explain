@@ -19,4 +19,4 @@ id = "3b50fb5cbf73422f89f22cfbbc2d64b9"
 # v2 tools switched on (docs/V2_DESIGN.md, feature flags): a comma list, for example "rate_change_impact".
 # Empty keeps the public connector exactly as it is.
 [vars]
-V2_TOOLS = "rate_change_impact"
+V2_TOOLS = "rate_change_impact,decision_explainer,speech_tracker"
