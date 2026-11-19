@@ -11,6 +11,8 @@
 
 Prices, no trial, the FOUNDER code and the refund terms are unchanged.
 
+Businesses and AI agents that call ATLAS Explain at volume are priced separately, by usage (credits per call): see `docs/USAGE_PRICING.md`.
+
 ## What costs money (and what doesn't)
 
 | Part | Who pays | Cost to the owner today |
