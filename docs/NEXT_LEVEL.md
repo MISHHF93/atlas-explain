@@ -150,7 +150,7 @@ A 2026 FINRA Foundation and Stanford study found only 18% of US investors show a
 
 ## Where things stand (18 Nov 2026)
 
-**Live:** connector 1.18.0 with 21 tools, 11 prompts and 12 views (new in 1.18.0: `decision_explainer` and `speech_tracker` from the Fed's and Bank of Canada's own statements and speeches; new in 1.17.0: `rate_change_impact`, v2 phase 1, and its widget at `/embed/rate-impact.html`; new in 1.16.0: `data_series` with CSV and the `make_a_report` prompt; views for countries, coming up, Treasury auctions, the evidence brief and data series); every tool returns structured content with an output schema; the partner sandbox at `/api/v1` and on keyed MCP (crypto hidden). A live sweep of every tool, prompt, view and error path, and an end-to-end partner key test (issue, call every endpoint, revoke), passed on 18 Nov 2026.
+**Live:** connector 1.19.0 with 21 tools, 11 prompts and 12 views (new in 1.19.0: the ECB and the Bank of England in `decision_explainer` and `speech_tracker`; new in 1.18.0: `decision_explainer` and `speech_tracker` from the Fed's and Bank of Canada's own statements and speeches; new in 1.17.0: `rate_change_impact`, v2 phase 1, and its widget at `/embed/rate-impact.html`; new in 1.16.0: `data_series` with CSV and the `make_a_report` prompt; views for countries, coming up, Treasury auctions, the evidence brief and data series); every tool returns structured content with an output schema; the partner sandbox at `/api/v1` and on keyed MCP (crypto hidden). A live sweep of every tool, prompt, view and error path, and an end-to-end partner key test (issue, call every endpoint, revoke), passed on 18 Nov 2026.
 
 **Next to build, in order:**
 1. Learning hub beside the chat, then spaced review (13, 14).

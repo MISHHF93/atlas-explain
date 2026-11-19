@@ -153,7 +153,7 @@ Every tool returns `structuredContent` with an `outputSchema`. Every claim objec
 
 ## 8. Phases
 
-**Built so far:** phase 1 (`rate_change_impact`, live). Phase 2, part one: Fed and Bank of Canada statements and speeches, `decision_explainer` and `speech_tracker`, behind the flag. Storage is simpler than section 3: one file, `/data/v1/docs.json`, holding the last two statements and twelve speeches per bank, written only when something changed. The ECB and the Bank of England are phase 2b.
+**Built so far:** phase 1 (`rate_change_impact`, live). Phase 2, part one: Fed and Bank of Canada statements and speeches, `decision_explainer` and `speech_tracker`, behind the flag. Storage is simpler than section 3: one file, `/data/v1/docs.json`, holding the last two statements and twelve speeches per bank, written only when something changed. Phase 2b (the ECB and the Bank of England) built 18 Nov 2026: the ECB's statements come from its own decisions list (the include file its page loads), the Bank of England's from its news feed and the summary pages of the months before.
 
 
 | Phase | Builds | Done when |

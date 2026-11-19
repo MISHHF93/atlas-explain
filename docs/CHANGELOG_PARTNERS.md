@@ -2,6 +2,21 @@
 
 Each entry says what's new, where its numbers come from, under what licence, and what it will never do. The design is in `docs/V2_DESIGN.md`.
 
+## 2026-11-18: the ECB and the Bank of England (v2, phase 2b, 1.19.0)
+
+**What's new:** `decision_explainer` and `speech_tracker` also cover the European Central Bank (deposit facility rate) and the Bank of England (Bank Rate). Their decision days are watched like the Fed's and the Bank of Canada's.
+
+**Where the text comes from**
+- **ECB:** its own list of monetary policy decisions, plus each decision's press release, and its press RSS feed for speeches and interviews.
+- **Bank of England:** its news RSS feed and the Monetary Policy Summary pages, plus its speeches RSS feed. Only the summary is used, not the minutes on the same page.
+- **The decision** is read from each bank's own wording. For the Bank of England that means the Committee's own vote (for example "voted by a majority of 6–3 to maintain Bank Rate at 3.75%"), never a dissenting member's.
+
+**Licence**
+- **ECB:** its notice says "Reproduction is permitted provided that the source is acknowledged", so ECB text is quoted in full, with the ECB named as the source.
+- **Bank of England:** its terms for commercial reuse are being confirmed. Until then, quotes are cut to 25 words with links, as for the Bank of Canada.
+
+**What it will never do:** add a prediction. A bank's own forward-looking words (the ECB writes, for example, that energy effects "are likely to drive up inflation") appear only inside quotation marks, attributed to that bank.
+
 ## 2026-11-18: rate decisions and speeches from the banks' own statements (v2, phase 2)
 
 **What's new** (both behind the Worker's `V2_TOOLS` variable; **switched on in the public connector on 18 Nov 2026, 1.18.0**)

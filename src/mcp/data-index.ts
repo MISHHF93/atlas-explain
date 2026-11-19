@@ -91,11 +91,13 @@ export const DATA_FILES_INDEX: readonly FileEntry[] = [
   {
     file: "docs.json",
     schema: DOCS_SCHEMA,
-    holds: "The Federal Reserve's last two FOMC statements and the Bank of Canada's last two rate announcements (full text, with the decision read from it), and each bank's recent speeches with the bank's own one-line description.",
-    refresh: "Every 3 hours with the news, and every 10 minutes from a scheduled decision to 3 hours after.",
+    holds: "The last two rate-decision statements of the Federal Reserve, the Bank of Canada, the ECB and the Bank of England (full text, with the decision read from it), and each bank's recent speeches with the bank's own one-line description.",
+    refresh: "Every 3 hours with the news, and every 10 minutes from any of the four banks' scheduled decisions to 3 hours after.",
     sources: [
       { name: "Federal Reserve Board (RSS and release pages)", licence: "open", note: "US government work." },
       { name: "Bank of Canada (RSS and release pages)", licence: "review", note: "Text reused as short quotes with links until the Bank's terms for commercial reuse are confirmed." },
+      { name: "European Central Bank (decisions list, press RSS, release pages)", licence: "open", note: "Its notice: reproduction is permitted provided that the source is acknowledged." },
+      { name: "Bank of England (news and speeches RSS, Monetary Policy Summary pages)", licence: "review", note: "Text reused as short quotes with links until the Bank's terms for commercial reuse are confirmed." },
     ],
   },
 ];

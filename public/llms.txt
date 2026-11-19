@@ -24,8 +24,8 @@ MCP Registry name: io.github.MISHHF93/atlas-explain
 - compare_countries: GDP growth, inflation, unemployment and GDP per person across the G20, from the World Bank
 - data_series: dated rows and CSV of official economic series, with source and licence, for charts, spreadsheets and reports
 - rate_change_impact: what a rate change would do to your own mortgage payment, HELOC, savings or GIC/CD, to the cent; never a forecast
-- decision_explainer: the Fed's or Bank of Canada's latest rate decision from its own statement, how the wording changed, and what it says it is weighing
-- speech_tracker: recent speeches by Fed and Bank of Canada policymakers, with the bank's own description and a link
+- decision_explainer: the Fed's, Bank of Canada's, ECB's or Bank of England's latest rate decision from its own statement, how the wording changed, and what it says it is weighing
+- speech_tracker: recent speeches by Fed, Bank of Canada, ECB and Bank of England policymakers, with the bank's own description and a link
 - notable_today: what stands out in the data today, each item with the rule that picked it
 - todays_headlines: official press releases and recent market news
 

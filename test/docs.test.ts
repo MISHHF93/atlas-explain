@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { CaptureEnv } from "../src/data/capture";
 import {
-  captureDocs, changesInContext, compareStatements, decisionWindow, diffWords, DOC_SOURCES, docsChanged, extractBocStatement, extractFedStatement,
+  boeDecisionItems, captureDocs, changesInContext, compareStatements, decisionWindow, ecbDecisionItems, extractBoeStatement, extractEcbStatement, parseBoeDecision, parseEcbDecision, diffWords, DOC_SOURCES, docsChanged, extractBocStatement, extractFedStatement,
   fracNumber, parseBocDecision, parseFedDecision, parseFeed, plain, readDocsFile, watchingSentences, type DocsFile,
 } from "../src/data/docs";
 import type { EconomyFile } from "../src/data/economy";
@@ -19,6 +19,15 @@ const PAGES: Record<string, string> = {
   "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm": "fed-stmt-0916.html",
   "https://www.bankofcanada.ca/2026/10/fad-press-release-2026-10-28/": "boc-stmt-1028.html",
   "https://www.bankofcanada.ca/2026/09/fad-press-release-2026-09-02/": "boc-stmt-0902.html",
+  [DOC_SOURCES.ecbDecisions.replace("YEAR", "2026")]: "ecb-mopo-2026.html",
+  [DOC_SOURCES.ecbPress]: "ecb-press.xml",
+  [DOC_SOURCES.boeNews]: "boe-news.xml",
+  [DOC_SOURCES.boeSpeeches]: "boe-speeches.xml",
+  "https://www.ecb.europa.eu/press/pr/date/2026/html/ecb.mp261029~9a493adf17.en.html": "ecb-mp-261029.html",
+  "https://www.ecb.europa.eu/press/pr/date/2026/html/ecb.mp260910~314e508016.en.html": "ecb-mp-260910.html",
+  // No MPC meeting in October 2026: that address is a 404, as on the live site.
+  "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2026/november-2026": "boe-november-2026.html",
+  "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2026/september-2026": "boe-september-2026.html",
 };
 const NOW = Date.parse("2026-11-18T22:00:00Z");
 function env(): CaptureEnv & { gets: string[] } {
@@ -83,13 +92,15 @@ describe("statements and speeches from the banks' own feeds", () => {
     expect(kept.speeches.boc.length).toBe(docs.speeches.boc.length);
   });
 
-  it("watches on decision days only: from a scheduled Fed or Bank of Canada decision to three hours after", () => {
+  it("watches on decision days only: from a scheduled decision to three hours after", () => {
     const economy = { calendar: { capturedAt: "", events: [{ date: "2026-12-09", institution: "Federal Reserve", title: "FOMC", sourceUrl: "https://x" }, { date: "2026-12-17", institution: "European Central Bank", title: "ECB", sourceUrl: "https://x" }] } } as unknown as EconomyFile;
     // 2:00 pm New York on 9 Dec 2026 is 19:00 UTC.
     expect(decisionWindow(economy, Date.parse("2026-12-09T19:10:00Z"))).toBe(true);
     expect(decisionWindow(economy, Date.parse("2026-12-09T21:59:00Z"))).toBe(true);
     expect(decisionWindow(economy, Date.parse("2026-12-09T22:01:00Z"))).toBe(false);
-    expect(decisionWindow(economy, Date.parse("2026-12-17T13:30:00Z"))).toBe(false);
+    // Since phase 2b the ECB is watched too: 14:15 in Frankfurt is 13:15 UTC.
+    expect(decisionWindow(economy, Date.parse("2026-12-17T13:30:00Z"))).toBe(true);
+    expect(decisionWindow(economy, Date.parse("2026-12-18T13:30:00Z"))).toBe(false);
   });
 });
 
@@ -127,7 +138,7 @@ describe("decision_explainer and speech_tracker", () => {
 
   it("refuses what it can't answer, and says so", async () => {
     docs = await captureDocs(env(), null);
-    expect((await decisionExplainer("ecb", undefined, fetcher(), NOW)).isError).toBe(true);
+    expect((await decisionExplainer("boj", undefined, fetcher(), NOW)).isError).toBe(true);
     expect((await decisionExplainer("fed", "2025-01-01", fetcher(), NOW)).content[0]!.text).toContain("Only the last two");
     expect((await decisionExplainer("nope", undefined, fetcher(), NOW)).isError).toBe(true);
     expect((await decisionExplainer("fed", undefined, async () => new Response("down", { status: 503 }), NOW)).isError).toBe(true);
@@ -184,5 +195,61 @@ describe("readable comparisons (found on live data, 18 Nov 2026)", () => {
     expect(s.comparison.mode).toBe("sentences");
     expect(s.newSentences.length).toBeLessThanOrEqual(6);
     for (const x of s.newSentences) expect(words(x)).toBeLessThanOrEqual(26);
+  });
+});
+
+describe("the ECB and the Bank of England (phase 2b)", () => {
+  it("finds each bank's decision statements: the ECB from its decisions list, the Bank of England from its feed and the months before", () => {
+    expect(ecbDecisionItems(fx("ecb-mopo-2026.html")).slice(0, 2).map((i) => i.date)).toEqual(["2026-10-29", "2026-09-10"]);
+    const boe = boeDecisionItems(fx("boe-news.xml"));
+    expect(boe[0]).toMatchObject({ date: "2026-11-05", link: "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2026/november-2026" });
+    expect(boe.slice(1, 3).map((i) => i.link.split("/").pop())).toEqual(["october-2026", "september-2026"]);
+  });
+
+  it("reads each decision from the statement, the Committee's own vote and not a dissent's", () => {
+    expect(parseEcbDecision(extractEcbStatement(fx("ecb-mp-261029.html")))).toEqual({ action: "hold", rate: 2.5, range: null, bp: 0 });
+    expect(parseEcbDecision(extractEcbStatement(fx("ecb-mp-260910.html")))).toEqual({ action: "raise", rate: 2.5, range: null, bp: 25 });
+    expect(parseBoeDecision(extractBoeStatement(fx("boe-november-2026.html")))).toEqual({ action: "raise", rate: 4, range: null, bp: 25 });
+    // September: "voted by a majority of 6–3 to maintain Bank Rate at 3.75%. Three members voted to increase … to 4%."
+    expect(parseBoeDecision(extractBoeStatement(fx("boe-september-2026.html")))).toEqual({ action: "hold", rate: 3.75, range: null, bp: 0 });
+    // The summary only, never the minutes on the same page.
+    expect(extractBoeStatement(fx("boe-november-2026.html")).join(" ")).not.toContain("Before turning to its immediate policy decision");
+    expect(extractEcbStatement(fx("ecb-mp-261029.html")).join(" ")).not.toMatch(/press conference starting|Reproduction is permitted/);
+  });
+
+  it("captures two statements and recent speeches for all four banks", async () => {
+    const docs = await captureDocs(env(), null);
+    expect(docs.statements.ecb.map((s) => [s.date, s.decision?.action])).toEqual([["2026-10-29", "hold"], ["2026-09-10", "raise"]]);
+    expect(docs.statements.boe.map((s) => [s.date, s.decision?.action, s.decision?.rate])).toEqual([["2026-11-05", "raise", 4], ["2026-09-17", "hold", 3.75]]);
+    expect(docs.speeches.ecb[0]).toMatchObject({ speaker: "Boris Vujčić", date: "2026-11-18" });
+    expect(docs.speeches.ecb.every((x) => !x.url.includes("europa.eu//"))).toBe(true);
+    expect(docs.speeches.boe[0]).toMatchObject({ speaker: "Andrew Bailey", date: "2026-11-18" });
+    // Nothing new on the next run: no statement page is read again, and no month is probed.
+    const again = env();
+    await captureDocs(again, docs);
+    expect(again.gets.filter((u) => /ecb\.mp|monetary-policy-summary-and-minutes|\.htm$|fad-press-release/.test(u))).toEqual([]);
+  });
+
+  it("explains ECB and Bank of England decisions; quotes the ECB with credit and keeps Bank of England quotes short", async () => {
+    const docs = await captureDocs(env(), null);
+    const fetcher: Fetcher = async (url) => (url.endsWith("/docs.json") ? new Response(JSON.stringify(docs)) : new Response("no", { status: 404 }));
+    const ecb = await decisionExplainer("ecb", undefined, fetcher, NOW);
+    expect(ecb.content[0]!.text).toContain("On 2026-10-29 the European Central Bank held its deposit facility rate at 2.5%.");
+    expect(ecb.content[0]!.text).toContain("Reproduced with the European Central Bank as the source.");
+    const boe = await decisionExplainer("Bank of England", undefined, fetcher, NOW);
+    expect(boe.content[0]!.text).toContain("On 2026-11-05 the Bank of England raised Bank Rate by 25 basis points to 4%. Before that, on 2026-09-17 the Bank of England held Bank Rate at 3.75%.");
+    expect(boe.content[0]!.text).toContain("Quotes are shortened; the full text is at the link.");
+    // Our own wording never predicts; the banks' own words (the ECB writes "likely to drive up inflation") appear
+    // only inside quotation marks, attributed, as docs/V2_DESIGN.md allows.
+    for (const t of [ecb, boe].map((r) => r.content[0]!.text.replace(/"[^"]*"/g, '""'))) expect(t).not.toMatch(/\b(will (cut|raise|hold)|likely to|you should|buy|sell)\b/i);
+    const sp = await speechTracker("boe", 30, fetcher, NOW);
+    expect(sp.content[0]!.text).toContain("Andrew Bailey");
+  });
+
+  it("watches all four banks' decision days", () => {
+    const economy = { calendar: { capturedAt: "", events: [{ date: "2026-12-17", institution: "European Central Bank", title: "ECB", sourceUrl: "https://x" }, { date: "2026-12-17", institution: "Bank of England", title: "MPC", sourceUrl: "https://x" }] } } as unknown as EconomyFile;
+    // ECB 14:15 Frankfurt is 13:15 UTC; Bank of England 12:00 London is 12:00 UTC.
+    expect(decisionWindow(economy, Date.parse("2026-12-17T12:05:00Z"))).toBe(true);
+    expect(decisionWindow(economy, Date.parse("2026-12-17T16:30:00Z"))).toBe(false);
   });
 });

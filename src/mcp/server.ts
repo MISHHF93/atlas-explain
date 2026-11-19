@@ -48,7 +48,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.18.0";
+export const SERVER_VERSION = "1.19.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -476,9 +476,9 @@ export const V2_TOOLS = [
   {
     name: "decision_explainer",
     title: "A rate decision, explained from the statement",
-    description: "What the Federal Reserve or the Bank of Canada decided at its latest rate decision (or the one before), how the official statement's wording changed from the previous one, word for word, and what the bank itself says it is watching, quoted with links. Use it when someone asks what a central bank just did or what changed. From the banks' own statements; it never says what the bank will do next.",
+    description: "What the Federal Reserve, the Bank of Canada, the European Central Bank or the Bank of England decided at its latest rate decision (or the one before), how the official statement's wording changed from the previous one, word for word, and what the bank itself says it is watching, quoted with links. Use it when someone asks what a central bank just did or what changed. From the banks' own statements; it never says what the bank will do next.",
     inputSchema: { type: "object", properties: {
-      bank: { type: "string", enum: ["fed", "boc"], description: "fed (Federal Reserve) or boc (Bank of Canada)." },
+      bank: { type: "string", enum: ["fed", "boc", "ecb", "boe"], description: "fed (Federal Reserve), boc (Bank of Canada), ecb (European Central Bank) or boe (Bank of England)." },
       date: str("Optional: the decision date, YYYY-MM-DD. Defaults to the latest; the one before is also kept."),
     }, required: ["bank"], additionalProperties: false },
     annotations: annotations("A rate decision, explained from the statement", true),
@@ -495,9 +495,9 @@ export const V2_TOOLS = [
   {
     name: "speech_tracker",
     title: "Central bankers' recent speeches",
-    description: "Recent speeches and remarks by Federal Reserve or Bank of Canada policymakers: who spoke, when, the title, the bank's own one-line description and a link to the full text. Use it when someone asks what central bankers have been saying. Descriptions are the bank's own words, attributed; nothing is added or interpreted.",
+    description: "Recent speeches and remarks by Federal Reserve, Bank of Canada, ECB or Bank of England policymakers: who spoke, when, the title, the bank's own one-line description and a link to the full text. Use it when someone asks what central bankers have been saying. Descriptions are the bank's own words, attributed; nothing is added or interpreted.",
     inputSchema: { type: "object", properties: {
-      bank: { type: "string", enum: ["fed", "boc"], description: "fed (Federal Reserve) or boc (Bank of Canada)." },
+      bank: { type: "string", enum: ["fed", "boc", "ecb", "boe"], description: "fed (Federal Reserve), boc (Bank of Canada), ecb (European Central Bank) or boe (Bank of England)." },
       days: { type: "number", description: "How far back to look, in days (default 30, at most 90)." },
     }, required: ["bank"], additionalProperties: false },
     annotations: annotations("Central bankers' recent speeches", true),
@@ -538,14 +538,15 @@ export function rateChangeImpactTool(args: Record<string, unknown>): ToolResult 
 /* ---------- decision_explainer and speech_tracker (v2 phase 2), from docs.json ---------- */
 
 const NO_DOCS = "ATLAS Explain's copies of the banks' statements and speeches couldn't be loaded right now. Nothing is shown in their place; try again later.";
-const docBank = (v: unknown): DocBank | null => {
-  const w = String(v ?? "").trim().toLowerCase();
-  return w === "fed" || w === "federal reserve" || w === "fomc" ? "fed" : w === "boc" || w === "bank of canada" ? "boc" : null;
+const BANK_WORDS: Record<string, DocBank> = {
+  fed: "fed", "federal reserve": "fed", fomc: "fed", boc: "boc", "bank of canada": "boc",
+  ecb: "ecb", "european central bank": "ecb", boe: "boe", "bank of england": "boe", mpc: "boe",
 };
-const ECB_BOE = /^(ecb|boe|european central bank|bank of england)$/i;
-/** Bank of Canada text: short quotes until its terms for commercial reuse are confirmed (docs/V2_DESIGN.md). */
+const docBank = (v: unknown): DocBank | null => BANK_WORDS[String(v ?? "").trim().toLowerCase()] ?? null;
+const CHOOSE_BANK = "Choose a bank: fed (Federal Reserve), boc (Bank of Canada), ecb (European Central Bank) or boe (Bank of England).";
+/** Text whose terms for commercial reuse aren't confirmed yet (Bank of Canada, Bank of England): short quotes with links. */
 const quote = (bank: DocBank, s: string, words = 25) => {
-  if (BANK_LICENCE[bank] === "public_domain") return s;
+  if (BANK_LICENCE[bank] !== "confirm") return s;
   const w = s.split(/\s+/);
   return w.length > words ? w.slice(0, words).join(" ") + " …" : s;
 };
@@ -553,14 +554,14 @@ const describe = (bank: DocBank, d: Statement) => {
   const x = d.decision;
   if (!x) return `${BANK_NAME[bank]} statement of ${d.date}`;
   const level = x.range ? `a target range of ${x.range.replace(" to ", "% to ")}%` : `${x.rate}%`;
-  const verb = x.action === "hold" ? "held its rate at" : x.action === "raise" ? `raised its rate${x.bp ? ` by ${x.bp} basis points` : ""} to` : `lowered its rate${x.bp ? ` by ${x.bp} basis points` : ""} to`;
+  const rate = bank === "ecb" ? "its deposit facility rate" : bank === "boe" ? "Bank Rate" : "its rate";
+  const verb = x.action === "hold" ? `held ${rate} at` : x.action === "raise" ? `raised ${rate}${x.bp ? ` by ${x.bp} basis points` : ""} to` : `lowered ${rate}${x.bp ? ` by ${x.bp} basis points` : ""} to`;
   return `On ${d.date} the ${BANK_NAME[bank]} ${verb} ${level}`;
 };
 
 export async function decisionExplainer(bankArg: unknown, date: string | undefined, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
-  if (ECB_BOE.test(String(bankArg ?? "").trim())) return text("The ECB and the Bank of England aren't covered by decision_explainer yet; economic_calendar has their dates and economy_snapshot their rates.", true);
   const bank = docBank(bankArg);
-  if (!bank) return text("Choose a bank: fed (Federal Reserve) or boc (Bank of Canada).", true);
+  if (!bank) return text(CHOOSE_BANK, true);
   const body = await getJson(DOCS_DATA_URL, fetcher);
   const docs = body == null ? null : readDocsFile(body);
   if (!docs) return text(NO_DOCS, true);
@@ -574,7 +575,7 @@ export async function decisionExplainer(bankArg: unknown, date: string | undefin
   const shown = changes.slice(0, 12).map((c) => ({ before: quote(bank, c.before, 8), removed: quote(bank, c.removed), added: quote(bank, c.added) }));
   const newSentences = (cmp?.newSentences ?? []).slice(0, 6).map((x) => quote(bank, x));
   const src = (s: Statement) => ({ name: `${BANK_NAME[bank]}, ${s.title}`, url: s.url, asOf: s.date });
-  const watching = watchingSentences(cur.paragraphs, BANK_LICENCE[bank] === "public_domain" ? 5 : 3).map((t) => ({ text: quote(bank, t, 40), source: { name: BANK_NAME[bank], url: cur.url }, asOf: cur.date }));
+  const watching = watchingSentences(cur.paragraphs, BANK_LICENCE[bank] !== "confirm" ? 5 : 3).map((t) => ({ text: quote(bank, t, 40), source: { name: BANK_NAME[bank], url: cur.url }, asOf: cur.date }));
   const economy = await loadEconomy(fetcher);
   const nextEvent = economy ? upcoming(economy.calendar.events.filter((e) => e.institution === BANK_NAME[bank]), now, 1)[0] : undefined;
   const next = nextEvent ? { date: nextEvent.date, time: decisionTime(nextEvent), url: nextEvent.sourceUrl } : null;
@@ -590,7 +591,7 @@ export async function decisionExplainer(bankArg: unknown, date: string | undefin
   }
   if (watching.length) lines.push("", "What the statement says the bank is weighing (its own words):", ...watching.map((w) => `- "${w.text}"`));
   if (next) lines.push("", `Next scheduled decision: ${next.date} (${utc(next.time)}). This says when, never what.`);
-  lines.push("", `Sources: ${[cur, ...(prev ? [prev] : [])].map((s) => `${s.title}, ${s.date} (${s.url})`).join("; ")}.${BANK_LICENCE[bank] === "public_domain" ? "" : " Quotes are shortened; the full text is at the link."}`);
+  lines.push("", `Sources: ${[cur, ...(prev ? [prev] : [])].map((s) => `${s.title}, ${s.date} (${s.url})`).join("; ")}.${BANK_LICENCE[bank] === "confirm" ? " Quotes are shortened; the full text is at the link." : BANK_LICENCE[bank] === "reuse_with_credit" ? ` Reproduced with the ${BANK_NAME[bank]} as the source.` : ""}`);
   return data(lines.join("\n"), {
     bank, institution: BANK_NAME[bank],
     decision: { ...cur.decision, date: cur.date, url: cur.url },
@@ -602,9 +603,8 @@ export async function decisionExplainer(bankArg: unknown, date: string | undefin
 }
 
 export async function speechTracker(bankArg: unknown, daysArg: unknown, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
-  if (ECB_BOE.test(String(bankArg ?? "").trim())) return text("The ECB and the Bank of England aren't covered by speech_tracker yet.", true);
   const bank = docBank(bankArg);
-  if (!bank) return text("Choose a bank: fed (Federal Reserve) or boc (Bank of Canada).", true);
+  if (!bank) return text(CHOOSE_BANK, true);
   const days = Math.min(90, Math.max(1, Math.round(Number(daysArg ?? 30)) || 30));
   const body = await getJson(DOCS_DATA_URL, fetcher);
   const docs = body == null ? null : readDocsFile(body);

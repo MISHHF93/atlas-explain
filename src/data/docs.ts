@@ -11,18 +11,31 @@ import type { CaptureEnv } from "./capture";
 import { decisionTime, type EconomyFile } from "./economy";
 
 export const DOCS_SCHEMA = "atlas-explain-docs-v1";
-export type DocBank = "fed" | "boc";
-export const DOC_BANKS: readonly DocBank[] = ["fed", "boc"];
+export type DocBank = "fed" | "boc" | "ecb" | "boe";
+export const DOC_BANKS: readonly DocBank[] = ["fed", "boc", "ecb", "boe"];
 
 export const DOC_SOURCES = {
   fedMonetary: "https://www.federalreserve.gov/feeds/press_monetary.xml",
   fedSpeeches: "https://www.federalreserve.gov/feeds/speeches.xml",
   bocPress: "https://www.bankofcanada.ca/content_type/press-releases/feed/",
   bocSpeeches: "https://www.bankofcanada.ca/content_type/speeches/feed/",
+  // The ECB's list of monetary policy decisions (the page itself loads it from here), and its press feed for speeches.
+  ecbDecisions: "https://www.ecb.europa.eu/press/govcdec/mopo/YEAR/html/index_include.en.html",
+  ecbPress: "https://www.ecb.europa.eu/rss/press.html",
+  boeNews: "https://www.bankofengland.co.uk/rss/news",
+  boeSpeeches: "https://www.bankofengland.co.uk/rss/speeches",
 } as const;
 
-export const BANK_NAME: Record<DocBank, string> = { fed: "Federal Reserve", boc: "Bank of Canada" };
-export const BANK_LICENCE: Record<DocBank, "public_domain" | "confirm"> = { fed: "public_domain", boc: "confirm" };
+/** Names as the economy calendar writes them. */
+export const BANK_NAME: Record<DocBank, string> = { fed: "Federal Reserve", boc: "Bank of Canada", ecb: "European Central Bank", boe: "Bank of England" };
+/** The rate each decision is about. */
+export const RATE_NAME: Record<DocBank, string> = { fed: "federal funds target range", boc: "policy rate", ecb: "deposit facility rate", boe: "Bank Rate" };
+/**
+ * public_domain: US government work. reuse_with_credit: the ECB's own notice says "Reproduction is permitted
+ * provided that the source is acknowledged". confirm: terms for commercial reuse not yet confirmed, so quotes
+ * are kept short with links (docs/V2_DESIGN.md).
+ */
+export const BANK_LICENCE: Record<DocBank, "public_domain" | "reuse_with_credit" | "confirm"> = { fed: "public_domain", boc: "confirm", ecb: "reuse_with_credit", boe: "confirm" };
 
 export interface Decision {
   action: "raise" | "cut" | "hold";
@@ -131,6 +144,25 @@ export function extractBocStatement(html: string): string[] {
   return out;
 }
 
+/** An ECB monetary policy decisions press release: from the decision to before the press-conference notice. */
+export function extractEcbStatement(html: string): string[] {
+  const out: string[] = [];
+  for (const p of paragraphsIn(html, '<div class="section">', 40_000)) {
+    if (/^The President of the ECB will comment/.test(p) || /^Disclaimer|^Reproduction is permitted/.test(p)) break;
+    if (/^\d{1,2} [A-Z][a-z]+ \d{4}$/.test(p) || /^\*+$/.test(p)) continue;
+    out.push(p);
+  }
+  return out;
+}
+
+/** A Bank of England Monetary Policy Summary: its paragraphs, without the minutes that follow on the same page. */
+export function extractBoeStatement(html: string): string[] {
+  const start = html.indexOf('<div class="page-content"');
+  if (start < 0) return [];
+  const end = html.indexOf("Minutes of the Monetary Policy Committee meeting", start);
+  return paragraphsIn(html.slice(start, end > start ? end : start + 30_000), '<div class="page-content"', 30_000);
+}
+
 const FRACTION: Record<string, number> = { "1/4": 0.25, "1/2": 0.5, "3/4": 0.75, "¼": 0.25, "½": 0.5, "¾": 0.75 };
 /** "3-3/4" → 3.75; "4" → 4; "2½" → 2.5. */
 export function fracNumber(s: string): number {
@@ -158,6 +190,59 @@ export function parseBocDecision(paragraphs: string[]): Decision | null {
   return { action, rate: Number(m[3]), range: null, bp: m[2] ? Number(m[2]) : action === "hold" ? 0 : null };
 }
 
+export function parseEcbDecision(paragraphs: string[]): Decision | null {
+  const text = paragraphs.join(" ");
+  const what = text.match(/decided to (keep|raise|increase|lower|reduce|cut) the three key ECB interest rates(?: by (\d+) basis points| unchanged)?/);
+  const rate = text.match(/deposit facility[^.]*?(?:at|to) (-?[\d.]+)%/);
+  if (!what || !rate) return null;
+  const action = what[1] === "keep" ? "hold" : /raise|increase/.test(what[1]!) ? "raise" : "cut";
+  return { action, rate: Number(rate[1]), range: null, bp: what[2] ? Number(what[2]) : action === "hold" ? 0 : null };
+}
+
+export function parseBoeDecision(paragraphs: string[]): Decision | null {
+  // The Committee's own vote ("voted by a majority of 6–3" or "voted unanimously"), never a dissent's
+  // ("Three members voted to increase Bank Rate …").
+  const m = paragraphs.join(" ").match(/voted (?:by a majority of \S+|unanimously) to (increase|reduce|cut|lower|maintain|hold|keep) Bank Rate (?:by ([\d.]+) percentage points?,? to|at|unchanged at) ([\d.]+)%/);
+  if (!m) return null;
+  const action = m[1] === "increase" ? "raise" : /reduce|cut|lower/.test(m[1]!) ? "cut" : "hold";
+  return { action, rate: Number(m[3]), range: null, bp: m[2] ? Math.round(Number(m[2]) * 100) : action === "hold" ? 0 : null };
+}
+
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+/** The ECB's decisions list: each decision's English press release, newest first, dated from its address. */
+export function ecbDecisionItems(html: string): FeedItem[] {
+  const seen = new Set<string>();
+  return [...html.matchAll(/\/press\/pr\/date\/\d{4}\/html\/ecb\.mp(\d{2})(\d{2})(\d{2})~[0-9a-f]+\.en\.html/g)]
+    .filter((m) => (seen.has(m[0]) ? false : (seen.add(m[0]), true)))
+    .map((m) => ({ title: "Monetary policy decisions", link: `https://www.ecb.europa.eu${m[0]}`, date: `20${m[1]}-${m[2]}-${m[3]}`, description: "" }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+/**
+ * The Bank of England: the latest summary from its news feed, then the months before it (the summaries live at
+ * /monetary-policy-summary-and-minutes/<year>/<month>-<year>, and the MPC skips some months).
+ */
+export function boeDecisionItems(newsXml: string): FeedItem[] {
+  const latest = parseFeed(newsXml).filter((i) => /Monetary Policy Summary/i.test(i.title) && /monetary-policy-summary-and-minutes\/\d{4}\//.test(i.link)).sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))[0];
+  if (!latest) return [];
+  const m = latest.link.match(/\/(\d{4})\/([a-z]+)-\d{4}\/?$/);
+  const out: FeedItem[] = [latest];
+  if (m) {
+    let y = Number(m[1]), k = MONTHS.indexOf(m[2]!);
+    for (let n = 0; n < 4 && k >= 0; n++) {
+      k -= 1;
+      if (k < 0) { k = 11; y -= 1; }
+      out.push({ title: `Monetary Policy Summary, ${MONTHS[k]![0]!.toUpperCase()}${MONTHS[k]!.slice(1)} ${y}`, link: `https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/${y}/${MONTHS[k]}-${y}`, date: null, description: "" });
+    }
+  }
+  return out;
+}
+/** "At its meeting ending on 4 November 2026" → the next day, when the decision is announced. */
+function boeAnnounced(paragraphs: string[]): string | null {
+  const m = paragraphs.join(" ").match(/meeting ending on (\d{1,2}) ([A-Z][a-z]+) (\d{4})/);
+  const k = m ? MONTHS.indexOf(m[2]!.toLowerCase()) : -1;
+  return m && k >= 0 ? new Date(Date.UTC(Number(m[3]), k, Number(m[1]) + 1)).toISOString().slice(0, 10) : null;
+}
+
 const isFedStatement = (i: FeedItem) => /issues FOMC statement/i.test(i.title);
 const isBocDecision = (i: FeedItem) => /policy rate/i.test(i.title) && /fad-press-release/.test(i.link);
 
@@ -173,42 +258,79 @@ function bocSpeech(i: FeedItem): Speech | null {
   return { bank: "boc", date: i.date, title: i.title.replace(/^Speech: /, ""), speaker: who ? `${who[1]} ${who[2]}` : null, about: i.description.slice(0, 300), url: i.link };
 }
 
+/** "Philip R. Lane: The practice…" (ECB press feed: speeches and interviews only). */
+function ecbSpeech(i: FeedItem): Speech | null {
+  if (!i.date || !/\/press\/(key|inter)\//.test(i.link)) return null;
+  const m = i.title.match(/^([^:]{3,60}): (.+)$/);
+  return { bank: "ecb", date: i.date, title: m ? m[2]! : i.title, speaker: m ? m[1]! : null, about: /\/press\/inter\//.test(i.link) ? "Interview" : "Speech", url: i.link.replace("europa.eu//", "europa.eu/") };
+}
+/** "… - speech by Andrew Bailey", "Huw Pill: Speech at …". */
+function boeSpeech(i: FeedItem): Speech | null {
+  if (!i.date) return null;
+  const by = i.title.match(/^(.+?)\s*[-–−]\s*(?:speech|remarks|panel remarks|lecture|keynote)[^A-Z]*by ([A-Z][^-–−]+)$/i);
+  const colon = i.title.match(/^([A-Z][a-z]+(?: [A-Z][a-z]+)+): (.+)$/);
+  const speaker = by ? by[2]!.trim() : colon ? colon[1]! : null;
+  const title = by ? by[1]!.trim() : colon ? colon[2]! : i.title;
+  return { bank: "boe", date: i.date, title, speaker, about: i.description.slice(0, 300), url: i.link };
+}
+
 /* ---------- capture ---------- */
 
-const empty = <T>(): Record<DocBank, T[]> => ({ fed: [], boc: [] });
+const empty = <T>(): Record<DocBank, T[]> => ({ fed: [], boc: [], ecb: [], boe: [] });
 
 /**
  * Reads both banks' feeds; fetches a statement page only when that statement isn't stored yet, so a
  * normal run is four feed reads. Keeps the last good copy of anything that fails.
  */
 export async function captureDocs(env: CaptureEnv, prev: DocsFile | null): Promise<DocsFile> {
-  const [fedM, fedS, bocP, bocS] = await Promise.all([DOC_SOURCES.fedMonetary, DOC_SOURCES.fedSpeeches, DOC_SOURCES.bocPress, DOC_SOURCES.bocSpeeches].map((u) => env.get(u).catch(() => "")));
+  const year = new Date(env.now).getUTCFullYear();
+  const ecbList = (y: number) => DOC_SOURCES.ecbDecisions.replace("YEAR", String(y));
+  const urls = [DOC_SOURCES.fedMonetary, DOC_SOURCES.fedSpeeches, DOC_SOURCES.bocPress, DOC_SOURCES.bocSpeeches, ecbList(year), DOC_SOURCES.ecbPress, DOC_SOURCES.boeNews, DOC_SOURCES.boeSpeeches];
+  const [fedM, fedS, bocP, bocS, ecbL, ecbP, boeN, boeS] = await Promise.all(urls.map((u) => env.get(u).catch(() => "")));
+  // Early in a year the ECB's list may hold one decision or none: add last year's.
+  let ecbItems = ecbDecisionItems(ecbL!);
+  if (ecbItems.length < 2) ecbItems = [...ecbItems, ...ecbDecisionItems(await env.get(ecbList(year - 1)).catch(() => ""))];
   const statements = empty<Statement>();
   const speeches = empty<Speech>();
-  const plan: [DocBank, string, (i: FeedItem) => boolean, (h: string) => string[], (p: string[]) => Decision | null][] = [
-    ["fed", fedM!, isFedStatement, extractFedStatement, parseFedDecision],
-    ["boc", bocP!, isBocDecision, extractBocStatement, parseBocDecision],
+  type Plan = { bank: DocBank; items: FeedItem[]; extract: (h: string) => string[]; decide: (p: string[]) => Decision | null; dated?: (p: string[]) => string | null };
+  const newest = (xml: string, pick: (i: FeedItem) => boolean) => parseFeed(xml).filter(pick).filter((i) => i.date).sort((a, b) => b.date!.localeCompare(a.date!));
+  const plans: Plan[] = [
+    { bank: "fed", items: newest(fedM!, isFedStatement), extract: extractFedStatement, decide: parseFedDecision },
+    { bank: "boc", items: newest(bocP!, isBocDecision), extract: extractBocStatement, decide: parseBocDecision },
+    { bank: "ecb", items: ecbItems, extract: extractEcbStatement, decide: parseEcbDecision },
+    { bank: "boe", items: boeDecisionItems(boeN!), extract: extractBoeStatement, decide: parseBoeDecision, dated: boeAnnounced },
   ];
-  for (const [bank, xml, pick, extract, decide] of plan) {
-    const known = new Map((prev?.statements[bank] ?? []).map((s) => [s.url, s]));
-    const items = parseFeed(xml).filter(pick).filter((i) => i.date).sort((a, b) => b.date!.localeCompare(a.date!)).slice(0, 2);
+  for (const { bank, items, extract, decide, dated } of plans) {
+    const stored = prev?.statements[bank] ?? [];
+    const known = new Map(stored.map((s) => [s.url, s]));
+    // Nothing new: the newest one is stored and so is the one before it. No page is read.
+    if (items[0] && known.has(items[0].link) && stored.length >= 2) {
+      statements[bank] = stored.slice(0, 2);
+      continue;
+    }
     for (const item of items) {
+      if (statements[bank].length >= 2) break;
       const kept = known.get(item.link);
       if (kept) { statements[bank].push(kept); continue; }
       const html = await env.get(item.link).catch(() => "");
       const paragraphs = html ? extract(html) : [];
-      if (paragraphs.length >= 2) statements[bank].push({ bank, date: item.date!, title: item.title, url: item.link, paragraphs, decision: decide(paragraphs), capturedAt: new Date(env.now).toISOString() });
-      else env.log(`docs: ${bank} statement ${item.link} couldn't be read`);
+      const decision = paragraphs.length >= 2 ? decide(paragraphs) : null;
+      const date = item.date ?? (dated ? dated(paragraphs) : null);
+      // A page with no readable decision isn't a decision statement (or the month had no meeting).
+      if (decision && date) statements[bank].push({ bank, date, title: item.title, url: item.link, paragraphs, decision, capturedAt: new Date(env.now).toISOString() });
+      else if (item.date) env.log(`docs: ${bank} statement ${item.link} couldn't be read`);
     }
     // A feed that failed, or a page that couldn't be read: keep what was there.
     if (statements[bank].length < 2) {
-      for (const s of prev?.statements[bank] ?? []) if (!statements[bank].some((x) => x.url === s.url)) statements[bank].push(s);
-      statements[bank] = statements[bank].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
+      for (const s of stored) if (!statements[bank].some((x) => x.url === s.url)) statements[bank].push(s);
     }
+    statements[bank] = statements[bank].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
   }
   const fromFeed = (xml: string, make: (i: FeedItem) => Speech | null) => parseFeed(xml).map(make).filter((s): s is Speech => s != null).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12);
   speeches.fed = fedS ? fromFeed(fedS, fedSpeech) : [];
   speeches.boc = bocS ? fromFeed(bocS, bocSpeech) : [];
+  speeches.ecb = ecbP ? fromFeed(ecbP, ecbSpeech) : [];
+  speeches.boe = boeS ? fromFeed(boeS, boeSpeech) : [];
   for (const bank of DOC_BANKS) if (!speeches[bank].length) speeches[bank] = prev?.speeches[bank] ?? [];
   return { schema: DOCS_SCHEMA, generatedAt: new Date(env.now).toISOString(), statements, speeches };
 }
@@ -281,10 +403,10 @@ export function watchingSentences(paragraphs: string[], max = 5): string[] {
 
 /* ---------- when to look, and whether anything changed ---------- */
 
-/** From two minutes before a scheduled Fed or Bank of Canada decision to three hours after. */
+/** From two minutes before a scheduled decision by any of the four banks to three hours after. */
 export function decisionWindow(economy: EconomyFile, now: number): boolean {
   return economy.calendar.events.some((e) => {
-    if (e.institution !== "Federal Reserve" && e.institution !== "Bank of Canada") return false;
+    if (!Object.values(BANK_NAME).includes(e.institution)) return false;
     const t = Date.parse(decisionTime(e));
     return now >= t - 2 * 60_000 && now <= t + 3 * 60 * 60_000;
   });
