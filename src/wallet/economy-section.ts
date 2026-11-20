@@ -95,7 +95,7 @@ function speechesCard(docs: DocsFile | null): HTMLElement {
     // Banks list scheduled appearances in the same feed; one dated after today hasn't happened yet.
     const upcoming = s.date > new Date().toISOString().slice(0, 10);
     li.append(a, el("p", "fine", `${BANK_NAME[s.bank]}${s.speaker ? `, ${s.speaker}` : ""} · ${upcoming ? "Scheduled for " : ""}${day(s.date)}`));
-    if (s.about && s.about !== "Speech" && s.about !== "Interview") li.append(el("p", "fine", s.about));
+    if (s.about && !["Speech", "Interview", "Remarks"].includes(s.about)) li.append(el("p", "fine", s.about));
     list.append(li);
   }
   c.append(all.length ? list : el("p", "fine", "No speeches are stored yet."));

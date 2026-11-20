@@ -52,7 +52,8 @@ export function moneyMaths(input: MoneyInput): MoneyResult | { error: string } {
     const n = typeof v === "number" && Number.isFinite(v) ? v : fallback;
     return n == null ? null : Math.min(hi, Math.max(lo, n));
   };
-  const money = (v: number) => (Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(2));
+  // Amounts are in the person's own currency; the dollar sign marks them as money, not a count.
+  const money = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(v) >= 100 ? Math.round(Math.abs(v)).toLocaleString("en-US") : Math.abs(v).toFixed(2)}`;
   const pct = (v: number) => `${Number(v.toFixed(2))}%`;
   const calc = input.calculation;
 

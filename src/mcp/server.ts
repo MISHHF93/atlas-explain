@@ -613,7 +613,9 @@ export async function speechTracker(bankArg: unknown, daysArg: unknown, fetcher:
   const since = new Date(now - days * 86_400_000).toISOString().slice(0, 10);
   const speeches = docs.speeches[bank].filter((s) => s.date >= since).map((s) => ({ ...s, source: { name: BANK_NAME[bank], url: s.url } }));
   if (!speeches.length) return data(`No ${BANK_NAME[bank]} speeches in the last ${days} days in its feed.`, { bank, institution: BANK_NAME[bank], speeches: [], refreshedAt: docs.generatedAt });
-  const lines = speeches.map((s) => `- ${s.date}${s.speaker ? `, ${s.speaker}` : ""}: ${s.title}${s.about ? `. ${BANK_NAME[bank]}'s description: "${s.about}"` : ""} (${s.url})`);
+  // A bare "Speech" or "Interview" says nothing the title does not.
+  const GENERIC_ABOUT = new Set(["Speech", "Interview", "Remarks"]);
+  const lines = speeches.map((s) => `- ${s.date}${s.speaker ? `, ${s.speaker}` : ""}: ${s.title}${s.about && !GENERIC_ABOUT.has(s.about) ? `. ${BANK_NAME[bank]}'s description: "${s.about}"` : ""} (${s.url})`);
   return data(`${BANK_NAME[bank]} speeches and remarks, last ${days} days, newest first:\n${lines.join("\n")}\n\nDescriptions are the bank's own; the full text is at each link. Read ${utc(docs.generatedAt)} from the ${BANK_NAME[bank]}'s feed.`, { bank, institution: BANK_NAME[bank], speeches, refreshedAt: docs.generatedAt });
 }
 

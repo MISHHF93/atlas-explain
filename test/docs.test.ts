@@ -151,6 +151,8 @@ describe("decision_explainer and speech_tracker", () => {
     expect(sp.length).toBeGreaterThan(3);
     expect(sp.every((s) => s.date >= "2026-11-11" && s.source.url === s.url)).toBe(true);
     expect(text(r)).toContain("Federal Reserve's description:");
+    // A description that only says "Speech" adds nothing to the title, so it is left out.
+    expect(text(r)).not.toMatch(/description: "(Speech|Interview|Remarks)"/);
   });
 
   it("stays off until V2_TOOLS names it", async () => {

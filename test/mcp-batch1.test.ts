@@ -95,6 +95,8 @@ describe("money maths (arithmetic on the person's own numbers)", () => {
 
   it("shows what a fee costs, what inflation does, and how diversification levels off", () => {
     const fees = moneyMaths({ calculation: "fees", amount: 10000, ratePct: 6, feePct: 1, years: 30 });
+    // Every amount reads as money: "$5,000", never a bare "5,000".
+    if (!("error" in fees)) for (const l of fees.lines.slice(0, 2)) expect(l).toMatch(/\$\d/);
     if ("error" in fees) throw new Error(fees.error);
     expect(fees.series[1]!.points.at(-1)!.y).toBeLessThan(fees.series[0]!.points.at(-1)!.y);
     const infl = moneyMaths({ calculation: "inflation", amount: 1000, inflationPct: 3, years: 10 });
