@@ -25,7 +25,7 @@ const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
 
 /** Every public destination, once. */
 const FOOTER_LINKS: readonly { href: string; label: string }[] = [
-  { href: "/start", label: "Get started" },
+  { href: "/app", label: "Get started" },
   { href: "/connect", label: "Add to your AI assistant" },
   { href: "/support", label: "Support and FAQ" },
   { href: "/partners", label: "For businesses" },
@@ -35,7 +35,7 @@ const FOOTER_LINKS: readonly { href: string; label: string }[] = [
 
 /** The one way into the product: Get started (Sign in, then the connector or the web app). */
 export function startCta(className: string): string {
-  return `<a class="${className}" href="/start" data-start-cta>Get started</a>`;
+  return `<a class="${className}" href="/app" data-start-cta>Get started</a>`;
 }
 
 /** Straight to the connector's setup steps, for people who already know they want it. */

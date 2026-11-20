@@ -57,11 +57,11 @@ describe("one header and one footer for every site page", () => {
     const footer = /<nav aria-label="Footer">(.*?)<\/nav>/.exec(sitePage("index.html"))?.[1] ?? "";
     const hrefs = [...footer.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(hrefs).size).toBe(hrefs.length);
-    expect(hrefs).toEqual(expect.arrayContaining(["/start", "/connect", "/support", "/privacy", "/terms"]));
-    // One way into the product: no separate link to the app.
-    expect(hrefs).not.toContain("/app");
+    expect(hrefs).toEqual(expect.arrayContaining(["/app", "/connect", "/support", "/privacy", "/terms"]));
+    // One way into the product: Get started is the app (sign-in first when needed), listed once.
+    expect(hrefs.filter((h) => h === "/app")).toHaveLength(1);
     // The journey starts with Get started; the connector's setup steps follow.
-    expect(hrefs.slice(0, 2)).toEqual(["/start", "/connect"]);
+    expect(hrefs.slice(0, 2)).toEqual(["/app", "/connect"]);
     expect(hrefs).not.toContain("/support#faq");
   });
 
@@ -76,7 +76,7 @@ describe("the website and the app read as separate places", () => {
     for (const f of SITE_PAGES) {
       const page = sitePage(f);
       expect(page, f).not.toMatch(/>Open the web app<|>Open the app<|>The app</);
-      expect(page, f).toContain('href="/start" data-start-cta>Get started</a>');
+      expect(page, f).toContain('href="/app" data-start-cta>Get started</a>');
     }
     expect(readFileSync("src/wallet/shell.ts", "utf8")).not.toContain("app-badge");
     expect(readFileSync("src/app/routes.ts", "utf8")).not.toContain("ATLAS Explain app");

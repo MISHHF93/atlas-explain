@@ -4,24 +4,25 @@
  * Public site (static HTML, no app JavaScript):  /  /support  /privacy  /terms  /connect  /how-its-built
  *   (404.html for the rest; the shared header and footer come from src/site/frame.ts)
  * App (one lazy-loaded bundle, app.html), one scrolling page with a section per address:
- *   /app (Explain)  /app/today  /app/learn  /app/assets  /app/assets/:symbol (sheet)
+ *   /app (Explain)  /app/today  /app/economy  /app/tools  /app/learn  /app/assets  /app/assets/:symbol (sheet)
  *   /app/account and /signin (the account sheet)
- *   /start (Get started: after Sign in, choose the AI-assistant connector or the web app)
+ *   /start (an older Get started address: opens the app, after Sign in when needed)
  */
 
-export type AppTab = "today" | "explain" | "assets" | "glossary" | "settings";
+export type AppTab = "today" | "explain" | "economy" | "tools" | "assets" | "glossary" | "settings";
 
 export type AppRoute =
   | { kind: "tab"; tab: AppTab }
   | { kind: "asset"; symbol: string }
   | { kind: "signin" }
-  | { kind: "start" }
   | { kind: "not_found"; path: string };
 
 /** Address of each section. "glossary" and "settings" keep their internal ids but read as Learn and Account. */
 export const TAB_PATHS: Record<AppTab, string> = {
   explain: "/app",
   today: "/app/today",
+  economy: "/app/economy",
+  tools: "/app/tools",
   assets: "/app/assets",
   glossary: "/app/learn",
   settings: "/app/account",
@@ -36,6 +37,7 @@ const ALIASES: Record<string, AppTab> = {
   "/app/settings": "settings",
   "/app/profile": "settings",
   "/app/signal": "today",
+  "/start": "explain",
 };
 
 const SYMBOL = /^[A-Za-z0-9.-]{1,15}$/;
@@ -48,7 +50,6 @@ export function normalisePath(pathname: string): string {
 export function parseRoute(pathname: string): AppRoute {
   const path = normalisePath(pathname);
   if (path === "/signin") return { kind: "signin" };
-  if (path === "/start") return { kind: "start" };
   for (const [tab, p] of Object.entries(TAB_PATHS) as [AppTab, string][]) {
     if (path === p) return { kind: "tab", tab };
   }
@@ -75,8 +76,6 @@ export function pathFor(route: AppRoute): string {
       return `${TAB_PATHS.assets}/${encodeURIComponent(route.symbol)}`;
     case "signin":
       return "/signin";
-    case "start":
-      return "/start";
     case "not_found":
       return route.path;
   }
@@ -93,6 +92,8 @@ export function tabFor(route: AppRoute): AppTab {
 export function titleFor(route: AppRoute): string {
   const names: Record<AppTab, string> = {
     today: "Today",
+    economy: "Economy",
+    tools: "Tools",
     explain: "Explain",
     assets: "Assets",
     glossary: "Learn",
@@ -102,7 +103,6 @@ export function titleFor(route: AppRoute): string {
   if (route.kind === "tab") return `${names[route.tab]} · ATLAS Explain`;
   if (route.kind === "asset") return `${route.symbol} · Assets · ATLAS Explain`;
   if (route.kind === "signin") return "Sign in · ATLAS Explain";
-  if (route.kind === "start") return "Get started · ATLAS Explain";
   return "Page not found · ATLAS Explain";
 }
 

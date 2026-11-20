@@ -78,6 +78,14 @@ export interface DocsFile {
 
 /* ---------- parsing ---------- */
 
+// Accented letters (Brasília, Genève, über): each named entity spelled out.
+const ACCENTED: Record<string, string> = {
+  agrave: "à", aacute: "á", acirc: "â", atilde: "ã", auml: "ä", aring: "å", egrave: "è", eacute: "é", ecirc: "ê", euml: "ë",
+  igrave: "ì", iacute: "í", icirc: "î", iuml: "ï", ograve: "ò", oacute: "ó", ocirc: "ô", otilde: "õ", ouml: "ö", oslash: "ø",
+  ugrave: "ù", uacute: "ú", ucirc: "û", uuml: "ü", yacute: "ý", ccedil: "ç", ntilde: "ñ", szlig: "ß",
+  Agrave: "À", Aacute: "Á", Acirc: "Â", Auml: "Ä", Egrave: "È", Eacute: "É", Ecirc: "Ê", Iacute: "Í", Oacute: "Ó", Ouml: "Ö",
+  Uacute: "Ú", Uuml: "Ü", Ccedil: "Ç", Ntilde: "Ñ", euro: "€", pound: "£",
+};
 const ENTITIES: Record<string, string> = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", rsquo: "’", lsquo: "‘", ldquo: "“", rdquo: "”", ndash: "–", mdash: "—", hellip: "…", frac14: "¼", frac12: "½", frac34: "¾" };
 export function plain(html: string): string {
   return html
@@ -86,7 +94,7 @@ export function plain(html: string): string {
     .replace(/<[^>]+>/g, " ")
     .replace(/&#(\d+);/g, (_, n: string) => String.fromCharCode(Number(n)))
     .replace(/&#x([0-9a-f]+);/gi, (_, n: string) => String.fromCharCode(parseInt(n, 16)))
-    .replace(/&([a-z]+\d*);/gi, (m, n: string) => ENTITIES[n.toLowerCase()] ?? m)
+    .replace(/&([a-z]+\d*);/gi, (m, n: string) => ACCENTED[n] ?? ENTITIES[n.toLowerCase()] ?? m)
     .replace(/\s+/g, " ")
     .trim()
     .replace(/ ([,.;:!?%)\]])/g, "$1")
@@ -343,7 +351,7 @@ export function readDocsFile(body: unknown): DocsFile | null {
   const statements = empty<Statement>(), speeches = empty<Speech>();
   for (const bank of DOC_BANKS) {
     statements[bank] = (Array.isArray(b.statements[bank]) ? b.statements[bank] : []).filter(okS).map((st) => ({ ...st, paragraphs: st.paragraphs.map(tidy) }));
-    speeches[bank] = (Array.isArray(b.speeches[bank]) ? b.speeches[bank] : []).filter(okP);
+    speeches[bank] = (Array.isArray(b.speeches[bank]) ? b.speeches[bank] : []).filter(okP).map((sp) => ({ ...sp, title: plain(sp.title), about: plain(sp.about ?? ""), speaker: sp.speaker == null ? null : plain(sp.speaker) }));
   }
   return { schema: DOCS_SCHEMA, generatedAt: b.generatedAt, statements, speeches };
 }

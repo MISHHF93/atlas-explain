@@ -39,7 +39,8 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 .lockup-home:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 3px; }
 /* Phones: the links take their own row under the logo and tools. */
 .section-nav { order: 3; flex: 1 0 100%; min-width: 0; }
-.section-links { display: flex; gap: 0.25rem; }
+.section-links { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.section-links::-webkit-scrollbar { display: none; }
 .section-link {
   display: inline-flex;
   align-items: center;
@@ -54,6 +55,7 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
   font-weight: 650;
   cursor: pointer;
 }
+.section-link { flex: 0 0 auto; white-space: nowrap; }
 .section-link:hover { background: var(--atlas-surface-2); color: var(--atlas-ink); }
 .section-link[aria-current="true"] { background: var(--atlas-accent-soft); color: var(--atlas-accent); }
 .section-link:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 2px; }
@@ -153,13 +155,6 @@ body.app-body { min-height: 100vh; min-height: 100dvh; background: var(--atlas-p
 
 /* ---------- Get started (/start): after Sign in, two ways in ---------- */
 .start-card { width: min(100%, 44rem); }
-.start-options { display: grid; gap: 0.9rem; }
-@media (min-width: 640px) { .start-options { grid-template-columns: 1fr 1fr; } }
-.start-option { display: grid; align-content: start; gap: 0.6rem; padding: 1rem; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius); background: var(--atlas-surface-2); min-width: 0; }
-.start-option-title { margin: 0; font-size: var(--atlas-text-base); font-weight: 650; color: var(--atlas-ink); }
-.start-option .fine { margin: 0; }
 .start-copy { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .start-copy code { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; padding: 0.4rem 0.55rem; border-radius: var(--atlas-radius-sm); background: var(--atlas-card); border: 1px solid var(--atlas-line); font-size: var(--atlas-text-xs); }
 .start-link { justify-self: start; color: var(--atlas-accent); font-size: var(--atlas-text-sm); font-weight: 600; }
-.start-option .primary { justify-self: start; }
-.start-page .signin-title:focus { outline: none; }

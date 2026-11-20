@@ -5,10 +5,10 @@ import type { SignalView } from "../core/signal";
 import { el, iconButton, prefersReducedMotion, replay } from "./dom";
 import { icon, type IconName } from "./icons";
 
-export type TabId = "today" | "explain" | "assets" | "signal" | "glossary" | "settings";
+export type TabId = "today" | "explain" | "economy" | "tools" | "assets" | "signal" | "glossary" | "settings";
 
 /** Every panel the shell can host. Only the tabs passed in (or TABS) appear in the navigation. */
-export const ALL_TAB_IDS: readonly TabId[] = ["today", "explain", "assets", "signal", "glossary", "settings"];
+export const ALL_TAB_IDS: readonly TabId[] = ["today", "explain", "economy", "tools", "assets", "signal", "glossary", "settings"];
 export type ThemeChoice = "system" | "light" | "dark";
 
 export interface TabDef { id: TabId; label: string; icon: IconName }

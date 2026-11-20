@@ -36,7 +36,7 @@ describe("sign in and account entry points", () => {
     for (const f of SITE_PAGES) {
       const head = /<header class="site-head">[\s\S]*?<\/header>/.exec(sitePage(f))?.[0] ?? "";
       expect(head, f).toContain('<a class="site-signin" href="/app/account" data-account-link hidden></a>');
-      expect(head, f).toContain('href="/start" data-start-cta>Get started</a>');
+      expect(head, f).toContain('href="/app" data-start-cta>Get started</a>');
       // No separate "Sign in" or "The app": they led to the same place.
       expect(head, f).not.toMatch(/>Sign in<|>The app</);
     }

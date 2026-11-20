@@ -44,9 +44,10 @@ describe("signing in is required for the web app", () => {
     }
   });
 
-  it("uses one page frame for Sign in and Get started, and one set of sign-in handlers", () => {
+  it("uses one page frame for Sign in, one set of sign-in handlers, and no Get started page in between", () => {
     expect(existsSync("src/wallet/full-page.ts")).toBe(true);
-    for (const f of ["src/wallet/signin-page.ts", "src/wallet/start-page.ts"]) expect(readFileSync(f, "utf8"), f).toContain('from "./full-page"');
+    expect(readFileSync("src/wallet/signin-page.ts", "utf8")).toContain('from "./full-page"');
+    expect(existsSync("src/wallet/start-page.ts")).toBe(false);
     const app = readFileSync("src/web/app.ts", "utf8");
     expect(app.match(/signInWithGoogle\(\)/g)).toHaveLength(1);
     expect(app).toContain("accountPanel(null, accountHandlers(backend), { compact: true })");

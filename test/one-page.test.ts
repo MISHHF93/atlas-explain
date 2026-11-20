@@ -6,9 +6,9 @@ const app = readFileSync("src/web/app.ts", "utf8");
 const shell = readFileSync("src/wallet/shell.ts", "utf8");
 
 describe("the web app is one page", () => {
-  it("stacks Explain, Today, Learn and Assets in that order, with Account out of the navigation", () => {
+  it("stacks Explain, Today, Economy, Assets, Tools and Learn in that order, with Account out of the navigation", () => {
     const tabs = /export const APP_TABS[^=]*= \[([\s\S]*?)\];/.exec(app)?.[1] ?? "";
-    expect([...tabs.matchAll(/id: "(\w+)"/g)].map((m) => m[1])).toEqual(["explain", "today", "glossary", "assets"]);
+    expect([...tabs.matchAll(/id: "(\w+)"/g)].map((m) => m[1])).toEqual(["explain", "today", "economy", "assets", "tools", "glossary"]);
     expect(app).toContain('layout: "page"');
   });
 

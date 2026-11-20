@@ -1255,3 +1255,16 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 
 /* A stock or fund without a licensed price shows its latest official figure instead. */
 .asset-nums .asset-figure + .asset-change { font-weight: 500; text-align: right; max-width: 11rem; line-height: 1.3; }
+
+/* Economy and Tools sections */
+.econ-source { margin: 0; }
+.econ-table-wrap { overflow-x: auto; }
+.econ-table { width: 100%; border-collapse: collapse; font-size: var(--atlas-text-xs); font-variant-numeric: tabular-nums; }
+.econ-table th, .econ-table td { padding: 0.35rem 0.4rem; border-bottom: 1px solid color-mix(in srgb, var(--atlas-ink) 10%, transparent); text-align: right; white-space: nowrap; }
+.econ-table th[scope="row"], .econ-table tr:first-child th:first-child { text-align: left; }
+.tool-grid { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+.tool-field { display: grid; gap: 0.25rem; font-size: var(--atlas-text-xs); font-weight: 600; }
+.tool-field input, .tool-field select, .tool-text { font: inherit; font-weight: 400; min-height: 2.5rem; padding: 0.45rem 0.6rem; border: 1px solid color-mix(in srgb, var(--atlas-ink) 18%, transparent); border-radius: var(--atlas-radius); background: var(--atlas-surface, transparent); color: inherit; width: 100%; box-sizing: border-box; }
+.tool-text { min-height: 5.5rem; resize: vertical; }
+.tool-out { display: grid; gap: 0.35rem; margin-top: 0.6rem; }
+.tool-out p { margin: 0; }

@@ -59,8 +59,6 @@ import { readAccountHint, saveAccountHint } from "../core/account-hint";
 /** Session storage key for an ATLAS desk link that arrived before sign-in. */
 const PENDING_HASH_KEY = "atlas-explain:pending-link";
 import { createSignInPage } from "../wallet/signin-page";
-import { createStartPage } from "../wallet/start-page";
-import { MCP_URL } from "../core/links";
 import { tracker } from "../core/analytics";
 import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
 import { RECENT_KEY, readRecent } from "../core/recent";
@@ -70,8 +68,10 @@ import { RECENT_KEY, readRecent } from "../core/recent";
 export const APP_TABS: readonly TabDef[] = [
   { id: "explain", label: "Explain", icon: "sparkle" },
   { id: "today", label: "Today", icon: "signal" },
-  { id: "glossary", label: "Learn", icon: "book" },
+  { id: "economy", label: "Economy", icon: "calendar" },
   { id: "assets", label: "Assets", icon: "coins" },
+  { id: "tools", label: "Tools", icon: "card" },
+  { id: "glossary", label: "Learn", icon: "book" },
 ];
 
 const THEME_KEY = "atlas-explain-theme";
@@ -159,12 +159,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   // The Sign in page (/signin) sits over the app frame as its own page.
   const signInPage = createSignInPage();
   host.append(signInPage.node);
-  // Get started (/start): after Sign in, choose the AI-assistant connector or the web app.
-  const startPage = createStartPage({
-    connectorUrl: MCP_URL,
-    onOpenApp: () => navigate({ kind: "tab", tab: "explain" }, { replace: true }),
-  });
-  host.append(startPage.node);
   let signInNote: string | undefined;
   // Signing in is required for the web app (owner decision, 16 Nov 2026). Every app address shows
   // the Sign in page first unless this browser is signed in; where the visitor was heading is kept
@@ -235,23 +229,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       }
     }
     if (next.kind !== "signin") hideSignIn();
-    if (next.kind === "start") showStart();
-    else hideStart();
     if (isAccountRoute(next)) openAccountRoute(next);
-  }
-
-  /** Get started: shown over the app frame, like the Sign in page. */
-  function showStart(): void {
-    shell.closeSheet();
-    shell.frame.inert = true;
-    document.title = titleFor({ kind: "start" });
-    startPage.show();
-  }
-
-  function hideStart(): void {
-    if (!startPage.open) return;
-    startPage.hide();
-    shell.frame.inert = false;
   }
 
   /** Back and forward buttons: show whatever the address now says. */
@@ -259,8 +237,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     route = parseRoute(location.pathname);
     document.title = titleFor(route);
     if (route.kind !== "signin") hideSignIn();
-    if (route.kind === "start") showStart();
-    else hideStart();
     following = true;
     try {
       shell.closeSheet();
@@ -524,6 +500,20 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     else if (route.kind === "asset") await showRouteSheet();
   }
 
+  /* ---------- Economy and Tools: the connector's other answers, loaded after start ---------- */
+
+  const economyHead = el("div", "panel-title");
+  economyHead.append(el("h1", undefined, "Economy"), el("span", "fine", "Official figures, central banks, auctions, countries"));
+  const economySlot = el("div", "stack");
+  shell.panels.economy.append(economyHead, economySlot);
+  void import("../wallet/economy-section").then((mod) => mod.mountEconomy(economySlot, (text) => sendToExplain(text))).catch(() => economySlot.replaceChildren(el("p", "fine", "The economy couldn't be loaded right now.")));
+
+  const toolsHead = el("div", "panel-title");
+  toolsHead.append(el("h1", undefined, "Tools"), el("span", "fine", "Your numbers, worked out here; nothing is sent"));
+  const toolsSlot = el("div", "stack");
+  shell.panels.tools.append(toolsHead, toolsSlot);
+  void import("../wallet/tools-section").then((mod) => mod.mountTools(toolsSlot)).catch(() => toolsSlot.replaceChildren(el("p", "fine", "The tools couldn't be loaded right now.")));
+
   /* ---------- Learn tab (glossary) ---------- */
 
   const glossaryHead = el("div", "panel-title");
@@ -711,7 +701,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     const deepLink = route.kind !== "tab" || route.tab !== "explain";
     if (!readFlag(ONBOARDED_KEY) && !preview.has("tab") && !preview.has("demo") && !deepLink && !location.hash) showOnboarding();
     if (isAccountRoute(route) || route.kind === "not_found") void showRouteSheet();
-    if (route.kind === "start") showStart();
     requestAnimationFrame(() => jumpToRouteSection());
     if (!backend) return;
     void backend.loadSettings().then(({ settings, priceFeed: next }) => {
@@ -892,13 +881,13 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     navigate({ kind: "signin" }, { replace: true });
   }
 
-  /** Back to where sign-in was asked from (?next=/app/...), otherwise Get started, to choose a way in. */
+  /** Back to where sign-in was asked from (?next=/app/...), otherwise straight into the app. */
   function afterSignIn(): void {
     hideSignIn();
     const next = new URLSearchParams(location.search).get("next");
     const target = next ? parseRoute(next) : null;
     shell.closeSheet();
-    navigate(target && target.kind !== "not_found" && !isAccountRoute(target) ? target : { kind: "start" }, { replace: true });
+    navigate(target && target.kind !== "not_found" && !isAccountRoute(target) ? target : { kind: "tab", tab: "explain" }, { replace: true });
     const pending = takePendingHash();
     if (pending) location.hash = pending;
   }
