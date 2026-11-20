@@ -32,7 +32,7 @@ import { parseBlsSchedule } from "./economy.ts";
 import { boeBankRateUrl, parseBoeBankRate, parseBoeMpcDates, parseEcbDepositRate, parseTreasuryAuctions, type Auction } from "./economy.ts";
 import { ECONOMY_SCHEMA, ECONOMY_SOURCES, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
 import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, oecdSharesUrl, parseData360, parseOecdShares, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
-import { SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, readTickerMap, stockFromSec } from "./sec.ts";
+import { PREDECESSOR_CIK, SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, mergePredecessorFacts, readTickerMap, stockFromSec } from "./sec.ts";
 
 export const CAPTURE_UA = `ATLAS Explain data capture (+${EXPLAIN_WEB_URL}/how-its-built)`;
 
@@ -100,7 +100,9 @@ async function runPart(part: MarketPart, env: CaptureEnv): Promise<Asset[]> {
         if (!hit) return;
         try {
           const submissions = await sec(`https://data.sec.gov/submissions/CIK${cik10(hit.cik)}.json`);
-          const facts = await sec(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik10(hit.cik)}.json`).catch(() => null);
+          const own = await sec(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik10(hit.cik)}.json`).catch(() => null);
+          const before = PREDECESSOR_CIK[ticker];
+          const facts = before ? mergePredecessorFacts(own, await sec(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik10(before)}.json`).catch(() => null), before) : own;
           const asset = build(hit.cik, submissions, facts);
           if (asset) out.push(asset);
         } catch (error) {

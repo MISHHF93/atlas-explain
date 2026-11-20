@@ -49,8 +49,10 @@ export interface ImpactResult {
 export function rateChangeImpact(input: ImpactInput): ImpactResult | { error: string } {
   const cents = (v: number) => Math.round(v * 100) / 100;
   const money = (v: number) => "$" + cents(Math.abs(v)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const signed = (v: number) => (v > 0 ? "+" : v < 0 ? "-" : "") + money(v);
-  const pts = (v: number) => (v > 0 ? "+" : "") + Number(v.toFixed(3)) + " pt";
+  // The balance the person typed, without ".00" when it is whole dollars.
+  const amount = (v: number) => (Number.isInteger(v) ? "$" + Math.abs(v).toLocaleString("en-US") : money(v));
+  const signed = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + money(v);
+  const pts = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + Number(Math.abs(v).toFixed(3)) + " pt";
   const pct = (v: number) => Number(v.toFixed(3)) + "%";
   const ok = (v: unknown, lo: number, hi: number): v is number => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi;
 
@@ -102,7 +104,7 @@ export function rateChangeImpact(input: ImpactInput): ImpactResult | { error: st
     row("Interest in the first month", firstInterest(rate), firstInterest(newRate));
     row("Payments over a year", before * 12, after * 12);
     const d = cents(after - before);
-    lines.push(`At ${pct(rate)}, a ${money(balance)} mortgage paid off over ${months} months costs ${money(before)} a month. At ${pct(newRate)} (${pts(input.changePts)}) it would be ${money(after)}: ${signed(d)} a month, ${signed(d * 12)} a year.`);
+    lines.push(`At ${pct(rate)}, a ${amount(balance)} mortgage paid off over ${months} months costs ${money(before)} a month. At ${pct(newRate)} (${pts(input.changePts)}) it would be ${money(after)}: ${signed(d)} a month, ${signed(d * 12)} a year.`);
     lines.push(`If your payment stays fixed while the rate moves (common with Canadian variable mortgages), the payment doesn't change; instead about ${money(Math.abs(cents(firstInterest(newRate) - firstInterest(rate))))} a month ${input.changePts > 0 ? "more" : "less"} goes to interest, and the rest to paying down the balance.`);
     assumptions.push(`Interest compounded ${compounding === "semi-annual" ? "twice a year" : "monthly"}${country === "CA" && !input.compounding ? " (how Canadian lenders state mortgage rates)" : ""}, paid monthly, rounded to the cent.`);
     assumptions.push(`The rate stays at ${pct(newRate)} for the rest of the ${months} months.`);
@@ -111,21 +113,21 @@ export function rateChangeImpact(input: ImpactInput): ImpactResult | { error: st
     row("Interest a month", interest(rate), interest(newRate));
     row("Interest a year", interest(rate) * 12, interest(newRate) * 12);
     const d = cents(interest(newRate) - interest(rate));
-    lines.push(`On a ${money(balance)} HELOC balance at ${pct(rate)}, interest is about ${money(interest(rate))} a month. At ${pct(newRate)} (${pts(input.changePts)}) it would be about ${money(interest(newRate))}: ${signed(d)} a month, ${signed(d * 12)} a year.`);
+    lines.push(`On a ${amount(balance)} HELOC balance at ${pct(rate)}, interest is about ${money(interest(rate))} a month. At ${pct(newRate)} (${pts(input.changePts)}) it would be about ${money(interest(newRate))}: ${signed(d)} a month, ${signed(d * 12)} a year.`);
     assumptions.push("Interest-only, worked out as balance × rate ÷ 12; lenders usually charge daily, so each month differs by a few cents.");
   } else if (product === "savings") {
     const yearly = (r: number) => cents((balance * r) / 100);
     row("Interest a year", yearly(rate), yearly(newRate));
     row("Interest a month", yearly(rate) / 12, yearly(newRate) / 12);
     const d = cents(yearly(newRate) - yearly(rate));
-    lines.push(`On ${money(balance)} in savings at ${pct(rate)}, interest is about ${money(yearly(rate))} a year. At ${pct(newRate)} (${pts(input.changePts)}) it would be about ${money(yearly(newRate))}: ${signed(d)} a year.`);
+    lines.push(`On ${amount(balance)} in savings at ${pct(rate)}, interest is about ${money(yearly(rate))} a year. At ${pct(newRate)} (${pts(input.changePts)}) it would be about ${money(yearly(newRate))}: ${signed(d)} a year.`);
     assumptions.push("Simple yearly interest on a steady balance; accounts that pay interest monthly earn slightly more. Interest is taxable in many cases.");
   } else {
     const earned = (r: number) => cents(months! >= 12 ? balance * (Math.pow(1 + r / 100, months! / 12) - 1) : (balance * r * months!) / 1200);
     row(`Interest over ${months} months`, earned(rate), earned(newRate));
     const d = cents(earned(newRate) - earned(rate));
     const kind = country === "CA" ? "GIC" : "CD";
-    lines.push(`Renewing a ${money(balance)} ${kind} for ${months} months at ${pct(rate)} earns about ${money(earned(rate))}. At ${pct(newRate)} (${pts(input.changePts)}) it would earn about ${money(earned(newRate))}: ${signed(d)} over the term.`);
+    lines.push(`Renewing a ${amount(balance)} ${kind} for ${months} months at ${pct(rate)} earns about ${money(earned(rate))}. At ${pct(newRate)} (${pts(input.changePts)}) it would earn about ${money(earned(newRate))}: ${signed(d)} over the term.`);
     assumptions.push(months! >= 12 ? "Interest compounded yearly and paid at maturity." : "Simple interest for a term under a year, paid at maturity.");
   }
   lines.push("This works out your numbers under the change you gave. It doesn't say whether rates will change; that's for each central bank and lender to decide.");

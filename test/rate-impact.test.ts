@@ -44,6 +44,9 @@ describe("rate_change_impact: arithmetic on the person's own numbers", () => {
     expect(p.change).toBe(Math.round((p.after - p.before) * 100) / 100);
     expect(row(r, "Interest in the first month").before).toBe(412.39);
     expect(r.lines[0]).toContain("$581.60 a month");
+    // A whole-dollar balance reads as typed, and a cut reads with a real minus sign.
+    expect(r.lines[0]).toContain("a $100,000 mortgage");
+    expect(r.lines[0]).toContain("(−0.25 pt) it would be $567.46: −$14.14 a month");
     expect(r.lines[1]).toContain("payment stays fixed");
     expect(r.follows).toContain("Bank of Canada");
     expect(r.assumptions[0]).toContain("twice a year");

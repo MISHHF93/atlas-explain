@@ -270,8 +270,8 @@
       }
     ],
     "lines": [
-      "After 30 years: about 261,129 without the fee and 211,129 with a 1% yearly fee.",
-      "The fee costs about 50,000, or 19.15% of the final balance, because each year's fee also stops that money from growing.",
+      "After 30 years: about $261,129 without the fee and $211,129 with a 1% yearly fee.",
+      "The fee costs about $50,000, or 19.15% of the final balance, because each year's fee also stops that money from growing.",
       "Same assumed return in both lines; only the fee differs. Real returns vary and are never guaranteed."
     ],
     "xLabel": "Years",

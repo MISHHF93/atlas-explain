@@ -24,6 +24,30 @@ export const SEC_ETFS: readonly { ticker: string; name: string; category: "index
   { ticker: "GLD", name: "SPDR Gold Trust", category: "commodity", about: "Holds physical gold bars in a vault." },
 ];
 
+/**
+ * Companies whose shares moved to a new SEC registrant (a new parent company) that hasn't filed an annual
+ * report yet. Their latest full-year figures are still under the old registrant number, so the capture reads
+ * both; each figure links to the filing it came from. ExxonMobil's new parent (CIK 2115436) took over in 2026.
+ */
+export const PREDECESSOR_CIK: Readonly<Record<string, number>> = { XOM: 34088 };
+
+/**
+ * Adds the predecessor's annual (us-gaap) figures to the current registrant's facts, each point tagged with the
+ * registrant that filed it. Cover-page facts (shares outstanding) stay the current registrant's own.
+ */
+export function mergePredecessorFacts(current: string | null, predecessor: string | null, predecessorCik: number): string | null {
+  if (!predecessor) return current;
+  const cur = (current ? JSON.parse(current) : {}) as Facts;
+  const old = JSON.parse(predecessor) as Facts;
+  const gaap = { ...(cur.facts?.["us-gaap"] ?? {}) };
+  for (const [name, concept] of Object.entries(old.facts?.["us-gaap"] ?? {})) {
+    const units = { ...(gaap[name]?.units ?? {}) };
+    for (const [unit, points] of Object.entries(concept.units ?? {})) units[unit] = [...(units[unit] ?? []), ...points.map((p) => ({ ...p, cik: predecessorCik }))];
+    gaap[name] = { units };
+  }
+  return JSON.stringify({ ...cur, facts: { ...(cur.facts ?? {}), "us-gaap": gaap } });
+}
+
 const STOCK_TERMS = ["filings", "market_hours", "market_order"];
 const US_HOURS = "Mon–Fri, 9:30 am–4:00 pm New York time (closed on US market holidays)";
 
@@ -59,6 +83,8 @@ interface XbrlPoint {
   fp?: string;
   form?: string;
   filed?: string;
+  /** The registrant that filed it, when not the asset's own (see PREDECESSOR_CIK). */
+  cik?: number;
 }
 
 type Facts = { facts?: Record<string, Record<string, { units?: Record<string, XbrlPoint[]> }>> };
@@ -119,7 +145,8 @@ function count(v: number): string {
   return v.toLocaleString("en-US");
 }
 
-function secSource(cik: number, p: { accn?: string }, label: string): SourceRef {
+function secSource(assetCik: number, p: { accn?: string; cik?: number }, label: string): SourceRef {
+  const cik = p.cik ?? assetCik;
   return {
     ...SOURCES.sec_edgar,
     label,

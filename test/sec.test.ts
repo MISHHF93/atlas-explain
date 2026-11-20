@@ -2,12 +2,14 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { validateAsset } from "../src/core/asset-schema";
 import {
+  PREDECESSOR_CIK,
   SEC_ETFS,
   annualValue,
   etfFromSec,
   figuresFromFacts,
   filingUrl,
   latestInstant,
+  mergePredecessorFacts,
   money,
   readTickerMap,
   recentFilings,
@@ -91,5 +93,24 @@ describe("SEC company figures", () => {
     expect(money(478_834_000_000)).toBe("$478.8 billion");
     expect(money(-267_000_000)).toBe("−$267.0 million");
     expect(filingUrl(320193, "0000320193-26-000026")).toBe("https://www.sec.gov/Archives/edgar/data/320193/000032019326000026/");
+  });
+});
+
+describe("a company whose shares moved to a new parent registrant (ExxonMobil, 2026)", () => {
+  const point = (end: string, val: number, accn: string) => ({ start: `${end.slice(0, 4)}-01-01`, end, val, accn, form: "10-K", filed: "2026-02-18" });
+  const old = JSON.stringify({ facts: { "us-gaap": { Revenues: { units: { USD: [point("2025-12-31", 332_238_000_000, "0000034088-26-000045")] } }, NetIncomeLoss: { units: { USD: [point("2025-12-31", 28_844_000_000, "0000034088-26-000045")] } } } } });
+  const cur = JSON.stringify({ facts: { dei: { EntityCommonStockSharesOutstanding: { units: { shares: [{ end: "2026-09-30", val: 4_080_000_000, filed: "2026-11-02", accn: "0002115436-26-000020" }] } } } } });
+
+  it("reads the full-year figures from the old registrant and links each to the filing it came from", () => {
+    expect(PREDECESSOR_CIK.XOM).toBe(34088);
+    const facts = figuresFromFacts(2115436, JSON.parse(mergePredecessorFacts(cur, old, 34088)!), Date.parse("2026-11-20T00:00:00Z"));
+    const by = Object.fromEntries(facts.map((f) => [f.label, f]));
+    expect(by.Revenue?.value).toBe("$332.2 billion");
+    expect(by.Revenue?.source.attribution.href).toBe("https://www.sec.gov/Archives/edgar/data/34088/000003408826000045/");
+    expect(by["Shares outstanding"]?.source.attribution.href).toBe("https://www.sec.gov/Archives/edgar/data/2115436/000211543626000020/");
+  });
+
+  it("changes nothing when the old registrant's facts can't be read", () => {
+    expect(mergePredecessorFacts(cur, null, 34088)).toBe(cur);
   });
 });
