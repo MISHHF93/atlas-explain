@@ -7,17 +7,17 @@
  * with trade wording is dropped. Missing numbers stay missing; nothing is filled in.
  * No balances, accounts or keys are read, even if a payload carried them.
  */
-import { ATLAS_ORIGIN } from "./atlas-origin";
-import { MIN_HIT_RATE, MIN_SAMPLE_SIZE, PAPER_PREDICTION_LABEL, type SignalColour } from "./signal";
+import { ATLAS_ORIGIN } from "./atlas-origin.ts";
+import { MIN_HIT_RATE, MIN_SAMPLE_SIZE, PAPER_PREDICTION_LABEL, type SignalColour } from "./signal.ts";
 import {
   MCP_ASSETS_SCHEMA,
   adaptMcpAsset,
   callMcp,
   mcpToolNames,
   structuredContent,
-} from "./atlas-mcp";
+} from "./atlas-mcp.ts";
 
-export { ATLAS_ORIGIN } from "./atlas-origin";
+export { ATLAS_ORIGIN } from "./atlas-origin.ts";
 export const ASSETS_PATH = "/api/explain/assets";
 export const ASSETS_SCHEMA = "atlas-explain-assets-v1";
 export const ASSET_SCHEMA = "atlas-explain-asset-v1";

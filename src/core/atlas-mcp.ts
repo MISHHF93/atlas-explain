@@ -4,7 +4,7 @@
  * POST http://localhost:3000/api/mcp/public — same host permission as the REST catalog.
  * Education only: never sends cookies. The hosted web app must not call this.
  */
-import { ATLAS_ORIGIN } from "./atlas-origin";
+import { ATLAS_ORIGIN } from "./atlas-origin.ts";
 
 export const MCP_PATH = "/api/mcp/public";
 export const MCP_ASSETS_SCHEMA = "atlas-mcp-assets-v1";

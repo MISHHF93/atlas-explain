@@ -7,8 +7,8 @@
  * - No figure means `quote: null` plus a plain reason. Nothing is zero-filled or invented.
  * - No account-shaped fields, and no trade instructions in any text.
  */
-import type { AssetView, CatalogView, LeanView } from "./assets";
-import { LOCAL_COIN_LOGOS } from "./coin-logos";
+import type { AssetView, CatalogView, LeanView } from "./assets.ts";
+import { LOCAL_COIN_LOGOS } from "./coin-logos.ts";
 
 export const ASSET_CLASSES = ["crypto", "stock", "etf", "index", "forex", "commodity", "future", "option", "rate"] as const;
 export type AssetClass = (typeof ASSET_CLASSES)[number];
