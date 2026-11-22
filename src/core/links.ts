@@ -11,6 +11,8 @@
 /* ---------- the website and web app ---------- */
 export const EXPLAIN_WEB_URL = "https://atlas-explain.web.app";
 export const APP_URL = `${EXPLAIN_WEB_URL}/app`;
+/** Firebase's second address for the same site; both may read the owner's admin view (src/mcp/admin.ts). */
+export const EXPLAIN_WEB_ALT_URL = "https://atlas-explain.firebaseapp.com";
 /** The one page for setting up the connector in AI assistants. */
 export const CONNECT_URL = `${EXPLAIN_WEB_URL}/connect`;
 

@@ -5,7 +5,7 @@
  *   (404.html for the rest; the shared header and footer come from src/site/frame.ts)
  * App (one lazy-loaded bundle, app.html), one scrolling page with a section per address:
  *   /app (Explain)  /app/today  /app/economy  /app/tools  /app/learn  /app/assets  /app/assets/:symbol (sheet)
- *   /app/account and /signin (the account sheet)
+ *   /app/account and /signin (the account sheet); /app/admin opens it too (the owner's usage card)
  *   /start (an older Get started address: opens the app, after Sign in when needed)
  */
 
@@ -36,6 +36,7 @@ const ALIASES: Record<string, AppTab> = {
   "/app/glossary": "glossary",
   "/app/settings": "settings",
   "/app/profile": "settings",
+  "/app/admin": "settings",
   "/app/signal": "today",
   "/start": "explain",
 };

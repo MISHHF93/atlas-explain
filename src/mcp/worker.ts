@@ -1,12 +1,14 @@
 /**
  * Cloudflare Workers entry for ATLAS Explain's live side: the MCP connector at /mcp, the live data
  * at /data/v1 (refreshed on visit), and the backup crons (all in src/mcp/live-data.ts). The runtime
- * treats every export of this file as an entry point, so it exports only the handler object.
+ * treats every export of this file as an entry point, so it exports only the handler object and the
+ * UsageStats Durable Object class (connector usage counts, src/mcp/stats.ts).
  * Deployed with `npm run deploy:mcp` (wrangler.toml). See docs/MCP.md.
  */
 import { handleRequest, runCapture, type WaitContext, type WorkerEnv } from "./live-data";
 import { setFeatures } from "./server";
 import { setPartnerCredits } from "./partner";
+export { UsageStats } from "./stats";
 
 export default {
   fetch(request: Request, env: WorkerEnv, ctx: WaitContext): Promise<Response> {

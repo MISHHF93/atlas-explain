@@ -13,6 +13,8 @@
  * The minimum gaps keep KV inside its free 1,000 writes a day and the sources inside their limits.
  * Deployed with `npm run deploy:mcp` (wrangler.toml). See docs/MCP.md.
  */
+import { ADMIN_STATS_PATH, handleAdminStats } from "./admin";
+import { recordEvent, type CallEvent, type StatsNamespace } from "./stats";
 import { handleHttp, MCP_PATH } from "./http";
 import { API_PREFIX, bearer, handlePartnerApi, handlePartnerMcp } from "./partner";
 import { DATA_SITE_URL } from "../core/links";
@@ -47,6 +49,10 @@ export interface WorkerEnv {
   V2_TOOLS?: string;
   /** "1" counts partner usage in ATLAS credits (docs/USAGE_PRICING.md). Anything else: one call per request. */
   CREDITS_ENABLED?: string;
+  /** Durable Object holding connector usage counts (src/mcp/stats.ts). Without it nothing is counted. */
+  STATS?: StatsNamespace;
+  /** Worker secret: the emails allowed into the admin view (src/mcp/admin.ts). */
+  ADMIN_EMAILS?: string;
 }
 
 export interface WaitContext {
@@ -285,11 +291,15 @@ export async function serveDataIndex(request: Request, env: WorkerEnv): Promise<
 export function handleRequest(request: Request, env: WorkerEnv, ctx?: WaitContext): Promise<Response> {
   const path = new URL(request.url).pathname;
   if (path === STRIPE_WEBHOOK_PATH) return handleStripeWebhook(request, env);
+  if (path === ADMIN_STATS_PATH) return handleAdminStats(request, env);
+  // Counts each tool call and connection, after the answer, without holding it up.
+  const stats = env.STATS;
+  const onCall = stats && ctx ? (e: CallEvent) => ctx.waitUntil(recordEvent(stats, e)) : undefined;
   if (path === "/data/v1/" || path === "/data/v1" || path === "/data/v1/index.json") return serveDataIndex(request, env);
   const file = fileOf(path);
   if (file) return serveData(request, env, file, ctx);
   // The partner sandbox (src/mcp/partner.ts): REST under /api/v1, and the connector under a partner key.
   if (path === API_PREFIX || path.startsWith(`${API_PREFIX}/`)) return handlePartnerApi(request, env.DATA, ownDataFetch(env, ctx), ctx);
-  if (path === MCP_PATH && bearer(request)?.startsWith("atlx_")) return handlePartnerMcp(request, env.DATA, ctx, (r) => handleHttp(r, ownDataFetch(env, ctx)));
-  return handleHttp(request, ownDataFetch(env, ctx));
+  if (path === MCP_PATH && bearer(request)?.startsWith("atlx_")) return handlePartnerMcp(request, env.DATA, ctx, (r) => handleHttp(r, ownDataFetch(env, ctx), onCall));
+  return handleHttp(request, ownDataFetch(env, ctx), onCall);
 }

@@ -16,6 +16,17 @@ crons = ["*/10 * * * *", "37 */3 * * *", "47 */6 * * *", "17 */6 * * *"]
 binding = "DATA"
 id = "3b50fb5cbf73422f89f22cfbbc2d64b9"
 
+# Connector usage counts for the owner's admin view (src/mcp/stats.ts, docs/ADMIN.md): one SQLite-backed
+# Durable Object, free on the Workers Free plan. Only counts are kept, never questions, answers or IPs.
+# Who may read them is the ADMIN_EMAILS secret: `npx wrangler@4 secret put ADMIN_EMAILS`.
+[[durable_objects.bindings]]
+name = "STATS"
+class_name = "UsageStats"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UsageStats"]
+
 # v2 tools switched on (docs/V2_DESIGN.md, feature flags): a comma list, for example "rate_change_impact".
 # Empty keeps the public connector exactly as it is.
 [vars]

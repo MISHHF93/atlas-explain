@@ -5,6 +5,7 @@
  * Hosted on Cloudflare Workers' free plan (src/mcp/worker.ts); see docs/MCP.md.
  */
 import { ICON_PNG_512_BASE64, ICON_PNG_64_BASE64, ICON_SVG } from "./icon-data";
+import { eventOf, type CallEvent } from "./stats";
 import { ALL_PROTOCOLS, CAPABILITIES, EDUCATION_LINE, handle, ICONS, INSTRUCTIONS, modernVersion, PROMPTS, SERVER_NAME, SERVER_VERSION, visibleTools, type Fetcher } from "./server";
 
 export const MCP_PATH = "/mcp";
@@ -113,7 +114,11 @@ function headerMismatch(request: Request, message: { method?: string; params?: R
   return null;
 }
 
-export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Response> {
+/**
+ * `onCall` hears one count per tool call or new connection (src/mcp/stats.ts), after the answer is ready.
+ * It never sees the question or the answer, and a failure in it never changes the response.
+ */
+export async function handleHttp(request: Request, fetcher: Fetcher, onCall?: (e: CallEvent) => void): Promise<Response> {
   const url = new URL(request.url);
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (!originAllowed(request.headers.get("Origin"))) return rpcError(-32600, "Forbidden origin", 403);
@@ -177,6 +182,14 @@ export async function handleHttp(request: Request, fetcher: Fetcher): Promise<Re
     if (problem) return json({ jsonrpc: "2.0", id: msg.id, error: { code: -32020, message: `Header mismatch: ${problem}` } }, 400);
   }
   const reply = await handle(msg, fetcher);
+  if (onCall) {
+    try {
+      const e = eventOf(msg as { method?: string; params?: Record<string, unknown> }, reply as { error?: unknown; result?: unknown } | null, request.headers.get("User-Agent"));
+      if (e) onCall(e);
+    } catch {
+      /* counting never affects the answer */
+    }
+  }
   // Notifications and responses from the client get 202 with no body.
   if (!reply) return new Response(null, { status: 202, headers: CORS });
   const { status, ...body } = reply;

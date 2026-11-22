@@ -28,7 +28,7 @@
     <main id="main" tabindex="-1">
       <article class="doc legal">
         <h1>Privacy policy</h1>
-        <p class="fine">Last updated 15 November 2026</p>
+        <p class="fine">Last updated 22 November 2026</p>
         <p class="lede">ATLAS Explain explains finance terms and market news in plain language. It is built to use as little of your data as possible: only the text you choose to explain, and only when you ask.</p>
 
         <h2 id="who">Who we are</h2>
@@ -57,7 +57,8 @@
 
         <h2 id="connector">If you use the AI-assistant connector</h2>
         <p>The ATLAS Explain connector (atlas-explain-mcp.atlas-explain.workers.dev) is read-only and needs no account. It receives only what your assistant sends to one of its tools: a term, an asset or coin name, a time range or a learning topic. It never receives your conversation, your assistant account or anything on your computer, and it stores none of the requests it answers.</p>
-        <p>It runs on Cloudflare Workers, which processes each request for us as a service provider and may keep short operational logs, such as IP address and time, to run and protect the service. To answer, the connector reads only our own data site (atlas-explain-data.web.app), which our scheduled data job fills from public sources, including crypto prices from Kraken and CoinGecko. Your IP address is never passed on to any of them. Your chat with the assistant is covered by your assistant provider's own privacy policy.</p>
+        <p>To see how much the connector is used, it keeps daily counts: how many times each tool was called, how many calls failed, and which kind of assistant made them (for example Claude or ChatGPT, read from the name its software sends, or the name it gives when it connects). Only those totals are kept, for up to about 13 months, and only the site's owner can see them. They never include what was asked, the answer, your IP address or anything that identifies you.</p>
+        <p>It runs on Cloudflare Workers, which processes each request for us as a service provider and may keep short operational logs, such as IP address and time, to run and protect the service. To answer, the connector reads only its own copy of our published data, which our scheduled data job fills from public sources, including crypto prices from Kraken and CoinGecko. Your IP address is never passed on to any of them. Your chat with the assistant is covered by your assistant provider's own privacy policy.</p>
 
         <h2 id="analytics">Cookies, storage and analytics</h2>
         <p>ATLAS Explain stores a few items in your browser to work: your theme, history, watchlist, recently viewed assets, and whether you've seen the welcome steps. Firebase stores sign-in information so you stay signed in.</p>

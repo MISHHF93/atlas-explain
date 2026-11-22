@@ -1268,3 +1268,14 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .tool-text { min-height: 5.5rem; resize: vertical; }
 .tool-out { display: grid; gap: 0.35rem; margin-top: 0.6rem; }
 .tool-out p { margin: 0; }
+
+/* Account sheet: the owner's Connector usage card (src/wallet/admin-usage.ts). */
+.admin-slot:empty { display: none; }
+.admin-card { margin-block: 1rem; }
+.admin-total { margin: 0.25rem 0 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.admin-bars { display: flex; align-items: flex-end; gap: 2px; height: 96px; padding-bottom: 2px; border-bottom: 1px solid var(--atlas-line); }
+.admin-bar { flex: 1 1 0; min-width: 2px; background: var(--atlas-accent); border-radius: 2px 2px 0 0; }
+.admin-bar.has-errors { background: linear-gradient(to top, var(--atlas-signal-down) 0 3px, var(--atlas-accent) 3px); }
+.admin-axis { display: flex; justify-content: space-between; margin: 0.25rem 0 0.75rem; }
+.admin-sub { margin: 0.75rem 0 0.25rem; font-size: var(--atlas-text-sm); }
+.admin-list .econ-table th[scope="row"] { white-space: normal; word-break: break-word; }
