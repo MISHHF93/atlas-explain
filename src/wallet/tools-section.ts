@@ -1,8 +1,9 @@
 /**
  * The Tools section of the web app: the connector's rate_change_impact, money_maths and scam_red_flags, run in
- * the browser on the numbers and text the person types. Nothing is sent anywhere. Arithmetic and warning signs
+ * the browser on the numbers and text the person types, and inflation_calculator on official yearly price indexes. Nothing is sent anywhere. Arithmetic and warning signs
  * only: never a forecast or a recommendation.
  */
+import { coverage, inflationCalculator, type PriceCountry } from "../core/inflation";
 import { moneyMaths } from "../core/money-maths";
 import { rateChangeImpact, type ImpactProduct } from "../core/rate-impact";
 import { CHECKS, matchRedFlags, REPORT } from "../core/red-flags";
@@ -55,6 +56,45 @@ function rateCard(): HTMLElement {
   for (const i of [country, product, balance, rate, change, months]) i.addEventListener("input", run);
   const form = el("div", "tool-grid");
   form.append(field("Where", country), field("What", product), field("Balance ($)", balance), field("Rate today (%)", rate), field("Change (points)", change), field("Months (mortgage left, or GIC/CD term)", months));
+  c.append(form, o);
+  run();
+  return c;
+}
+
+function inflationCard(): HTMLElement {
+  const c = card("tool-inflation", "What money from one year buys in another", "From each country's official consumer price index, as yearly averages: the US from 1913, Canada from 1914, the UK from 1988 and the euro area from 1997. It describes the past and is not a forecast.");
+  const country = select([["US", "United States"], ["CA", "Canada"], ["UK", "United Kingdom"], ["EA", "Euro area"]]);
+  const latest = coverage("US").to;
+  const amount = num("1000"), from = num("1990", "1"), to = num(String(latest), "1");
+  const o = out();
+  const run = () => {
+    const r = inflationCalculator({ country: country.value as PriceCountry, amount: Number(amount.value), fromYear: Number(from.value), toYear: Number(to.value) });
+    if ("error" in r) return lines(o, [r.error]);
+    const src = el("p", "fine");
+    const a = el("a", undefined, r.source.name) as HTMLAnchorElement;
+    a.href = r.source.url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    src.append("Source: ", a, `. ${r.source.series}.`);
+    o.replaceChildren(...r.lines.slice(0, 3).map((l) => el("p", undefined, l)), src);
+  };
+  // Each country's index starts in a different year: keep the years inside it.
+  country.addEventListener("input", () => {
+    const span = coverage(country.value as PriceCountry);
+    for (const i of [from, to]) {
+      i.min = String(span.from);
+      i.max = String(span.to);
+    }
+    if (Number(from.value) < span.from) from.value = String(span.from);
+    run();
+  });
+  for (const i of [amount, from, to]) i.addEventListener("input", run);
+  for (const i of [from, to]) {
+    i.min = "1913";
+    i.max = String(latest);
+  }
+  const form = el("div", "tool-grid");
+  form.append(field("Where", country), field("Amount", amount), field("From the year", from), field("To the year", to));
   c.append(form, o);
   run();
   return c;
@@ -120,5 +160,5 @@ function scamCard(): HTMLElement {
 
 /** Fills the Tools section. Everything runs in the browser. */
 export function mountTools(slot: HTMLElement): void {
-  slot.replaceChildren(rateCard(), growthCard(), scamCard());
+  slot.replaceChildren(rateCard(), inflationCard(), growthCard(), scamCard());
 }

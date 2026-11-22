@@ -14,6 +14,11 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-22: an inflation calculator (1.22.0)
+
+- New tool `inflation_calculator`: what an amount from one year buys in another, from the official consumer price index of the US (from 1913), Canada (from 1914), the UK (from 1988) or the euro area (from 1997), as yearly averages. Returns `value`, `changePct`, `yearlyPct`, a `points` array (one per year, for a chart) and the source with its licence. Years outside a country's index are refused with the range, never estimated.
+- Also in the web app's Tools section, worked out in the browser.
+
 ## 2026-11-22: Canada, UK and euro-area inflation and jobs (1.21.0)
 
 - `economy_snapshot`, `/economy` and `data_series` add five figures, each from its own statistics agency with about a year of monthly history: Canada's inflation over 12 months and unemployment rate (Statistics Canada, Open Licence), the UK's CPI inflation and unemployment rate (Office for National Statistics, Open Government Licence; the UK rate is a three-month average, dated by its last month) and the euro area's unemployment rate (Eurostat). New ids: `ca_cpi`, `ca_unemployment`, `uk_cpi`, `uk_unemployment`, `euro_unemployment`.

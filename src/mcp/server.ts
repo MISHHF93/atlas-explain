@@ -40,6 +40,7 @@ import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
 import { BANK_LICENCE, BANK_NAME, compareStatements, readDocsFile, watchingSentences, type DocBank, type Statement } from "../data/docs";
 import { noPriceNote, officialPriceLink } from "../core/price-links";
 import { rateChangeImpact, type ImpactCountry, type ImpactProduct } from "../core/rate-impact";
+import { inflationCalculator, priceCountry } from "../core/inflation";
 import { moneyMaths, type MoneyCalc } from "../core/money-maths";
 import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
 import { comingUp } from "../core/coming-up";
@@ -49,7 +50,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.21.0";
+export const SERVER_VERSION = "1.22.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -451,6 +452,26 @@ function readGlossaryResource(uri: string): { uri: string; mimeType: string; tex
 
 export const V2_TOOLS = [
   {
+    name: "inflation_calculator",
+    title: "What money from one year buys in another",
+    description: "Works out what an amount of money from one year is worth in another, from the official consumer price index of the US (1913 on, Bureau of Labor Statistics), Canada (1914 on, Statistics Canada), the UK (1988 on, Office for National Statistics) or the euro area (1997 on, ECB), as yearly averages. Use it when someone asks what money from the past is worth today, how much prices have risen since a year, or what inflation did to their savings. Describes the past only; never a forecast.",
+    inputSchema: { type: "object", properties: {
+      amount: { type: "number", description: "The amount of money, in that country's currency." },
+      from_year: { type: "number", description: "The year the amount is from." },
+      to_year: { type: "number", description: "The year to compare with. Defaults to the latest full year." },
+      country: { type: "string", enum: ["US", "CA", "UK", "EA"], description: "US, CA (Canada), UK or EA (the euro area). Ask if unsure; defaults to the US." },
+    }, required: ["amount", "from_year"], additionalProperties: false },
+    annotations: annotations("What money from one year buys in another", false),
+    icons: ICONS,
+    outputSchema: obj({
+      country: { type: "string" }, amount: { type: "number" }, fromYear: { type: "number" }, toYear: { type: "number" },
+      value: { type: "number" }, changePct: { type: "number" }, yearlyPct: { type: "number" },
+      points: { type: "array", items: { type: "object", properties: { year: { type: "number" }, value: { type: "number" } } } },
+      lines: { type: "array", items: { type: "string" } },
+      source: { type: "object", properties: { name: { type: "string" }, series: { type: "string" }, url: { type: "string" }, licence: { type: "string" } } },
+    }, ["country", "value", "lines", "source"]),
+  },
+  {
     name: "rate_change_impact",
     title: "What a rate change would do to my numbers",
     description: "Works out what a change in interest rates would do to someone's own variable-rate mortgage payment, HELOC interest, savings interest or GIC/CD renewal, to the cent, and which central bank drives that product (Canada: Bank of Canada; US: the Federal Reserve). Use it when someone asks what a cut or a rise would mean for them. Pure arithmetic on the numbers they give; it never says whether a change will happen.",
@@ -520,6 +541,16 @@ export function setFeatures(v2Tools: string | undefined): void {
 /** The tools a client is offered: v1's, plus any v2 tool switched on. */
 export function visibleTools(): readonly ((typeof TOOLS)[number] | (typeof V2_TOOLS)[number])[] {
   return [...TOOLS, ...V2_TOOLS.filter((t) => enabledV2.has(t.name))];
+}
+
+export function inflationCalculatorTool(args: Record<string, unknown>): ToolResult {
+  const n = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN);
+  const country = args.country == null ? "US" : priceCountry(args.country);
+  if (!country) return text("Choose US, CA (Canada), UK or EA (the euro area).", true);
+  const r = inflationCalculator({ country, amount: n(args.amount), fromYear: n(args.from_year), toYear: args.to_year == null ? undefined : n(args.to_year) });
+  if ("error" in r) return text(r.error, true);
+  const note = args.country == null ? "\nCountry not given, so the US was assumed; say if it's somewhere else." : "";
+  return data(`${r.lines.join("\n")}\nSource: ${r.source.name} (${r.source.url}). ${r.source.licence}${note}`, r as unknown as Record<string, unknown>);
 }
 
 export function rateChangeImpactTool(args: Record<string, unknown>): ToolResult {
@@ -1868,6 +1899,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "money_maths": return ok(moneyMathsTool(args));
         case "decision_explainer": return enabledV2.has("decision_explainer") ? ok(await decisionExplainer(args.bank, s(args.date), fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "speech_tracker": return enabledV2.has("speech_tracker") ? ok(await speechTracker(args.bank, args.days, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
+        case "inflation_calculator": return enabledV2.has("inflation_calculator") ? ok(inflationCalculatorTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "rate_change_impact": return enabledV2.has("rate_change_impact") ? ok(rateChangeImpactTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "upcoming_events": return ok(await upcomingEvents(s(args.only), fetcher));
         case "scam_red_flags": return ok(await scamRedFlags(s(args.pitch), fetcher));

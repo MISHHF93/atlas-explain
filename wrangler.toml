@@ -30,6 +30,6 @@ new_sqlite_classes = ["UsageStats"]
 # v2 tools switched on (docs/V2_DESIGN.md, feature flags): a comma list, for example "rate_change_impact".
 # Empty keeps the public connector exactly as it is.
 [vars]
-V2_TOOLS = "rate_change_impact,decision_explainer,speech_tracker"
+V2_TOOLS = "rate_change_impact,decision_explainer,speech_tracker,inflation_calculator"
 # "1" counts partner usage in ATLAS credits (docs/USAGE_PRICING.md); "0" keeps one call per request.
 CREDITS_ENABLED = "0"
