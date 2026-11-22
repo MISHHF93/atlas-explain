@@ -4,6 +4,9 @@
  *   - US inflation (CPI, year over year) and unemployment: Bureau of Labor Statistics (api.bls.gov v1)
  *   - Effective federal funds rate (with the Fed's target range) and SOFR: Federal Reserve Bank of New York
  *   - Euro-area inflation (HICP, year over year): European Central Bank data portal
+ *   - Euro-area unemployment: Eurostat (une_rt_m)
+ *   - Canada inflation (CPI) and unemployment: Statistics Canada (Web Data Service)
+ *   - UK inflation (CPI) and unemployment: Office for National Statistics (time series)
  *   - Canada's policy rate (target for the overnight rate): Bank of Canada Valet
  *   - US total public debt outstanding: US Treasury Fiscal Data
  *   - Bank of England Bank Rate (Bank of England database) and the ECB deposit facility rate (ECB data portal)
@@ -17,7 +20,9 @@
 
 export const ECONOMY_SCHEMA = "atlas-explain-economy-v1";
 
-export type IndicatorId = "us_cpi" | "us_unemployment" | "us_fed_funds" | "us_sofr" | "euro_hicp" | "euro_deposit_rate" | "ca_policy_rate" | "uk_bank_rate" | "us_debt";
+export type IndicatorId =
+  | "us_cpi" | "us_unemployment" | "us_fed_funds" | "us_sofr" | "euro_hicp" | "euro_unemployment" | "euro_deposit_rate"
+  | "ca_cpi" | "ca_unemployment" | "ca_policy_rate" | "uk_cpi" | "uk_unemployment" | "uk_bank_rate" | "us_debt";
 
 export interface Point {
   /** The period or day the value is for (YYYY-MM or YYYY-MM-DD). */
@@ -120,6 +125,9 @@ export const ECONOMY_SOURCES = {
   auctionsAnnounced: "https://www.treasurydirect.gov/TA_WS/securities/announced?format=json&days=14",
   auctionsResults: "https://www.treasurydirect.gov/TA_WS/securities/auctioned?format=json&days=21",
   blsSchedule: "https://www.bls.gov/schedule/news_release/bls.ics",
+  // UK: CPI annual rate (D7G7, MM23) and the unemployment rate, 16+, seasonally adjusted (MGSX, LMS). Open Government Licence.
+  onsCpi: "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/d7g7/mm23/data",
+  onsUnemployment: "https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms/data",
 } as const;
 
 const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -141,6 +149,12 @@ const CREDIT: Record<IndicatorId, { source: string; url: string }> = {
   uk_bank_rate: { source: "Bank of England", url: "https://www.bankofengland.co.uk/monetary-policy/the-interest-rate-bank-rate" },
   euro_deposit_rate: { source: "European Central Bank", url: "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html" },
   us_debt: { source: "U.S. Department of the Treasury, Fiscal Data", url: "https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" },
+  // Statistics Canada Open Licence: credit the agency and the product (table).
+  ca_cpi: { source: "Statistics Canada, table 18-10-0004-01", url: "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401" },
+  ca_unemployment: { source: "Statistics Canada, table 14-10-0287-01", url: "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701" },
+  uk_cpi: { source: "Office for National Statistics", url: "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/d7g7/mm23" },
+  uk_unemployment: { source: "Office for National Statistics", url: "https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms" },
+  euro_unemployment: { source: "Eurostat (une_rt_m)", url: "https://ec.europa.eu/eurostat/databrowser/view/une_rt_m/default/table" },
 };
 
 type Rec = Record<string, unknown>;
@@ -506,7 +520,134 @@ export function upcoming(events: CalendarEvent[], now: number, limit = 12): Cale
 
 /* ---------- the published file ---------- */
 
-const INDICATOR_IDS: readonly IndicatorId[] = ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "euro_hicp", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate", "us_debt"];
+/* ---------- Canada, UK and euro-area figures (added 22 Nov 2026) ---------- */
+
+/** Statistics Canada series (vectors): all-items CPI (2002=100, not seasonally adjusted) and the unemployment rate (15+, seasonally adjusted). */
+export const STATCAN_VECTORS = { cpi: 41690973, unemployment: 2062815 } as const;
+
+/** One Statistics Canada request for both series, from 26 months before `now` (13 twelve-month changes need 25 months). */
+export function statcanUrl(now: number): string {
+  const from = new Date(now - 26 * 31 * 86_400_000);
+  const start = `${from.getUTCFullYear()}-${String(from.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const ids = encodeURIComponent(`"${STATCAN_VECTORS.cpi}","${STATCAN_VECTORS.unemployment}"`);
+  return `https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorByReferencePeriodRange?vectorIds=${ids}&startRefPeriod=${start}&endReferencePeriod=2100-12-01`;
+}
+
+/** Statistics Canada Web Data Service answer → monthly points per vector, oldest first. */
+export function statcanSeries(body: unknown): Map<number, Point[]> {
+  const out = new Map<number, Point[]>();
+  if (!Array.isArray(body)) return out;
+  for (const r of body) {
+    if (!isRec(r) || r.status !== "SUCCESS" || !isRec(r.object)) continue;
+    const id = num(r.object.vectorId);
+    const rows = Array.isArray(r.object.vectorDataPoint) ? r.object.vectorDataPoint : [];
+    if (id == null) continue;
+    const points = rows
+      .flatMap((p): Point[] => {
+        const v = isRec(p) ? num(p.value) : null;
+        const t = isRec(p) && typeof p.refPer === "string" ? p.refPer.slice(0, 7) : "";
+        return v != null && isMonth(t) ? [{ t, v }] : [];
+      })
+      .sort((a, b) => a.t.localeCompare(b.t));
+    out.set(id, points);
+  }
+  return out;
+}
+
+/** Twelve-month change of a monthly price index, as points; a month without the one a year before is skipped. */
+function overTwelveMonths(index: Point[]): Point[] {
+  const byMonth = new Map(index.map((p) => [p.t, p.v]));
+  return index.flatMap((p): Point[] => {
+    const [y, m] = p.t.split("-");
+    const before = byMonth.get(`${Number(y) - 1}-${m}`);
+    return before ? [{ t: p.t, v: Math.round(((p.v - before) / before) * 1000) / 10 }] : [];
+  });
+}
+
+export function parseStatcanCpi(body: unknown, capturedAt: string): Indicator | null {
+  const index = statcanSeries(body).get(STATCAN_VECTORS.cpi) ?? [];
+  return indicator("ca_cpi", "Canada inflation (CPI, over 12 months)", "%", overTwelveMonths(index).slice(-13), "vs the month before", capturedAt);
+}
+
+export function parseStatcanUnemployment(body: unknown, capturedAt: string): Indicator | null {
+  const points = (statcanSeries(body).get(STATCAN_VECTORS.unemployment) ?? []).slice(-13);
+  return indicator("ca_unemployment", "Canada unemployment rate", "%", points, "vs the month before", capturedAt);
+}
+
+const ONS_MONTHS: Record<string, string> = { JAN: "01", FEB: "02", MAR: "03", APR: "04", MAY: "05", JUN: "06", JUL: "07", AUG: "08", SEP: "09", OCT: "10", NOV: "11", DEC: "12" };
+
+/**
+ * An ONS time series (…/timeseries/<id>/<dataset>/data) → monthly points, oldest first. A rolling three-month
+ * figure (labour market, label "2026 JUL-SEP") is dated by its last month.
+ */
+export function onsMonths(body: unknown): Point[] {
+  const rows = isRec(body) && Array.isArray(body.months) ? body.months : [];
+  return rows
+    .flatMap((r): Point[] => {
+      if (!isRec(r)) return [];
+      const v = num(r.value);
+      const m = /^(\d{4}) ([A-Z]{3})(?:-([A-Z]{3}))?$/.exec(typeof r.label === "string" ? r.label.trim() : "");
+      if (v == null || !m) return [];
+      const last = m[3] ?? m[2]!;
+      // A window like "NOV-JAN" ends in the next year.
+      const year = m[3] && Number(ONS_MONTHS[m[3]]) < Number(ONS_MONTHS[m[2]!]) ? Number(m[1]) + 1 : Number(m[1]);
+      const month = ONS_MONTHS[last];
+      return month ? [{ t: `${year}-${month}`, v }] : [];
+    })
+    .sort((a, b) => a.t.localeCompare(b.t));
+}
+
+export function parseOnsCpi(body: unknown, capturedAt: string): Indicator | null {
+  return indicator("uk_cpi", "UK inflation (CPI, over 12 months)", "%", onsMonths(body).slice(-13), "vs the month before", capturedAt);
+}
+
+export function parseOnsUnemployment(body: unknown, capturedAt: string): Indicator | null {
+  return indicator("uk_unemployment", "UK unemployment rate", "%", onsMonths(body).slice(-13), "vs the three months before", capturedAt, "A three-month average; the period shown is its last month.");
+}
+
+/** Eurostat monthly unemployment for the euro area, asking for every euro-area code that may exist (EA20 to EA25). */
+export const EUROSTAT_UNEMPLOYMENT_URL = `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?${["EA20", "EA21", "EA22", "EA23", "EA24", "EA25"].map((g) => `geo=${g}`).join("&")}&age=TOTAL&sex=T&unit=PC_ACT&s_adj=SA&lastTimePeriod=14&format=JSON&lang=EN`;
+
+/**
+ * Eurostat JSON-stat → the euro area's unemployment rate. The euro area's code changes when a country joins
+ * (EA20, then EA21 from 2026), so the newest code that has figures is used; the others are left empty by Eurostat.
+ */
+export function parseEurostatUnemployment(body: unknown, capturedAt: string): Indicator | null {
+  if (!isRec(body) || !Array.isArray(body.id) || !Array.isArray(body.size) || !isRec(body.dimension) || !isRec(body.value)) return null;
+  const ids = body.id as unknown[];
+  const sizes = (body.size as unknown[]).map((s) => num(s) ?? 0);
+  const stride = (dim: string) => {
+    const at = ids.indexOf(dim);
+    return at < 0 ? 0 : sizes.slice(at + 1).reduce((a, b) => a * b, 1);
+  };
+  const index = (dim: string): Record<string, number> => {
+    const d = (body.dimension as Rec)[dim];
+    const cat = isRec(d) && isRec(d.category) && isRec(d.category.index) ? d.category.index : {};
+    return Object.fromEntries(Object.entries(cat).flatMap(([k, v]) => (typeof v === "number" ? [[k, v]] : [])));
+  };
+  const geos = Object.entries(index("geo")).sort((a, b) => b[0].localeCompare(a[0], "en", { numeric: true }));
+  const times = Object.entries(index("time"));
+  const values = body.value as Rec;
+  for (const [, g] of geos) {
+    const points = times
+      .flatMap(([t, i]): Point[] => {
+        const v = num(values[String(g * stride("geo") + i * stride("time"))]);
+        return v != null && isMonth(t) ? [{ t, v }] : [];
+      })
+      .sort((a, b) => a.t.localeCompare(b.t));
+    if (points.length >= 2) return indicator("euro_unemployment", "Euro-area unemployment rate", "%", points.slice(-13), "vs the month before", capturedAt);
+  }
+  return null;
+}
+
+/** Every indicator, in the order shown: country by country, figures before rates, US debt last. */
+export const INDICATOR_IDS: readonly IndicatorId[] = [
+  "us_cpi", "us_unemployment", "us_fed_funds", "us_sofr",
+  "euro_hicp", "euro_unemployment", "euro_deposit_rate",
+  "ca_cpi", "ca_unemployment", "ca_policy_rate",
+  "uk_cpi", "uk_unemployment", "uk_bank_rate",
+  "us_debt",
+];
 const INSTITUTIONS: readonly string[] = ["Federal Reserve", "European Central Bank", "Bank of Canada", "Bank of England"];
 const isAuction = (a: unknown): a is Auction => isRec(a) && typeof a.cusip === "string" && isDay(a.auctionDate) && isDay(a.issueDate) && typeof a.offeringUsd === "number" && typeof a.term === "string";
 const isTime = (v: unknown): v is string => typeof v === "string" && Number.isFinite(Date.parse(v));

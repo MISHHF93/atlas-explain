@@ -49,7 +49,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.20.0";
+export const SERVER_VERSION = "1.21.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -215,7 +215,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "economy_snapshot",
     title: "The economy at a glance",
-    description: "Headline economic figures with period, change and source: inflation, unemployment, policy rates and US public debt, plus the next rate decisions. Use it for how the economy is doing, or one topic. Covers US CPI over 12 months and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation and the ECB deposit rate (ECB), Canada's policy rate (Bank of Canada), the UK's Bank Rate (Bank of England) and US public debt (Treasury), each with about a year of history. Optional filter by topic.",
+    description: "Headline economic figures with period, change and source: inflation, unemployment, policy rates and US public debt, plus the next rate decisions. Use it for how the economy is doing, or one topic. Covers US CPI over 12 months and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation and the ECB deposit rate (ECB) and euro-area unemployment (Eurostat), Canada's inflation and unemployment (Statistics Canada) and policy rate (Bank of Canada), the UK's inflation and unemployment (Office for National Statistics) and Bank Rate (Bank of England), and US public debt (Treasury), each with about a year of history. Optional filter by topic, for example 'canada inflation' or 'uk'.",
     inputSchema: { type: "object", properties: { topic: str("Optional topic, for example 'inflation', 'jobs', 'rates', 'debt', 'euro' or 'canada'. Leave empty for all.") }, additionalProperties: false },
     annotations: annotations("The economy at a glance", true),
     icons: ICONS,
@@ -385,7 +385,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "data_series",
     title: "Data series for charts and reports",
-    description: "Clean dated rows of official economic data, with source and licence, for making a chart, spreadsheet, table or report. Use it when someone wants the numbers themselves, or to build something from them. Covers US inflation, unemployment, the fed funds rate, SOFR and debt, euro-area inflation, the ECB, Bank of Canada and Bank of England rates, and World Bank GDP growth, inflation, unemployment and GDP per person for the G20. Also returns CSV. Leave empty for the list. Never crypto or stock prices.",
+    description: "Clean dated rows of official economic data, with source and licence, for making a chart, spreadsheet, table or report. Use it when someone wants the numbers themselves, or to build something from them. Covers US inflation, unemployment, the fed funds rate, SOFR and debt; euro-area, Canadian and UK inflation and unemployment; the ECB, Bank of Canada and Bank of England rates; and World Bank GDP growth, inflation, unemployment and GDP per person for the G20. Also returns CSV. Leave empty for the list. Never crypto or stock prices.",
     inputSchema: { type: "object", properties: {
       series: str("Optional: one to four series ids or names, separated by commas, for example 'us_cpi, uk_bank_rate' or 'world_inflation'. Leave empty to list what's available."),
       countries: str("For world_ series: up to six G20 country names or codes, for example 'Japan, Germany'. Defaults to the United States."),
@@ -1048,13 +1048,22 @@ async function loadEconomy(fetcher: Fetcher): Promise<EconomyFile | null> {
   return body == null ? null : readEconomyFile(body);
 }
 
+/** Country-specific phrases come first: a question is matched exactly, then by the first phrase it contains. */
 const TOPICS: Record<string, readonly Indicator["id"][]> = {
-  inflation: ["us_cpi", "euro_hicp"], prices: ["us_cpi", "euro_hicp"], cpi: ["us_cpi"], hicp: ["euro_hicp"],
-  jobs: ["us_unemployment"], unemployment: ["us_unemployment"], employment: ["us_unemployment"], labour: ["us_unemployment"], labor: ["us_unemployment"],
+  "us inflation": ["us_cpi"], "us unemployment": ["us_unemployment"], "us jobs": ["us_unemployment"],
+  "canada inflation": ["ca_cpi"], "canadian inflation": ["ca_cpi"], "canada unemployment": ["ca_unemployment"], "canada jobs": ["ca_unemployment"],
+  "uk inflation": ["uk_cpi"], "british inflation": ["uk_cpi"], "uk unemployment": ["uk_unemployment"], "uk jobs": ["uk_unemployment"],
+  "euro inflation": ["euro_hicp"], "euro area inflation": ["euro_hicp"], "eurozone inflation": ["euro_hicp"],
+  "euro unemployment": ["euro_unemployment"], "euro area unemployment": ["euro_unemployment"], "eurozone unemployment": ["euro_unemployment"],
+  inflation: ["us_cpi", "euro_hicp", "ca_cpi", "uk_cpi"], prices: ["us_cpi", "euro_hicp", "ca_cpi", "uk_cpi"], cpi: ["us_cpi", "ca_cpi", "uk_cpi"], hicp: ["euro_hicp"],
+  jobs: ["us_unemployment", "euro_unemployment", "ca_unemployment", "uk_unemployment"], unemployment: ["us_unemployment", "euro_unemployment", "ca_unemployment", "uk_unemployment"],
+  employment: ["us_unemployment", "euro_unemployment", "ca_unemployment", "uk_unemployment"], labour: ["us_unemployment", "euro_unemployment", "ca_unemployment", "uk_unemployment"], labor: ["us_unemployment", "euro_unemployment", "ca_unemployment", "uk_unemployment"],
   rates: ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"], fed: ["us_fed_funds", "us_sofr"], sofr: ["us_sofr"],
   "interest rates": ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"], "policy rates": ["us_fed_funds", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"],
-  debt: ["us_debt"], deficit: ["us_debt"], euro: ["euro_hicp", "euro_deposit_rate"], ecb: ["euro_hicp", "euro_deposit_rate"], europe: ["euro_hicp", "euro_deposit_rate"], canada: ["ca_policy_rate"], boc: ["ca_policy_rate"],
-  uk: ["uk_bank_rate"], britain: ["uk_bank_rate"], "united kingdom": ["uk_bank_rate"], boe: ["uk_bank_rate"], "bank of england": ["uk_bank_rate"],
+  debt: ["us_debt"], deficit: ["us_debt"],
+  euro: ["euro_hicp", "euro_unemployment", "euro_deposit_rate"], eurozone: ["euro_hicp", "euro_unemployment", "euro_deposit_rate"], ecb: ["euro_hicp", "euro_deposit_rate"], europe: ["euro_hicp", "euro_unemployment", "euro_deposit_rate"],
+  canada: ["ca_cpi", "ca_unemployment", "ca_policy_rate"], boc: ["ca_policy_rate"],
+  uk: ["uk_cpi", "uk_unemployment", "uk_bank_rate"], britain: ["uk_cpi", "uk_unemployment", "uk_bank_rate"], "united kingdom": ["uk_cpi", "uk_unemployment", "uk_bank_rate"], boe: ["uk_bank_rate"], "bank of england": ["uk_bank_rate"],
   us: ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "us_debt"],
 };
 
@@ -1077,7 +1086,7 @@ export async function economySnapshot(topic: string | undefined, fetcher: Fetche
   const q = topic?.trim().toLowerCase() ?? "";
   const ids = q ? TOPICS[q] ?? Object.entries(TOPICS).find(([k]) => q.includes(k))?.[1] : undefined;
   const list = file.indicators.filter((i) => !ids || ids.includes(i.id));
-  if (q && !ids) return text(`No economic topic called "${topic}". Try inflation, jobs, rates, debt, euro or canada, or leave it empty for everything.`, true);
+  if (q && !ids) return text(`No economic topic called "${topic}". Try inflation, jobs, rates, debt, us, euro, canada or uk (or "uk inflation"), or leave it empty for everything.`, true);
   const next = upcoming(file.calendar.events, now, 3);
   const age = now - Date.parse(file.generatedAt);
   const stale = age > ECONOMY_STALE_MS ? ` These were captured ${Math.round(age / 86_400_000)} days ago: the 6-hourly refresh hasn't run since.` : "";
@@ -1278,7 +1287,13 @@ export async function evidenceBrief(key: string, fetcher: Fetcher, now = Date.no
   if (liquidity) lines.push(`How easily it trades: spread ${Number(liquidity.spreadBps).toFixed(2)} basis points${liquidity.slippage10kPct != null ? `; filling $10,000 against the asks moved the average price ${Number(liquidity.slippage10kPct).toFixed(4)}%` : ""} (Kraken).`);
 
   // 3. The economic backdrop.
-  const backdropIds = kind === "other" && /CA|CAD/.test(String(d.symbol)) ? ["ca_policy_rate", "us_fed_funds"] : ["us_fed_funds", "us_cpi"];
+  // Each currency's own central bank and inflation next to the Fed's, when the asset is about that currency.
+  const sym = String(d.symbol);
+  const backdropIds =
+    kind === "other" && /CA|CAD/.test(sym) ? ["ca_policy_rate", "ca_cpi", "us_fed_funds"]
+    : kind === "other" && /EUR/.test(sym) ? ["euro_deposit_rate", "euro_hicp", "us_fed_funds"]
+    : kind === "other" && /GBP/.test(sym) ? ["uk_bank_rate", "uk_cpi", "us_fed_funds"]
+    : ["us_fed_funds", "us_cpi"];
   const backdrop = (economy?.indicators ?? []).filter((i) => backdropIds.includes(i.id)).map((i) => ({ name: i.name, value: fmtIndicator(i), period: i.period, source: i.source }));
   // The central bank whose decision bears most directly on this asset; the soonest decision of any if it has none coming.
   const bank = /EUR/.test(String(d.symbol)) ? "European Central Bank" : /GBP/.test(String(d.symbol)) ? "Bank of England" : kind === "other" && /CA|CAD/.test(String(d.symbol)) ? "Bank of Canada" : "Federal Reserve";
@@ -1641,12 +1656,19 @@ const SERIES_LICENCE: Record<string, string> = {
   "European Central Bank": "Free to reuse with credit to the European Central Bank.",
   "Bank of Canada": "Free to reuse with credit to the Bank of Canada.",
   "Bank of England": "Free to reuse with credit to the Bank of England (its terms apply).",
+  "Statistics Canada, table 18-10-0004-01": "Statistics Canada Open Licence: free to reuse, including commercially. Credit: Source: Statistics Canada, table 18-10-0004-01.",
+  "Statistics Canada, table 14-10-0287-01": "Statistics Canada Open Licence: free to reuse, including commercially. Credit: Source: Statistics Canada, table 14-10-0287-01.",
+  "Office for National Statistics": "Open Government Licence v3.0. Credit: Source: Office for National Statistics.",
+  "Eurostat (une_rt_m)": "Free to reuse, including commercially, with the source acknowledged: Eurostat (une_rt_m).",
 };
 const ECON_SERIES_WORDS: Record<string, IndicatorId> = {
   cpi: "us_cpi", "us cpi": "us_cpi", "us inflation": "us_cpi", inflation: "us_cpi",
   "us unemployment": "us_unemployment", unemployment: "us_unemployment", jobs: "us_unemployment",
   "fed funds": "us_fed_funds", "federal funds": "us_fed_funds", fed: "us_fed_funds", sofr: "us_sofr",
   "euro inflation": "euro_hicp", hicp: "euro_hicp", "euro area inflation": "euro_hicp",
+  "euro unemployment": "euro_unemployment", "euro area unemployment": "euro_unemployment", "eurozone unemployment": "euro_unemployment",
+  "canada inflation": "ca_cpi", "canada cpi": "ca_cpi", "canadian inflation": "ca_cpi", "canada unemployment": "ca_unemployment", "canada jobs": "ca_unemployment",
+  "uk inflation": "uk_cpi", "uk cpi": "uk_cpi", "british inflation": "uk_cpi", "uk unemployment": "uk_unemployment", "uk jobs": "uk_unemployment",
   ecb: "euro_deposit_rate", "ecb rate": "euro_deposit_rate", "euro deposit rate": "euro_deposit_rate",
   boc: "ca_policy_rate", "canada rate": "ca_policy_rate", "bank of canada": "ca_policy_rate",
   boe: "uk_bank_rate", "bank rate": "uk_bank_rate", "uk rate": "uk_bank_rate", "bank of england": "uk_bank_rate",

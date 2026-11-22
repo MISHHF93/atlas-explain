@@ -1,0 +1,187 @@
+{
+ "description": {
+  "title": "Unemployment rate (aged 16 and over, seasonally adjusted): %",
+  "contact": {
+   "email": "labour.market@ons.gov.uk",
+   "name": "Labour Market team",
+   "telephone": "+44 1633 455400"
+  },
+  "releaseDate": "2026-11-17T00:00:00.000Z",
+  "nextRelease": "15 December 2026",
+  "datasetId": "LMS",
+  "datasetUri": "/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/labourmarketstatistics",
+  "cdid": "MGSX",
+  "unit": "%",
+  "preUnit": "",
+  "source": "",
+  "monthLabelStyle": "three month average",
+  "date": "2026 AUG",
+  "number": "4.6",
+  "keyNote": "UK: Aged 16 and over\n",
+  "sampleSize": "0"
+ },
+ "years": [],
+ "quarters": [],
+ "months": [
+  {
+   "date": "2025 MAY",
+   "value": "4.7",
+   "label": "2025 APR-JUN",
+   "year": "2025",
+   "month": "May",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2025-08-11T23:00:00.000Z"
+  },
+  {
+   "date": "2025 JUN",
+   "value": "4.7",
+   "label": "2025 MAY-JUL",
+   "year": "2025",
+   "month": "June",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2025-09-15T23:00:00.000Z"
+  },
+  {
+   "date": "2025 JUL",
+   "value": "4.8",
+   "label": "2025 JUN-AUG",
+   "year": "2025",
+   "month": "July",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2025-10-13T23:00:00.000Z"
+  },
+  {
+   "date": "2025 AUG",
+   "value": "5.0",
+   "label": "2025 JUL-SEP",
+   "year": "2025",
+   "month": "August",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2025-11-11T00:00:00.000Z"
+  },
+  {
+   "date": "2025 SEP",
+   "value": "5.1",
+   "label": "2025 AUG-OCT",
+   "year": "2025",
+   "month": "September",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2025-12-16T00:00:00.000Z"
+  },
+  {
+   "date": "2025 OCT",
+   "value": "5.1",
+   "label": "2025 SEP-NOV",
+   "year": "2025",
+   "month": "October",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-01-20T00:00:00.000Z"
+  },
+  {
+   "date": "2025 NOV",
+   "value": "5.2",
+   "label": "2025 OCT-DEC",
+   "year": "2025",
+   "month": "November",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-02-17T00:00:00.000Z"
+  },
+  {
+   "date": "2025 DEC",
+   "value": "5.2",
+   "label": "2025 NOV-JAN",
+   "year": "2025",
+   "month": "December",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-03-19T00:00:00.000Z"
+  },
+  {
+   "date": "2026 JAN",
+   "value": "4.9",
+   "label": "2025 DEC-FEB",
+   "year": "2026",
+   "month": "January",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-04-20T23:00:00.000Z"
+  },
+  {
+   "date": "2026 FEB",
+   "value": "5.0",
+   "label": "2026 JAN-MAR",
+   "year": "2026",
+   "month": "February",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-05-18T23:00:00.000Z"
+  },
+  {
+   "date": "2026 MAR",
+   "value": "4.9",
+   "label": "2026 FEB-APR",
+   "year": "2026",
+   "month": "March",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-06-17T23:00:00.000Z"
+  },
+  {
+   "date": "2026 APR",
+   "value": "4.9",
+   "label": "2026 MAR-MAY",
+   "year": "2026",
+   "month": "April",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-07-20T23:00:00.000Z"
+  },
+  {
+   "date": "2026 MAY",
+   "value": "4.9",
+   "label": "2026 APR-JUN",
+   "year": "2026",
+   "month": "May",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-08-17T23:00:00.000Z"
+  },
+  {
+   "date": "2026 JUN",
+   "value": "4.9",
+   "label": "2026 MAY-JUL",
+   "year": "2026",
+   "month": "June",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-09-14T23:00:00.000Z"
+  },
+  {
+   "date": "2026 JUL",
+   "value": "4.7",
+   "label": "2026 JUN-AUG",
+   "year": "2026",
+   "month": "July",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-10-19T23:00:00.000Z"
+  },
+  {
+   "date": "2026 AUG",
+   "value": "4.6",
+   "label": "2026 JUL-SEP",
+   "year": "2026",
+   "month": "August",
+   "quarter": "",
+   "sourceDataset": "LMS",
+   "updateDate": "2026-11-17T00:00:00.000Z"
+  }
+ ]
+}

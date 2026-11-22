@@ -14,6 +14,13 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-22: Canada, UK and euro-area inflation and jobs (1.21.0)
+
+- `economy_snapshot`, `/economy` and `data_series` add five figures, each from its own statistics agency with about a year of monthly history: Canada's inflation over 12 months and unemployment rate (Statistics Canada, Open Licence), the UK's CPI inflation and unemployment rate (Office for National Statistics, Open Government Licence; the UK rate is a three-month average, dated by its last month) and the euro area's unemployment rate (Eurostat). New ids: `ca_cpi`, `ca_unemployment`, `uk_cpi`, `uk_unemployment`, `euro_unemployment`.
+- Topics accept a country (`canada`, `uk`, `euro`) or a country and a figure (`canada inflation`, `uk jobs`, `eurozone unemployment`).
+- Evidence briefs on euro, pound and Canadian-dollar assets show that currency's central bank and inflation next to the Fed's.
+- No change to existing fields; the new figures appear in the same `indicators` list.
+
 ## 2026-11-19: links to official prices, and OECD share-price indices (1.20.0)
 
 **What's new**

@@ -30,7 +30,7 @@ import {
 import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseEiaSpotPage, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
 import { parseBlsSchedule } from "./economy.ts";
 import { boeBankRateUrl, parseBoeBankRate, parseBoeMpcDates, parseEcbDepositRate, parseTreasuryAuctions, type Auction } from "./economy.ts";
-import { ECONOMY_SCHEMA, ECONOMY_SOURCES, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
+import { ECONOMY_SCHEMA, ECONOMY_SOURCES, EUROSTAT_UNEMPLOYMENT_URL, INDICATOR_IDS, parseEurostatUnemployment, parseOnsCpi, parseOnsUnemployment, parseStatcanCpi, parseStatcanUnemployment, statcanUrl, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
 import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, oecdSharesUrl, parseData360, parseOecdShares, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
 import { PREDECESSOR_CIK, SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, mergePredecessorFacts, readTickerMap, stockFromSec } from "./sec.ts";
 
@@ -327,10 +327,21 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
     ["euro_hicp", ECONOMY_SOURCES.hicp, parseEcbHicp],
     ["ca_policy_rate", ECONOMY_SOURCES.bocPolicy, parseBocPolicy],
     ["us_debt", ECONOMY_SOURCES.debt, parseTreasuryDebt],
+    ["euro_unemployment", EUROSTAT_UNEMPLOYMENT_URL, parseEurostatUnemployment],
+    ["ca_cpi", statcanUrl(env.now), parseStatcanCpi],
+    ["ca_unemployment", statcanUrl(env.now), parseStatcanUnemployment],
+    ["uk_cpi", ECONOMY_SOURCES.onsCpi, parseOnsCpi],
+    ["uk_unemployment", ECONOMY_SOURCES.onsUnemployment, parseOnsUnemployment],
   ];
   const indicators: Indicator[] = [];
+  // Statistics Canada answers both Canadian series in one request: read it once.
+  const bodies = new Map<string, Promise<unknown>>();
+  const once = (url: string) => {
+    if (!bodies.has(url)) bodies.set(url, json(url).catch(() => null));
+    return bodies.get(url)!;
+  };
   for (const [id, url, parse] of reads) {
-    const fresh = parse(await json(url).catch(() => null), at);
+    const fresh = parse(await once(url), at);
     const kept = fresh ?? prev?.indicators.find((i) => i.id === id) ?? null;
     if (!fresh) env.log(`economy ${id}: ${kept ? `kept the value captured ${kept.capturedAt}` : "no data"}`);
     if (kept) indicators.push(kept);
@@ -347,8 +358,7 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
     if (kept) indicators.push(kept);
   }
   // Keep the published order: each bank's rates together.
-  const ORDER: IndicatorId[] = ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "euro_hicp", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate", "us_debt"];
-  indicators.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+  indicators.sort((a, b) => INDICATOR_IDS.indexOf(a.id) - INDICATOR_IDS.indexOf(b.id));
   const pages: [string, (html: string) => CalendarEvent[], CalendarEvent["institution"]][] = [
     [ECONOMY_SOURCES.fomc, parseFomcCalendar, "Federal Reserve"],
     [ECONOMY_SOURCES.ecbCalendar, parseEcbCalendar, "European Central Bank"],
