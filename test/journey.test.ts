@@ -41,3 +41,11 @@ describe("one journey: website, Sign in, then straight into the app (no page in 
     expect(rewriteFor("/nothing-here")).toBeNull();
   });
 });
+
+describe("Google sign-in", () => {
+  it("doesn't force Google's account picker: one account signs straight in (owner decision, 22 Nov 2026)", () => {
+    const account = readFileSync("src/platform/web/account.ts", "utf8");
+    expect(account).not.toContain("select_account");
+    expect(account).toContain("return new GoogleAuthProvider();");
+  });
+});

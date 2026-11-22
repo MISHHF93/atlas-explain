@@ -38,10 +38,12 @@ export class AuthFlowError extends Error {
   }
 }
 
+/**
+ * No forced account picker (owner decision, 22 Nov 2026): with one Google account in the browser, Google
+ * signs straight in; with several, Google shows its own picker.
+ */
 function googleProvider(): GoogleAuthProvider {
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: "select_account" });
-  return provider;
+  return new GoogleAuthProvider();
 }
 
 /**
