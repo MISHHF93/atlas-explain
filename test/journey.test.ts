@@ -24,7 +24,7 @@ describe("one journey: website, Sign in, then straight into the app (no page in 
   });
 
   it("opens the app after signing in when there was no destination: no chooser page", () => {
-    expect(app).toMatch(/!isAccountRoute\(target\) \? target : \{ kind: "tab", tab: "explain" \}/);
+    expect(app).toContain('target.kind !== "signin" ? target : { kind: "tab", tab: "explain" }');
     expect(app).not.toContain("createStartPage");
   });
 
@@ -47,5 +47,24 @@ describe("Google sign-in", () => {
     const account = readFileSync("src/platform/web/account.ts", "utf8");
     expect(account).not.toContain("select_account");
     expect(account).toContain("return new GoogleAuthProvider();");
+  });
+});
+
+describe("signing in finishes the right way", () => {
+  const account = readFileSync("src/platform/web/account.ts", "utf8");
+  const backend = readFileSync("src/platform/web/backend.ts", "utf8");
+
+  it("hears a first Google sign-in, which keeps the anonymous visitor's uid", () => {
+    expect(account).toContain("return onIdTokenChanged(auth, (user) => onChange(accountView(user)));");
+    expect(account).not.toContain("onAuthStateChanged(");
+  });
+
+  it("takes the visitor where they were heading, the account sheet (/app/admin) included", () => {
+    expect(parseRoute("/app/admin")).toEqual({ kind: "tab", tab: "settings" });
+    expect(app).toContain('target.kind !== "signin" ? target : { kind: "tab", tab: "explain" }');
+  });
+
+  it("brings an email link back to the same destination", () => {
+    expect(backend).toContain('/signin?signin=email${next ? `&next=${encodeURIComponent(next)}` : ""}');
   });
 });

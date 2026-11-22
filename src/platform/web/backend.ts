@@ -148,7 +148,8 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
     },
     async sendEmailLink(email) {
       await currentUserId();
-      const url = `${window.location.origin}/signin?signin=email`;
+      const next = new URLSearchParams(window.location.search).get("next");
+      const url = `${window.location.origin}/signin?signin=email${next ? `&next=${encodeURIComponent(next)}` : ""}`;
       return (await accountFlows()).sendEmailLink(auth, email, url);
     },
     async completeSignIn(typedEmail) {

@@ -6,7 +6,7 @@ import {
   linkWithCredential,
   linkWithPopup,
   linkWithRedirect,
-  onAuthStateChanged,
+  onIdTokenChanged,
   reauthenticateWithPopup,
   deleteUser,
   sendSignInLinkToEmail,
@@ -158,6 +158,10 @@ export async function signOutToAnonymous(auth: Auth): Promise<void> {
   await signInAnonymously(auth).catch(() => undefined);
 }
 
+/**
+ * Calls back on every sign-in change. onIdTokenChanged, not onAuthStateChanged: a first Google sign-in links
+ * Google to the visitor's anonymous id, which keeps the same uid, and onAuthStateChanged doesn't report that.
+ */
 export function watchAccount(auth: Auth, onChange: (view: AccountView | null) => void): () => void {
-  return onAuthStateChanged(auth, (user) => onChange(accountView(user)));
+  return onIdTokenChanged(auth, (user) => onChange(accountView(user)));
 }

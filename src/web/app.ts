@@ -757,7 +757,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       if (outcome.state === "need-email") askLinkEmail(b);
       else {
         reportSignIn(outcome);
-        if (outcome.state === "signed-in" && route.kind === "signin") window.setTimeout(() => afterSignIn(), 400);
       }
     } catch {
       // Sign-in couldn't start: the Sign in page says so and offers a reload.
@@ -780,7 +779,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       const outcome = await b.completeSignIn(email);
       if (outcome.state === "signed-in") {
         reportSignIn(outcome);
-        window.setTimeout(() => (route.kind === "signin" ? afterSignIn() : shell.closeSheet()), 400);
+        if (route.kind !== "signin") window.setTimeout(() => shell.closeSheet(), 400);
         return outcome.message;
       }
       throw new Error(outcome.state === "error" ? outcome.message : "Sign-in did not finish. Try again in a moment.");
@@ -844,8 +843,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         const result = await b.signInWithGoogle();
         if (result === "redirecting") return "Taking you to Google…";
         tracker.track("login", { method: "google" });
-        window.setTimeout(() => afterSignIn(), 400);
-        return "You are signed in. Taking you to ATLAS Explain…";
+        // The account watcher sees the sign-in and leaves the Sign in page (afterSignIn); nothing else does.
+        return "You are signed in.";
       },
       onEmail: async (email) => {
         await b.sendEmailLink(email);
@@ -890,12 +889,15 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   }
 
   /** Back to where sign-in was asked from (?next=/app/...), otherwise straight into the app. */
+  /** Leaves the Sign in page for where the visitor was heading. Runs once per sign-in, from the account watcher. */
   function afterSignIn(): void {
+    if (route.kind !== "signin") return;
     hideSignIn();
     const next = new URLSearchParams(location.search).get("next");
     const target = next ? parseRoute(next) : null;
     shell.closeSheet();
-    navigate(target && target.kind !== "not_found" && !isAccountRoute(target) ? target : { kind: "tab", tab: "explain" }, { replace: true });
+    // Any app address, the account sheet (/app/account, /app/admin) included; never back to Sign in itself.
+    navigate(target && target.kind !== "not_found" && target.kind !== "signin" ? target : { kind: "tab", tab: "explain" }, { replace: true });
     const pending = takePendingHash();
     if (pending) location.hash = pending;
   }

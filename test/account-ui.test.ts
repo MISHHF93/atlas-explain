@@ -67,8 +67,12 @@ describe("website first, then Sign in, then the app", () => {
   });
 
   it("leads into the app after signing in, including back from an email link, and back to Sign in after signing out", () => {
-    expect(app).toMatch(/function afterSignIn\(\): void \{\s*hideSignIn\(\);/);
-    expect(app).toContain('if (outcome.state === "signed-in" && route.kind === "signin") window.setTimeout(() => afterSignIn(), 400);');
+    // One way out of the Sign in page: the sign-in state (Google, an email link, or already signed in), once.
+    expect(app).toMatch(/function afterSignIn\(\): void \{\s*if \(route\.kind !== "signin"\) return;\s*hideSignIn\(\);/);
+    expect(app).toContain('if (view?.signedIn && route.kind === "signin" && signInPage.open) window.setTimeout(() => afterSignIn(), 0);');
+    // Callers: the account watcher and Sign in when already signed in (plus the definition itself).
+    expect(app.match(/afterSignIn\(\)/g)).toHaveLength(3);
+    expect(app).not.toContain("window.setTimeout(() => afterSignIn(), 400)");
     expect(app).toMatch(/async function signOutNow\(\)[\s\S]*?navigate\(\{ kind: "signin" \}\);/);
     // The header's "Sign in" goes to the page; the account sheet stays for signed-in settings.
     expect(app).toContain('onAccount: () => navigate(account?.signedIn ? { kind: "tab", tab: "settings" } : { kind: "signin" })');
