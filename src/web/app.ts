@@ -868,15 +868,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       shell.openSheet("Your account", [el("p", "fine", "Sign-in isn't available right now. Reload the page to try again."), ...settingsNodes]);
       return;
     }
-    shell.openSheet("Your account", [accountPanel(account, accountHandlers(backend)), adminSlot(), ...settingsNodes]);
-  }
-
-  /** Room for the owner's Connector usage card; it fills only if the connector lets this account see it. */
-  function adminSlot(): HTMLElement {
-    const slot = el("div", "admin-slot");
-    const token = backend?.idToken?.bind(backend);
-    if (account?.signedIn && token) void import("../wallet/admin-usage").then((m) => m.mountAdminUsage(slot, token));
-    return slot;
+    shell.openSheet("Your account", [accountPanel(account, accountHandlers(backend)), ...settingsNodes]);
   }
 
   /** Shows the Sign in page when the visitor isn't signed in, keeping where they were in ?next=. */

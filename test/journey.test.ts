@@ -59,8 +59,8 @@ describe("signing in finishes the right way", () => {
     expect(account).not.toContain("onAuthStateChanged(");
   });
 
-  it("takes the visitor where they were heading, the account sheet (/app/admin) included", () => {
-    expect(parseRoute("/app/admin")).toEqual({ kind: "tab", tab: "settings" });
+  it("takes the visitor where they were heading, the account sheet (/app/account) included", () => {
+    expect(parseRoute("/app/account")).toEqual({ kind: "tab", tab: "settings" });
     expect(app).toContain('target.kind !== "signin" ? target : { kind: "tab", tab: "explain" }');
   });
 

@@ -84,8 +84,6 @@ export interface WebBackend {
   deleteAccount(): Promise<{ status: "deleted" | "reauth-needed"; deleted: number; keptToday: boolean }>;
   /** Starts Firebase Analytics after consent; null when unsupported or blocked. Loaded on demand. */
   startAnalytics(): Promise<AnalyticsSink | null>;
-  /** The signed-in account's Firebase ID token (for the owner's admin view); null when signed out. */
-  idToken?(): Promise<string | null>;
   /** Opens the Stripe Payment Link for this account. Throws if billing is off, signed out, or the link is not set up. */
   startCheckout(interval: ProInterval): Promise<void>;
   /** Opens Stripe's customer portal, where a subscriber changes or cancels the plan. */
@@ -178,10 +176,6 @@ export function startWebBackend(env: PublicEnvConfig): WebBackend {
       const user = auth.currentUser;
       if (!user || user.isAnonymous) return;
       await (await store()).writeWatchlist(user.uid, ids);
-    },
-    async idToken() {
-      const user = auth.currentUser;
-      return user && !user.isAnonymous ? user.getIdToken() : null;
     },
     async startAnalytics() {
       try {

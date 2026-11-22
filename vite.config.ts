@@ -51,6 +51,7 @@ export default defineConfig({
         embedRateImpact: "embed/rate-impact.html",
         notFound: "404.html",
         app: "app.html",
+        admin: "admin.html",
       },
       output: {
         codeSplitting: { groups: firebaseChunkGroups },

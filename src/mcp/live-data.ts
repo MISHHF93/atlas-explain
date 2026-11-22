@@ -13,12 +13,12 @@
  * The minimum gaps keep KV inside its free 1,000 writes a day and the sources inside their limits.
  * Deployed with `npm run deploy:mcp` (wrangler.toml). See docs/MCP.md.
  */
-import { ADMIN_STATS_PATH, handleAdminStats } from "./admin";
+import { ADMIN_OVERVIEW_PATH, ADMIN_STATS_PATH, handleAdminOverview, handleAdminStats, type OverviewStore } from "./admin";
 import { recordEvent, type CallEvent, type StatsNamespace } from "./stats";
 import { handleHttp, MCP_PATH } from "./http";
-import { API_PREFIX, bearer, handlePartnerApi, handlePartnerMcp } from "./partner";
+import { API_PREFIX, bearer, creditsEnabled, handlePartnerApi, handlePartnerMcp } from "./partner";
 import { DATA_SITE_URL } from "../core/links";
-import type { Fetcher } from "./server";
+import { SERVER_VERSION, visibleTools, type Fetcher } from "./server";
 import { captureWorld, CAPTURE_UA, WORKER_MARKET_PARTS, captureCrypto, captureEconomy, captureMarket, captureNews, type CaptureEnv } from "../data/capture";
 import { readEconomyFile } from "../data/economy";
 import { readWorldFile } from "../data/world";
@@ -292,6 +292,15 @@ export function handleRequest(request: Request, env: WorkerEnv, ctx?: WaitContex
   const path = new URL(request.url).pathname;
   if (path === STRIPE_WEBHOOK_PATH) return handleStripeWebhook(request, env);
   if (path === ADMIN_STATS_PATH) return handleAdminStats(request, env);
+  if (path === ADMIN_OVERVIEW_PATH) {
+    return handleAdminOverview(request, { ...env, DATA: env.DATA as unknown as OverviewStore }, {
+      files: DATA_FILES,
+      refreshAfterMs: REFRESH_AFTER_MS,
+      // Statements and speeches are saved only when a bank publishes something new (see capture above).
+      savedOnChange: ["docs.json"],
+      service: { version: SERVER_VERSION, tools: visibleTools().map((t) => t.name), creditsEnabled: creditsEnabled() },
+    });
+  }
   // Counts each tool call and connection, after the answer, without holding it up.
   const stats = env.STATS;
   const onCall = stats && ctx ? (e: CallEvent) => ctx.waitUntil(recordEvent(stats, e)) : undefined;

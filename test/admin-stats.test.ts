@@ -154,30 +154,75 @@ describe("the admin sign-in check", () => {
   });
 });
 
-describe("the Connector usage card in the web app", () => {
-  it("asks the connector with the account's token, and shows nothing when it says no or the visitor is signed out", async () => {
-    const { mountAdminUsage } = await import("../src/wallet/admin-usage");
-    let filled = 0;
-    const slot = { replaceChildren: () => { filled += 1; } } as unknown as HTMLElement;
-    const asked: [string, string | null][] = [];
-    const fetcher = (async (url: string, init?: RequestInit) => {
-      asked.push([url, new Headers(init?.headers).get("Authorization")]);
-      return new Response(JSON.stringify({ error: "Not allowed" }), { status: 403 });
-    }) as unknown as typeof fetch;
-    await mountAdminUsage(slot, async () => "tok", fetcher);
-    expect(asked).toEqual([["https://atlas-explain-mcp.atlas-explain.workers.dev/admin/stats?days=30", "Bearer tok"]]);
-    await mountAdminUsage(slot, async () => null, fetcher);
-    expect(asked).toHaveLength(1);
-    await mountAdminUsage(slot, async () => "tok", (async () => { throw new Error("offline"); }) as unknown as typeof fetch);
-    expect(filled).toBe(0);
+describe("the owner dashboard", () => {
+  /** KV as the overview reads it: values with metadata, and a prefix list. */
+  function kv(entries: Record<string, { value: string; metadata?: unknown }>) {
+    return {
+      async get(k: string) {
+        return entries[k]?.value ?? null;
+      },
+      async getWithMetadata<M>(k: string) {
+        return { value: entries[k]?.value ?? null, metadata: (entries[k]?.metadata ?? null) as M | null };
+      },
+      async list({ prefix }: { prefix: string }) {
+        return { keys: Object.keys(entries).filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true };
+      },
+    };
+  }
+  const deps = { files: ["crypto.json", "docs.json", "news.json"], refreshAfterMs: { "crypto.json": 3 * 60_000, "docs.json": 3 * 3_600_000, "news.json": 15 * 60_000 }, savedOnChange: ["docs.json"], service: { version: "1.20.0", tools: ["explain_term"], creditsEnabled: false } };
+
+  it("shows usage, how fresh each data file is, and partner keys with their use, to the owner only", async () => {
+    const { handleAdminOverview } = await import("../src/mcp/admin");
+    const { keys, token } = await signer();
+    const ns = namespace();
+    await ns.get("global").fetch("https://stats/record", { method: "POST", body: JSON.stringify({ kind: "tool", tool: "explain_term", agent: "Claude", error: false }) });
+    const store = kv({
+      "data/v1/crypto.json": { value: "{}", metadata: { capturedAt: new Date(NOW - 2 * 60_000).toISOString() } },
+      "data/v1/docs.json": { value: "{}", metadata: { capturedAt: new Date(NOW - 2 * DAY).toISOString() } },
+      "data/v1/news.json": { value: "{}", metadata: { capturedAt: new Date(NOW - 3 * 3_600_000).toISOString() } },
+      "partners/keys/abc": { value: JSON.stringify({ name: "Acme Bank", tier: "pilot", dailyLimit: 10000, createdAt: "2026-11-01T00:00:00Z", active: true }) },
+      "partners/keys/old": { value: JSON.stringify({ name: "revoked", tier: "sandbox", dailyLimit: 0, createdAt: "2026-11-01T00:00:00Z", active: false }) },
+      "partners/usage/abc/2026-11-22": { value: "40" },
+      "partners/usage/abc/2026-11-20": { value: "2" },
+    });
+    const env = { STATS: ns, ADMIN_EMAILS: "owner@example.com", DATA: store };
+    const ask = async (claims: Record<string, unknown>, e: Record<string, unknown> = env) =>
+      handleAdminOverview(new Request("https://w/admin/overview?days=7", { headers: { Origin: "https://atlas-explain.web.app", Authorization: `Bearer ${await token(claims)}` } }), e as typeof env, deps, keys, NOW);
+    const r = await ask(good);
+    expect(r.status).toBe(200);
+    const o = (await r.json()) as import("../src/mcp/admin").Overview;
+    expect(o.owner).toBe("owner@example.com");
+    expect(o.usage?.totals.calls).toBe(1);
+    expect(o.data).toEqual([
+      { file: "crypto.json", capturedAt: new Date(NOW - 2 * 60_000).toISOString(), ageMinutes: 2, expectedEveryMinutes: 3, savedOnChange: false, late: false },
+      // Saved only when a bank publishes: two quiet days is normal.
+      { file: "docs.json", capturedAt: new Date(NOW - 2 * DAY).toISOString(), ageMinutes: 2880, expectedEveryMinutes: 180, savedOnChange: true, late: false },
+      // Three hours on a 15-minute schedule is behind.
+      { file: "news.json", capturedAt: new Date(NOW - 3 * 3_600_000).toISOString(), ageMinutes: 180, expectedEveryMinutes: 15, savedOnChange: false, late: true },
+    ]);
+    expect(o.partners).toEqual([{ name: "Acme Bank", tier: "pilot", dailyLimit: 10000, active: true, createdAt: "2026-11-01T00:00:00Z", today: 40, last7Days: 42 }]);
+    expect(o.service).toEqual({ ...deps.service, counting: true });
+    // Anyone else: refused, and told whether an owner is set up at all.
+    const other = await ask({ ...good, email: "someone@example.com" });
+    expect(other.status).toBe(403);
+    expect(await other.json()).toMatchObject({ setup: true });
+    const none = await ask(good, { ...env, ADMIN_EMAILS: "" });
+    expect(none.status).toBe(403);
+    expect(await none.json()).toMatchObject({ setup: false });
   });
 
-  it("opens from /app/admin, and loads only for a signed-in account, on demand", async () => {
-    const { parseRoute } = await import("../src/app/routes");
-    expect(parseRoute("/app/admin")).toEqual({ kind: "tab", tab: "settings" });
+  it("is its own page at /admin, apart from the user app, never indexed", async () => {
     const { readFileSync } = await import("node:fs");
+    const fb = JSON.parse(readFileSync("firebase.json", "utf8")) as { hosting: { rewrites: unknown[]; redirects: unknown[]; headers: { source: string; headers: { key: string; value: string }[] }[] } };
+    expect(fb.hosting.rewrites).toContainEqual({ source: "/admin", destination: "/admin.html" });
+    expect(fb.hosting.redirects).toContainEqual({ source: "/app/admin", destination: "/admin", type: 301 });
+    expect(fb.hosting.headers.find((x) => x.source === "/admin")?.headers).toContainEqual({ key: "X-Robots-Tag", value: "noindex, nofollow" });
+    expect(readFileSync("admin.html", "utf8")).toContain('<meta name="robots" content="noindex, nofollow" />');
+    expect(readFileSync("vite.config.ts", "utf8")).toContain('admin: "admin.html"');
     const app = readFileSync("src/web/app.ts", "utf8");
-    expect(app).toContain('if (account?.signedIn && token) void import("../wallet/admin-usage")');
-    expect(readFileSync("src/wallet/admin-usage.ts", "utf8")).not.toMatch(/@[a-z0-9-]+\.[a-z]{2,}/i);
+    expect(app).not.toContain("admin-usage");
+    // The page never names the owner: the connector decides.
+    for (const f of ["src/admin/main.ts", "src/admin/view.ts", "admin.html"]) expect(readFileSync(f, "utf8")).not.toMatch(/@gmail\.com/);
+    expect(readFileSync("src/admin/main.ts", "utf8")).toContain("/admin/overview?days=");
   });
 });

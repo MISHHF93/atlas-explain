@@ -52,7 +52,7 @@
         ]
       },
       {
-        "source": "/@(app|signin|start|privacy|terms|how-its-built|support|connect|partners){,/**}",
+        "source": "/@(app|signin|start|privacy|terms|how-its-built|support|connect|partners|admin){,/**}",
         "headers": [
           {
             "key": "Cache-Control",
@@ -79,6 +79,15 @@
           {
             "key": "Cache-Control",
             "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/admin",
+        "headers": [
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow"
           }
         ]
       }
@@ -123,6 +132,10 @@
       {
         "source": "/partners",
         "destination": "/partners.html"
+      },
+      {
+        "source": "/admin",
+        "destination": "/admin.html"
       }
     ],
     "redirects": [
@@ -144,6 +157,11 @@
       {
         "source": "/welcome",
         "destination": "/connect",
+        "type": 301
+      },
+      {
+        "source": "/app/admin",
+        "destination": "/admin",
         "type": 301
       }
     ]

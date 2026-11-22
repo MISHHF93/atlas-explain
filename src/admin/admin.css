@@ -1,0 +1,61 @@
+/* The owner dashboard (/admin). Brand colours and dark mode come from the shared tokens. */
+@import "../brand/tokens.css";
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+body { margin: 0; background: var(--atlas-paper); color: var(--atlas-ink); font-family: var(--atlas-font-sans); line-height: 1.45; -webkit-text-size-adjust: 100%; }
+a { color: var(--atlas-accent); }
+
+.ad-head { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--atlas-line); background: var(--atlas-card); }
+.ad-brand { font-family: var(--atlas-font-serif); font-weight: 700; font-size: 1.05rem; color: var(--atlas-ink); text-decoration: none; }
+.ad-tag { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--atlas-accent); border: 1px solid var(--atlas-accent); border-radius: 999px; padding: 0.1rem 0.55rem; }
+.ad-main { max-width: 1120px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+.ad-page { display: grid; gap: 1rem; }
+
+.ad-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem; }
+.ad-title { margin: 0; font-family: var(--atlas-font-serif); font-size: 1.6rem; line-height: 1.2; }
+.ad-fine { margin: 0.2rem 0 0; color: var(--atlas-muted); font-size: 0.85rem; }
+.ad-loading { padding: 2rem 0; }
+.ad-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+.ad-btn { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0.4rem 0.9rem; border: 1px solid var(--atlas-line); border-radius: 0.55rem; background: var(--atlas-card); color: var(--atlas-ink); font: inherit; font-size: 0.9rem; text-decoration: none; cursor: pointer; }
+.ad-btn:hover { border-color: var(--atlas-accent); }
+.ad-btn-primary { background: var(--atlas-accent); border-color: var(--atlas-accent); color: var(--atlas-paper); font-weight: 600; }
+.ad-btn:focus-visible, .ad-seg-btn:focus-visible, a:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 2px; }
+
+.ad-seg { display: inline-flex; border: 1px solid var(--atlas-line); border-radius: 0.55rem; overflow: hidden; }
+.ad-seg-btn { min-height: 2.25rem; padding: 0.4rem 0.75rem; border: 0; background: var(--atlas-card); color: var(--atlas-ink); font: inherit; font-size: 0.85rem; cursor: pointer; }
+.ad-seg-btn + .ad-seg-btn { border-left: 1px solid var(--atlas-line); }
+.ad-seg-btn[aria-pressed="true"] { background: var(--atlas-accent); color: var(--atlas-paper); font-weight: 600; }
+
+.ad-card { background: var(--atlas-card); border: 1px solid var(--atlas-line); border-radius: 0.85rem; padding: 1rem; min-width: 0; }
+.ad-card-title { margin: 0 0 0.6rem; font-size: 1rem; }
+.ad-message { max-width: 34rem; margin: 3rem auto 0; display: grid; gap: 0.75rem; }
+.ad-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+
+.ad-tiles { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); margin-bottom: 1rem; }
+.ad-tile { display: grid; gap: 0.1rem; padding: 0.7rem 0.8rem; border: 1px solid var(--atlas-line); border-radius: 0.65rem; }
+.ad-tile-label { font-size: 0.8rem; color: var(--atlas-muted); }
+.ad-tile-value { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+
+.ad-bars { display: flex; align-items: flex-end; gap: 2px; height: 140px; border-bottom: 1px solid var(--atlas-line); }
+.ad-bar { flex: 1 1 0; min-width: 2px; background: var(--atlas-accent); border-radius: 2px 2px 0 0; }
+.ad-bar-err { background: linear-gradient(to top, var(--atlas-signal-down) 0 4px, var(--atlas-accent) 4px); }
+.ad-axis { display: flex; justify-content: space-between; margin-top: 0.3rem; font-size: 0.78rem; color: var(--atlas-muted); }
+
+.ad-table-wrap { overflow-x: auto; }
+.ad-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+.ad-table th, .ad-table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--atlas-line); text-align: right; white-space: nowrap; }
+.ad-table th[scope="row"], .ad-table th[scope="col"]:first-child { text-align: left; font-weight: 600; white-space: normal; word-break: break-word; }
+.ad-table th[scope="col"] { color: var(--atlas-muted); font-weight: 600; font-size: 0.8rem; }
+
+.ad-pill { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.ad-pill-ok { color: var(--atlas-signal-up); border: 1px solid var(--atlas-signal-up); }
+.ad-pill-warn { color: var(--atlas-signal-down); border: 1px solid var(--atlas-signal-down); }
+.ad-pill-off { color: var(--atlas-muted); border: 1px solid var(--atlas-line); }
+
+.ad-facts { list-style: none; margin: 0 0 0.5rem; padding: 0; display: grid; gap: 0.4rem; }
+.ad-facts li { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--atlas-line); padding-bottom: 0.35rem; }
+.ad-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
+.ad-links li { display: grid; }
