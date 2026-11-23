@@ -7,6 +7,9 @@
  *   - Euro-area unemployment: Eurostat (une_rt_m)
  *   - Canada inflation (CPI) and unemployment: Statistics Canada (Web Data Service)
  *   - Canada's posted prime, 5-year mortgage and 5-year GIC rates at the chartered banks: Bank of Canada Valet (weekly)
+ *   - US national average savings and CD rates: FDIC national rates (monthly)
+ *   - UK quoted 2- and 5-year fixed mortgage rates: Bank of England database (monthly)
+ *   - Euro-area cost of borrowing for house purchase and household deposit rate: ECB bank interest rate statistics (monthly)
  *   - UK inflation (CPI) and unemployment: Office for National Statistics (time series)
  *   - Canada's policy rate (target for the overnight rate): Bank of Canada Valet
  *   - US total public debt outstanding: US Treasury Fiscal Data
@@ -22,9 +25,10 @@
 export const ECONOMY_SCHEMA = "atlas-explain-economy-v1";
 
 export type IndicatorId =
-  | "us_cpi" | "us_unemployment" | "us_fed_funds" | "us_sofr" | "euro_hicp" | "euro_unemployment" | "euro_deposit_rate"
+  | "us_cpi" | "us_unemployment" | "us_fed_funds" | "us_sofr" | "us_savings_rate" | "us_cd_12m" | "us_cd_5y"
+  | "euro_hicp" | "euro_unemployment" | "euro_deposit_rate" | "euro_mortgage_rate" | "euro_deposits_1y"
   | "ca_cpi" | "ca_unemployment" | "ca_policy_rate" | "ca_prime_rate" | "ca_mortgage_5y" | "ca_gic_5y"
-  | "uk_cpi" | "uk_unemployment" | "uk_bank_rate" | "us_debt";
+  | "uk_cpi" | "uk_unemployment" | "uk_bank_rate" | "uk_mortgage_2y" | "uk_mortgage_5y" | "us_debt";
 
 export interface Point {
   /** The period or day the value is for (YYYY-MM or YYYY-MM-DD). */
@@ -184,6 +188,13 @@ const CREDIT: Record<IndicatorId, { source: string; url: string }> = {
   ca_prime_rate: { source: "Bank of Canada", url: "https://www.bankofcanada.ca/rates/banking-and-financial-statistics/posted-interest-rates-offered-by-chartered-banks/" },
   ca_mortgage_5y: { source: "Bank of Canada", url: "https://www.bankofcanada.ca/rates/banking-and-financial-statistics/posted-interest-rates-offered-by-chartered-banks/" },
   ca_gic_5y: { source: "Bank of Canada", url: "https://www.bankofcanada.ca/rates/banking-and-financial-statistics/posted-interest-rates-offered-by-chartered-banks/" },
+  us_savings_rate: { source: "Federal Deposit Insurance Corporation (FDIC)", url: "https://www.fdic.gov/national-rates-and-rate-caps" },
+  us_cd_12m: { source: "Federal Deposit Insurance Corporation (FDIC)", url: "https://www.fdic.gov/national-rates-and-rate-caps" },
+  us_cd_5y: { source: "Federal Deposit Insurance Corporation (FDIC)", url: "https://www.fdic.gov/national-rates-and-rate-caps" },
+  uk_mortgage_2y: { source: "Bank of England", url: "https://www.bankofengland.co.uk/statistics/visual-summaries/quoted-household-interest-rates" },
+  uk_mortgage_5y: { source: "Bank of England", url: "https://www.bankofengland.co.uk/statistics/visual-summaries/quoted-household-interest-rates" },
+  euro_mortgage_rate: { source: "European Central Bank", url: "https://data.ecb.europa.eu/data/datasets/MIR" },
+  euro_deposits_1y: { source: "European Central Bank", url: "https://data.ecb.europa.eu/data/datasets/MIR" },
 };
 
 type Rec = Record<string, unknown>;
@@ -700,12 +711,125 @@ export function parseEurostatUnemployment(body: unknown, capturedAt: string): In
   return null;
 }
 
+/* ---------- rates people pay in the US, UK and euro area (added 23 Nov 2026) ---------- */
+
+const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+
+/** The FDIC's national rates, by product, as the FDIC labels them, and what each figure is. */
+export const FDIC_RATES: readonly { id: IndicatorId; row: string; name: string; note: string }[] = [
+  { id: "us_savings_rate", row: "Savings", name: "US savings account rate (national average)", note: "The FDIC's national average across insured banks and credit unions, weighted by deposits; the best accounts pay much more." },
+  { id: "us_cd_12m", row: "12 month CD", name: "US 12-month CD rate (national average)", note: "The FDIC's national average for a 12-month CD under $100,000; many banks pay more." },
+  { id: "us_cd_5y", row: "60 month CD", name: "US 5-year CD rate (national average)", note: "The FDIC's national average for a 60-month CD under $100,000; many banks pay more." },
+];
+
+/** The FDIC's monthly national rates page: the current one, or a past month's ("2026-10"). */
+export function fdicRatesUrl(month?: string): string {
+  if (!month) return "https://www.fdic.gov/national-rates-and-rate-caps";
+  const [y, m] = month.split("-");
+  return `https://www.fdic.gov/national-rates-and-rate-caps/national-rates-and-rate-caps-${MONTH_NAMES[Number(m) - 1]}-${y}`;
+}
+
+/** One FDIC national rates page → its month (from the title) and the national rate for each product. */
+export function parseFdicRates(html: string): { month: string; rates: Partial<Record<IndicatorId, number>> } | null {
+  const title = /National Rates and Rate Caps\s*[–-]\s*([A-Z][a-z]+)\s+(\d{4})/.exec(html);
+  const mi = title ? MONTH_NAMES.indexOf(title[1]!.toLowerCase()) : -1;
+  if (!title || mi < 0) return null;
+  const rows = html.replace(/<\/t[dh]>/gi, "|").replace(/<\/tr>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").split("\n");
+  const rates: Partial<Record<IndicatorId, number>> = {};
+  for (const r of FDIC_RATES) {
+    const line = rows.map((l) => l.replace(/\s+/g, " ").trim()).find((l) => l.startsWith(`${r.row}|`));
+    const v = line ? num(line.split("|")[1]) : null;
+    // A national rate is a small positive percentage; anything else means the page changed shape.
+    if (v != null && v >= 0 && v < 25) rates[r.id] = v;
+  }
+  return Object.keys(rates).length ? { month: `${title[2]}-${String(mi + 1).padStart(2, "0")}`, rates } : null;
+}
+
+/** The month before "2026-11" → "2026-10". */
+export const monthBefore = (month: string): string => {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+};
+
+/**
+ * The FDIC figures as indicators: the pages read now, added to the months already kept (the FDIC publishes a page
+ * per month, so the history grows a month at a time and keeps the last 13).
+ */
+export function fdicIndicators(pages: (ReturnType<typeof parseFdicRates>)[], prev: EconomyFile | null, capturedAt: string): Indicator[] {
+  const out: Indicator[] = [];
+  for (const r of FDIC_RATES) {
+    const byMonth = new Map((prev?.indicators.find((i) => i.id === r.id)?.series ?? []).map((p) => [p.t, p.v]));
+    for (const p of pages) if (p && p.rates[r.id] != null) byMonth.set(p.month, p.rates[r.id]!);
+    const series = [...byMonth].map(([t, v]) => ({ t, v })).filter((p) => isMonth(p.t)).sort((a, b) => a.t.localeCompare(b.t)).slice(-13);
+    const ind = indicator(r.id, r.name, "%", series, "vs the month before", capturedAt, r.note);
+    if (ind) out.push(ind);
+  }
+  return out;
+}
+
+/** The Bank of England's quoted mortgage rates (monthly averages of lenders' quoted rates). */
+export const BOE_QUOTED: readonly { id: IndicatorId; code: string; name: string; note: string }[] = [
+  { id: "uk_mortgage_2y", code: "IUMBV34", name: "UK 2-year fixed mortgage rate (75% loan-to-value)", note: "The average rate lenders quoted for a 2-year fixed mortgage at 75% loan-to-value, from the Bank of England; deals vary by lender and borrower." },
+  { id: "uk_mortgage_5y", code: "IUMBV42", name: "UK 5-year fixed mortgage rate (75% loan-to-value)", note: "The average rate lenders quoted for a 5-year fixed mortgage at 75% loan-to-value, from the Bank of England; deals vary by lender and borrower." },
+];
+
+/** Bank of England database CSV for the quoted mortgage rates, from about 14 months before `now`. */
+export function boeQuotedUrl(now: number): string {
+  const from = new Date(now - 430 * 86_400_000);
+  const day = `01/${SHORT_MONTHS[from.getUTCMonth()]}/${from.getUTCFullYear()}`;
+  return `https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp?csv.x=yes&Datefrom=${day}&Dateto=now&SeriesCodes=${BOE_QUOTED.map((q) => q.code).join(",")}&CSVF=TN&UsingCodes=Y`;
+}
+
+/** "DATE,IUMBV34,IUMBV42" then "31 Oct 2026,5.39,5.19" → one monthly indicator per series. */
+export function parseBoeQuoted(id: IndicatorId) {
+  const meta = BOE_QUOTED.find((q) => q.id === id)!;
+  return (csv: string, capturedAt: string): Indicator | null => {
+    const lines = csv.trim().split(/\r?\n/);
+    const head = (lines[0] ?? "").split(",").map((h) => h.trim());
+    const col = head.indexOf(meta.code);
+    if (head[0] !== "DATE" || col < 0) return null;
+    const points = lines.slice(1).flatMap((line): Point[] => {
+      const cells = line.split(",");
+      const d = /^(\d{2}) ([A-Z][a-z]{2}) (\d{4})$/.exec((cells[0] ?? "").trim());
+      const m = d ? SHORT_MONTHS.indexOf(d[2]!) + 1 : 0;
+      const v = num(cells[col]);
+      return d && m && v != null ? [{ t: `${d[3]}-${String(m).padStart(2, "0")}`, v }] : [];
+    }).sort((a, b) => a.t.localeCompare(b.t));
+    return indicator(id, meta.name, "%", points.slice(-13), "vs the month before", capturedAt, meta.note);
+  };
+}
+
+/** The ECB's bank interest rate statistics (MIR) for households in the euro area. */
+export const ECB_MIR: readonly { id: IndicatorId; key: string; name: string; note: string }[] = [
+  { id: "euro_mortgage_rate", key: "M.U2.B.A2C.AM.R.A.2250.EUR.N", name: "Euro-area cost of borrowing for a home", note: "What households paid on new loans for house purchase, a weighted average across the euro area (ECB composite cost of borrowing)." },
+  { id: "euro_deposits_1y", key: "M.U2.B.L22.F.R.A.2250.EUR.N", name: "Euro-area rate on household deposits up to 1 year", note: "What banks paid on new household deposits fixed for up to one year, a euro-area average (ECB)." },
+];
+export const ecbMirUrl = (id: IndicatorId): string => `https://data-api.ecb.europa.eu/service/data/MIR/${ECB_MIR.find((m) => m.id === id)!.key}?lastNObservations=13&format=csvdata`;
+
+/** ECB data portal CSV for one MIR series → a monthly indicator. */
+export function parseEcbMir(id: IndicatorId) {
+  const meta = ECB_MIR.find((m) => m.id === id)!;
+  return (csv: string, capturedAt: string): Indicator | null => {
+    const lines = csv.trim().split(/\r?\n/);
+    const head = (lines[0] ?? "").split(",");
+    const ti = head.indexOf("TIME_PERIOD");
+    const vi = head.indexOf("OBS_VALUE");
+    if (ti < 0 || vi < 0) return null;
+    const points = lines.slice(1).flatMap((line): Point[] => {
+      const cells = line.split(",");
+      const v = num(cells[vi]);
+      return isMonth(cells[ti]) && v != null ? [{ t: cells[ti]!, v }] : [];
+    }).sort((a, b) => a.t.localeCompare(b.t));
+    return indicator(id, meta.name, "%", points.slice(-13), "vs the month before", capturedAt, meta.note);
+  };
+}
+
 /** Every indicator, in the order shown: country by country, figures before rates, US debt last. */
 export const INDICATOR_IDS: readonly IndicatorId[] = [
-  "us_cpi", "us_unemployment", "us_fed_funds", "us_sofr",
-  "euro_hicp", "euro_unemployment", "euro_deposit_rate",
+  "us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "us_savings_rate", "us_cd_12m", "us_cd_5y",
+  "euro_hicp", "euro_unemployment", "euro_deposit_rate", "euro_mortgage_rate", "euro_deposits_1y",
   "ca_cpi", "ca_unemployment", "ca_policy_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y",
-  "uk_cpi", "uk_unemployment", "uk_bank_rate",
+  "uk_cpi", "uk_unemployment", "uk_bank_rate", "uk_mortgage_2y", "uk_mortgage_5y",
   "us_debt",
 ];
 const INSTITUTIONS: readonly string[] = ["Federal Reserve", "European Central Bank", "Bank of Canada", "Bank of England"];

@@ -15,13 +15,13 @@ export const CHANGE_TOPICS: readonly ChangeTopic[] = ["all", "rates", "inflation
 
 const IDS: Record<ChangeTopic, readonly IndicatorId[] | null> = {
   all: null,
-  rates: ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y"],
+  rates: ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y", "us_savings_rate", "us_cd_12m", "us_cd_5y", "uk_mortgage_2y", "uk_mortgage_5y", "euro_mortgage_rate", "euro_deposits_1y"],
   inflation: ["us_cpi", "euro_hicp", "ca_cpi", "uk_cpi"],
   jobs: ["us_unemployment", "euro_unemployment", "ca_unemployment", "uk_unemployment"],
-  us: ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "us_debt"],
+  us: ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "us_savings_rate", "us_cd_12m", "us_cd_5y", "us_debt"],
   canada: ["ca_cpi", "ca_unemployment", "ca_policy_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y"],
-  uk: ["uk_cpi", "uk_unemployment", "uk_bank_rate"],
-  euro: ["euro_hicp", "euro_unemployment", "euro_deposit_rate"],
+  uk: ["uk_cpi", "uk_unemployment", "uk_bank_rate", "uk_mortgage_2y", "uk_mortgage_5y"],
+  euro: ["euro_hicp", "euro_unemployment", "euro_deposit_rate", "euro_mortgage_rate", "euro_deposits_1y"],
 };
 const BANKS: Record<ChangeTopic, readonly DocBank[]> = {
   all: ["fed", "boc", "ecb", "boe"], rates: ["fed", "boc", "ecb", "boe"], inflation: [], jobs: [],

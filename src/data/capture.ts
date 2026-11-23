@@ -30,7 +30,7 @@ import {
 import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseEiaSpotPage, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
 import { parseBlsSchedule } from "./economy.ts";
 import { boeBankRateUrl, parseBoeBankRate, parseBoeMpcDates, parseEcbDepositRate, parseTreasuryAuctions, type Auction } from "./economy.ts";
-import { ECONOMY_SCHEMA, ECONOMY_SOURCES, EUROSTAT_UNEMPLOYMENT_URL, INDICATOR_IDS, parsePostedRate, trackFirstSeen, parseEurostatUnemployment, parseOnsCpi, parseOnsUnemployment, parseStatcanCpi, parseStatcanUnemployment, statcanUrl, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
+import { ECONOMY_SCHEMA, ECONOMY_SOURCES, EUROSTAT_UNEMPLOYMENT_URL, INDICATOR_IDS, boeQuotedUrl, ecbMirUrl, fdicIndicators, fdicRatesUrl, monthBefore, parseBoeQuoted, parseEcbMir, parseFdicRates, parsePostedRate, trackFirstSeen, parseEurostatUnemployment, parseOnsCpi, parseOnsUnemployment, parseStatcanCpi, parseStatcanUnemployment, statcanUrl, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
 import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, oecdSharesUrl, parseData360, parseOecdShares, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
 import { PREDECESSOR_CIK, SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, mergePredecessorFacts, readTickerMap, stockFromSec } from "./sec.ts";
 
@@ -354,14 +354,35 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
   const csvReads: [IndicatorId, string, (csv: string, at: string) => Indicator | null][] = [
     ["euro_deposit_rate", ECONOMY_SOURCES.ecbDeposit, parseEcbDepositRate],
     ["uk_bank_rate", boeBankRateUrl(env.now), parseBoeBankRate],
+    // One Bank of England request serves both quoted mortgage rates; each ECB rate is its own series.
+    ["uk_mortgage_2y", boeQuotedUrl(env.now), parseBoeQuoted("uk_mortgage_2y")],
+    ["uk_mortgage_5y", boeQuotedUrl(env.now), parseBoeQuoted("uk_mortgage_5y")],
+    ["euro_mortgage_rate", ecbMirUrl("euro_mortgage_rate"), parseEcbMir("euro_mortgage_rate")],
+    ["euro_deposits_1y", ecbMirUrl("euro_deposits_1y"), parseEcbMir("euro_deposits_1y")],
   ];
+  const csvBodies = new Map<string, Promise<string>>();
+  const csvOnce = (url: string) => {
+    if (!csvBodies.has(url)) csvBodies.set(url, env.get(url).catch(() => ""));
+    return csvBodies.get(url)!;
+  };
   for (const [id, url, parse] of csvReads) {
-    const fresh = parse(await env.get(url).catch(() => ""), at);
+    const fresh = parse(await csvOnce(url), at);
     const kept = fresh ?? prev?.indicators.find((i) => i.id === id) ?? null;
     if (!fresh) env.log(`economy ${id}: ${kept ? `kept the value captured ${kept.capturedAt}` : "no data"}`);
     if (kept) indicators.push(kept);
   }
   // Keep the published order: each bank's rates together.
+  // The FDIC's national rates: this month's page, plus last month's while fewer than two months are kept.
+  const fdicNow = parseFdicRates(await env.get(fdicRatesUrl()).catch(() => ""));
+  const keptMonths = prev?.indicators.find((i) => i.id === "us_savings_rate")?.series.length ?? 0;
+  const fdicBefore = fdicNow && keptMonths < 2 ? parseFdicRates(await env.get(fdicRatesUrl(monthBefore(fdicNow.month))).catch(() => "")) : null;
+  const fdic = fdicIndicators([fdicBefore, fdicNow], prev, at);
+  for (const id of ["us_savings_rate", "us_cd_12m", "us_cd_5y"] as const) {
+    const fresh = fdicNow ? fdic.find((i) => i.id === id) : undefined;
+    const kept = fresh ?? prev?.indicators.find((i) => i.id === id) ?? null;
+    if (!fresh) env.log(`economy ${id}: ${kept ? `kept the value captured ${kept.capturedAt}` : "no data"}`);
+    if (kept) indicators.push(kept);
+  }
   indicators.sort((a, b) => INDICATOR_IDS.indexOf(a.id) - INDICATOR_IDS.indexOf(b.id));
   const pages: [string, (html: string) => CalendarEvent[], CalendarEvent["institution"]][] = [
     [ECONOMY_SOURCES.fomc, parseFomcCalendar, "Federal Reserve"],

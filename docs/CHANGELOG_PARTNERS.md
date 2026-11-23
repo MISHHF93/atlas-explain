@@ -14,6 +14,12 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: rates people pay in the US, UK and euro area (1.26.0)
+
+- Seven monthly figures join the economy data: US national average savings, 12-month CD and 5-year CD rates (FDIC; `us_savings_rate`, `us_cd_12m`, `us_cd_5y`), the UK's quoted 2- and 5-year fixed mortgage rates at 75% loan-to-value (Bank of England; `uk_mortgage_2y`, `uk_mortgage_5y`), and the euro area's cost of borrowing for a home and household deposit rate up to one year (ECB; `euro_mortgage_rate`, `euro_deposits_1y`). Each says what kind of average it is.
+- Topics `mortgage`, `mortgage rates`, `savings`, `cd rates`, `uk mortgage` and more; `whats_changed` and `data_series` include them.
+- `rate_change_impact` adds the US national average savings or 12-month CD rate as `reference` for a US savings or CD answer.
+
 ## 2026-11-23: paying off several debts (1.25.0)
 
 - New tool `debt_payoff(debts[], monthly_budget, method?)`: the avalanche and snowball methods side by side on the person's own numbers, with `months`, `totalInterest`, `totalPaid`, the payoff `order` and monthly `points` for each. Pure arithmetic; it compares and never recommends.
