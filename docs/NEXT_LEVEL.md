@@ -146,26 +146,17 @@ A 2026 FINRA Foundation and Stanford study found only 18% of US investors show a
 - **Done (1.13.0):** `money_maths` with an interactive view (compound growth, fees, inflation, diversification); `scam_red_flags` (SEC and FINRA warning signs, where to check and report, recent official fraud actions); Bank of England Bank Rate and MPC dates, and the ECB deposit rate, in `economy_snapshot` and `economic_calendar`; `treasury_auctions` from TreasuryDirect; prompts `check_an_offer` and `money_lesson`.
 - **Done since:** the Today section (17), countdowns and scenarios (1.14.0), keyless energy prices from the EIA's history pages, the partner sandbox (REST and keyed MCP, `docs/PARTNER_API.md`) with its page, OpenAPI spec and samples, and structured answers from every tool (1.15.0).
 - **Batch 2:** the learning hub and spaced review (13, 14), weekly futures positioning from the CFTC (keyless, CC0; descriptive only), euro-area unemployment from Eurostat (keyless), supersession and view control (11, 10).
-- **Not now:** DefiLlama stablecoins (terms to read first), Statistics Canada (blocks automated reads), stock prices (no free display licence). Fiscal Data's `upcoming_auctions` lagged a month on 18 Nov 2026, so auctions come from TreasuryDirect; the SEC's investor-alerts feed refuses automated readers, so recent fraud actions come from the official releases already captured.
+- **Not now:** DefiLlama stablecoins (terms to read first), stock prices (no free display licence). Fiscal Data's `upcoming_auctions` lagged a month on 18 Nov 2026, so auctions come from TreasuryDirect; the SEC's investor-alerts feed refuses automated readers, so recent fraud actions come from the official releases already captured.
 
-## Where things stand (18 Nov 2026)
+## Where things stand (23 Nov 2026)
 
-**Live:** connector 1.19.0 with 21 tools, 11 prompts and 12 views (new in 1.19.0: the ECB and the Bank of England in `decision_explainer` and `speech_tracker`; new in 1.18.0: `decision_explainer` and `speech_tracker` from the Fed's and Bank of Canada's own statements and speeches; new in 1.17.0: `rate_change_impact`, v2 phase 1, and its widget at `/embed/rate-impact.html`; new in 1.16.0: `data_series` with CSV and the `make_a_report` prompt; views for countries, coming up, Treasury auctions, the evidence brief and data series); every tool returns structured content with an output schema; the partner sandbox at `/api/v1` and on keyed MCP (crypto hidden). A live sweep of every tool, prompt, view and error path, and an end-to-end partner key test (issue, call every endpoint, revoke), passed on 18 Nov 2026.
+**Live:** connector 1.23.0 with 23 tools, 11 prompts and 12 views, published to the MCP Registry. Since 1.19.0: Canada, UK and euro-area inflation and jobs from Statistics Canada, the ONS and Eurostat (1.21.0); `inflation_calculator` on each country's official yearly price index (1.22.0); `whats_changed` (1.23.0, v2 phase 3), with `economy.json` recording when each monthly figure first appears. The owner dashboard is at /admin (docs/ADMIN.md), with connector usage counted since 22 Nov 2026. A sweep on 23 Nov 2026 called every tool, prompt and view, the partner API's public routes and every site link: no errors, nothing slower than 1.5 s.
 
 **Next to build, in order:**
-1. Learning hub beside the chat, then spaced review (13, 14).
-2. CFTC weekly positioning (descriptive only) and Eurostat unemployment.
-3. Only the newest copy stays live, and view control (11, 10).
-4. Partner self-serve: a sign-up form that issues sandbox keys, usage shown to the partner, and webhooks for scheduled releases.
-5. A shared counter for partner limits (today each Cloudflare isolate counts on its own between flushes to KV, so the daily limit is approximate).
-
-**Owner steps** are in `docs/LAUNCH_CHECKLIST.md`.
-
-### Suggested order for round 3
-
-12 (quick, one release with 11), then 16 (distribution), then 13 + 14 (learning), then 15 and 17.
-
-Sources: claude.com "Interactive connectors and MCP Apps" and "Open your apps in Claude"; @ClaudeDevs on app tools and embedded sites (Nov 2026); MCP blog on the 2026-07-28 spec; sunpeak.ai on app-only tool visibility; reporting on the plugin directory portal (Sep 2026); 11:FS and Gerald on gamification in finance learning; World Bank, IMF and OECD API listings. Third-party claims (for example, that entry points need a Verified listing) to be checked against Anthropic's docs before relying on them.
+1. Rates people actually pay: Canada's posted prime, mortgage and GIC rates from the Bank of Canada (free with credit), beside `rate_change_impact`; the US 30-year mortgage rate from Freddie Mac only after its terms are confirmed for an API (they allow automatically updated PMMS data on a website).
+2. A debt payoff calculator (avalanche and snowball, pure arithmetic): budgeting and debt are the questions people most often bring to chatbots.
+3. Learning hub beside the chat, then spaced review (13, 14).
+4. CFTC weekly positioning (descriptive only), once the dataset's licence is confirmed.
 
 ## Round 5: what institutions want from a data connector (researched 18 Nov 2026)
 

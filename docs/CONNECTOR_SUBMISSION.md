@@ -14,7 +14,7 @@ Checked against Anthropic's checklist (https://claude.com/docs/connectors/buildi
 
 ## 2. Tools
 
-Synced from the server: 10 read-only tools (`explain_term`, `browse_glossary`, `asset_details`, `official_figures`, `crypto_prices`, `price_history`, `todays_headlines`, and since 1.6.0 `economy_snapshot`, `economic_calendar`, `market_depth`), 3 prompts (`market_brief`, `explain_asset`, `learn_next`) and 5 interactive chart views (MCP Apps: the `price_history` chart, the `crypto_prices` board with sparklines, the `official_figures` cards and yield curve, the `economy_snapshot` dashboard, the `market_depth` depth chart). No write tools.
+Synced from the server (1.23.0, 23 Nov 2026): 23 read-only tools (`explain_term`, `browse_glossary`, `asset_details`, `official_figures`, `crypto_prices`, `price_history`, `todays_headlines`, `economy_snapshot`, `economic_calendar`, `market_depth`, `evidence_brief`, `notable_today`, `upcoming_events`, `money_maths`, `scam_red_flags`, `treasury_auctions`, `compare_countries`, `data_series`, `whats_changed`, `inflation_calculator`, `rate_change_impact`, `decision_explainer`, `speech_tracker`), 11 prompts and 12 interactive views (MCP Apps). No write tools; every tool has a title, `readOnlyHint: true` and an output schema. After a new version, open the listing and choose "Sync from server" to refresh this list.
 
 ## 3. Listing
 
@@ -28,7 +28,8 @@ Synced from the server: 10 read-only tools (`explain_term`, `browse_glossary`, `
   - Look up what an asset is: its market, trading hours, and its latest official figure or price, or why no price is shown.
   - Official figures from free government and regulator sources: US Treasury yields (drawn as a yield curve in Claude), ECB and Bank of Canada rates, EIA energy prices, and SEC-filed figures for about 30 large US companies and ETFs.
   - Prices for ten major coins, refreshed about every 10 minutes, shown in Claude as a price board with 24-hour sparklines; choose a coin to see how it moved over 24 hours, 7 days or 30 days on an interactive chart.
-  - The economy at a glance: US inflation and unemployment, the fed funds rate and SOFR, euro-area inflation, Canada's policy rate and US public debt, each with about a year of history, plus the next Fed, ECB and Bank of Canada rate decisions.
+  - The economy at a glance for the US, the euro area, Canada and the UK: inflation, unemployment and policy rates from each official agency, with a year of history, what changed since any date, central-bank statements and speeches, and the next rate decisions.
+  - Calculators on your own numbers: what a rate change does to a mortgage or savings, what money from a past year is worth today, fees and compounding.
   - How trading works, with real numbers: a coin's bid-ask spread, its order book as a depth chart, and the slippage of filling different order sizes.
   - Today's market headlines and official press releases (Federal Reserve, SEC, CFTC, ECB, Bank of Canada, Bank of England), each linked to its publisher.
 
