@@ -37,6 +37,7 @@ import { COUNTRIES_APP_HTML, COUNTRIES_APP_URI } from "./countries-app";
 import { EVENTS_APP_HTML, EVENTS_APP_URI } from "./events-app";
 import { SERIES_APP_HTML, SERIES_APP_URI } from "./series-app";
 import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
+import { DEBT_APP_HTML, DEBT_APP_URI, INFLATION_APP_HTML, INFLATION_APP_URI } from "./calc-apps";
 import { BANK_LICENCE, BANK_NAME, compareStatements, readDocsFile, watchingSentences, type DocBank, type Statement } from "../data/docs";
 import { noPriceNote, officialPriceLink } from "../core/price-links";
 import { rateChangeImpact, type ImpactCountry, type ImpactProduct } from "../core/rate-impact";
@@ -52,7 +53,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.26.0";
+export const SERVER_VERSION = "1.27.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -426,6 +427,8 @@ export const MCP_APPS = [
   { uri: ECONOMY_APP_URI, name: "economy", title: "The economy at a glance", description: "The view economy_snapshot draws in clients that support MCP Apps: a card per indicator, its trend over about a year, and the next rate decisions.", html: ECONOMY_APP_HTML },
   { uri: DEPTH_APP_URI, name: "market-depth", title: "Order book depth chart", description: "The view market_depth draws in clients that support MCP Apps: best bid and ask, the spread, a depth chart of the order book and slippage by order size.", html: DEPTH_APP_HTML },
   { uri: MONEY_APP_URI, name: "money-maths", title: "Money maths", description: "The view money_maths draws in clients that support MCP Apps: the result as a chart, with the inputs as fields to change.", html: MONEY_APP_HTML },
+  { uri: INFLATION_APP_URI, name: "inflation", title: "Inflation calculator", description: "The view inflation_calculator draws in clients that support MCP Apps: the amount's value year by year as a chart, with the amount as a field to change.", html: INFLATION_APP_HTML },
+  { uri: DEBT_APP_URI, name: "debt-payoff", title: "Debt payoff", description: "The view debt_payoff draws in clients that support MCP Apps: what is still owed each month under the avalanche and the snowball.", html: DEBT_APP_HTML },
   { uri: NOTABLE_APP_URI, name: "notable-today", title: "What's notable today", description: "The view notable_today draws in clients that support MCP Apps: a card per item with why it was picked and its source, then what was checked and found ordinary.", html: NOTABLE_APP_HTML },
   { uri: COUNTRIES_APP_URI, name: "countries", title: "Countries compared", description: "The view compare_countries draws in clients that support MCP Apps: a bar per country for one indicator, with the year of each figure.", html: COUNTRIES_APP_HTML },
   { uri: EVENTS_APP_URI, name: "coming-up", title: "Coming up", description: "The view upcoming_events draws in clients that support MCP Apps: a timeline of rate decisions and data releases, with countdowns and what each outcome would mean.", html: EVENTS_APP_HTML },
@@ -468,6 +471,7 @@ export const V2_TOOLS = [
       method: { type: "string", enum: ["both", "avalanche", "snowball"], description: "Default both, to compare them." },
     }, required: ["debts", "monthly_budget"], additionalProperties: false },
     annotations: annotations("Paying off several debts: avalanche and snowball", false),
+    _meta: { ui: { resourceUri: DEBT_APP_URI } },
     icons: ICONS,
     outputSchema: obj({
       budget: { type: "number" },
@@ -510,6 +514,7 @@ export const V2_TOOLS = [
       country: { type: "string", enum: ["US", "CA", "UK", "EA"], description: "US, CA (Canada), UK or EA (the euro area). Ask if unsure; defaults to the US." },
     }, required: ["amount", "from_year"], additionalProperties: false },
     annotations: annotations("What money from one year buys in another", false),
+    _meta: { ui: { resourceUri: INFLATION_APP_URI } },
     icons: ICONS,
     outputSchema: obj({
       country: { type: "string" }, amount: { type: "number" }, fromYear: { type: "number" }, toYear: { type: "number" },

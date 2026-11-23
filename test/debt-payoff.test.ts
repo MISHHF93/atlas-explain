@@ -78,3 +78,26 @@ describe("in the connector and the app", () => {
     expect(readFileSync("src/wallet/tools-section.ts", "utf8")).toContain("slot.replaceChildren(rateCard(), inflationCard(), debtCard(), growthCard(), scamCard());");
   });
 });
+
+describe("chart views for the newer calculators (MCP Apps)", () => {
+  it("links inflation_calculator and debt_payoff to their views, and serves both", async () => {
+    const { V2_TOOLS, handle, setFeatures } = await import("../src/mcp/server");
+    const { DEBT_APP_URI, INFLATION_APP_URI, DEBT_APP_HTML, INFLATION_APP_HTML } = await import("../src/mcp/calc-apps");
+    const meta = (n: string) => (V2_TOOLS.find((t) => t.name === n) as { _meta?: { ui?: { resourceUri?: string } } })._meta?.ui?.resourceUri;
+    expect(meta("inflation_calculator")).toBe(INFLATION_APP_URI);
+    expect(meta("debt_payoff")).toBe(DEBT_APP_URI);
+    setFeatures(undefined);
+    const none: Fetcher = async () => new Response("no", { status: 404 });
+    for (const [uri, html] of [[INFLATION_APP_URI, INFLATION_APP_HTML], [DEBT_APP_URI, DEBT_APP_HTML]] as const) {
+      const r = await handle({ jsonrpc: "2.0", id: 1, method: "resources/read", params: { uri } }, none);
+      expect((r?.result as { contents: { text: string }[] }).contents[0]!.text).toBe(html);
+      expect(html).toMatch(/never a forecast/);
+    }
+  });
+
+  it("charts interest paid so far for debts (where the two methods differ), ending at each plan's exact total", async () => {
+    const { DEBT_APP_HTML } = await import("../src/mcp/calc-apps");
+    expect(DEBT_APP_HTML).toContain("i === last ? p.totalInterest : Math.max(0, d.budget * q.month - (start - q.balance))");
+    expect(DEBT_APP_HTML).toContain("Interest paid so far, month by month, by method.");
+  });
+});

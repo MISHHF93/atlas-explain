@@ -14,6 +14,10 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: chart views for the inflation and debt calculators (1.27.0)
+
+- In assistants that support MCP Apps, `inflation_calculator` draws the amount's value year by year (change the amount and it rescales), and `debt_payoff` charts the interest paid so far under the avalanche and the snowball. No change to either tool's answer.
+
 ## 2026-11-23: six more partner API endpoints
 
 - The REST API now offers everything the connector does (except crypto prices): `GET /decisions/{bank}`, `GET /speeches/{bank}`, `GET /whats-changed`, `GET /inflation`, `POST /rate-impact` and `POST /debt-payoff`, each with the same inputs and answers as its connector tool. In the OpenAPI spec, with a real sample of each on /partners.
