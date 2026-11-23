@@ -120,7 +120,13 @@ export const FIGURES_APP_HTML = appPage({
       askButtons($("asks"), [{ label: "Brief on " + figs[0].symbol, prompt: "Using ATLAS Explain, give me an evidence brief on " + figs[0].symbol + " (" + figs[0].name + ")." }]);
     }
     else { $("plot").replaceChildren(); $("readout").textContent = ""; $("title").textContent = "Official figures"; $("sub").textContent = figs.length + (figs.length === 1 ? " figure" : " figures") + ", each with its source and date."; }
-    $("cards").replaceChildren(...figs.slice(0, 12).map(card));
+    // Inside the conversation, a few cards (three under a yield curve) and "Show all"; up to 12 in the side panel.
+    const drawCards = () => {
+      const total = Math.min(12, figs.length), cap = Math.min(total, inlineCap(rates.length >= 3 ? 3 : 5));
+      $("cards").replaceChildren(...figs.slice(0, cap).map(card), ...(total > cap ? [showAllButton("Show all " + total + " figures")] : []));
+    };
+    drawCards();
+    whenModeChanges(drawCards);
     const sources = [...new Set(figs.map((f) => f.source).filter(Boolean))];
     $("source").textContent = sources.length ? "Sources: " + sources.join(", ") + "." : "";
   }

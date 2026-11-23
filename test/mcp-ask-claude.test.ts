@@ -6,7 +6,8 @@ describe("helping people use the connector at its best (docs/NEXT_LEVEL.md round
     for (const app of MCP_APPS) {
       expect(app.html, app.uri).toContain('<div class="asks" id="asks"></div>');
       expect(app.html, app.uri).toContain('request("ui/message", { role: "user", content: [{ type: "text"');
-      expect(app.html, app.uri).toContain("items.slice(0, 2)");
+      // Two at most, and one while "Show all" is on screen (an inline card has at most two actions).
+      expect(app.html, app.uri).toContain('items.slice(0, document.querySelector(".show-all") ? 1 : 2)');
       expect(app.html, app.uri).toContain('b.addEventListener("click", () => askClaude(it.prompt, status))');
       expect(app.html, app.uri).toContain('askButtons($("asks")');
       expect(app.html, app.uri).not.toMatch(/\b(buy|sell)\b/i);

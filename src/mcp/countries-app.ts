@@ -31,10 +31,12 @@ export const COUNTRIES_APP_HTML = appPage({
   footer: "Each bar is the latest year the World Bank has published for that country; actual values only, never a forecast.",
   script: `
   let data = null;
+  let current = null;
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   const val = (unit, v) => unit === "USD" ? "$" + Math.round(v).toLocaleString("en-US") : v.toFixed(1) + "%";
   function show(id, report) {
     const ind = data.indicators.find((i) => i.id === id);
+    current = id;
     for (const b of document.querySelectorAll("#pick button")) b.setAttribute("aria-pressed", String(b.dataset.id === id));
     $("title").textContent = ind.name + ", countries compared";
     $("sub").textContent = ind.about + " Highest first.";
@@ -44,7 +46,9 @@ export const COUNTRIES_APP_HTML = appPage({
     const zero = ((0 - lo) / span) * 100;
     const ul = el("ul", "bars");
     ul.setAttribute("aria-label", ind.name + " by country");
-    for (const r of rows) {
+    // Inside the conversation, the top five and "Show all"; every country in the side panel.
+    const cap = inlineCap(5);
+    for (const r of rows.slice(0, cap)) {
       const li = el("li", "bar" + (r.v ? "" : " none"));
       li.tabIndex = 0;
       const track = el("span", "track");
@@ -63,7 +67,7 @@ export const COUNTRIES_APP_HTML = appPage({
       li.addEventListener("click", () => { read(); if (r.v) tellClaude("The user picked " + r.name + " in the ATLAS Explain countries view: " + ind.name.toLowerCase() + " " + val(ind.unit, r.v.value) + " in " + r.v.year + " (World Bank)."); });
       ul.append(li);
     }
-    $("plot").replaceChildren(ul);
+    $("plot").replaceChildren(ul, ...(rows.length > cap ? [showAllButton("Show all " + rows.length + " countries")] : []));
     const top = rows[0], last = rows.filter((r) => r.v).pop();
     askButtons($("asks"), [
       { label: "Why do they differ?", prompt: "Using ATLAS Explain's compare_countries, explain in plain language why " + ind.name.toLowerCase() + " differs so much between countries, using " + (top ? top.name : "the highest") + " and " + (last ? last.name : "the lowest") + " as examples. Name the source and years; no forecast." },
@@ -75,6 +79,7 @@ export const COUNTRIES_APP_HTML = appPage({
   function onResult(d) {
     if (!d || !Array.isArray(d.indicators) || !d.indicators.length || !Array.isArray(d.countries)) { message("Nothing to show right now."); return; }
     data = d;
+    whenModeChanges(() => { if (current) show(current, false); });
     $("pick").replaceChildren(...d.indicators.map((i) => { const b = el("button", "", i.name); b.type = "button"; b.dataset.id = i.id; b.addEventListener("click", () => show(i.id, true)); return b; }));
     $("pick").hidden = d.indicators.length < 2;
     $("source").textContent = d.source || "";

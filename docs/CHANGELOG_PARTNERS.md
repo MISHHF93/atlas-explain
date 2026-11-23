@@ -14,6 +14,11 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: shorter lists inside the conversation (1.28.2)
+
+- Claude's MCP Apps guidelines keep an inline card to about 4–5 items. Inside the conversation, the crypto board shows the five biggest coins, the countries view the top five, official figures up to five cards (three under a yield curve) and Treasury auctions the next two and the three latest results, each with "Show all", which opens the side panel with everything. Where an assistant has no side panel, everything shows as before.
+- No change to any tool's answer or data; the text answer still lists everything.
+
 ## 2026-11-23: views checked against Claude's MCP Apps guidelines (1.28.1)
 
 - Every interactive view: on touch screens each button and field is at least 44 px tall (the guidelines ask for 44 pt tap targets), and the view keeps clear of the screen edges and overlays Claude reports (`safeAreaInsets`).

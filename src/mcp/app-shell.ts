@@ -83,6 +83,7 @@ const BASE_CSS = `
   .ask:hover { background: var(--soft); }
   .ask:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .ask-status { font-size: 12px; color: var(--muted); }
+  .show-all { margin-top: 10px; grid-column: 1 / -1; justify-self: start; }
   /* Skeletons while a result is on its way: the shape of the content, not a spinner. */
   .sk { display: grid; gap: 10px; margin-top: 10px; }
   .sk-line, .sk-block { background: var(--soft); border-radius: var(--radius); animation: sk 1.2s ease-in-out infinite; }
@@ -189,7 +190,8 @@ const bridgeJs = (name: string) => `
     if (!host) return;
     const status = Object.assign(document.createElement("span"), { className: "ask-status" });
     status.setAttribute("role", "status");
-    const buttons = items.slice(0, 2).map((it) => {
+    // At most two actions in an inline card: with "Show all" on screen, one question for Claude.
+    const buttons = items.slice(0, document.querySelector(".show-all") ? 1 : 2).map((it) => {
       const b = Object.assign(document.createElement("button"), { type: "button", className: "ask", textContent: it.label });
       b.addEventListener("click", () => askClaude(it.prompt, status));
       return b;
@@ -217,14 +219,40 @@ const bridgeJs = (name: string) => `
     const inset = ctx.safeAreaInsets;
     if (inset && typeof inset === "object") for (const side of ["top", "right", "bottom", "left"]) { const v = Number(inset[side]); if (Number.isFinite(v) && v >= 0) document.documentElement.style.setProperty("--safe-" + side, v + "px"); }
     if (ctx.displayMode) document.querySelector("main").dataset.mode = ctx.displayMode;
-    if (Array.isArray(ctx.availableDisplayModes)) hostModes = ctx.availableDisplayModes;
+    if (Array.isArray(ctx.availableDisplayModes)) {
+      const before = hostModes.join();
+      hostModes = ctx.availableDisplayModes;
+      // A side panel offered after the view drew: shorten its long lists now.
+      if (hostModes.join() !== before && typeof redrawForMode === "function") redrawForMode();
+    }
     const expand = $("expand");
     if (expand) expand.hidden = !hostModes.includes("fullscreen") || ctx.displayMode === "fullscreen" || document.querySelector("main").dataset.mode === "fullscreen";
   }
+  /** Asks Claude for the side panel (fullscreen); the host decides. */
+  function openSidePanel() {
+    request("ui/request-display-mode", { mode: "fullscreen" }).then((r) => {
+      if (!r || !r.mode) return;
+      document.querySelector("main").dataset.mode = r.mode;
+      const ex = $("expand"); if (ex) ex.hidden = r.mode === "fullscreen";
+      reportSize();
+    }).catch(() => {});
+  }
   const expandButton = $("expand");
-  if (expandButton) expandButton.addEventListener("click", () => {
-    request("ui/request-display-mode", { mode: "fullscreen" }).then((r) => { if (r && r.mode) { document.querySelector("main").dataset.mode = r.mode; expandButton.hidden = r.mode === "fullscreen"; reportSize(); } }).catch(() => {});
-  });
+  if (expandButton) expandButton.addEventListener("click", openSidePanel);
+  /**
+   * Long lists (Claude's MCP Apps guidelines: about 4-5 items in an inline card). Inside the conversation a
+   * view shows the first few items and "Show all", which opens the side panel; there, or where the host has
+   * no side panel, everything shows. inlineCap(n) is how many to show now; whenModeChanges(fn) redraws on a switch.
+   */
+  let redrawForMode = null;
+  function inlineCap(n) { return document.querySelector("main").dataset.mode !== "fullscreen" && hostModes.includes("fullscreen") ? n : Infinity; }
+  function whenModeChanges(fn) { redrawForMode = fn; }
+  function showAllButton(label) {
+    const b = Object.assign(document.createElement("button"), { type: "button", className: "ask show-all", textContent: label });
+    b.addEventListener("click", openSidePanel);
+    return b;
+  }
+  new MutationObserver(() => { if (redrawForMode) { redrawForMode(); reportSize(); } }).observe(document.querySelector("main"), { attributes: true, attributeFilter: ["data-mode"] });
   window.addEventListener("message", (event) => {
     const m = event.data;
     if (!m || m.jsonrpc !== "2.0") return;

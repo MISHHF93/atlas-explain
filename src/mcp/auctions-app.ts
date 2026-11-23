@@ -38,20 +38,23 @@ export const AUCTIONS_APP_HTML = appPage({
     if (!d || (!Array.isArray(d.upcoming) && !Array.isArray(d.recent))) { message("Nothing to show right now."); return; }
     const up = d.upcoming || [], recent = (d.recent || []).filter((a) => a.yieldPct != null);
     $("sub").textContent = up.length + " announced, " + recent.length + " recent results.";
+    // Inside the conversation, the next two auctions and the three latest results, and "Show all"; everything in the side panel.
+    whenModeChanges(() => onResult(d));
+    const upCap = inlineCap(2), recentCap = inlineCap(3);
     const parts = [];
     if (up.length) {
       parts.push(el("p", "label", "Announced"));
       const t = el("table"); const head = el("tr");
       for (const [h, r] of [["Auction date", 0], ["Security", 0], ["Offering", 1]]) { const th = el("th", r ? "r" : "", h); th.scope = "col"; head.append(th); }
       t.append(head);
-      for (const a of up) { const tr = el("tr"); tr.append(el("td", "", day(a.auctionDate)), el("td", "", name(a)), el("td", "r", bn(a.offeringUsd))); t.append(tr); }
+      for (const a of up.slice(0, upCap)) { const tr = el("tr"); tr.append(el("td", "", day(a.auctionDate)), el("td", "", name(a)), el("td", "r", bn(a.offeringUsd))); t.append(tr); }
       parts.push(t);
     }
     if (recent.length) {
       parts.push(el("p", "label", "Recent results: the yield each sold at"));
       const hi = Math.max(...recent.map((a) => a.yieldPct));
       const box = el("div");
-      for (const a of recent) {
+      for (const a of recent.slice(0, recentCap)) {
         const row = el("div", "yb"); row.tabIndex = 0;
         const track = el("span", "track"), fill = el("span", "fill");
         fill.style.width = Math.max(2, (a.yieldPct / hi) * 100) + "%"; track.append(fill);
@@ -65,6 +68,7 @@ export const AUCTIONS_APP_HTML = appPage({
       }
       parts.push(box);
     }
+    if (up.length > upCap || recent.length > recentCap) parts.push(showAllButton("Show all " + (up.length + recent.length) + " auctions"));
     $("plot").replaceChildren(...parts);
     $("source").textContent = d.source ? "Source: " + d.source + "." : "";
     askButtons($("asks"), [

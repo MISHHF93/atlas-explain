@@ -61,8 +61,11 @@ export const BOARD_APP_HTML = appPage({
     $("source").textContent = d.source || "";
     askButtons($("asks"), [{ label: "Explain today's moves", prompt: "Using ATLAS Explain, explain today's biggest crypto moves in plain language, with the sources and what the numbers don't tell me." }]);
     if (d.coins.length === 1) $("sub").textContent = "Choose the coin to see its chart.";
+    // Inside the conversation, the five biggest coins and "Show all"; every coin in the side panel.
+    const drawRows = () => {
+    const cap = inlineCap(5);
     const rows = Object.assign(document.createElement("div"), { className: "rows" });
-    for (const c of d.coins) {
+    for (const c of d.coins.slice(0, cap)) {
       const row = document.createElement("button");
       row.type = "button"; row.className = "row"; row.dataset.symbol = c.symbol; row.setAttribute("aria-pressed", "false");
       const name = document.createElement("span");
@@ -75,7 +78,11 @@ export const BOARD_APP_HTML = appPage({
       row.addEventListener("click", () => choose(c.symbol, "24h"));
       rows.append(row);
     }
-    $("plot").replaceChildren(rows);
+    $("plot").replaceChildren(rows, ...(d.coins.length > cap ? [showAllButton("Show all " + d.coins.length + " coins")] : []));
+    if (chosen) for (const r of document.querySelectorAll(".row")) r.setAttribute("aria-pressed", String(r.dataset.symbol === chosen));
+    };
+    drawRows();
+    whenModeChanges(drawRows);
     if (d.coins.length === 1) choose(d.coins[0].symbol, "7d", false);
   }
 

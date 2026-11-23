@@ -55,7 +55,24 @@ describe("interactive views in the chat (MCP Apps)", () => {
       expect(html, app.uri).toContain("main button, main input, main select { min-height: 44px !important; }");
       expect(html, app.uri).toContain("ctx.safeAreaInsets");
       expect(html, app.uri).toContain("calc(12px + var(--safe-top, 0px))");
+      // Every view's script parses.
+      expect(() => new Function(html.split("<script>")[1]!.split("</script>")[0]!), app.uri).not.toThrow();
     }
+  });
+
+  it("keeps long lists to a few items inside the conversation, with Show all opening the side panel", () => {
+    const long: Record<string, string> = { "crypto-board": "coins", countries: "countries", "official-figures": "figures", "treasury-auctions": "auctions" };
+    for (const app of MCP_APPS) {
+      if (!(app.name in long)) continue;
+      expect(app.html, app.name).toContain("inlineCap(");
+      expect(app.html, app.name).toContain(`showAllButton("Show all " +`);
+      expect(app.html, app.name).toContain(`" ${long[app.name]}")`);
+      expect(app.html, app.name).toContain("whenModeChanges(");
+    }
+    // Shared: the side panel on request, and at most two actions while "Show all" is on screen.
+    const html = MCP_APPS[0].html;
+    expect(html).toContain('request("ui/request-display-mode", { mode: "fullscreen" })');
+    expect(html).toContain('items.slice(0, document.querySelector(".show-all") ? 1 : 2)');
   });
 
   it("gives each coin its last 24 hours for the board's sparkline", async () => {
