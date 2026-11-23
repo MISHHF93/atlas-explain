@@ -98,7 +98,7 @@ describe("in the connector and the app", () => {
 
   it("has a card in the app's Tools section, worked out in the browser", () => {
     const tools = readFileSync("src/wallet/tools-section.ts", "utf8");
-    expect(tools).toContain("slot.replaceChildren(rateCard(), inflationCard(), growthCard(), scamCard());");
+    expect(tools).toContain("slot.replaceChildren(rateCard(), inflationCard(), debtCard(), growthCard(), scamCard());");
     expect(tools).toContain('from "../core/inflation"');
   });
 });

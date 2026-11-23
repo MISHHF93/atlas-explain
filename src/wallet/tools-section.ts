@@ -1,8 +1,9 @@
 /**
  * The Tools section of the web app: the connector's rate_change_impact, money_maths and scam_red_flags, run in
- * the browser on the numbers and text the person types, and inflation_calculator on official yearly price indexes. Nothing is sent anywhere. Arithmetic and warning signs
+ * the browser on the numbers and text the person types, debt_payoff, and inflation_calculator on official yearly price indexes. Nothing is sent anywhere. Arithmetic and warning signs
  * only: never a forecast or a recommendation.
  */
+import { debtPayoff } from "../core/debt-payoff";
 import { coverage, inflationCalculator, type PriceCountry } from "../core/inflation";
 import { moneyMaths } from "../core/money-maths";
 import { rateChangeImpact, type ImpactProduct } from "../core/rate-impact";
@@ -100,6 +101,38 @@ function inflationCard(): HTMLElement {
   return c;
 }
 
+function debtCard(): HTMLElement {
+  const c = card("tool-debt", "Paying off several debts", "Highest rate first (avalanche) or smallest balance first (snowball): how long each takes and the interest each costs. It compares; it doesn't say which to choose. Leave a row's balance empty to skip it.");
+  const rows: { name: HTMLInputElement; balance: HTMLInputElement; rate: HTMLInputElement; min: HTMLInputElement }[] = [];
+  const text = (value: string) => {
+    const i = el("input") as HTMLInputElement;
+    i.type = "text";
+    i.value = value;
+    i.maxLength = 40;
+    return i;
+  };
+  const starts: [string, string, string, string][] = [["Credit card", "6000", "22.99", "180"], ["Car loan", "9000", "6.9", "250"], ["Line of credit", "2500", "9.5", "60"]];
+  const grid = el("div", "tool-grid");
+  for (const [n, b, r, m] of starts) {
+    const row = { name: text(n), balance: num(b), rate: num(r, "0.01"), min: num(m) };
+    rows.push(row);
+    grid.append(field("Debt", row.name), field("Owed ($)", row.balance), field("Rate (%)", row.rate), field("Minimum a month ($)", row.min));
+  }
+  const budget = num("800");
+  grid.append(field("Total each month ($)", budget));
+  const o = out();
+  const run = () => {
+    const debts = rows.filter((r) => r.balance.value.trim() !== "" && Number(r.balance.value) > 0).map((r) => ({ name: r.name.value, balance: Number(r.balance.value), ratePct: Number(r.rate.value), minPayment: Number(r.min.value) }));
+    const res = debtPayoff({ debts, budget: Number(budget.value) });
+    lines(o, "error" in res ? [res.error] : res.lines.slice(0, -1));
+  };
+  for (const r of rows) for (const i of [r.name, r.balance, r.rate, r.min]) i.addEventListener("input", run);
+  budget.addEventListener("input", run);
+  c.append(grid, o);
+  run();
+  return c;
+}
+
 function growthCard(): HTMLElement {
   const c = card("tool-growth", "Money maths: growth and fees", "What a starting amount and monthly savings could grow to at a rate you choose, and what a yearly fee takes. An assumption, never a forecast.");
   const amount = num("5000"), monthly = num("200"), rate = num("6", "0.1"), fee = num("1", "0.05"), years = num("20", "1");
@@ -160,5 +193,5 @@ function scamCard(): HTMLElement {
 
 /** Fills the Tools section. Everything runs in the browser. */
 export function mountTools(slot: HTMLElement): void {
-  slot.replaceChildren(rateCard(), inflationCard(), growthCard(), scamCard());
+  slot.replaceChildren(rateCard(), inflationCard(), debtCard(), growthCard(), scamCard());
 }

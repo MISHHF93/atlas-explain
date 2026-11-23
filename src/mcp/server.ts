@@ -42,6 +42,7 @@ import { noPriceNote, officialPriceLink } from "../core/price-links";
 import { rateChangeImpact, type ImpactCountry, type ImpactProduct } from "../core/rate-impact";
 import { inflationCalculator, priceCountry } from "../core/inflation";
 import { changeTopic, whatsChanged } from "../core/whats-changed";
+import { debtPayoff } from "../core/debt-payoff";
 import { moneyMaths, type MoneyCalc } from "../core/money-maths";
 import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
 import { comingUp } from "../core/coming-up";
@@ -51,7 +52,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.24.0";
+export const SERVER_VERSION = "1.25.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -453,6 +454,33 @@ function readGlossaryResource(uri: string): { uri: string; mimeType: string; tex
 
 export const V2_TOOLS = [
   {
+    name: "debt_payoff",
+    title: "Paying off several debts: avalanche and snowball",
+    description: "Works out how long it takes to pay off several debts with one monthly amount, and the interest paid, by two methods: avalanche (extra money to the highest rate first) and snowball (extra money to the smallest balance first), month by month. Use it when someone asks how to plan paying off credit cards or loans, which order to pay them in, or how much interest they'd pay. Pure arithmetic on their numbers; it compares the methods and never says which to choose.",
+    inputSchema: { type: "object", properties: {
+      debts: { type: "array", minItems: 1, maxItems: 10, description: "Each debt: a short name, the balance, the yearly interest rate in percent and the minimum monthly payment.", items: { type: "object", properties: {
+        name: { type: "string", description: "A short name, for example 'Visa' or 'Car loan'." },
+        balance: { type: "number", description: "What's owed now." },
+        rate_pct: { type: "number", description: "The yearly interest rate, in percent." },
+        min_payment: { type: "number", description: "The minimum monthly payment." },
+      }, required: ["balance", "rate_pct", "min_payment"], additionalProperties: false } },
+      monthly_budget: { type: "number", description: "The total that can go to these debts each month, at least the minimums added up." },
+      method: { type: "string", enum: ["both", "avalanche", "snowball"], description: "Default both, to compare them." },
+    }, required: ["debts", "monthly_budget"], additionalProperties: false },
+    annotations: annotations("Paying off several debts: avalanche and snowball", false),
+    icons: ICONS,
+    outputSchema: obj({
+      budget: { type: "number" },
+      debts: { type: "array", items: { type: "object", properties: { name: { type: "string" }, balance: { type: "number" }, ratePct: { type: "number" }, minPayment: { type: "number" } } } },
+      plans: { type: "array", items: { type: "object", properties: {
+        method: { type: "string" }, months: { type: "number" }, totalInterest: { type: "number" }, totalPaid: { type: "number" },
+        order: { type: "array", items: { type: "object", properties: { name: { type: "string" }, month: { type: "number" } } } },
+        points: { type: "array", items: { type: "object", properties: { month: { type: "number" }, balance: { type: "number" } } } },
+      } } },
+      lines: { type: "array", items: { type: "string" } },
+    }, ["plans", "lines"]),
+  },
+  {
     name: "whats_changed",
     title: "What changed since a date",
     description: "What changed in the economy since a date: each official figure that moved (inflation, unemployment, policy rates, US debt for the US, euro area, Canada and the UK), written as 'went from … to …' with its source, plus the Federal Reserve, Bank of Canada, ECB and Bank of England statements and speeches published since, and the next rate decisions. Use it when someone asks what's new, what happened this week, or what they missed since a date. Up to 90 days back. Describes the past only; never a forecast.",
@@ -562,6 +590,19 @@ export function setFeatures(v2Tools: string | undefined): void {
 /** The tools a client is offered: v1's, plus any v2 tool switched on. */
 export function visibleTools(): readonly ((typeof TOOLS)[number] | (typeof V2_TOOLS)[number])[] {
   return [...TOOLS, ...V2_TOOLS.filter((t) => enabledV2.has(t.name))];
+}
+
+export function debtPayoffTool(args: Record<string, unknown>): ToolResult {
+  const n = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN);
+  const list = Array.isArray(args.debts) ? args.debts : [];
+  const debts = list.map((d, i) => {
+    const r = (d && typeof d === "object" ? d : {}) as Record<string, unknown>;
+    return { name: typeof r.name === "string" && r.name.trim() ? r.name : `Debt ${i + 1}`, balance: n(r.balance), ratePct: n(r.rate_pct), minPayment: n(r.min_payment) };
+  });
+  const method = args.method === "avalanche" || args.method === "snowball" ? args.method : "both";
+  const r = debtPayoff({ debts, budget: n(args.monthly_budget), method });
+  if ("error" in r) return text(r.error, true);
+  return data(r.lines.join("\n"), r as unknown as Record<string, unknown>);
 }
 
 export async function whatsChangedTool(args: Record<string, unknown>, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
@@ -1956,6 +1997,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "money_maths": return ok(moneyMathsTool(args));
         case "decision_explainer": return enabledV2.has("decision_explainer") ? ok(await decisionExplainer(args.bank, s(args.date), fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "speech_tracker": return enabledV2.has("speech_tracker") ? ok(await speechTracker(args.bank, args.days, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
+        case "debt_payoff": return enabledV2.has("debt_payoff") ? ok(debtPayoffTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "whats_changed": return enabledV2.has("whats_changed") ? ok(await whatsChangedTool(args, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "inflation_calculator": return enabledV2.has("inflation_calculator") ? ok(inflationCalculatorTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "rate_change_impact": return enabledV2.has("rate_change_impact") ? ok(await rateChangeImpactTool(args, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);

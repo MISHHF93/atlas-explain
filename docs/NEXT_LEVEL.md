@@ -154,7 +154,7 @@ A 2026 FINRA Foundation and Stanford study found only 18% of US investors show a
 
 **Next to build, in order:**
 1. Rates people actually pay: Canada's posted prime, mortgage and GIC rates from the Bank of Canada (free with credit), beside `rate_change_impact`; the US 30-year mortgage rate from Freddie Mac only after its terms are confirmed for an API (they allow automatically updated PMMS data on a website).
-2. A debt payoff calculator (avalanche and snowball, pure arithmetic): budgeting and debt are the questions people most often bring to chatbots.
+2. ~~A debt payoff calculator~~: built 23 Nov 2026 as `debt_payoff` (1.25.0). Rates people pay: Canada's posted rates built the same day (1.24.0).
 3. Learning hub beside the chat, then spaced review (13, 14).
 4. CFTC weekly positioning (descriptive only), once the dataset's licence is confirmed.
 
