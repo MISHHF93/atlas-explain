@@ -7,7 +7,7 @@
 import type { HeadlinesView } from "../core/catalog";
 import { HEADLINE_CREDIT, type NewsItem } from "../core/news";
 import { relativeTime } from "../core/history";
-import { el, labelledButton } from "./dom";
+import { el, labelledButton, showFirst } from "./dom";
 
 export const HEADLINES_SOURCE = HEADLINE_CREDIT.replace(/\.$/, "");
 
@@ -35,7 +35,10 @@ export function headlinesCard(view: HeadlinesView | { kind: "loading" }, onExpla
   card.append(el("p", "fine", "Tap Explain to get any headline in plain language, with both sides. Education only."));
   const list = el("ul", "headline-list");
   for (const item of view.items) list.append(headlineRow(item, onExplain, now));
-  card.append(list, el("p", "fine headline-source", `${HEADLINES_SOURCE}. Each links to its publisher; we don't write or check them.`));
+  card.append(list);
+  const more = showFirst(list, 4, "headlines");
+  if (more) card.append(more);
+  card.append(el("p", "fine headline-source", `${HEADLINES_SOURCE}. Each links to its publisher; we don't write or check them.`));
   return card;
 }
 

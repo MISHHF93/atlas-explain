@@ -2,12 +2,14 @@
  * The Economy section of the web app: what the connector serves as economy_snapshot, decision_explainer,
  * speech_tracker, treasury_auctions, compare_countries and data_series, read from the same public data files.
  * Every figure names its source and date; anything missing says so. Describes what happened, never a forecast.
+ * Since 23 Nov 2026 the central-bank card is the one place for rates (it also gives each bank's next decision), and
+ * long lists show the first few with a "Show all" button.
  */
 import { DOCS_DATA_URL, ECONOMY_DATA_URL, WORLD_DATA_URL } from "../core/links";
 import { BANK_NAME, compareStatements, readDocsFile, type DocBank, type DocsFile } from "../data/docs";
-import { readEconomyFile, type EconomyFile } from "../data/economy";
+import { readEconomyFile, upcoming, type CalendarEvent, type EconomyFile } from "../data/economy";
 import { readWorldFile, WORLD_COUNTRIES, WORLD_INDICATORS, type WorldFile } from "../data/world";
-import { el } from "./dom";
+import { el, showFirst } from "./dom";
 
 const getJson = (url: string): Promise<unknown> => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 const day = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
@@ -50,11 +52,16 @@ function indicatorsCard(file: EconomyFile | null, onExplain: (t: string) => void
     list.append(li);
   }
   c.append(list);
+  const more = showFirst(list, 6, "figures");
+  if (more) c.append(more);
   return c;
 }
 
-function banksCard(docs: DocsFile | null, onExplain: (t: string) => void): HTMLElement {
-  const c = card("econ-banks", "Central banks: latest decisions", "Read from each bank's own statement, with how its wording changed since the decision before.");
+const INSTITUTION: Record<DocBank, CalendarEvent["institution"]> = { fed: "Federal Reserve", boc: "Bank of Canada", ecb: "European Central Bank", boe: "Bank of England" };
+
+function banksCard(docs: DocsFile | null, economy: EconomyFile | null, onExplain: (t: string) => void): HTMLElement {
+  const c = card("econ-banks", "Central banks: rates and decisions", "Each bank's latest decision, read from its own statement, how the wording changed since the decision before, and its next decision date. Nobody knows the outcome in advance.");
+  const next = economy ? upcoming(economy.calendar.events, Date.now(), 24) : [];
   if (!docs) return (missing(c, "The statements"), c);
   const list = el("ul", "notable-list");
   for (const bank of ["fed", "boc", "ecb", "boe"] as DocBank[]) {
@@ -69,6 +76,11 @@ function banksCard(docs: DocsFile | null, onExplain: (t: string) => void): HTMLE
     if (prev) {
       const cmp = compareStatements(prev.paragraphs, cur.paragraphs);
       text.append(el("p", "fine", cmp.mode === "words" ? `${cmp.changes.length} wording changes since ${day(prev.date)}.` : `Mostly rewritten since ${day(prev.date)} (about ${Math.round(cmp.changedShare * 100)}% of the words).`));
+    }
+    const due = next.find((e) => e.institution === INSTITUTION[bank]);
+    if (due) {
+      const days = Math.round((Date.parse(`${due.date}T12:00:00Z`) - Date.now()) / 86_400_000);
+      text.append(el("p", "fine econ-next", `Next decision: ${day(due.date)}${days <= 0 ? " (today)" : days === 1 ? " (tomorrow)" : ` (in ${days} days)`}.`));
     }
     text.append(source(cur.title, cur.url));
     const ask = el("button", "secondary small", "Explain") as HTMLButtonElement;
@@ -99,6 +111,8 @@ function speechesCard(docs: DocsFile | null): HTMLElement {
     list.append(li);
   }
   c.append(all.length ? list : el("p", "fine", "No speeches are stored yet."));
+  const more = all.length ? showFirst(list, 4, "speeches") : null;
+  if (more) c.append(more);
   return c;
 }
 
@@ -113,7 +127,10 @@ function auctionsCard(file: EconomyFile | null): HTMLElement {
     li.append(el("p", "coming-title", `${a.term} ${a.type.toLowerCase()}, ${day(a.auctionDate)}`), el("p", "fine", set));
     list.append(li);
   }
-  c.append(list, source("TreasuryDirect, U.S. Department of the Treasury", "https://www.treasurydirect.gov/auctions/"));
+  c.append(list);
+  const more = showFirst(list, 4, "auctions");
+  if (more) c.append(more);
+  c.append(source("TreasuryDirect, U.S. Department of the Treasury", "https://www.treasurydirect.gov/auctions/"));
   return c;
 }
 
@@ -143,7 +160,10 @@ function countriesCard(world: WorldFile | null): HTMLElement {
   }
   const wrap = el("div", "econ-table-wrap");
   wrap.append(table);
-  c.append(wrap, source("World Bank, World Development Indicators (CC BY 4.0)", world.source.url));
+  // The table is wide: one tap away, so the page stays short.
+  const fold = el("details", "econ-fold");
+  fold.append(el("summary", undefined, `Show the table (${pick.length} countries)`), wrap);
+  c.append(fold, source("World Bank, World Development Indicators (CC BY 4.0)", world.source.url));
   if (world.sharePrices) c.append(source("OECD, Financial market: share prices", "https://data-explorer.oecd.org/"));
   return c;
 }
@@ -155,6 +175,6 @@ export function mountEconomy(slot: HTMLElement, onExplain: (text: string) => voi
     const economy = e ? readEconomyFile(e) : null;
     const docs = d ? readDocsFile(d) : null;
     const world = w ? readWorldFile(w) : null;
-    slot.replaceChildren(indicatorsCard(economy, onExplain), banksCard(docs, onExplain), speechesCard(docs), auctionsCard(economy), countriesCard(world));
+    slot.replaceChildren(indicatorsCard(economy, onExplain), banksCard(docs, economy, onExplain), speechesCard(docs), auctionsCard(economy), countriesCard(world));
   });
 }

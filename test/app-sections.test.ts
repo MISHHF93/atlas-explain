@@ -36,3 +36,27 @@ describe("text from the banks' feeds reads correctly", () => {
     expect(readDocsFile(stored)!.speeches.fed[0]!.about).toBe("Brasília, Brazil");
   });
 });
+
+describe("a shorter app (owner decision, 23 Nov 2026)", () => {
+  const today = readFileSync("src/wallet/today-brief.ts", "utf8");
+  const economy = readFileSync("src/wallet/economy-section.ts", "utf8");
+  const news = readFileSync("src/wallet/headlines.ts", "utf8");
+  const dom = readFileSync("src/wallet/dom.ts", "utf8");
+
+  it("has one place for rates: Economy's central-bank card, with each bank's next decision", () => {
+    expect(today).toContain("return [notableCard(brief, onExplain), comingUpCard(brief)];");
+    expect(today).not.toContain("Policy rates and the next decision");
+    expect(economy).toContain('"Central banks: rates and decisions"');
+    expect(economy).toContain("Next decision: ${day(due.date)}");
+  });
+
+  it("shows the first few rows of each long list, with a button that says how many there are", () => {
+    expect(dom).toContain("button.textContent = open ? \"Show fewer\" : `Show all ${rows.length} ${noun}`;");
+    expect(dom).toContain('button.setAttribute("aria-expanded", String(open));');
+    expect(today).toContain('showFirst(list, 3, "items")');
+    expect(today).toContain('showFirst(list, 3, "dates")');
+    expect(news).toContain('showFirst(list, 4, "headlines")');
+    for (const [n, noun] of [[6, "figures"], [4, "speeches"], [4, "auctions"]] as const) expect(economy).toContain(`showFirst(list, ${n}, "${noun}")`);
+    expect(economy).toContain("Show the table (${pick.length} countries)");
+  });
+});

@@ -27,6 +27,32 @@ export function labelledButton(name: IconName, label: string, className: string)
   return button;
 }
 
+let showMoreIds = 0;
+/**
+ * Shows the first `first` children of `list` and returns a "Show all N …" button for the rest (null when
+ * nothing is hidden). The button says how many there are, and whether the list is open (aria-expanded).
+ */
+export function showFirst(list: HTMLElement, first: number, noun: string): HTMLButtonElement | null {
+  const rows = [...list.children] as HTMLElement[];
+  if (rows.length <= first) return null;
+  if (!list.id) list.id = `show-more-${++showMoreIds}`;
+  const button = el("button", "secondary small show-more");
+  button.type = "button";
+  button.setAttribute("aria-controls", list.id);
+  let open = false;
+  const apply = () => {
+    rows.forEach((r, i) => (r.hidden = !open && i >= first));
+    button.setAttribute("aria-expanded", String(open));
+    button.textContent = open ? "Show fewer" : `Show all ${rows.length} ${noun}`;
+  };
+  button.addEventListener("click", () => {
+    open = !open;
+    apply();
+  });
+  apply();
+  return button;
+}
+
 export function externalLink(label: string, href: string, className = "link-btn"): HTMLAnchorElement {
   const link = el("a", className, label);
   link.href = href;

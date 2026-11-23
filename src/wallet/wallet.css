@@ -1268,3 +1268,9 @@ textarea:focus, input:focus { background: var(--atlas-card); box-shadow: inset 0
 .tool-text { min-height: 5.5rem; resize: vertical; }
 .tool-out { display: grid; gap: 0.35rem; margin-top: 0.6rem; }
 .tool-out p { margin: 0; }
+
+/* "Show all N …" under a shortened list (showFirst in src/wallet/dom.ts), and the folded country table. */
+.show-more { margin-top: 0.6rem; }
+.econ-next { margin: 0.15rem 0 0; color: var(--atlas-ink); }
+.econ-fold { margin-top: 0.5rem; }
+.econ-fold > summary { cursor: pointer; font-weight: 600; padding: 0.35rem 0; }
