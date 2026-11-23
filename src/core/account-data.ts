@@ -20,6 +20,8 @@ export interface ExportInput {
   recentlyViewed: string[];
   /** Learn path progress in this browser: glossary term ids. */
   learnProgress?: string[];
+  /** Learn review schedule in this browser: topic ids with their next review date. */
+  reviewSchedule?: Record<string, unknown>;
 }
 
 /** Account-shaped keys never belong in an export (they are never stored, but this keeps it that way). */
@@ -47,6 +49,7 @@ export function buildExport(input: ExportInput): Record<string, unknown> {
     browserHistory: input.browserHistory,
     recentlyViewed: input.recentlyViewed,
     learnProgress: input.learnProgress ?? [],
+    reviewSchedule: input.reviewSchedule ?? {},
   }) as Record<string, unknown>;
 }
 
@@ -75,7 +78,10 @@ export const LOCAL_DATA_KEYS = [
   "atlas-explain-watchlist",
   "atlas-explain-recent-assets",
   "atlas-explain-learned",
+  "atlas-explain-review",
 ] as const;
 
 /** Learn path progress in the web app: a list of glossary term ids, nothing personal. */
 export const WEB_LEARN_KEY = "atlas-explain-learned";
+/** Learn review schedule in the web app: topic ids with their next review date (src/core/review.ts). */
+export const WEB_REVIEW_KEY = "atlas-explain-review";

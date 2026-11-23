@@ -38,6 +38,8 @@ import { EVENTS_APP_HTML, EVENTS_APP_URI } from "./events-app";
 import { SERIES_APP_HTML, SERIES_APP_URI } from "./series-app";
 import { MONEY_APP_HTML, MONEY_APP_URI } from "./money-app";
 import { DEBT_APP_HTML, DEBT_APP_URI, INFLATION_APP_HTML, INFLATION_APP_URI } from "./calc-apps";
+import { LEARNING_APP_HTML, LEARNING_APP_URI } from "./learning-app";
+import { checkQuestions, passMark, REVIEW_DAYS } from "../core/review";
 import { BANK_LICENCE, BANK_NAME, compareStatements, readDocsFile, watchingSentences, type DocBank, type Statement } from "../data/docs";
 import { noPriceNote, officialPriceLink } from "../core/price-links";
 import { rateChangeImpact, type ImpactCountry, type ImpactProduct } from "../core/rate-impact";
@@ -53,7 +55,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.27.0";
+export const SERVER_VERSION = "1.28.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -89,7 +91,7 @@ interface Tool {
   annotations: { title: string; readOnlyHint: true; destructiveHint: false; idempotentHint: true; openWorldHint: boolean };
   icons: typeof ICONS;
   /** The MCP App this tool draws, and (economy_snapshot) a global entry point on Claude's Artifacts page. */
-  _meta?: { ui: { resourceUri: string }; "openai/ui"?: { entrypoints: { type: "global" }[] } };
+  _meta?: { ui: { resourceUri?: string; visibility?: ("model" | "app")[] }; "openai/ui"?: { entrypoints: { type: "global" }[] } };
 }
 
 const str = (description: string) => ({ type: "string", description });
@@ -428,6 +430,7 @@ export const MCP_APPS = [
   { uri: DEPTH_APP_URI, name: "market-depth", title: "Order book depth chart", description: "The view market_depth draws in clients that support MCP Apps: best bid and ask, the spread, a depth chart of the order book and slippage by order size.", html: DEPTH_APP_HTML },
   { uri: MONEY_APP_URI, name: "money-maths", title: "Money maths", description: "The view money_maths draws in clients that support MCP Apps: the result as a chart, with the inputs as fields to change.", html: MONEY_APP_HTML },
   { uri: INFLATION_APP_URI, name: "inflation", title: "Inflation calculator", description: "The view inflation_calculator draws in clients that support MCP Apps: the amount's value year by year as a chart, with the amount as a field to change.", html: INFLATION_APP_HTML },
+  { uri: LEARNING_APP_URI, name: "learning-hub", title: "Learning hub", description: "The view learning_hub draws in clients that support MCP Apps: the learning path, three questions per topic from the glossary, and topics due for review (1, 7 and 28 days after passing), with progress kept on the device.", html: LEARNING_APP_HTML },
   { uri: DEBT_APP_URI, name: "debt-payoff", title: "Debt payoff", description: "The view debt_payoff draws in clients that support MCP Apps: what is still owed each month under the avalanche and the snowball.", html: DEBT_APP_HTML },
   { uri: NOTABLE_APP_URI, name: "notable-today", title: "What's notable today", description: "The view notable_today draws in clients that support MCP Apps: a card per item with why it was picked and its source, then what was checked and found ordinary.", html: NOTABLE_APP_HTML },
   { uri: COUNTRIES_APP_URI, name: "countries", title: "Countries compared", description: "The view compare_countries draws in clients that support MCP Apps: a bar per country for one indicator, with the year of each figure.", html: COUNTRIES_APP_HTML },
@@ -456,6 +459,36 @@ function readGlossaryResource(uri: string): { uri: string; mimeType: string; tex
 /* ---------- v2 tools (docs/V2_DESIGN.md), each off until named in the Worker's V2_TOOLS variable ---------- */
 
 export const V2_TOOLS = [
+  {
+    name: "learning_hub",
+    title: "Learning hub: check yourself and review",
+    description: "Opens the ATLAS Explain learning path as a hub: three quick questions per topic from the glossary to check understanding, and spaced review, where a passed topic comes back after 1, 7 and 28 days. Use it when someone wants to practise, test what they've learned, review, or see their learning progress. Progress stays on their device. For teaching a topic term by term, use browse_glossary or the learn_next prompt.",
+    inputSchema: { type: "object", properties: { topic: str("Optional learning-path topic to start a check on, for example 'rates' or 'saving'. Leave empty for the whole path.") }, additionalProperties: false },
+    annotations: annotations("Learning hub: check yourself and review", false),
+    _meta: { ui: { resourceUri: LEARNING_APP_URI } },
+    icons: ICONS,
+    outputSchema: obj({
+      topic: nullable("string"),
+      reviewDays: { type: "array", items: { type: "number" } },
+      steps: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, terms: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, summary: { type: "string" } } } } } } },
+    }, ["steps", "reviewDays"]),
+  },
+  {
+    name: "learning_check",
+    title: "Questions for one learning-path topic",
+    description: "Three multiple-choice questions on one learning-path topic, each a glossary description with the term's name blanked out. Called by the learning hub view; to quiz someone in the chat, use the quiz_me prompt instead.",
+    inputSchema: { type: "object", properties: {
+      topic: str("The learning-path topic id, for example 'rates'."),
+      seed: { type: "number", description: "Any whole number; the same seed gives the same questions." },
+    }, required: ["topic"], additionalProperties: false },
+    annotations: annotations("Questions for one learning-path topic", false),
+    _meta: { ui: { resourceUri: LEARNING_APP_URI, visibility: ["app"] } },
+    icons: ICONS,
+    outputSchema: obj({
+      topic: { type: "string" }, title: { type: "string" }, passMark: { type: "number" },
+      questions: { type: "array", items: { type: "object", properties: { termId: { type: "string" }, prompt: { type: "string" }, options: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" } } } }, answerId: { type: "string" } } } },
+    }, ["topic", "questions"]),
+  },
   {
     name: "debt_payoff",
     title: "Paying off several debts: avalanche and snowball",
@@ -595,6 +628,33 @@ export function setFeatures(v2Tools: string | undefined): void {
 /** The tools a client is offered: v1's, plus any v2 tool switched on. */
 export function visibleTools(): readonly ((typeof TOOLS)[number] | (typeof V2_TOOLS)[number])[] {
   return [...TOOLS, ...V2_TOOLS.filter((t) => enabledV2.has(t.name))];
+}
+
+const findStep = (v: unknown) => {
+  const q = String(v ?? "").trim().toLowerCase();
+  return q ? LEARN_PATH.find((s) => s.id === q || s.title.toLowerCase().includes(q)) : undefined;
+};
+
+/** learning_hub: the path with every term, for the view; the text answer works without a view too. */
+export function learningHubTool(args: Record<string, unknown>): ToolResult {
+  const step = findStep(args.topic);
+  if (args.topic != null && String(args.topic).trim() && !step) return text(`No topic called "${String(args.topic)}". Topics: ${LEARN_PATH.map((s) => s.id).join(", ")}.`, true);
+  const steps = LEARN_PATH.map((s) => ({ id: s.id, title: s.title, terms: learnTerms(s).map((t) => ({ id: t.id, title: t.title, summary: t.summary })) }));
+  const list = LEARN_PATH.map((s, i) => `${i + 1}. ${s.title} (${s.terms.length} ${s.terms.length === 1 ? "term" : "terms"})`).join("\n");
+  return data(
+    `The ATLAS Explain learning hub${step ? `, starting a check on "${step.title}"` : ""}.\n${list}\n\nEach topic has three quick questions from the glossary; passing two of three brings the topic back for review after ${REVIEW_DAYS.join(", ")} days, because going over things again later is what makes them stick. Progress stays on the person's device. Where the interactive view doesn't show, the quiz_me prompt asks the same kind of questions in the chat. Source: ATLAS Explain glossary. ${APP_URL}/learn`,
+    { topic: step?.id ?? null, reviewDays: [...REVIEW_DAYS], steps },
+  );
+}
+
+/** learning_check (app-only): questions for one topic, from the glossary. */
+export function learningCheckTool(args: Record<string, unknown>): ToolResult {
+  const step = findStep(args.topic);
+  if (!step) return text(`Choose a topic: ${LEARN_PATH.map((s) => s.id).join(", ")}.`, true);
+  const seed = typeof args.seed === "number" && Number.isFinite(args.seed) ? Math.floor(Math.abs(args.seed)) : 1;
+  const questions = checkQuestions(step.id, seed);
+  const body = questions.map((q, i) => `${i + 1}. ${q.prompt}\n   Options: ${q.options.map((o) => o.title).join(" / ")}`).join("\n");
+  return data(`Check yourself: ${step.title}\n${body}\n\nSource: ATLAS Explain glossary.`, { topic: step.id, title: step.title, passMark: passMark(questions.length), questions });
 }
 
 export function debtPayoffTool(args: Record<string, unknown>): ToolResult {
@@ -2011,6 +2071,8 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "money_maths": return ok(moneyMathsTool(args));
         case "decision_explainer": return enabledV2.has("decision_explainer") ? ok(await decisionExplainer(args.bank, s(args.date), fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "speech_tracker": return enabledV2.has("speech_tracker") ? ok(await speechTracker(args.bank, args.days, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
+        case "learning_hub": return enabledV2.has("learning_hub") ? ok(learningHubTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
+        case "learning_check": return enabledV2.has("learning_check") ? ok(learningCheckTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "debt_payoff": return enabledV2.has("debt_payoff") ? ok(debtPayoffTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "whats_changed": return enabledV2.has("whats_changed") ? ok(await whatsChangedTool(args, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "inflation_calculator": return enabledV2.has("inflation_calculator") ? ok(inflationCalculatorTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);

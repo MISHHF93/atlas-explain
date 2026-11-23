@@ -745,6 +745,17 @@ textarea:focus-visible, input:focus-visible { outline: none; }
 .learn-lesson { border-top: 1px solid var(--atlas-line); padding-top: 0.5rem; animation: atlas-fade 240ms var(--atlas-ease); }
 .learn-lesson p { margin: 0; }
 .learn-term { font-weight: 700; font-size: var(--atlas-text-sm); margin-top: 0.15rem !important; }
+/* Due for review: three questions from the glossary (src/wallet/review-card.ts). */
+.review-body { display: grid; gap: 0.45rem; }
+.review-body p { margin: 0; }
+.review-q { font-size: var(--atlas-text-sm); line-height: 1.5; }
+.review-options { display: grid; gap: 0.35rem; }
+.review-option { text-align: left; font: inherit; font-size: var(--atlas-text-sm); color: var(--atlas-ink); background: transparent; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius-sm); padding: 0.5rem 0.7rem; cursor: pointer; }
+.review-option:hover:not([disabled]) { border-color: var(--atlas-accent); }
+.review-option:focus-visible { outline: 2px solid var(--atlas-accent); outline-offset: 2px; }
+.review-option[disabled] { cursor: default; }
+.review-option.right { border-color: var(--atlas-accent); color: var(--atlas-accent); font-weight: 700; }
+.review-option.wrong { border-color: var(--atlas-warn-ink); color: var(--atlas-warn-ink); background: var(--atlas-warn); }
 @media (prefers-reduced-motion: reduce) {
   .learn-fill, .history-item { transition: none; }
   .learn-lesson { animation: none; }

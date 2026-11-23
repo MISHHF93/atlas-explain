@@ -14,7 +14,7 @@ Checked against Anthropic's checklist (https://claude.com/docs/connectors/buildi
 
 ## 2. Tools
 
-Synced from the server (1.27.0, 23 Nov 2026): 24 read-only tools (`explain_term`, `browse_glossary`, `asset_details`, `official_figures`, `crypto_prices`, `price_history`, `todays_headlines`, `economy_snapshot`, `economic_calendar`, `market_depth`, `evidence_brief`, `notable_today`, `upcoming_events`, `money_maths`, `scam_red_flags`, `treasury_auctions`, `compare_countries`, `data_series`, `whats_changed`, `inflation_calculator`, `rate_change_impact`, `decision_explainer`, `speech_tracker`, `debt_payoff`), 11 prompts and 14 interactive views (MCP Apps). No write tools; every tool has a title, `readOnlyHint: true` and an output schema. After a new version, open the listing and choose "Sync from server" to refresh this list.
+Synced from the server (1.28.0, 23 Nov 2026): 25 read-only tools (`explain_term`, `browse_glossary`, `asset_details`, `official_figures`, `crypto_prices`, `price_history`, `todays_headlines`, `economy_snapshot`, `economic_calendar`, `market_depth`, `evidence_brief`, `notable_today`, `upcoming_events`, `money_maths`, `scam_red_flags`, `treasury_auctions`, `compare_countries`, `data_series`, `whats_changed`, `inflation_calculator`, `rate_change_impact`, `decision_explainer`, `speech_tracker`, `debt_payoff`, `learning_hub`), plus `learning_check`, which only the learning hub view calls (hidden from the model), 11 prompts and 15 interactive views (MCP Apps). No write tools; every tool has a title, `readOnlyHint: true` and an output schema. After a new version, open the listing and choose "Sync from server" to refresh this list.
 
 ## 3. Listing
 

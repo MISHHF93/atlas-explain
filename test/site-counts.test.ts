@@ -10,7 +10,8 @@ describe("the website describes the connector as it is deployed", () => {
 
   it("gives the true number of tools and prompts on the home page and in How it's built on Partners", () => {
     setFeatures(v2);
-    const tools = visibleTools().length;
+    // Tools only a view calls (_meta.ui.visibility ["app"]) are hidden from the assistant, so the site doesn't count them.
+    const tools = visibleTools().filter((t) => !(t as { _meta?: { ui?: { visibility?: string[] } } })._meta?.ui?.visibility?.every((v) => v === "app")).length;
     expect(readFileSync("index.html", "utf8")).toContain(`${tools} tools and ${PROMPTS.length} one-click prompts.`);
     expect(readFileSync("partners.html", "utf8")).toContain(`${tools} tools`);
     expect(readFileSync("index.html", "utf8")).toContain(`All ${tools} tools, and the ready-made prompts`);

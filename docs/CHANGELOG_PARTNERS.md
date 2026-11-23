@@ -14,6 +14,12 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: learning hub with spaced review (1.28.0)
+
+- `learning_hub` opens the learning path as an interactive view: three quick questions per topic, built only from the glossary (a term's summary with its name blanked out, and three glossary terms to pick from), and spaced review after 1, 7 and 28 days. `learning_check` supplies the questions to the view only. Progress stays on the person's device; nothing is sent or stored by the server.
+- The web app's Learn section shows a "Due for review" card with the same questions and schedule; the schedule is in "Download my data" and is removed by "Clear data on this browser".
+- Source: the ATLAS Explain glossary. No market data, no forecasts.
+
 ## 2026-11-23: chart views for the inflation and debt calculators (1.27.0)
 
 - In assistants that support MCP Apps, `inflation_calculator` draws the amount's value year by year (change the amount and it rescales), and `debt_payoff` charts the interest paid so far under the avalanche and the snowball. No change to either tool's answer.

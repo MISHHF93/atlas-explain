@@ -53,7 +53,7 @@ import type { TabDef } from "../wallet/shell";
 import { createWatchlist, localKeyValue } from "../core/watchlist";
 import { buildSettings } from "../wallet/settings";
 import { headlinesCard } from "../wallet/headlines";
-import { WEB_LEARN_KEY } from "../core/account-data";
+import { WEB_LEARN_KEY, WEB_REVIEW_KEY } from "../core/account-data";
 import { yourDataGroup } from "../wallet/your-data";
 import { readAccountHint, saveAccountHint } from "../core/account-hint";
 /** Session storage key for an ATLAS desk link that arrived before sign-in. */
@@ -83,6 +83,13 @@ function readLearned(): unknown {
     return JSON.parse(localStorage.getItem(LEARN_STORE_KEY) ?? "[]");
   } catch {
     return [];
+  }
+}
+function readReview(): unknown {
+  try {
+    return JSON.parse(localStorage.getItem(WEB_REVIEW_KEY) ?? "{}");
+  } catch {
+    return {};
   }
 }
 const ONBOARDED_KEY = "atlas-explain-onboarded";
@@ -534,6 +541,14 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     },
     announce: (text) => shell.announce(text),
     initialCount: 6,
+    storedReview: readReview(),
+    saveReview: (state) => {
+      try {
+        localStorage.setItem(WEB_REVIEW_KEY, JSON.stringify(state));
+      } catch {
+        // Private mode: the schedule lasts for this visit only.
+      }
+    },
   }));
 
   /** Assets and Learn ask Explain the same way on both surfaces: go to Explain and answer now. */
@@ -599,6 +614,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         browserHistory: loadTextHistory(),
         recentlyViewed: recent,
         learnProgress: Array.isArray(readLearned()) ? (readLearned() as unknown[]).filter((id): id is string => typeof id === "string") : [],
+        reviewSchedule: (() => { const r = readReview(); return r && typeof r === "object" && !Array.isArray(r) ? (r as Record<string, unknown>) : {}; })(),
       };
     },
     deleteAccount: async () => {

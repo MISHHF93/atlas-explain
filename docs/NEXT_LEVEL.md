@@ -150,12 +150,12 @@ A 2026 FINRA Foundation and Stanford study found only 18% of US investors show a
 
 ## Where things stand (23 Nov 2026)
 
-**Live:** connector 1.27.0 with 24 tools, 11 prompts and 14 views (1.24.0 to 1.27.0 added Canada's posted rates, `debt_payoff`, rates people pay in the US, UK and euro area, and chart views for the inflation and debt calculators), published to the MCP Registry. Since 1.19.0: Canada, UK and euro-area inflation and jobs from Statistics Canada, the ONS and Eurostat (1.21.0); `inflation_calculator` on each country's official yearly price index (1.22.0); `whats_changed` (1.23.0, v2 phase 3), with `economy.json` recording when each monthly figure first appears. The owner dashboard is at /admin (docs/ADMIN.md), with connector usage counted since 22 Nov 2026. A sweep on 23 Nov 2026 called every tool, prompt and view, the partner API's public routes and every site link: no errors, nothing slower than 1.5 s.
+**Live:** connector 1.28.0 with 25 tools (plus `learning_check`, which only a view calls), 11 prompts and 15 views (1.28.0 added the learning hub with spaced review; 1.24.0 to 1.27.0 added Canada's posted rates, `debt_payoff`, rates people pay in the US, UK and euro area, and chart views for the inflation and debt calculators), published to the MCP Registry. Since 1.19.0: Canada, UK and euro-area inflation and jobs from Statistics Canada, the ONS and Eurostat (1.21.0); `inflation_calculator` on each country's official yearly price index (1.22.0); `whats_changed` (1.23.0, v2 phase 3), with `economy.json` recording when each monthly figure first appears. The owner dashboard is at /admin (docs/ADMIN.md), with connector usage counted since 22 Nov 2026. A sweep on 23 Nov 2026 called every tool, prompt and view, the partner API's public routes and every site link: no errors, nothing slower than 1.5 s.
 
 **Next to build, in order:**
 1. Rates people actually pay: Canada's posted prime, mortgage and GIC rates from the Bank of Canada (free with credit), beside `rate_change_impact`; the US 30-year mortgage rate from Freddie Mac only after its terms are confirmed for an API (they allow automatically updated PMMS data on a website).
 2. ~~A debt payoff calculator~~: built 23 Nov 2026 as `debt_payoff` (1.25.0). Rates people pay: Canada's posted rates built the same day (1.24.0).
-3. Learning hub beside the chat, then spaced review (13, 14).
+3. ~~Learning hub beside the chat, then spaced review (13, 14)~~: built 23 Nov 2026 as `learning_hub` (1.28.0), with a "Due for review" card in the web app.
 4. CFTC weekly positioning (descriptive only), once the dataset's licence is confirmed.
 
 ## Round 5: what institutions want from a data connector (researched 18 Nov 2026)
