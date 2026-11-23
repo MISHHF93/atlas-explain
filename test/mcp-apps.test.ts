@@ -51,6 +51,10 @@ describe("interactive views in the chat (MCP Apps)", () => {
       expect(html, app.uri).toMatch(/never a forecast/);
       expect(html, app.uri).not.toMatch(/<script[^>]+src=|<link[^>]+href=|fetch\(|XMLHttpRequest|@import/);
       expect(html, app.uri).not.toMatch(/\b(buy|sell)\b/i);
+      // Claude's MCP Apps guidelines: 44 pt tap targets on touch screens, and the host's safe-area insets respected.
+      expect(html, app.uri).toContain("main button, main input, main select { min-height: 44px !important; }");
+      expect(html, app.uri).toContain("ctx.safeAreaInsets");
+      expect(html, app.uri).toContain("calc(12px + var(--safe-top, 0px))");
     }
   });
 

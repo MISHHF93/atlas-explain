@@ -14,6 +14,12 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: views checked against Claude's MCP Apps guidelines (1.28.1)
+
+- Every interactive view: on touch screens each button and field is at least 44 px tall (the guidelines ask for 44 pt tap targets), and the view keeps clear of the screen edges and overlays Claude reports (`safeAreaInsets`).
+- The learning hub is one card inside the conversation (the topic to do next, and "All topics", which opens the side panel), and shows at most two actions after a check. It now says that the assistant may clear the view's storage.
+- No change to any tool's answer or data.
+
 ## 2026-11-23: learning hub with spaced review (1.28.0)
 
 - `learning_hub` opens the learning path as an interactive view: three quick questions per topic, built only from the glossary (a term's summary with its name blanked out, and three glossary terms to pick from), and spaced review after 1, 7 and 28 days. `learning_check` supplies the questions to the view only. Progress stays on the person's device; nothing is sent or stored by the server.

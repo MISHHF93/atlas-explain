@@ -43,8 +43,9 @@ const BASE_CSS = `
   * { box-sizing: border-box; }
   /* Transparent, so the conversation shows through; the host sets the colour scheme. */
   html, body { margin: 0; background: transparent; color: var(--fg); font: 14px/1.4 var(--font); }
-  main { padding: 12px 16px; }
-  main[data-mode="fullscreen"] { max-width: 960px; margin: 0 auto; padding: 20px 24px; }
+  /* Claude's safe-area insets (hostContext.safeAreaInsets, set by applyHost) keep controls clear of screen edges and overlays. */
+  main { padding: calc(12px + var(--safe-top, 0px)) calc(16px + var(--safe-right, 0px)) calc(12px + var(--safe-bottom, 0px)) calc(16px + var(--safe-left, 0px)); }
+  main[data-mode="fullscreen"] { max-width: 960px; margin: 0 auto; padding: calc(20px + var(--safe-top, 0px)) calc(24px + var(--safe-right, 0px)) calc(20px + var(--safe-bottom, 0px)) calc(24px + var(--safe-left, 0px)); }
   header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   h1 { font-size: 15px; margin: 0; font-weight: 600; }
   h2 { font-size: 14px; margin: 0; font-weight: 600; }
@@ -88,6 +89,12 @@ const BASE_CSS = `
   .sk-line { height: 12px; } .sk-line.short { width: 40%; } .sk-block { height: 150px; }
   @keyframes sk { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .sk-line, .sk-block { animation: none; } }
+  /* Touch screens: every control at least 44 px tall (Claude's MCP Apps guidelines ask for 44 pt tap targets). */
+  @media (pointer: coarse) {
+    main button, main input, main select { min-height: 44px !important; }
+    .ranges button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; }
+    .expand { width: 44px; height: 44px; }
+  }
 `;
 
 /** Formatting and drawing helpers every app can call. */
@@ -207,6 +214,8 @@ const bridgeJs = (name: string) => `
     if (theme === "dark" || theme === "light") { document.documentElement.dataset.theme = theme; document.documentElement.style.colorScheme = theme; }
     const vars = ctx.styles && ctx.styles.variables;
     if (vars && typeof vars === "object") for (const k in vars) if (k.startsWith("--")) document.documentElement.style.setProperty(k, String(vars[k]));
+    const inset = ctx.safeAreaInsets;
+    if (inset && typeof inset === "object") for (const side of ["top", "right", "bottom", "left"]) { const v = Number(inset[side]); if (Number.isFinite(v) && v >= 0) document.documentElement.style.setProperty("--safe-" + side, v + "px"); }
     if (ctx.displayMode) document.querySelector("main").dataset.mode = ctx.displayMode;
     if (Array.isArray(ctx.availableDisplayModes)) hostModes = ctx.availableDisplayModes;
     const expand = $("expand");

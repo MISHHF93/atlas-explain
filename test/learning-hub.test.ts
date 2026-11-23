@@ -111,8 +111,19 @@ describe("learning_hub and learning_check in the connector", () => {
     expect(LEARNING_APP_HTML).toContain("const DAYS = [1,7,28];");
     expect(LEARNING_APP_HTML).toContain(`const KEY = "${LEARNING_STORE_KEY}";`);
     expect(LEARNING_APP_HTML).toContain('callTool("learning_check"');
-    expect(LEARNING_APP_HTML).toContain("Progress stays on this device.");
+    expect(LEARNING_APP_HTML).toContain("Progress stays on this device");
     expect(LEARNING_APP_HTML).not.toMatch(/fetch\(/);
+    // Claude's guidelines: honest about storage the host may clear.
+    expect(LEARNING_APP_HTML).toContain("where your assistant may clear it");
+  });
+
+  it("is one compact card inline, with every topic in the side panel, and at most two actions after a check", () => {
+    expect(LEARNING_APP_HTML).toContain('if (mode() !== "fullscreen" && canExpand) {');
+    expect(LEARNING_APP_HTML).toContain('list.append(row(featured));');
+    expect(LEARNING_APP_HTML).toContain('request("ui/request-display-mode", { mode: "fullscreen" })');
+    expect(LEARNING_APP_HTML).not.toContain("Try different questions");
+    const js = LEARNING_APP_HTML.split("<script>")[1]!.split("</script>")[0]!;
+    expect(() => new Function(js)).not.toThrow();
   });
 });
 

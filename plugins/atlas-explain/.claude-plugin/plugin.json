@@ -1,7 +1,7 @@
 {
   "name": "atlas-explain",
   "displayName": "ATLAS Explain",
-  "version": "1.28.0",
+  "version": "1.28.1",
   "description": "Market jargon explained in plain language, with official figures, crypto prices and charts, economic data and headlines, each with its source and time. Four skills teach terms, brief the day's markets, explain a move and show what trading costs, all education only.",
   "author": { "name": "ATLAS Explain", "url": "https://atlas-explain.web.app" },
   "homepage": "https://atlas-explain.web.app/#setup",

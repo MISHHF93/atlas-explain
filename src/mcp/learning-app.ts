@@ -47,7 +47,7 @@ export const LEARNING_APP_HTML = appPage({
   </header>
   <div id="plot" class="plot"><div class="sk" aria-busy="true" aria-label="Loading"><div class="sk-line"></div><div class="sk-line short"></div><div class="sk-line"></div></div></div>
   <div class="asks" id="asks"></div>`,
-  footer: "Questions come from the ATLAS Explain glossary; it teaches terms, never a forecast. Progress stays on this device.",
+  footer: "Questions come from the ATLAS Explain glossary; it teaches terms, never a forecast. Progress stays on this device, where your assistant may clear it.",
   script: `
   const DAYS = ${JSON.stringify(REVIEW_DAYS)};
   const DAY = 86400000;
@@ -83,31 +83,51 @@ export const LEARNING_APP_HTML = appPage({
     if (isDue(id)) return "Due for review now";
     return "Passed; next review " + dayName(s.due);
   }
+  let screen = "home";
+  const mode = () => document.querySelector("main").dataset.mode;
+  /** Inline, the hub is one card (Claude's guidelines: a few data points, at most two actions); every topic is in the side panel. */
   function home() {
+    screen = "home";
     $("title").textContent = "Learning path";
     const steps = hub.steps;
     const passed = steps.filter((s) => state[s.id]).length;
     const due = steps.filter((s) => isDue(s.id));
     $("sub").textContent = passed + " of " + steps.length + " topics passed" + (due.length ? "; " + due.length + " due for review" : "") + ".";
-    const list = node("ul", "topics");
     const ordered = due.concat(steps.filter((s) => !isDue(s.id)));
-    for (const s of ordered) {
+    const featured = due[0] || steps.find((s) => !state[s.id]) || ordered[0];
+    const row = (s) => {
       const li = node("li", "topic" + (isDue(s.id) ? " due" : ""));
       li.append(node("b", "", s.title + " (" + s.terms.length + (s.terms.length === 1 ? " term)" : " terms)")), node("span", "st", status(s.id)));
-      li.append(button(isDue(s.id) ? "Review" : state[s.id] ? "Check again" : "Check yourself", isDue(s.id) ? "btn primary" : "btn", () => check(s.id)));
-      list.append(li);
+      li.append(button(isDue(s.id) ? "Review" : state[s.id] ? "Check again" : "Check yourself", isDue(s.id) || s === featured ? "btn primary" : "btn", () => check(s.id)));
+      return li;
+    };
+    const lead = node("p", "lead", "Three quick questions per topic, from the glossary. Pass two of three and the topic comes back for review in " + DAYS.join(", then ") + " days: going over things again later is what makes them stick.");
+    const canExpand = hostModes.includes("fullscreen");
+    if (mode() !== "fullscreen" && canExpand) {
+      const list = node("ul", "topics");
+      list.append(row(featured));
+      const more = node("div", "row");
+      more.append(button("All " + steps.length + " topics", "btn", () => {
+        request("ui/request-display-mode", { mode: "fullscreen" }).then((r) => { if (r && r.mode) { document.querySelector("main").dataset.mode = r.mode; const ex = $("expand"); if (ex) ex.hidden = r.mode === "fullscreen"; home(); } }).catch(() => {});
+      }));
+      $("plot").replaceChildren(lead, list, more);
+      $("asks").replaceChildren();
+      reportSize();
+      return;
     }
-    const parts = [node("p", "lead", "Three quick questions per topic, from the glossary. Pass two of three and the topic comes back for review in " + DAYS.join(", then ") + " days: going over things again later is what makes them stick.")];
-    parts.push(list);
-    if (!stored) parts.push(node("p", "fine", "This chat doesn't let the view keep progress, so it lasts while the view is open."));
+    const list = node("ul", "topics");
+    for (const s of ordered) list.append(row(s));
+    const parts = [lead, list, node("p", "fine", stored ? "Progress is kept in this view's storage on this device; your assistant may clear it, and it doesn't follow you to other devices." : "This chat doesn't let the view keep progress, so it lasts while the view is open.")];
     $("plot").replaceChildren(...parts);
-    const next = ordered[0];
     askButtons($("asks"), [
-      { label: "Teach me the next topic", prompt: "Using ATLAS Explain's learn_next, teach me the \\"" + (steps.find((s) => !state[s.id]) || next).title + "\\" topic of the learning path, term by term." },
+      { label: "Teach me the next topic", prompt: "Using ATLAS Explain's learn_next, teach me the \\"" + featured.title + "\\" topic of the learning path, term by term." },
     ]);
     reportSize();
   }
+  // Moving between inline and the side panel redraws the home screen for the space it has.
+  new MutationObserver(() => { if (hub && screen === "home") home(); }).observe(document.querySelector("main"), { attributes: true, attributeFilter: ["data-mode"] });
   async function check(topic) {
+    screen = "check";
     const step = hub.steps.find((s) => s.id === topic);
     if (!step) return home();
     $("title").textContent = step.title;
@@ -154,7 +174,8 @@ export const LEARNING_APP_HTML = appPage({
       const after = pass ? (s.due ? "Passed. Next review " + dayName(s.due) + "." : "Passed, and every review is done: this one's kept.") : (s ? "Not this time; it comes back tomorrow to try again." : "Not this time. Read the terms again, then try once more.");
       $("sub").textContent = right + " of " + total + " right";
       $("plot").replaceChildren(node("p", "lead", right + " of " + total + " right. " + after), node("div", "row"));
-      $("plot").lastChild.append(button("Back to the path", "btn primary", home), button("Try different questions", "btn", () => check(topic)));
+      // Two actions at most: back to the path, and one question for Claude.
+      $("plot").lastChild.append(button("Back to the path", "btn primary", home));
       tellClaude("In the ATLAS Explain learning hub the user " + (wasDue ? "reviewed" : "checked themselves on") + " \\"" + step.title + "\\": " + right + " of " + total + " right. " + after + (missed.length ? " Missed: " + missed.join(", ") + "." : ""));
       askButtons($("asks"), missed.length
         ? [{ label: "Explain the ones I missed", prompt: "Using ATLAS Explain's explain_term, explain these in plain language with a simple example each: " + missed.join(", ") + "." }]
