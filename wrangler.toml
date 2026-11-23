@@ -5,6 +5,12 @@ main = "src/mcp/worker.ts"
 compatibility_date = "2025-09-01"
 workers_dev = true
 
+# Local runs (npx wrangler dev) listen on 127.0.0.1: "localhost" binds only IPv6 [::1] on this Windows setup,
+# and browsers reaching 127.0.0.1 get connection refused (-102).
+[dev]
+ip = "127.0.0.1"
+port = 8787
+
 # Live data: captured on a schedule by this Worker (src/data/capture.ts) and served at /data/v1/.
 # One cron per part keeps each run inside the free plan's CPU and subrequest limits. These three
 # strings must match CRONS in src/mcp/worker.ts.

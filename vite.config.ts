@@ -34,8 +34,16 @@ const siteRoutes = {
   },
 };
 
+/**
+ * Local servers listen on 127.0.0.1 by name. Left to "localhost", Node 17+ on Windows binds only the IPv6 [::1],
+ * and browsers that reach localhost through 127.0.0.1 get "connection refused" (ERR_CONNECTION_REFUSED, -102).
+ */
+const LOCAL = { host: "127.0.0.1", port: 5173, strictPort: true } as const;
+
 export default defineConfig({
   plugins: [siteFrame, siteRoutes],
+  server: LOCAL,
+  preview: { ...LOCAL, port: 4173 },
   build: {
     chunkSizeWarningLimit: 500,
     rolldownOptions: {
