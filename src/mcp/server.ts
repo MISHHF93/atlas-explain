@@ -41,6 +41,7 @@ import { BANK_LICENCE, BANK_NAME, compareStatements, readDocsFile, watchingSente
 import { noPriceNote, officialPriceLink } from "../core/price-links";
 import { rateChangeImpact, type ImpactCountry, type ImpactProduct } from "../core/rate-impact";
 import { inflationCalculator, priceCountry } from "../core/inflation";
+import { changeTopic, whatsChanged } from "../core/whats-changed";
 import { moneyMaths, type MoneyCalc } from "../core/money-maths";
 import { CHECKS, matchRedFlags, RED_FLAGS, REPORT } from "../core/red-flags";
 import { comingUp } from "../core/coming-up";
@@ -50,7 +51,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.22.0";
+export const SERVER_VERSION = "1.23.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -452,6 +453,25 @@ function readGlossaryResource(uri: string): { uri: string; mimeType: string; tex
 
 export const V2_TOOLS = [
   {
+    name: "whats_changed",
+    title: "What changed since a date",
+    description: "What changed in the economy since a date: each official figure that moved (inflation, unemployment, policy rates, US debt for the US, euro area, Canada and the UK), written as 'went from … to …' with its source, plus the Federal Reserve, Bank of Canada, ECB and Bank of England statements and speeches published since, and the next rate decisions. Use it when someone asks what's new, what happened this week, or what they missed since a date. Up to 90 days back. Describes the past only; never a forecast.",
+    inputSchema: { type: "object", properties: {
+      topic: { type: "string", enum: ["all", "rates", "inflation", "jobs", "us", "canada", "uk", "euro"], description: "What to look at. Default all." },
+      since: str("Optional: the date to compare with, YYYY-MM-DD, at most 90 days back."),
+      days: { type: "number", description: "Optional instead of since: how many days back, 1 to 90. Default 7." },
+    }, additionalProperties: false },
+    annotations: annotations("What changed since a date", true),
+    icons: ICONS,
+    outputSchema: obj({
+      since: { type: "string" }, topic: { type: "string" },
+      changes: { type: "array", items: { type: "object", properties: { id: { type: "string" }, claim: { type: "string" }, from: { type: "object" }, to: { type: "object" }, source: { type: "object" }, asOf: { type: "string" } } } },
+      documents: { type: "array", items: { type: "object", properties: { kind: { type: "string" }, institution: { type: "string" }, title: { type: "string" }, speaker: { type: ["string", "null"] }, url: { type: "string" }, publishedAt: { type: "string" } } } },
+      upcoming: { type: "array", items: { type: "object", properties: { date: { type: "string" }, institution: { type: "string" }, title: { type: "string" }, sourceUrl: { type: "string" } } } },
+      notes: { type: "array", items: { type: "string" } },
+    }, ["since", "changes", "documents", "upcoming"]),
+  },
+  {
     name: "inflation_calculator",
     title: "What money from one year buys in another",
     description: "Works out what an amount of money from one year is worth in another, from the official consumer price index of the US (1913 on, Bureau of Labor Statistics), Canada (1914 on, Statistics Canada), the UK (1988 on, Office for National Statistics) or the euro area (1997 on, ECB), as yearly averages. Use it when someone asks what money from the past is worth today, how much prices have risen since a year, or what inflation did to their savings. Describes the past only; never a forecast.",
@@ -541,6 +561,35 @@ export function setFeatures(v2Tools: string | undefined): void {
 /** The tools a client is offered: v1's, plus any v2 tool switched on. */
 export function visibleTools(): readonly ((typeof TOOLS)[number] | (typeof V2_TOOLS)[number])[] {
   return [...TOOLS, ...V2_TOOLS.filter((t) => enabledV2.has(t.name))];
+}
+
+export async function whatsChangedTool(args: Record<string, unknown>, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
+  const topic = changeTopic(args.topic);
+  if (!topic) return text("Choose a topic: all, rates, inflation, jobs, us, canada, uk or euro.", true);
+  const DAY = 86_400_000;
+  let since: number;
+  if (typeof args.since === "string" && args.since.trim()) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.since.trim())) return text("Give the date as YYYY-MM-DD.", true);
+    since = Date.parse(`${args.since.trim()}T00:00:00Z`);
+  } else {
+    const d = args.days == null ? 7 : Number(args.days);
+    if (!Number.isFinite(d) || d < 1 || d > 90) return text("Give a number of days from 1 to 90.", true);
+    since = now - Math.round(d) * DAY;
+  }
+  if (!Number.isFinite(since) || since >= now) return text("Give a date in the past.", true);
+  if (now - since > 90 * DAY + DAY) return text("Look back at most 90 days.", true);
+  const [economy, docsBody] = await Promise.all([loadEconomy(fetcher), getJson(DOCS_DATA_URL, fetcher)]);
+  const docs = docsBody == null ? null : readDocsFile(docsBody);
+  const r = whatsChanged({ economy, docs, topic, since, now });
+  const parts = [
+    `What changed since ${r.since}${topic === "all" ? "" : ` (${topic})`}:`,
+    r.changes.length ? r.changes.map((c) => `- ${c.claim} Source: ${c.source.name} (${c.source.url}).`).join("\n") : "- No published figure moved in that time.",
+    r.documents.length ? `\nPublished by the central banks since then:\n${r.documents.map((d) => `- ${d.publishedAt}, ${d.institution} ${d.kind}${d.speaker ? ` (${d.speaker})` : ""}: ${d.title} (${d.url})`).join("\n")}` : "",
+    r.upcoming.length ? `\nComing up:\n${r.upcoming.map((e) => `- ${e.date}: ${e.title} (${e.sourceUrl})`).join("\n")}` : "",
+    r.notes.length ? `\n${r.notes.join(" ")}` : "",
+    "\nThese are published figures and documents; nothing here says what happens next.",
+  ].filter(Boolean);
+  return data(parts.join("\n"), r as unknown as Record<string, unknown>);
 }
 
 export function inflationCalculatorTool(args: Record<string, unknown>): ToolResult {
@@ -1899,6 +1948,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "money_maths": return ok(moneyMathsTool(args));
         case "decision_explainer": return enabledV2.has("decision_explainer") ? ok(await decisionExplainer(args.bank, s(args.date), fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "speech_tracker": return enabledV2.has("speech_tracker") ? ok(await speechTracker(args.bank, args.days, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
+        case "whats_changed": return enabledV2.has("whats_changed") ? ok(await whatsChangedTool(args, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "inflation_calculator": return enabledV2.has("inflation_calculator") ? ok(inflationCalculatorTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "rate_change_impact": return enabledV2.has("rate_change_impact") ? ok(rateChangeImpactTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "upcoming_events": return ok(await upcomingEvents(s(args.only), fetcher));

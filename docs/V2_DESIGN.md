@@ -160,7 +160,7 @@ Every tool returns `structuredContent` with an `outputSchema`. Every claim objec
 |---|---|---|
 | 1 | `rate_change_impact` (pure arithmetic) with reference-to-the-cent tests and its widget | Matches the reference schedules exactly; red-team rules pass |
 | 2 | Document capture (Fed, BoC, ECB, BoE, BEA), `speech_tracker`, decision watch, `decision_explainer` with wording diff | A replay of a recorded decision day writes the decision file within one cron tick; diff fixtures pass |
-| 3 | Daily snapshots, `whats_changed` | Claims all sourced; 90-day window |
+| 3 | `whats_changed` (built 23 Nov 2026, 1.23.0: instead of daily snapshot files, `economy.json` records when each period was first seen, with no extra KV writes) | Claims all sourced; 90-day window |
 | 4 | Tier B coverage (headlines only), `article_context` (metadata only) | 15-word rule test passes; robots.txt honoured |
 | 5 | White-label, widgets, audit log, metering fields | Partner fixtures pass; billing stays off |
 

@@ -74,6 +74,28 @@ export interface EconomyFile {
   releases?: { capturedAt: string; events: DataRelease[] };
   /** US Treasury auctions from TreasuryDirect; absent in files captured before 18 Nov 2026. */
   auctions?: { capturedAt: string; upcoming: Auction[]; recent: Auction[] };
+  /**
+   * When ATLAS Explain first saw each period of each indicator (ISO), for whats_changed: a monthly figure's
+   * period isn't its publication day. null: already there when tracking began (`trackingSince`). Since 23 Nov 2026.
+   */
+  firstSeen?: Partial<Record<IndicatorId, Record<string, string | null>>>;
+  trackingSince?: string;
+}
+
+/**
+ * Carries the first-seen dates forward and stamps new periods with `at`. On the first run (no earlier dates),
+ * and for an indicator added later, the periods already there are marked null: seen before tracking began.
+ */
+export function trackFirstSeen(indicators: readonly Indicator[], prev: EconomyFile | null, at: string): { firstSeen: NonNullable<EconomyFile["firstSeen"]>; trackingSince: string } {
+  const before = prev?.firstSeen;
+  const out: NonNullable<EconomyFile["firstSeen"]> = {};
+  for (const i of indicators) {
+    const known = before?.[i.id];
+    const map: Record<string, string | null> = {};
+    for (const p of i.series) map[p.t] = known && p.t in known ? known[p.t]! : before && known ? at : null;
+    out[i.id] = map;
+  }
+  return { firstSeen: out, trackingSince: prev?.trackingSince ?? at };
 }
 
 /** A scheduled data release, from the agency's own published calendar. */
@@ -671,5 +693,17 @@ export function readEconomyFile(body: unknown): EconomyFile | null {
   const au = isRec(body.auctions) && isTime(body.auctions.capturedAt) && Array.isArray(body.auctions.upcoming) && Array.isArray(body.auctions.recent)
     ? { capturedAt: body.auctions.capturedAt, upcoming: body.auctions.upcoming.filter(isAuction), recent: body.auctions.recent.filter(isAuction) }
     : undefined;
-  return { schema: ECONOMY_SCHEMA, generatedAt: body.generatedAt, indicators, calendar: { capturedAt: isTime(cal.capturedAt) ? cal.capturedAt : body.generatedAt, events }, ...(rel ? { releases: rel } : {}), ...(au ? { auctions: au } : {}) };
+  const seen: NonNullable<EconomyFile["firstSeen"]> = {};
+  if (isRec(body.firstSeen)) {
+    for (const [id, m] of Object.entries(body.firstSeen)) {
+      if (!INDICATOR_IDS.includes(id as IndicatorId) || !isRec(m)) continue;
+      seen[id as IndicatorId] = Object.fromEntries(Object.entries(m).filter(([, v]) => v === null || isTime(v))) as Record<string, string | null>;
+    }
+  }
+  const tracking = isTime(body.trackingSince) ? body.trackingSince : null;
+  return {
+    schema: ECONOMY_SCHEMA, generatedAt: body.generatedAt, indicators, calendar: { capturedAt: isTime(cal.capturedAt) ? cal.capturedAt : body.generatedAt, events },
+    ...(rel ? { releases: rel } : {}), ...(au ? { auctions: au } : {}),
+    ...(tracking ? { firstSeen: seen, trackingSince: tracking } : {}),
+  };
 }

@@ -14,6 +14,11 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: what changed since a date (1.23.0)
+
+- New tool `whats_changed(topic, since | days)`: each official figure that moved since a date (up to 90 days), the central banks' statements and speeches given since, and the next rate decisions. `changes[]` carry `claim`, `from`, `to`, `source` and `asOf`; `documents[]` carry `kind`, `institution`, `title`, `url` and `publishedAt`.
+- `economy.json` gains `firstSeen` (when each period of each indicator first appeared) and `trackingSince`. Monthly figures are compared from 23 Nov 2026; earlier dates say so.
+
 ## 2026-11-22: an inflation calculator (1.22.0)
 
 - New tool `inflation_calculator`: what an amount from one year buys in another, from the official consumer price index of the US (from 1913), Canada (from 1914), the UK (from 1988) or the euro area (from 1997), as yearly averages. Returns `value`, `changePct`, `yearlyPct`, a `points` array (one per year, for a chart) and the source with its licence. Years outside a country's index are refused with the range, never estimated.
