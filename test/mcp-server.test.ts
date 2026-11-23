@@ -107,14 +107,13 @@ describe("hosted MCP over HTTP", () => {
 describe("online-only links", () => {
   it("shows coming-soon text until the owner sets each address, and never a dead link", () => {
     expect(MCP_URL === null || /^https:\/\/[^/]+\/mcp(\?v=\d+)?$/.test(MCP_URL)).toBe(true);
-    // Support keeps its old anchor but sends people to the one setup page.
-    const support = sitePage("support.html");
-    expect(support).toContain('id="ai-assistants"');
-    expect(support).toContain('href="/connect"');
-    // /connect: the address is filled in at build time everywhere the page uses it, never typed by hand.
-    const raw = readFileSync("connect.html", "utf8");
+    // The questions keep the old Support anchor and point to Set it up on the same page.
+    const page = sitePage("index.html");
+    expect(page).toContain('id="ai-assistants"');
+    expect(page).toContain('href="#setup"');
+    // Set it up: the address is filled in at build time everywhere the page uses it, never typed by hand.
+    const raw = readFileSync("index.html", "utf8");
     expect(raw).not.toContain("workers.dev");
-    const page = sitePage("connect.html");
     expect(page).not.toContain("%MCP_URL%");
     if (MCP_URL) {
       expect(page).toContain(`<code id="mcp-url" data-mcp-url>${MCP_URL}</code>`);
@@ -130,7 +129,7 @@ describe("the connector address in a browser", () => {
     for (const path of ["/", MCP_PATH]) {
       const res = await handleHttp(new Request(`https://mcp.example${path}`, { headers: browser }), never);
       expect(res.status, path).toBe(302);
-      expect(res.headers.get("Location")).toBe("https://atlas-explain.web.app/connect");
+      expect(res.headers.get("Location")).toBe("https://atlas-explain.web.app/#setup");
     }
     // A client opening a stream with GET still gets the protocol's 405, and POSTs are answered as before.
     const stream = await handleHttp(new Request(`https://mcp.example${MCP_PATH}`, { headers: { Accept: "text/event-stream" } }), never);

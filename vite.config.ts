@@ -50,11 +50,8 @@ export default defineConfig({
       // Public site pages are static HTML with a tiny script; the app is one entry (app.html) served at /app/**.
       input: {
         site: "index.html",
-        howItsBuilt: "how-its-built.html",
         privacy: "privacy.html",
         terms: "terms.html",
-        support: "support.html",
-        connect: "connect.html",
         partners: "partners.html",
         embedRateImpact: "embed/rate-impact.html",
         notFound: "404.html",

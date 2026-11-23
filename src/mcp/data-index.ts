@@ -110,7 +110,7 @@ export function dataIndex(origin: string, capturedAt: Record<string, string | nu
   return {
     schema: DATA_INDEX_SCHEMA,
     publisher: "ATLAS Explain",
-    about: `${EXPLAIN_WEB_URL}/how-its-built`,
+    about: `${EXPLAIN_WEB_URL}/partners#how-its-built`,
     use: "For information and education only. Not for transactions or trading decisions. Every value carries its source and time; credit the original source when you reuse it, and check each source's own terms below.",
     docs: "https://github.com/MISHHF93/atlas-explain/blob/main/docs/DATA_API.md",
     files: DATA_FILES_INDEX.map((f) => ({ ...f, url: `${origin}/data/v1/${f.file}`, capturedAt: capturedAt[f.file] ?? null })),

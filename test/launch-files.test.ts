@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const read = (p: string) => readFileSync(p, "utf8");
-const PAGES = ["index.html", "app.html", "connect.html", "partners.html", "support.html", "privacy.html", "terms.html", "how-its-built.html", "404.html"];
+const PAGES = ["index.html", "app.html", "partners.html", "privacy.html", "terms.html", "404.html"];
 
 describe("files a public launch needs", () => {
   it("makes the web app installable: a manifest with real PNG icons, linked from every page", () => {

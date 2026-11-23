@@ -39,7 +39,7 @@ describe("signing in is required for the web app", () => {
   });
 
   it("no longer offers \"Continue without an account\" anywhere", () => {
-    for (const f of ["src/wallet/signin-page.ts", "src/web/app.ts", "src/core/account-hint.ts", "index.html", "support.html", "privacy.html", "terms.html"]) {
+    for (const f of ["src/wallet/signin-page.ts", "src/web/app.ts", "src/core/account-hint.ts", "index.html", "partners.html", "privacy.html", "terms.html"]) {
       expect(readFileSync(f, "utf8"), f).not.toMatch(/Continue without an account|continue-without-account|saveGuestChoice/);
     }
   });

@@ -188,7 +188,7 @@ tr:last-child td { border-bottom: 0; }
 .qa .steps, .qa .copy-row, .qa .snippet, .qa > .btn { margin: 0 1rem 0.9rem; }
 .qa .steps { color: var(--atlas-muted); line-height: 1.6; }
 
-/* /connect: the connector address, copyable commands and config snippets */
+/* The home page's Set it up: the connector address, copyable commands and config snippets */
 .connect-url { display: grid; gap: 0.35rem; padding: 1rem; border: 1px solid var(--atlas-line); border-radius: var(--atlas-radius-lg); background: var(--atlas-card); box-shadow: var(--atlas-shadow-sm); }
 .copy-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .copy-row code { flex: 1 1 16rem; min-width: 0; padding: 0.55rem 0.7rem; overflow-wrap: anywhere; font-size: var(--atlas-text-sm); }

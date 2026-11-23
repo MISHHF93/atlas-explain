@@ -52,21 +52,21 @@ describe("public site", () => {
     const hero = /<section class="hero"[\s\S]*?<\/section>/.exec(page)?.[0] ?? "";
     // The main button starts the journey (Sign in, then choose); the connector's steps are one click away.
     expect(hero).toContain('<a class="btn btn-primary btn-lg" href="/app" data-start-cta>Get started</a>');
-    expect(hero).toContain('<a class="btn" href="/connect">Add to your AI assistant</a>');
+    expect(hero).toContain('<a class="btn" href="#setup">Add to your AI assistant</a>');
     expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(page)?.[0]).toContain('href="/app" data-start-cta>Get started</a>');
     expect(page).toContain('id="browser"');
     expect(page).toMatch(/Gemini Nano, on this device/);
     expect(page).toMatch(/Gemini in the cloud, if needed/);
   });
-  it("keeps build and hackathon detail on How it's built, out of the customer pages", () => {
-    const built = readFileSync("how-its-built.html", "utf8");
+  it("keeps build and hackathon detail in How it's built (on Partners, for developers), out of the customer pages", () => {
+    const built = readFileSync("partners.html", "utf8");
     for (const part of ["Firebase AI Logic", "App Check", "Remote Config", "#BuildHybridAI", "Gemini Nano"]) expect(built).toContain(part);
     for (const [file, text] of pages) {
       // Privacy and terms name their processors on purpose; their production text lands with the legal review.
-      if (file === "how-its-built.html" || file === "privacy.html" || file === "terms.html") continue;
+      if (file === "partners.html" || file === "privacy.html" || file === "terms.html") continue;
       const visible = text.replace(/<[^>]+>/g, " ");
       expect(visible, file).not.toMatch(/Firebase AI Logic|App Check|Remote Config|#BuildHybridAI|coming soon|during the beta/i);
-      expect(text, file).toContain('href="/how-its-built"');
+      expect(text, file).toContain('href="/partners#how-its-built"');
     }
     expect(page).toContain('href="/app"');
     expect(page).toContain("https://github.com/MISHHF93/atlas-explain");
@@ -113,7 +113,9 @@ describe("hosting routes", () => {
     expect(map["/app/**"]).toBe("/app.html");
     expect(map["/signin"]).toBe("/app.html");
     expect(map["/privacy"]).toBe("/privacy.html");
-    expect(map["/support"]).toBe("/support.html");
+    expect(map["/partners"]).toBe("/partners.html");
+    // The old pages are redirects to their new sections, not rewrites.
+    for (const gone of ["/connect", "/support", "/how-its-built"]) expect(map[gone]).toBeUndefined();
     expect(map["**"]).toBeUndefined();
   });
   it("never caches HTML for an hour", () => {

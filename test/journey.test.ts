@@ -14,8 +14,9 @@ describe("one journey: website, Sign in, then straight into the app (no page in 
     expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(home)?.[0]).toContain('<a class="btn btn-primary btn-sm" href="/app" data-start-cta>Get started</a>');
     expect(home).toContain('<a class="btn btn-primary btn-lg" href="/app" data-start-cta>Get started</a>');
     expect(home).not.toContain('href="/start"');
-    // The connector's setup steps stay public, for the directory and for people who already know.
-    expect(home).toContain('href="/connect"');
+    // The connector's setup steps stay public, on the home page, for the directory and for people who already know.
+    expect(home).toContain('href="#setup"');
+    expect(home).toContain('id="setup"');
   });
 
   it("asks a signed-out visitor to sign in first, and remembers where they were heading", () => {
@@ -37,7 +38,9 @@ describe("one journey: website, Sign in, then straight into the app (no page in 
     expect(rewriteFor("/signin")).toBe("/app.html");
     expect(rewriteFor("/start")).toBe("/app.html");
     expect(rewriteFor("/app/learn")).toBe("/app.html");
-    expect(rewriteFor("/connect")).toBe("/connect.html");
+    expect(rewriteFor("/partners")).toBe("/partners.html");
+    // /connect is a redirect now (to /#setup), not a page.
+    expect(rewriteFor("/connect")).toBeNull();
     expect(rewriteFor("/nothing-here")).toBeNull();
   });
 });

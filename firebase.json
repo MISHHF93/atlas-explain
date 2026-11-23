@@ -52,7 +52,7 @@
         ]
       },
       {
-        "source": "/@(app|signin|start|privacy|terms|how-its-built|support|connect|partners|admin){,/**}",
+        "source": "/@(app|signin|start|privacy|terms|partners|admin){,/**}",
         "headers": [
           {
             "key": "Cache-Control",
@@ -110,24 +110,12 @@
         "destination": "/app.html"
       },
       {
-        "source": "/how-its-built",
-        "destination": "/how-its-built.html"
-      },
-      {
         "source": "/privacy",
         "destination": "/privacy.html"
       },
       {
         "source": "/terms",
         "destination": "/terms.html"
-      },
-      {
-        "source": "/support",
-        "destination": "/support.html"
-      },
-      {
-        "source": "/connect",
-        "destination": "/connect.html"
       },
       {
         "source": "/partners",
@@ -146,22 +134,37 @@
       },
       {
         "source": "/demo/trading-terms.html",
-        "destination": "/connect",
+        "destination": "/#setup",
         "type": 301
       },
       {
         "source": "/download/**",
-        "destination": "/connect",
+        "destination": "/#setup",
         "type": 301
       },
       {
         "source": "/welcome",
-        "destination": "/connect",
+        "destination": "/#setup",
         "type": 301
       },
       {
         "source": "/app/admin",
         "destination": "/admin",
+        "type": 301
+      },
+      {
+        "source": "/connect",
+        "destination": "/#setup",
+        "type": 301
+      },
+      {
+        "source": "/support",
+        "destination": "/#questions",
+        "type": 301
+      },
+      {
+        "source": "/how-its-built",
+        "destination": "/partners#how-its-built",
         "type": 301
       }
     ]

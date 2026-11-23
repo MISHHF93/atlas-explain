@@ -3,7 +3,7 @@ import { readAccountHint } from "../core/account-hint";
 import "./site.css";
 
 /*
- * Public site pages (/, /support, /privacy, /terms, /connect, /how-its-built, 404). Static HTML with
+ * Public site pages (/, /partners, /privacy, /terms, 404). Static HTML with
  * the shared header and footer filled in at build time (src/site/frame.ts). This tiny script
  * only forwards links made for the old single-page app (desk links, old account links,
  * email sign-in links, preview flags) to their new address under /app.
@@ -11,7 +11,7 @@ import "./site.css";
 const target = legacyRedirect(location);
 if (target) location.replace(target);
 
-// Copy buttons on /connect: copy the text of the element they name, then say so for a moment.
+// Copy buttons in Set it up on the home page: copy the text of the element they name, then say so for a moment.
 for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
   button.addEventListener("click", () => {
     const text = document.getElementById(button.dataset.copy ?? "")?.textContent?.trim() ?? "";

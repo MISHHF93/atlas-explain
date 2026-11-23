@@ -1,7 +1,8 @@
 /**
  * Route map for atlas-explain.web.app. Pure functions, no DOM, so they are unit tested.
  *
- * Public site (static HTML, no app JavaScript):  /  /support  /privacy  /terms  /connect  /how-its-built
+ * Public site (static HTML, no app JavaScript):  /  /partners  /privacy  /terms (the old /connect, /support and
+ *   /how-its-built redirect to sections of / and /partners)
  *   (404.html for the rest; the shared header and footer come from src/site/frame.ts)
  * App (one lazy-loaded bundle, app.html), one scrolling page with a section per address:
  *   /app (Explain)  /app/today  /app/economy  /app/tools  /app/learn  /app/assets  /app/assets/:symbol (sheet)
@@ -152,7 +153,7 @@ const EMAIL_LINK_KEYS = ["signin", "oobCode", "mode", "apiKey"];
  * app (owner decision, 16 Nov 2026): every app address, from any link, a bookmark or a typed
  * address, shows the Sign in page unless the visitor is signed in. Only an email sign-in link
  * passes, because it is the sign-in itself; preview flags pass in development only. The connector
- * and its public setup page (/connect) need no account and are not app addresses.
+ * and its public setup steps (/#setup) need no account and are not app addresses.
  */
 export function needsSignInStep(route: AppRoute, loc: { search: string; hash: string }, state: { signedIn: boolean; dev?: boolean }): boolean {
   if (route.kind === "signin" || route.kind === "not_found") return false;

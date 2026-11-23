@@ -14,12 +14,12 @@ export const APP_URL = `${EXPLAIN_WEB_URL}/app`;
 /** Firebase's second address for the same site; both may read the owner's admin view (src/mcp/admin.ts). */
 export const EXPLAIN_WEB_ALT_URL = "https://atlas-explain.firebaseapp.com";
 /** The one page for setting up the connector in AI assistants. */
-export const CONNECT_URL = `${EXPLAIN_WEB_URL}/connect`;
+export const CONNECT_URL = `${EXPLAIN_WEB_URL}/#setup`;
 
 /* ---------- the MCP connector (Cloudflare Workers free plan) ---------- */
 export const MCP_ORIGIN = "https://atlas-explain-mcp.atlas-explain.workers.dev";
 /**
- * The public connector address (the directory, the registry and /connect use it). One account that
+ * The public connector address (the directory, the registry and the home page's setup steps use it). One account that
  * had added it before the protocol fix kept a saved failure for it and used "?v=2", and on 16 Nov 2026
  * "?v=3" (chat stopped seeing the tools though the server answered); the server ignores the query.
  */

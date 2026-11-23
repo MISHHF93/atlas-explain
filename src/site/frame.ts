@@ -1,34 +1,35 @@
 /**
- * The one header and footer of the public site pages (/, /connect, /support, /privacy, /terms,
- * /how-its-built, 404). Each page holds only `<!-- site:header -->` and `<!-- site:footer -->`
+ * The one header and footer of the public site pages (/, /partners, /privacy, /terms, 404). Since 23 Nov 2026
+ * the home page also holds the connector setup and the questions (the old /connect and /support), and /partners
+ * holds How it's built; the old addresses redirect (firebase.json). Each page holds only `<!-- site:header -->` and `<!-- site:footer -->`
  * markers; the build (vite.config.ts) and the tests (applySiteFrame) put this markup in, so the
  * pages can never drift apart again.
  *
  * One way in: the website's only button into the product is "Get started" (/start). It passes the
  * Sign in page (signing in is required for the web app), then Get started offers the two ways in:
- * the AI-assistant connector (/connect, public setup steps, no account) and the web app (/app).
+ * the AI-assistant connector (/#setup, public setup steps, no account) and the web app (/app).
  * Signed in on this browser, the button reads "Open ATLAS Explain" and your initials link to your
  * account (src/site/site.ts). There is no separate "Sign in" or "The app" link: they led to the
  * same place.
  */
 import { DATA_SITE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
 
-export type SitePage = "home" | "connect" | "partners" | "support" | "privacy" | "terms" | "how-its-built" | "404";
+export type SitePage = "home" | "partners" | "privacy" | "terms" | "404";
 
 const SOURCE_URL = "https://github.com/MISHHF93/atlas-explain";
 
 const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/connect", label: "AI assistants", page: "connect" },
-  { href: "/support", label: "Support", page: "support" },
+  { href: "/#setup", label: "Set it up" },
+  { href: "/#questions", label: "Questions" },
+  { href: "/partners", label: "Partners", page: "partners" },
 ];
 
 /** Every public destination, once. */
 const FOOTER_LINKS: readonly { href: string; label: string }[] = [
   { href: "/app", label: "Get started" },
-  { href: "/connect", label: "Add to your AI assistant" },
-  { href: "/support", label: "Support and FAQ" },
-  { href: "/partners", label: "For businesses" },
+  { href: "/#setup", label: "Add to your AI assistant" },
+  { href: "/#questions", label: "Questions and support" },
+  { href: "/partners", label: "For businesses and developers" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
 ];
@@ -40,7 +41,7 @@ export function startCta(className: string): string {
 
 /** Straight to the connector's setup steps, for people who already know they want it. */
 export function connectCta(className: string): string {
-  return `<a class="${className}" href="/connect">Add to your AI assistant</a>`;
+  return `<a class="${className}" href="/#setup">Add to your AI assistant</a>`;
 }
 
 
@@ -63,7 +64,7 @@ export function siteFooter(): string {
     `<footer class="site-foot">`,
     `      <p class="foot-edu">${EDUCATION_LINE}</p>`,
     `      <nav aria-label="Footer">${links}<a href="${SOURCE_URL}" target="_blank" rel="noreferrer">Source · Apache-2.0</a></nav>`,
-    `      <p class="fine">© 2026 ATLAS Explain · <a href="/how-its-built">How it's built</a></p>`,
+    `      <p class="fine">© 2026 ATLAS Explain · <a href="/partners#how-its-built">How it's built</a></p>`,
     `    </footer>`,
   ].join("\n");
 }

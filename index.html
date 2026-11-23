@@ -33,7 +33,7 @@
           <p class="hero-lede">Add ATLAS Explain to your AI assistant and ask about any market term, asset or move. It answers in plain language, with official figures, prices and charts, and names the source and time of every number. Free, and no account needed.</p>
           <div class="hero-cta">
             <a class="btn btn-primary btn-lg" href="/app" data-start-cta>Get started</a>
-            <a class="btn" href="/connect">Add to your AI assistant</a>
+            <a class="btn" href="#setup">Add to your AI assistant</a>
           </div>
           <p class="fine">Educational information, not investment advice. It never tells anyone to trade.</p>
         </div>
@@ -49,7 +49,62 @@
           <li class="card"><span class="flow-n">2</span><h3>Ask as you normally would</h3><p>"What is a stop-limit order?" "How did Bitcoin move this week?" "What are Apple's latest filed figures?"</p></li>
           <li class="card"><span class="flow-n">3</span><h3>Get sourced answers</h3><p>Plain-language terms, official figures from government and regulator sources, crypto prices and charts, and today's headlines, each with its source and time.</p></li>
         </ol>
-        <p><a href="/connect">See everything it can do, and the steps for your assistant</a></p>
+        <p><a href="#setup">Set it up in your assistant</a> · <a href="#what-to-ask">What you can ask</a> · <a href="#questions">Questions</a></p>
+      </section>
+
+      <section class="band" id="setup" aria-labelledby="setup-title">
+        <h2 id="setup-title" class="band-title">Set it up</h2>
+        <p class="band-lede">Copy the address, then follow the steps for your assistant. Free, no account and nothing to install.</p>
+        <div class="connect-url">
+          <span class="fine">Connector address</span>
+          <div class="copy-row"><code id="mcp-url" data-mcp-url>%MCP_URL%</code><button type="button" class="btn btn-sm btn-primary" data-copy="mcp-url">Copy</button></div>
+        </div>
+        <div class="faq">
+          <details class="qa" open>
+            <summary>Claude (web and desktop)</summary>
+            <ol class="steps">
+              <li>Open <b>Customize</b>, then <b>Connectors</b>, then <b>Add connector</b> and <b>Add custom connector</b>.</li>
+              <li>Name it ATLAS Explain and paste the connector address. Claude detects that no sign-in is needed.</li>
+              <li>In a chat, turn the connector on and ask, for example: "Using ATLAS Explain, what is a stop-limit order?"</li>
+            </ol>
+          </details>
+          <details class="qa">
+            <summary>Claude Code</summary>
+            <p>Run this once in a terminal:</p>
+            <div class="copy-row"><code id="cmd-claude-code">claude mcp add --transport http atlas-explain %MCP_URL%</code><button type="button" class="btn btn-sm" data-copy="cmd-claude-code">Copy</button></div>
+          </details>
+          <details class="qa">
+            <summary>ChatGPT</summary>
+            <ol class="steps">
+              <li>Turn on developer mode in Settings, under Apps and connectors (available on some plans).</li>
+              <li>Create a connector, name it ATLAS Explain, paste the connector address, and choose no authentication.</li>
+            </ol>
+          </details>
+          <details class="qa">
+            <summary>Cursor</summary>
+            <p>Add this to <code>~/.cursor/mcp.json</code> (or the project's <code>.cursor/mcp.json</code>):</p>
+            <pre class="snippet" id="cfg-cursor">{
+  "mcpServers": {
+    "atlas-explain": { "url": "%MCP_URL%" }
+  }
+}</pre>
+            <button type="button" class="btn btn-sm" data-copy="cfg-cursor">Copy</button>
+          </details>
+          <details class="qa">
+            <summary>VS Code</summary>
+            <p>Add this to <code>.vscode/mcp.json</code>, or run "MCP: Add Server", choose HTTP and paste the address:</p>
+            <pre class="snippet" id="cfg-vscode">{
+  "servers": {
+    "atlas-explain": { "type": "http", "url": "%MCP_URL%" }
+  }
+}</pre>
+            <button type="button" class="btn btn-sm" data-copy="cfg-vscode">Copy</button>
+          </details>
+          <details class="qa">
+            <summary>Any other MCP client</summary>
+            <p>Use the connector address with the Streamable HTTP transport and no authentication.</p>
+          </details>
+        </div>
       </section>
 
       <section class="band" id="what-to-ask" aria-labelledby="ask-title">
@@ -75,17 +130,43 @@
           <figure><img src="/directory/crypto-board.png" width="1200" height="1094" loading="lazy" decoding="async" alt="The crypto board inside Claude: ten coins with their price, change and a 24-hour sparkline." /><figcaption>The crypto board: pick a coin to open its chart.</figcaption></figure>
           <figure><img src="/directory/yield-curve.png" width="1200" height="1486" loading="lazy" decoding="async" alt="The US Treasury yield curve inside Claude, with each term's yield and its source." /><figcaption>Official figures, with the yield curve drawn from Treasury data.</figcaption></figure>
         </div>
+        <details class="qa all-tools">
+          <summary>All 24 tools, and the ready-made prompts</summary>
+          <div class="cards two">
+            <article class="card"><h3>Explain and learn</h3><p>Plain-language meanings for market terms, and the learning path topic by topic, from a curated glossary.</p></article>
+            <article class="card"><h3>Look up an asset</h3><p>What it is, where and when it trades, and its latest official figure or price, or why no price is shown.</p></article>
+            <article class="card"><h3>Official figures</h3><p>US Treasury yields, ECB and Bank of Canada rates, EIA energy prices, and SEC-filed figures for large US companies, each with its source and date.</p></article>
+            <article class="card"><h3>Crypto prices and charts</h3><p>Prices for ten major coins, refreshed every few minutes, and how a coin moved over 24 hours, 7 days or 30 days, drawn as interactive charts in Claude and ChatGPT. Every answer says when the prices were collected.</p></article>
+            <article class="card"><h3>The economy</h3><p>Inflation and unemployment in the US, the euro area, Canada and the UK, each from its own statistics agency; the four central banks' policy rates; Canada's posted prime, mortgage and GIC rates; and US public debt, with about a year of history, and the dates of the next Fed, ECB, Bank of Canada and Bank of England rate decisions.</p></article>
+            <article class="card"><h3>What a rate change means for you</h3><p>What a cut or a rise would do to your own variable-rate mortgage, HELOC, savings or GIC/CD renewal, to the cent, and which central bank drives it. Arithmetic on your numbers; it never says whether rates will change.</p></article>
+            <article class="card"><h3>Central bank decisions, word by word</h3><p>The latest Fed, Bank of Canada, ECB or Bank of England decision, how the statement's wording changed from the one before, and what the bank says it is watching, quoted with links.</p></article>
+            <article class="card"><h3>What central bankers are saying</h3><p>Recent speeches and remarks by each bank's policymakers: who spoke, when, the title and a link to the full text.</p></article>
+            <article class="card"><h3>Charts and reports</h3><p>Official series (policy rates, inflation, growth, yields, share-price indices) as data an assistant can turn into a chart, a table or a one-page report, each with its source and licence.</p></article>
+            <article class="card"><h3>How trading works, with real numbers</h3><p>A coin's bid-ask spread, its order book as a depth chart, and how far the average price moves when an order is filled: spreads and slippage, explained with live data.</p></article>
+            <article class="card"><h3>An evidence brief on one asset</h3><p>Everything above on one page for a coin, a company, a currency or a rate, each fact with its source, plus what the brief doesn't tell you. Facts only, never a recommendation.</p></article>
+            <article class="card"><h3>Inflation over the years</h3><p>What money from one year buys in another, from each country's official consumer price index as yearly averages: the US from 1913, Canada from 1914, the UK from 1988 and the euro area from 1997. It describes the past and is not a forecast.</p></article>
+            <article class="card"><h3>Paying off debts</h3><p>Several debts and one monthly amount: how long the avalanche (highest rate first) and the snowball (smallest balance first) each take, the interest each costs, and the order debts are cleared. It compares; it never says which to choose.</p></article>
+            <article class="card"><h3>Money maths</h3><p>Compound growth, what a fee costs over 30 years, what inflation does to cash, and why holding more things swings less: worked out from your own numbers, drawn as a chart you can change.</p></article>
+            <article class="card"><h3>Spot an investment scam</h3><p>Paste a message or offer and see which warning signs regulators describe it shows, where to check the seller is registered and where to report. It never says whether something is a scam.</p></article>
+            <article class="card"><h3>Treasury auctions</h3><p>What the US government is borrowing this week, and what its latest auctions paid and how much demand there was, from TreasuryDirect.</p></article>
+            <article class="card"><h3>Countries compared</h3><p>GDP growth, inflation, unemployment and GDP per person for the G20 and the EU, from the World Bank, each with the year it was published.</p></article>
+            <article class="card"><h3>What changed since a date</h3><p>Every official figure that moved, the central banks' statements and speeches, and the next rate decisions, since any date in the last 90 days, each with its source. Ask for everything or one topic: rates, inflation, jobs, or the US, Canada, the UK or the euro area.</p></article>
+            <article class="card"><h3>What's notable today</h3><p>What stands out across all the data: unusual crypto moves, an inverted or flat yield curve, rate decisions this week, figures that just changed, new official releases. Each item says the rule that picked it. It describes; it never forecasts.</p></article>
+            <article class="card"><h3>Today's headlines</h3><p>Recent market news and official releases from the Federal Reserve, SEC, CFTC, ECB, Bank of Canada and Bank of England, each linked to its publisher.</p></article>
+          </div>
+          <p>Ready-made prompts in the connector: <b>Today's market brief</b>, <b>What's notable today</b>, <b>The economy today</b>, <b>Evidence brief on an asset</b>, <b>Explain an asset</b>, <b>Check an offer for scam warning signs</b>, <b>A money maths lesson</b>, <b>Learn the next topic</b>, <b>Quiz me on a topic</b>, <b>What's coming up</b> or <b>Make a chart or report</b>..</p>
+        </details>
       </section>
 
-      <section class="band" aria-labelledby="trust-title">
+      <section class="band" id="trust" aria-labelledby="trust-title">
         <h2 id="trust-title" class="band-title">Built to be trusted</h2>
         <ul class="points">
           <li><b>Education only. No predictions.</b> It explains and shows sources. It never recommends a trade or says where a price is going.</li>
           <li><b>No made-up numbers.</b> Missing data stays missing, with the reason. Every figure names its source and time.</li>
-          <li><b>Never your accounts.</b> It never reads balances, account numbers, positions or other pages.</li>
-          <li><b>Private.</b> The connector only receives what your assistant asks it, changes nothing and stores none of it: it keeps only daily totals of how often each tool is used.</li>
+          <li><b>Never your accounts.</b> It never reads balances, account numbers, positions or other pages, and never sees the other connectors in your assistant. Anything you do in another service happens there, under its own terms.</li>
+          <li><b>Private.</b> The connector only receives what your assistant asks it, changes nothing and stores none of it: it keeps only daily totals of how often each tool is used. See <a href="/privacy#connector">how the connector handles data</a>.</li>
+          <li><b>Open data.</b> Developers can read the same published files, and what each source permits, at <a href="%DATA_ORIGIN%/data/v1/">the data index</a>. For information and education, not for transactions.</li>
         </ul>
-        <p><a href="/privacy">Read the privacy policy</a></p>
       </section>
 
       <section class="band split" id="browser" aria-labelledby="browser-title">
@@ -104,9 +185,31 @@
         </ol>
       </section>
 
+      <section class="band" id="questions" aria-labelledby="questions-title">
+        <h2 id="questions-title" class="band-title">Questions</h2>
+        <div id="faq"></div>
+        <div class="faq">
+          <details class="qa" id="ai-assistants"><summary>How do I add it to my AI assistant?</summary><p>Add one address as a connector in Claude, ChatGPT, Cursor, VS Code or any assistant that supports MCP. The address and the steps for each assistant are on <a href="#setup">Set it up</a>. No account or key is needed.</p></details>
+          <details class="qa"><summary>Is it free?</summary><p>Yes. The connector, explaining, learning and live prices are free. A Pro plan with more cloud answers in the web app may be offered later, and you will always see the price before paying anything.</p></details>
+          <details class="qa"><summary>Does it give trading advice?</summary><p>No. It is education only. It explains terms and shows sources, and it never tells anyone to trade or says where a price is going.</p></details>
+          <details class="qa"><summary>What does the connector receive?</summary><p>Only what your assistant sends when it uses an ATLAS Explain tool, such as a term or a ticker. It never sees your chat history, accounts or files, changes nothing and keeps none of it.</p></details>
+          <details class="qa"><summary>Where do the figures and prices come from?</summary><p>Official figures come from government and regulator sources, crypto prices from a public market-data provider, and headlines from public news feeds. Each answer names its source and time. Missing data stays missing, with the reason.</p></details>
+          <details class="qa"><summary>Can I use it without an AI assistant?</summary><p>Yes. The web app at atlas-explain.web.app/app explains whatever you type or paste. In desktop Chrome it tries Gemini Nano on your device first; otherwise Gemini answers in the cloud. Every answer says which one ran.</p></details>
+          <details class="qa"><summary>Do I need an account?</summary><p>For the web app, yes: a free account, with Google or a one-time email link. It keeps your saved explanations and settings on every device. The AI-assistant connector needs no account.</p></details>
+        </div>
+        <h3 id="troubleshooting">If something looks stuck</h3>
+        <ul class="points">
+          <li><b>Your assistant can't reach ATLAS Explain:</b> check the address on <a href="#setup">Set it up</a>, then remove the connector and add it again.</li>
+          <li><b>"Cloud" answers do not arrive in the web app:</b> check your connection. Each browser has a fair-use limit of 8 cloud answers a minute and 300 a day; on-device answers are never limited.</li>
+          <li><b>Answers always say "Cloud":</b> Gemini Nano needs recent desktop Chrome on a supported computer. When it isn't available, the cloud answers instead and says so.</li>
+          <li><b>The site looks out of date:</b> reload with Ctrl+Shift+R (Cmd+Shift+R on a Mac).</li>
+        </ul>
+        <p class="fine">Something not working, or a term explained badly? <a href="https://github.com/MISHHF93/atlas-explain/issues" target="_blank" rel="noreferrer">Open an issue</a> (never include account numbers or anything private). To see or delete your account data, open Account in the <a href="/app">web app</a>, or read the <a href="/privacy">privacy policy</a>.</p>
+      </section>
+
       <section class="band cta-band" aria-labelledby="cta-title">
         <h2 id="cta-title" class="band-title">Make market jargon readable, wherever you ask</h2>
-        <div class="hero-cta"><a class="btn btn-primary btn-lg" href="/app" data-start-cta>Get started</a><a class="btn" href="/support">Questions and support</a></div>
+        <div class="hero-cta"><a class="btn btn-primary btn-lg" href="/app" data-start-cta>Get started</a><a class="btn" href="#setup">Add to your AI assistant</a></div>
       </section>
     </main>
     <!-- site:footer -->

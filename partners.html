@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>ATLAS Explain for businesses · Partner API</title>
+    <title>ATLAS Explain for businesses and developers · Partner API</title>
     <meta name="description" content="Education-only market explanations and sourced official figures for banks, credit unions, brokers and fintech apps, by API or MCP. Free sandbox." />
     <link rel="canonical" href="https://atlas-explain.web.app/partners" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="ATLAS Explain" />
-    <meta property="og:title" content="ATLAS Explain for businesses" />
+    <meta property="og:title" content="ATLAS Explain for businesses and developers" />
     <meta property="og:description" content="Education-only market explanations and sourced official figures for banks, credit unions, brokers and fintech apps, by API or MCP. Free sandbox." />
     <meta property="og:url" content="https://atlas-explain.web.app/partners" />
     <meta property="og:image" content="https://atlas-explain.web.app/og/atlas-explain.png" />
@@ -27,7 +27,7 @@
     <!-- site:header partners -->
     <main id="main" tabindex="-1">
       <article class="doc">
-        <h1>ATLAS Explain for businesses</h1>
+        <h1>ATLAS Explain for businesses and developers</h1>
         <p class="lede">Plain-language market explanations and sourced official figures for your app and your AI agents: the same content ATLAS Explain gives in Claude, by REST API or MCP. Education only. Every fact names its source and time, and nothing recommends, rates or forecasts anything.</p>
         <p class="fine">Status: free <b>sandbox</b>, open now. Pilots and paid plans come after a legal review of the partner terms.</p>
 
@@ -40,7 +40,7 @@
         </div>
 
         <h2 id="what">What's included</h2>
-        <table>
+        <div class="table-wrap"><table>
           <thead><tr><th>Endpoint</th><th>What it returns</th><th>Sample</th></tr></thead>
           <tbody>
             <tr><td><code>GET /terms</code></td><td>Market and economics terms in plain language</td><td><a href="/partners/samples/terms.json">terms.json</a></td></tr>
@@ -56,7 +56,7 @@
             <tr><td><code>POST /scam-check</code></td><td>Which investment-fraud warning signs a message shows, and where to check and report</td><td><a href="/partners/samples/scam-check.json">scam-check.json</a></td></tr>
             <tr><td><code>POST /money</code></td><td>Compound growth, fees, inflation or diversification from your numbers</td><td><a href="/partners/samples/money.json">money.json</a></td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="fine">Samples were captured from live data on 18 Nov 2026. Full description: <a href="/partners/openapi.json">OpenAPI 3.1 spec</a> · <a href="https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md">partner documentation</a>.</p>
 
         <h2 id="how">How it works</h2>
@@ -68,7 +68,7 @@
         <p>Every answer is <code>{ data, meta }</code>. <code>meta.credit</code> says what to show with the data, and <code>meta.educationOnly</code> is always true.</p>
 
         <h2 id="licensing">What you may show</h2>
-        <table>
+        <div class="table-wrap"><table>
           <thead><tr><th>Content</th><th>Redistribution</th></tr></thead>
           <tbody>
             <tr><td>Explanations, "if this happens", scam warning signs, money maths</td><td>ATLAS Explain's own content, under the partner terms</td></tr>
@@ -77,13 +77,60 @@
             <tr><td>ECB, Bank of Canada, Bank of England, New York Fed</td><td>Reuse with attribution; credit the bank</td></tr>
             <tr><td>Crypto prices</td><td>Not offered: their sources don't allow redistribution</td></tr>
           </tbody>
-        </table>
+        </table></div>
         <p class="fine">You stay responsible for how you present the content under the rules that apply to you, for example FINRA's rules on communications with the public, which apply to AI-written messages too.</p>
 
         <h2 id="key">Ask for a sandbox key</h2>
         <p>Open a request with your organisation's name and what you'd like to build. Don't post anything confidential: we'll reply there and send the key privately.</p>
         <p><a class="btn btn-primary" href="https://github.com/MISHHF93/atlas-explain/issues/new?title=Partner%20sandbox%20key%20request&amp;body=Organisation%3A%0AWhat%20you%27d%20like%20to%20build%3A%0AREST%20or%20MCP%3A%0A%0A(Please%20don%27t%20post%20anything%20confidential.)">Request a sandbox key</a></p>
         <p class="fine">Educational information, not investment advice. ATLAS Explain never tells anyone to trade.</p>
+
+        <h2 id="how-its-built">How it's built</h2>
+        <p>The technical design behind ATLAS Explain, for developers, partners and the judges of Google's #BuildHybridAI challenge. Everyday use needs none of this.</p>
+
+        <h3 id="built-connector">The AI-assistant connector (MCP)</h3>
+        <ul class="points">
+          <li><b>One address</b> on Cloudflare Workers' free plan speaks the Model Context Protocol over Streamable HTTP, current and earlier protocol versions alike.</li>
+          <li><b>24 tools that look things up and never change anything</b>: terms and the learning path; assets, official figures, crypto prices and price history; headlines, what stands out today, what changed since a date, the economy, the calendar and what's coming up; central-bank decisions and speeches; Treasury auctions, countries compared and data series; an evidence brief per asset; and calculators for money maths, paying off debts, inflation over the years, rate changes and scam warning signs. Twelve of them draw interactive charts inside the chat. It also offers prompts, glossary resources and completions.</li>
+          <li><b>No account, no key, nothing kept about you.</b> It answers what the assistant asks and keeps only daily totals of how often each tool is used. It is listed in the official MCP Registry.</li>
+        </ul>
+        <p>Setup steps for each assistant are on <a href="/#setup">the home page</a>.</p>
+
+        <h3 id="built-hybrid">Hybrid inference with Firebase AI Logic</h3>
+        <p>In the web app, every explanation goes through the Firebase AI Logic Web SDK in hybrid mode, with <code>prefer_on_device</code> as the default.</p>
+        <ol class="steps">
+          <li><b>On the device.</b> When Chrome's Prompt API reports Gemini Nano as available, the prompt runs locally. Nothing leaves the computer, and the answer is labelled "On this device".</li>
+          <li><b>In the cloud.</b> When Nano is unavailable (phones, other browsers, older hardware) or the text is too long for it, the same prompt goes to Gemini Flash-Lite in the cloud and is labelled "Cloud".</li>
+          <li><b>Private context stays local.</b> Private notes and watchlists are only ever included in on-device prompts. A cloud fallback drops them and says so.</li>
+        </ol>
+        <p>The path that actually ran is read from the SDK's response and shown on every answer. It is never guessed.</p>
+
+        <h3 id="built-protection">Protection and configuration</h3>
+        <ul class="points">
+          <li><b>App Check</b> with reCAPTCHA Enterprise is enforced on Firebase AI Logic, so only this site can spend cloud calls.</li>
+          <li><b>Fair-use limits</b>: each browser is limited to 8 cloud answers a minute and 300 a day. Answers on the device are never limited.</li>
+          <li><b>Remote Config</b> holds the inference mode, the cloud model, the prompt template, the on-device size limits, the price provider and the billing switch. Built-in defaults apply when it can't be read.</li>
+          <li><b>Education-only guardrails</b>: a fixed system prompt, refusal of requests for trade decisions, removal of account-like numbers before anything is sent, and a scan in the release check that blocks trade-instruction wording.</li>
+        </ul>
+
+        <h3 id="built-data">Data</h3>
+        <ul class="points">
+          <li><b>Official figures</b> from the agencies that publish them (US Treasury and TreasuryDirect, the BLS, the New York Fed, the ECB, Eurostat, the Bank of Canada, Statistics Canada, the Bank of England, the ONS, the EIA, SEC EDGAR, the World Bank and the OECD), the <b>central banks' own statements and speeches</b>, <b>headlines</b> (GDELT and official releases from the Federal Reserve, SEC, CFTC, ECB, Bank of Canada and Bank of England) and <b>crypto prices</b> (Kraken, with CoinGecko as backup) are captured on a schedule by the connector's Cloudflare Worker and served from one address, so the web app and the connector show the same numbers, every answer names its source and time, and nothing depends on a rate-limited source. Each source and what it permits are in <a href="%DATA_ORIGIN%/data/v1/">the data index</a>.</li>
+          <li><b>Live crypto prices</b> in the web app come from a public market-data provider (Kraken or CoinGecko, chosen in Remote Config). The provider is named and linked next to every price, with its time.</li>
+          <li><b>No fixtures.</b> Missing data is shown as missing, with the reason.</li>
+          <li><b>ATLAS research desk.</b> ATLAS Explain can also read the public signal of the ATLAS research software when that software runs on the same computer. That integration is optional and is hidden for everyone who doesn't run ATLAS. Its paper predictions stay withheld until they pass a published evidence gate.</li>
+        </ul>
+
+        <h3 id="built-stack">Stack</h3>
+        <ul class="points">
+          <li>TypeScript with Vite, no UI framework. The app's routes are lazy-loaded.</li>
+          <li>The connector: a Cloudflare Worker using the same glossary and data code as the web app.</li>
+          <li>Firebase: AI Logic, App Check, Remote Config, Authentication (Google and email link), Firestore with owner-only rules, and Hosting.</li>
+        </ul>
+
+        <h3 id="built-source">Source</h3>
+        <p>Everything runs online: the website and web app on Firebase Hosting, and the AI-assistant (MCP) address on Cloudflare's free plan. The code is open source under Apache-2.0 at <a href="https://github.com/MISHHF93/atlas-explain" target="_blank" rel="noreferrer">github.com/MISHHF93/atlas-explain</a>.</p>
+
       </article>
     </main>
     <!-- site:footer -->

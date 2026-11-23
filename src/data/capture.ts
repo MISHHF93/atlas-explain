@@ -34,7 +34,7 @@ import { ECONOMY_SCHEMA, ECONOMY_SOURCES, EUROSTAT_UNEMPLOYMENT_URL, INDICATOR_I
 import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, oecdSharesUrl, parseData360, parseOecdShares, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
 import { PREDECESSOR_CIK, SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, mergePredecessorFacts, readTickerMap, stockFromSec } from "./sec.ts";
 
-export const CAPTURE_UA = `ATLAS Explain data capture (+${EXPLAIN_WEB_URL}/how-its-built)`;
+export const CAPTURE_UA = `ATLAS Explain data capture (+${EXPLAIN_WEB_URL}/partners#how-its-built)`;
 
 /** What a runner gives the capture: the network, a clock and a log. */
 export interface CaptureEnv {

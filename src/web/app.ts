@@ -145,8 +145,8 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     menu: [
       { label: "ATLAS Explain website", icon: "back", run: () => location.assign("/") },
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
-      { label: "Use it in your AI assistant", icon: "plug", run: () => location.assign("/connect") },
-      { label: "Help and support", icon: "info", run: () => location.assign("/support") },
+      { label: "Use it in your AI assistant", icon: "plug", run: () => location.assign("/#setup") },
+      { label: "Help and support", icon: "info", run: () => location.assign("/#questions") },
       { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },
       { label: "Terms", icon: "doc", run: () => openLegal("terms") },
       { label: "Privacy", icon: "shield", run: () => openLegal("privacy") },
@@ -628,7 +628,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     yourData: yourData.node,
     stats: statsGroup,
     legal: { onTerms: () => openLegal("terms"), onPrivacy: () => openLegal("privacy") },
-    about: { action: { icon: "plug", label: "Use it in your AI assistant", run: () => location.assign("/connect") } },
+    about: { action: { icon: "plug", label: "Use it in your AI assistant", run: () => location.assign("/#setup") } },
   }).nodes;
   // One page has one top-level heading (Explain); the other section titles sit a level below it.
   for (const id of ["today", "glossary", "assets"] as const) {

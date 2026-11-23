@@ -25,7 +25,7 @@ export function createSignInPage(): SignInPage {
       // Only want the connector? It needs no account.
       const connector = el("p", "fine signin-connector");
       const link = document.createElement("a");
-      link.href = "/connect";
+      link.href = "/#setup";
       link.textContent = "The AI-assistant connector";
       connector.append(link, document.createTextNode(" needs no account."));
       const wrap = el("div", "stack");
