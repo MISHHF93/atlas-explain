@@ -30,7 +30,7 @@ import {
 import { EIA_SERIES, MARKET_SCHEMA, parseBocBonds, parseBocFx, parseEcbXml, parseEiaSeries, parseEiaSpotPage, parseTreasuryCsv, type MarketFile } from "./market-sources.ts";
 import { parseBlsSchedule } from "./economy.ts";
 import { boeBankRateUrl, parseBoeBankRate, parseBoeMpcDates, parseEcbDepositRate, parseTreasuryAuctions, type Auction } from "./economy.ts";
-import { ECONOMY_SCHEMA, ECONOMY_SOURCES, EUROSTAT_UNEMPLOYMENT_URL, INDICATOR_IDS, trackFirstSeen, parseEurostatUnemployment, parseOnsCpi, parseOnsUnemployment, parseStatcanCpi, parseStatcanUnemployment, statcanUrl, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
+import { ECONOMY_SCHEMA, ECONOMY_SOURCES, EUROSTAT_UNEMPLOYMENT_URL, INDICATOR_IDS, parsePostedRate, trackFirstSeen, parseEurostatUnemployment, parseOnsCpi, parseOnsUnemployment, parseStatcanCpi, parseStatcanUnemployment, statcanUrl, parseBlsCpi, parseBlsUnemployment, parseBocEvents, parseBocPolicy, parseEcbCalendar, parseEcbHicp, parseEffr, parseFomcCalendar, parseSofr, parseTreasuryDebt, type CalendarEvent, type EconomyFile, type Indicator, type IndicatorId } from "./economy.ts";
 import { WORLD_INDICATORS, WORLD_SCHEMA, WORLD_SOURCE, oecdSharesUrl, parseData360, parseOecdShares, worldUrl, type WorldFile, type WorldIndicatorData } from "./world.ts";
 import { PREDECESSOR_CIK, SEC_ETFS, SEC_STOCKS, cik10, etfFromSec, mergePredecessorFacts, readTickerMap, stockFromSec } from "./sec.ts";
 
@@ -332,6 +332,10 @@ export async function captureEconomy(env: CaptureEnv, prev: EconomyFile | null):
     ["ca_unemployment", statcanUrl(env.now), parseStatcanUnemployment],
     ["uk_cpi", ECONOMY_SOURCES.onsCpi, parseOnsCpi],
     ["uk_unemployment", ECONOMY_SOURCES.onsUnemployment, parseOnsUnemployment],
+    // One Bank of Canada request serves all three posted rates.
+    ["ca_prime_rate", ECONOMY_SOURCES.bocPosted, parsePostedRate("ca_prime_rate")],
+    ["ca_mortgage_5y", ECONOMY_SOURCES.bocPosted, parsePostedRate("ca_mortgage_5y")],
+    ["ca_gic_5y", ECONOMY_SOURCES.bocPosted, parsePostedRate("ca_gic_5y")],
   ];
   const indicators: Indicator[] = [];
   // Statistics Canada answers both Canadian series in one request: read it once.

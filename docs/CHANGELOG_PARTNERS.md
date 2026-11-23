@@ -14,6 +14,12 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: Canada's posted prime, mortgage and GIC rates (1.24.0)
+
+- `economy_snapshot`, `/economy`, `data_series` and `whats_changed` add three weekly figures from the Bank of Canada: the chartered banks' posted prime rate (`ca_prime_rate`), 5-year conventional mortgage rate (`ca_mortgage_5y`) and 5-year GIC rate (`ca_gic_5y`). Each says it's a posted rate (most borrowers negotiate a lower mortgage rate; other institutions often pay more on GICs), and a change is dated to the first weekly figure at the new level.
+- `rate_change_impact` adds an optional `reference` with today's posted prime (variable mortgages, HELOCs) or GIC rate for Canada. It never replaces the rate given.
+- Topics `mortgage`, `prime rate`, `gic` and `posted rates`.
+
 ## 2026-11-23: what changed since a date (1.23.0)
 
 - New tool `whats_changed(topic, since | days)`: each official figure that moved since a date (up to 90 days), the central banks' statements and speeches given since, and the next rate decisions. `changes[]` carry `claim`, `from`, `to`, `source` and `asOf`; `documents[]` carry `kind`, `institution`, `title`, `url` and `publishedAt`.

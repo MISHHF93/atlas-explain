@@ -6,6 +6,7 @@
  *   - Euro-area inflation (HICP, year over year): European Central Bank data portal
  *   - Euro-area unemployment: Eurostat (une_rt_m)
  *   - Canada inflation (CPI) and unemployment: Statistics Canada (Web Data Service)
+ *   - Canada's posted prime, 5-year mortgage and 5-year GIC rates at the chartered banks: Bank of Canada Valet (weekly)
  *   - UK inflation (CPI) and unemployment: Office for National Statistics (time series)
  *   - Canada's policy rate (target for the overnight rate): Bank of Canada Valet
  *   - US total public debt outstanding: US Treasury Fiscal Data
@@ -22,7 +23,8 @@ export const ECONOMY_SCHEMA = "atlas-explain-economy-v1";
 
 export type IndicatorId =
   | "us_cpi" | "us_unemployment" | "us_fed_funds" | "us_sofr" | "euro_hicp" | "euro_unemployment" | "euro_deposit_rate"
-  | "ca_cpi" | "ca_unemployment" | "ca_policy_rate" | "uk_cpi" | "uk_unemployment" | "uk_bank_rate" | "us_debt";
+  | "ca_cpi" | "ca_unemployment" | "ca_policy_rate" | "ca_prime_rate" | "ca_mortgage_5y" | "ca_gic_5y"
+  | "uk_cpi" | "uk_unemployment" | "uk_bank_rate" | "us_debt";
 
 export interface Point {
   /** The period or day the value is for (YYYY-MM or YYYY-MM-DD). */
@@ -138,6 +140,8 @@ export const ECONOMY_SOURCES = {
   // The ECB moved euro-area HICP from "ICP" to the new "HICP" dataset in Feb 2026 (method change).
   hicp: "https://data-api.ecb.europa.eu/service/data/HICP/M.U2.N.000000.4D0.ANR?lastNObservations=13&format=jsondata",
   bocPolicy: "https://www.bankofcanada.ca/valet/observations/V39079/json?recent=260",
+  // The chartered banks' posted rates, weekly (Wednesdays): prime, 5-year conventional mortgage, 5-year GIC.
+  bocPosted: "https://www.bankofcanada.ca/valet/observations/V80691311,V80691335,V80691341/json?recent=60",
   debt: "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?sort=-record_date&page[size]=260&fields=record_date,tot_pub_debt_out_amt",
   fomc: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
   ecbCalendar: "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
@@ -177,6 +181,9 @@ const CREDIT: Record<IndicatorId, { source: string; url: string }> = {
   uk_cpi: { source: "Office for National Statistics", url: "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/d7g7/mm23" },
   uk_unemployment: { source: "Office for National Statistics", url: "https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms" },
   euro_unemployment: { source: "Eurostat (une_rt_m)", url: "https://ec.europa.eu/eurostat/databrowser/view/une_rt_m/default/table" },
+  ca_prime_rate: { source: "Bank of Canada", url: "https://www.bankofcanada.ca/rates/banking-and-financial-statistics/posted-interest-rates-offered-by-chartered-banks/" },
+  ca_mortgage_5y: { source: "Bank of Canada", url: "https://www.bankofcanada.ca/rates/banking-and-financial-statistics/posted-interest-rates-offered-by-chartered-banks/" },
+  ca_gic_5y: { source: "Bank of Canada", url: "https://www.bankofcanada.ca/rates/banking-and-financial-statistics/posted-interest-rates-offered-by-chartered-banks/" },
 };
 
 type Rec = Record<string, unknown>;
@@ -300,6 +307,37 @@ export function parseBocPolicy(body: unknown, capturedAt: string): Indicator | n
     })
     .sort((a, b) => a.t.localeCompare(b.t));
   return policyRate("ca_policy_rate", "Bank of Canada policy rate", daily, capturedAt);
+}
+
+/** The chartered banks' posted rates the Bank of Canada publishes each week, and what each one is (and isn't). */
+export const POSTED_RATES: readonly { id: IndicatorId; series: string; name: string; note: string }[] = [
+  { id: "ca_prime_rate", series: "V80691311", name: "Canada prime rate (chartered banks)", note: "The base most variable-rate mortgages and HELOCs are priced from: a variable mortgage is usually prime minus a discount, a HELOC prime plus a margin." },
+  { id: "ca_mortgage_5y", series: "V80691335", name: "Canada 5-year conventional mortgage rate (posted)", note: "The big banks' posted rate; most borrowers negotiate a lower one." },
+  { id: "ca_gic_5y", series: "V80691341", name: "Canada 5-year GIC rate (posted)", note: "The big banks' posted rate; other banks and credit unions often pay more." },
+];
+
+/** Bank of Canada Valet weekly observations for the posted rates → one indicator each, kept as changes like a policy rate. */
+export function parsePostedRate(id: IndicatorId) {
+  const meta = POSTED_RATES.find((p) => p.id === id)!;
+  return (body: unknown, capturedAt: string): Indicator | null => {
+    const rows = isRec(body) && Array.isArray(body.observations) ? body.observations.filter(isRec) : [];
+    const weekly = rows
+      .flatMap((r): Point[] => {
+        const cell = r[meta.series];
+        const v = isRec(cell) ? num(cell.v) : null;
+        return isDay(r.d) && v != null ? [{ t: r.d, v }] : [];
+      })
+      .sort((a, b) => a.t.localeCompare(b.t));
+    const ind = policyRate(id, meta.name, weekly, capturedAt);
+    if (!ind) return null;
+    // Weekly figures (as of each Wednesday): a change shows up in the first week at the new level, not on its day.
+    const changes = weekly.filter((p, i) => i === 0 || p.v !== weekly[i - 1]!.v);
+    const cur = changes[changes.length - 1]!;
+    const before = changes[changes.length - 2];
+    ind.changeWindow = "since the last change";
+    ind.note = `${before ? `First at this level in the weekly figures for ${cur.t}, up from ${before.v.toFixed(2)}%.`.replace(" up from", cur.v > before.v ? " up from" : " down from") : `Unchanged since at least ${cur.t}.`} ${meta.note}`;
+    return ind;
+  };
 }
 
 /** Bank of England database CSV ("DATE,IUDBEDR" then "03 Nov 2025,4") → Bank Rate. */
@@ -666,7 +704,7 @@ export function parseEurostatUnemployment(body: unknown, capturedAt: string): In
 export const INDICATOR_IDS: readonly IndicatorId[] = [
   "us_cpi", "us_unemployment", "us_fed_funds", "us_sofr",
   "euro_hicp", "euro_unemployment", "euro_deposit_rate",
-  "ca_cpi", "ca_unemployment", "ca_policy_rate",
+  "ca_cpi", "ca_unemployment", "ca_policy_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y",
   "uk_cpi", "uk_unemployment", "uk_bank_rate",
   "us_debt",
 ];

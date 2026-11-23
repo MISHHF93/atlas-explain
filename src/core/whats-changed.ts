@@ -15,11 +15,11 @@ export const CHANGE_TOPICS: readonly ChangeTopic[] = ["all", "rates", "inflation
 
 const IDS: Record<ChangeTopic, readonly IndicatorId[] | null> = {
   all: null,
-  rates: ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"],
+  rates: ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y"],
   inflation: ["us_cpi", "euro_hicp", "ca_cpi", "uk_cpi"],
   jobs: ["us_unemployment", "euro_unemployment", "ca_unemployment", "uk_unemployment"],
   us: ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "us_debt"],
-  canada: ["ca_cpi", "ca_unemployment", "ca_policy_rate"],
+  canada: ["ca_cpi", "ca_unemployment", "ca_policy_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y"],
   uk: ["uk_cpi", "uk_unemployment", "uk_bank_rate"],
   euro: ["euro_hicp", "euro_unemployment", "euro_deposit_rate"],
 };
@@ -30,7 +30,10 @@ const BANKS: Record<ChangeTopic, readonly DocBank[]> = {
 const INSTITUTION: Record<DocBank, CalendarEvent["institution"]> = { fed: "Federal Reserve", boc: "Bank of Canada", ecb: "European Central Bank", boe: "Bank of England" };
 
 /** Rates set by a decision: they stay put between decisions, so a change has a single day. */
-const STEP_RATES: readonly IndicatorId[] = ["euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"];
+const STEP_RATES: readonly IndicatorId[] = ["euro_deposit_rate", "ca_policy_rate", "uk_bank_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y"];
+
+/** Weekly posted rates (as of each Wednesday): a change appears in the first week at the new level, not on its own day. */
+const WEEKLY: readonly IndicatorId[] = ["ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y"];
 
 /** Daily series whose small day-to-day moves aren't news: report only a move of at least this many points. */
 const DAILY_MIN_PT: Partial<Record<IndicatorId, number>> = { us_fed_funds: 0.1, us_sofr: 0.1 };
@@ -100,7 +103,7 @@ function changeOf(i: Indicator, file: EconomyFile, sinceDay: string, sinceIso: s
   const claim = dir === "was unchanged"
     ? `${i.name} was unchanged at ${fmt(i, latest.v)} (${periodLabel(from.t)} and ${periodLabel(latest.t)}).`
     : steps.length
-      ? `${i.name} ${dir} from ${fmt(i, from.v)} to ${fmt(i, latest.v)}, in effect from ${steps.at(-1)!.t}${steps.length > 1 ? ` (it moved ${steps.length} times in that time)` : ""}.`
+      ? `${i.name} ${dir} from ${fmt(i, from.v)} to ${fmt(i, latest.v)}, ${WEEKLY.includes(i.id) ? "first shown in the weekly figures for" : "in effect from"} ${steps.at(-1)!.t}${steps.length > 1 ? ` (it moved ${steps.length} times in that time)` : ""}.`
       : `${i.name} ${dir} from ${fmt(i, from.v)} (${periodLabel(from.t)}) to ${fmt(i, latest.v)} (${periodLabel(latest.t)}).`;
   if (steps.length) asOf = steps.at(-1)!.t;
   return { id: i.id, claim, from: { value: from.v, period: from.t }, to: { value: latest.v, period: latest.t }, source: { name: i.source, url: i.sourceUrl }, asOf };

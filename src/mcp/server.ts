@@ -51,7 +51,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.23.0";
+export const SERVER_VERSION = "1.24.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -217,7 +217,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "economy_snapshot",
     title: "The economy at a glance",
-    description: "Headline economic figures with period, change and source: inflation, unemployment, policy rates and US public debt, plus the next rate decisions. Use it for how the economy is doing, or one topic. Covers US CPI over 12 months and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation and the ECB deposit rate (ECB) and euro-area unemployment (Eurostat), Canada's inflation and unemployment (Statistics Canada) and policy rate (Bank of Canada), the UK's inflation and unemployment (Office for National Statistics) and Bank Rate (Bank of England), and US public debt (Treasury), each with about a year of history. Optional filter by topic, for example 'canada inflation' or 'uk'.",
+    description: "Headline economic figures with period, change and source: inflation, unemployment, policy rates and US public debt, plus the next rate decisions. Use it for how the economy is doing, or one topic. Covers US CPI over 12 months and unemployment (Bureau of Labor Statistics), the effective federal funds rate with the Fed's target range and SOFR (New York Fed), euro-area inflation and the ECB deposit rate (ECB) and euro-area unemployment (Eurostat), Canada's inflation and unemployment (Statistics Canada), policy rate and the chartered banks' posted prime, 5-year mortgage and 5-year GIC rates (Bank of Canada), the UK's inflation and unemployment (Office for National Statistics) and Bank Rate (Bank of England), and US public debt (Treasury), each with about a year of history. Optional filter by topic, for example 'canada inflation', 'uk' or 'mortgage'.",
     inputSchema: { type: "object", properties: { topic: str("Optional topic, for example 'inflation', 'jobs', 'rates', 'debt', 'euro' or 'canada'. Leave empty for all.") }, additionalProperties: false },
     annotations: annotations("The economy at a glance", true),
     icons: ICONS,
@@ -494,7 +494,7 @@ export const V2_TOOLS = [
   {
     name: "rate_change_impact",
     title: "What a rate change would do to my numbers",
-    description: "Works out what a change in interest rates would do to someone's own variable-rate mortgage payment, HELOC interest, savings interest or GIC/CD renewal, to the cent, and which central bank drives that product (Canada: Bank of Canada; US: the Federal Reserve). Use it when someone asks what a cut or a rise would mean for them. Pure arithmetic on the numbers they give; it never says whether a change will happen.",
+    description: "Works out what a change in interest rates would do to someone's own variable-rate mortgage payment, HELOC interest, savings interest or GIC/CD renewal, to the cent, and which central bank drives that product (Canada: Bank of Canada; US: the Federal Reserve). Use it when someone asks what a cut or a rise would mean for them. Pure arithmetic on the numbers they give; for Canada it also shows today's posted prime or GIC rate for reference. It never says whether a change will happen.",
     inputSchema: { type: "object", properties: {
       product: { type: "string", enum: ["variable_mortgage", "heloc", "savings", "gic_cd"], description: "What to work out." },
       balance: { type: "number", description: "Amount owed (mortgage, HELOC) or held (savings, GIC/CD), in dollars." },
@@ -513,6 +513,7 @@ export const V2_TOOLS = [
       lines: { type: "array", items: { type: "string" } },
       follows: { type: "string" },
       assumptions: { type: "array", items: { type: "string" } },
+      reference: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, valuePct: { type: "number" }, asOf: { type: "string" }, source: { type: "object" } } },
     }, ["product", "rows", "lines", "follows"]),
   },
   {
@@ -602,7 +603,7 @@ export function inflationCalculatorTool(args: Record<string, unknown>): ToolResu
   return data(`${r.lines.join("\n")}\nSource: ${r.source.name} (${r.source.url}). ${r.source.licence}${note}`, r as unknown as Record<string, unknown>);
 }
 
-export function rateChangeImpactTool(args: Record<string, unknown>): ToolResult {
+export async function rateChangeImpactTool(args: Record<string, unknown>, fetcher?: Fetcher): Promise<ToolResult> {
   const n = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN);
   const r = rateChangeImpact({
     product: String(args.product) as ImpactProduct,
@@ -613,7 +614,12 @@ export function rateChangeImpactTool(args: Record<string, unknown>): ToolResult 
   });
   if ("error" in r) return text(r.error, true);
   const countryNote = args.country == null ? "\nCountry not given, so Canada was assumed; say if it's the US." : "";
-  return data(`${r.lines.join("\n")}\n\nWhich rate it follows: ${r.follows}\nAssumed: ${r.assumptions.join(" ")}${countryNote}`, r as unknown as Record<string, unknown>);
+  // For reference only: today's posted rate for this kind of product in Canada. The person's own rate is what's worked out.
+  const refId = r.country === "CA" ? ({ variable_mortgage: "ca_prime_rate", heloc: "ca_prime_rate", gic_cd: "ca_gic_5y" } as Partial<Record<ImpactProduct, IndicatorId>>)[r.product] : undefined;
+  const ref = refId && fetcher ? (await loadEconomy(fetcher).catch(() => null))?.indicators.find((i) => i.id === refId) ?? null : null;
+  const refLine = ref ? `\nFor reference: ${ref.name} is ${ref.value.toFixed(2)}% (weekly figures for ${ref.period}, ${ref.source}, ${ref.sourceUrl}). ${refId === "ca_prime_rate" ? "Variable mortgages are usually priced at prime minus a discount, HELOCs at prime plus a margin; your own rate is the one worked out above." : "Other banks and credit unions often pay more; your own rate is the one worked out above."}` : "";
+  const out: Record<string, unknown> = { ...(r as unknown as Record<string, unknown>), ...(ref ? { reference: { id: ref.id, name: ref.name, valuePct: ref.value, asOf: ref.period, source: { name: ref.source, url: ref.sourceUrl } } } : {}) };
+  return data(`${r.lines.join("\n")}\n\nWhich rate it follows: ${r.follows}\nAssumed: ${r.assumptions.join(" ")}${countryNote}${refLine}`, out);
 }
 
 /* ---------- decision_explainer and speech_tracker (v2 phase 2), from docs.json ---------- */
@@ -1132,6 +1138,7 @@ async function loadEconomy(fetcher: Fetcher): Promise<EconomyFile | null> {
 const TOPICS: Record<string, readonly Indicator["id"][]> = {
   "us inflation": ["us_cpi"], "us unemployment": ["us_unemployment"], "us jobs": ["us_unemployment"],
   "canada inflation": ["ca_cpi"], "canadian inflation": ["ca_cpi"], "canada unemployment": ["ca_unemployment"], "canada jobs": ["ca_unemployment"],
+  "prime rate": ["ca_prime_rate"], prime: ["ca_prime_rate"], mortgage: ["ca_mortgage_5y", "ca_prime_rate"], mortgages: ["ca_mortgage_5y", "ca_prime_rate"], gic: ["ca_gic_5y"], gics: ["ca_gic_5y"], "posted rates": ["ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y"],
   "uk inflation": ["uk_cpi"], "british inflation": ["uk_cpi"], "uk unemployment": ["uk_unemployment"], "uk jobs": ["uk_unemployment"],
   "euro inflation": ["euro_hicp"], "euro area inflation": ["euro_hicp"], "eurozone inflation": ["euro_hicp"],
   "euro unemployment": ["euro_unemployment"], "euro area unemployment": ["euro_unemployment"], "eurozone unemployment": ["euro_unemployment"],
@@ -1142,7 +1149,7 @@ const TOPICS: Record<string, readonly Indicator["id"][]> = {
   "interest rates": ["us_fed_funds", "us_sofr", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"], "policy rates": ["us_fed_funds", "euro_deposit_rate", "ca_policy_rate", "uk_bank_rate"],
   debt: ["us_debt"], deficit: ["us_debt"],
   euro: ["euro_hicp", "euro_unemployment", "euro_deposit_rate"], eurozone: ["euro_hicp", "euro_unemployment", "euro_deposit_rate"], ecb: ["euro_hicp", "euro_deposit_rate"], europe: ["euro_hicp", "euro_unemployment", "euro_deposit_rate"],
-  canada: ["ca_cpi", "ca_unemployment", "ca_policy_rate"], boc: ["ca_policy_rate"],
+  canada: ["ca_cpi", "ca_unemployment", "ca_policy_rate", "ca_prime_rate", "ca_mortgage_5y", "ca_gic_5y"], boc: ["ca_policy_rate"],
   uk: ["uk_cpi", "uk_unemployment", "uk_bank_rate"], britain: ["uk_cpi", "uk_unemployment", "uk_bank_rate"], "united kingdom": ["uk_cpi", "uk_unemployment", "uk_bank_rate"], boe: ["uk_bank_rate"], "bank of england": ["uk_bank_rate"],
   us: ["us_cpi", "us_unemployment", "us_fed_funds", "us_sofr", "us_debt"],
 };
@@ -1747,6 +1754,7 @@ const ECON_SERIES_WORDS: Record<string, IndicatorId> = {
   "fed funds": "us_fed_funds", "federal funds": "us_fed_funds", fed: "us_fed_funds", sofr: "us_sofr",
   "euro inflation": "euro_hicp", hicp: "euro_hicp", "euro area inflation": "euro_hicp",
   "euro unemployment": "euro_unemployment", "euro area unemployment": "euro_unemployment", "eurozone unemployment": "euro_unemployment",
+  "prime rate": "ca_prime_rate", "canada prime": "ca_prime_rate", "mortgage rate": "ca_mortgage_5y", "canada mortgage": "ca_mortgage_5y", "5-year mortgage": "ca_mortgage_5y", "gic rate": "ca_gic_5y", gic: "ca_gic_5y",
   "canada inflation": "ca_cpi", "canada cpi": "ca_cpi", "canadian inflation": "ca_cpi", "canada unemployment": "ca_unemployment", "canada jobs": "ca_unemployment",
   "uk inflation": "uk_cpi", "uk cpi": "uk_cpi", "british inflation": "uk_cpi", "uk unemployment": "uk_unemployment", "uk jobs": "uk_unemployment",
   ecb: "euro_deposit_rate", "ecb rate": "euro_deposit_rate", "euro deposit rate": "euro_deposit_rate",
@@ -1950,7 +1958,7 @@ export async function handle(message: Message, fetcher: Fetcher): Promise<Reply 
         case "speech_tracker": return enabledV2.has("speech_tracker") ? ok(await speechTracker(args.bank, args.days, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "whats_changed": return enabledV2.has("whats_changed") ? ok(await whatsChangedTool(args, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "inflation_calculator": return enabledV2.has("inflation_calculator") ? ok(inflationCalculatorTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
-        case "rate_change_impact": return enabledV2.has("rate_change_impact") ? ok(rateChangeImpactTool(args)) : fail(-32602, `Unknown tool: ${String(name)}`);
+        case "rate_change_impact": return enabledV2.has("rate_change_impact") ? ok(await rateChangeImpactTool(args, fetcher)) : fail(-32602, `Unknown tool: ${String(name)}`);
         case "upcoming_events": return ok(await upcomingEvents(s(args.only), fetcher));
         case "scam_red_flags": return ok(await scamRedFlags(s(args.pitch), fetcher));
         case "treasury_auctions": return ok(await treasuryAuctions(s(args.kind), fetcher));
