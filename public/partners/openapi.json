@@ -581,6 +581,370 @@
           }
         }
       }
+    },
+    "/decisions/{bank}": {
+      "get": {
+        "summary": "A central bank's latest rate decision, how its statement changed, and what it says it is watching",
+        "parameters": [
+          {
+            "name": "bank",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fed",
+                "boc",
+                "ecb",
+                "boe"
+              ]
+            },
+            "description": "fed (Federal Reserve), boc (Bank of Canada), ecb (European Central Bank) or boe (Bank of England)."
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional decision date, YYYY-MM-DD; the latest and the one before are kept."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
+      }
+    },
+    "/speeches/{bank}": {
+      "get": {
+        "summary": "Recent speeches by a central bank's policymakers, with links",
+        "parameters": [
+          {
+            "name": "bank",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fed",
+                "boc",
+                "ecb",
+                "boe"
+              ]
+            },
+            "description": "fed (Federal Reserve), boc (Bank of Canada), ecb (European Central Bank) or boe (Bank of England)."
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "How far back, 1 to 90 (default 30)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
+      }
+    },
+    "/whats-changed": {
+      "get": {
+        "summary": "What changed since a date: figures that moved, statements and speeches, the next decisions",
+        "parameters": [
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "rates",
+                "inflation",
+                "jobs",
+                "us",
+                "canada",
+                "uk",
+                "euro"
+              ]
+            },
+            "description": "Default all."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "YYYY-MM-DD, at most 90 days back."
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "Instead of since: 1 to 90 (default 7)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
+      }
+    },
+    "/inflation": {
+      "get": {
+        "summary": "What money from one year buys in another, from an official price index",
+        "parameters": [
+          {
+            "name": "amount",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The amount, in that country's currency."
+          },
+          {
+            "name": "from_year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The year the amount is from."
+          },
+          {
+            "name": "to_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "Default: the latest full year."
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "US",
+                "CA",
+                "UK",
+                "EA"
+              ]
+            },
+            "description": "Default US."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
+      }
+    },
+    "/rate-impact": {
+      "post": {
+        "summary": "What a rate change does to a variable mortgage, HELOC, savings or GIC/CD, to the cent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product",
+                  "balance",
+                  "rate_pct",
+                  "change_pts"
+                ],
+                "properties": {
+                  "product": {
+                    "type": "string",
+                    "enum": [
+                      "variable_mortgage",
+                      "heloc",
+                      "savings",
+                      "gic_cd"
+                    ]
+                  },
+                  "balance": {
+                    "type": "number",
+                    "description": "Owed or held, in dollars."
+                  },
+                  "rate_pct": {
+                    "type": "number",
+                    "description": "The rate today, percent a year."
+                  },
+                  "change_pts": {
+                    "type": "number",
+                    "description": "The change, in percentage points (-0.25 for a quarter-point cut)."
+                  },
+                  "months": {
+                    "type": "number",
+                    "description": "Mortgage: months left (default 300). GIC/CD: term (default 12)."
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "CA",
+                      "US"
+                    ]
+                  },
+                  "compounding": {
+                    "type": "string",
+                    "enum": [
+                      "semi-annual",
+                      "monthly"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
+      }
+    },
+    "/debt-payoff": {
+      "post": {
+        "summary": "Several debts and one monthly amount, by the avalanche and snowball methods",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "debts",
+                  "monthly_budget"
+                ],
+                "properties": {
+                  "debts": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "balance",
+                        "rate_pct",
+                        "min_payment"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "balance": {
+                          "type": "number",
+                          "description": "Owed now."
+                        },
+                        "rate_pct": {
+                          "type": "number",
+                          "description": "Yearly rate, percent."
+                        },
+                        "min_payment": {
+                          "type": "number",
+                          "description": "Minimum monthly payment."
+                        }
+                      }
+                    }
+                  },
+                  "monthly_budget": {
+                    "type": "number",
+                    "description": "The total each month, at least the minimums added up."
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "both",
+                      "avalanche",
+                      "snowball"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotAvailable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooMany"
+          }
+        }
+      }
     }
   }
 }

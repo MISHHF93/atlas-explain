@@ -1,0 +1,202 @@
+{
+  "data": {
+    "since": "2026-10-24",
+    "topic": "rates",
+    "changes": [
+      {
+        "id": "ca_policy_rate",
+        "claim": "Bank of Canada policy rate rose from 2.25% to 2.50%, in effect from 2026-10-29.",
+        "from": {
+          "value": 2.25,
+          "period": "2025-11-19"
+        },
+        "to": {
+          "value": 2.5,
+          "period": "2026-11-20"
+        },
+        "source": {
+          "name": "Bank of Canada",
+          "url": "https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/"
+        },
+        "asOf": "2026-10-29"
+      },
+      {
+        "id": "ca_prime_rate",
+        "claim": "Canada prime rate (chartered banks) rose from 4.45% to 4.70%, first shown in the weekly figures for 2026-11-04.",
+        "from": {
+          "value": 4.45,
+          "period": "2025-11-05"
+        },
+        "to": {
+          "value": 4.7,
+          "period": "2026-11-18"
+        },
+        "source": {
+          "name": "Bank of Canada",
+          "url": "https://www.bankofcanada.ca/rates/banking-and-financial-statistics/posted-interest-rates-offered-by-chartered-banks/"
+        },
+        "asOf": "2026-11-04"
+      },
+      {
+        "id": "uk_bank_rate",
+        "claim": "Bank of England Bank Rate rose from 3.75% to 4.00%, in effect from 2026-11-05.",
+        "from": {
+          "value": 3.75,
+          "period": "2025-12-18"
+        },
+        "to": {
+          "value": 4,
+          "period": "2026-11-20"
+        },
+        "source": {
+          "name": "Bank of England",
+          "url": "https://www.bankofengland.co.uk/monetary-policy/the-interest-rate-bank-rate"
+        },
+        "asOf": "2026-11-05"
+      }
+    ],
+    "documents": [
+      {
+        "kind": "speech",
+        "bank": "ecb",
+        "institution": "European Central Bank",
+        "title": "Climate change and monetary policy",
+        "speaker": "Philip R. Lane",
+        "url": "https://www.ecb.europa.eu/press/key/date/2026/html/ecb.sp261123~b5816801a0.en.pdf",
+        "publishedAt": "2026-11-23"
+      },
+      {
+        "kind": "speech",
+        "bank": "fed",
+        "institution": "Federal Reserve",
+        "title": "The U.S. Economy in Global Context",
+        "speaker": "Cook",
+        "url": "https://www.federalreserve.gov/newsevents/speech/cook20261120a.htm",
+        "publishedAt": "2026-11-20"
+      },
+      {
+        "kind": "speech",
+        "bank": "fed",
+        "institution": "Federal Reserve",
+        "title": "Opening Remarks",
+        "speaker": "Waller",
+        "url": "https://www.federalreserve.gov/newsevents/speech/waller20261120a.htm",
+        "publishedAt": "2026-11-20"
+      },
+      {
+        "kind": "speech",
+        "bank": "ecb",
+        "institution": "European Central Bank",
+        "title": "Acting in time",
+        "speaker": "Christine Lagarde",
+        "url": "https://www.ecb.europa.eu/press/key/date/2026/html/ecb.sp261120~e52bcc4db2.en.html",
+        "publishedAt": "2026-11-20"
+      },
+      {
+        "kind": "speech",
+        "bank": "fed",
+        "institution": "Federal Reserve",
+        "title": "Monetary Policy amid Frequent and Complex Shocks",
+        "speaker": "Jefferson",
+        "url": "https://www.federalreserve.gov/newsevents/speech/jefferson20261119a.htm",
+        "publishedAt": "2026-11-19"
+      },
+      {
+        "kind": "speech",
+        "bank": "fed",
+        "institution": "Federal Reserve",
+        "title": "Investing in America’s Underserved Communities",
+        "speaker": "Barr",
+        "url": "https://www.federalreserve.gov/newsevents/speech/barr20261118a.htm",
+        "publishedAt": "2026-11-18"
+      },
+      {
+        "kind": "speech",
+        "bank": "boc",
+        "institution": "Bank of Canada",
+        "title": "Edmonton Chamber of Commerce",
+        "speaker": "Deputy Governor Toni Gravelle",
+        "url": "https://www.bankofcanada.ca/multimedia/speech-edmonton-chamber-of-commerce-2026-11-18/",
+        "publishedAt": "2026-11-18"
+      },
+      {
+        "kind": "speech",
+        "bank": "boc",
+        "institution": "Bank of Canada",
+        "title": "Setting the scenario: Monetary policy communications in uncertain times",
+        "speaker": "Deputy Governor Toni Gravelle",
+        "url": "https://www.bankofcanada.ca/2026/11/setting-the-scenario-monetary-policy-communications-in-uncertain-times/",
+        "publishedAt": "2026-11-18"
+      },
+      {
+        "kind": "speech",
+        "bank": "boc",
+        "institution": "Bank of Canada",
+        "title": "Talking about an uncertain future",
+        "speaker": "Deputy Governor Toni Gravelle",
+        "url": "https://www.bankofcanada.ca/2026/11/talking-about-an-uncertain-future/",
+        "publishedAt": "2026-11-18"
+      },
+      {
+        "kind": "speech",
+        "bank": "ecb",
+        "institution": "European Central Bank",
+        "title": "Financial Stability Review - November 2026",
+        "speaker": "Boris Vujčić",
+        "url": "https://www.ecb.europa.eu/press/key/date/2026/html/ecb.sp261118~86f1e8147e.en.pdf",
+        "publishedAt": "2026-11-18"
+      },
+      {
+        "kind": "speech",
+        "bank": "boe",
+        "institution": "Bank of England",
+        "title": "The UK’s regional growth: unlocking the economy’s full potential",
+        "speaker": "Andrew Bailey",
+        "url": "https://www.bankofengland.co.uk/speech/2026/november/andrew-bailey-speech-at-the-annual-institute-of-economic-development-conference-london",
+        "publishedAt": "2026-11-18"
+      },
+      {
+        "kind": "speech",
+        "bank": "boe",
+        "institution": "Bank of England",
+        "title": "Transparency and predictability: a foundation for future resilience",
+        "speaker": "Katharine Braddick",
+        "url": "https://www.bankofengland.co.uk/speech/2026/november/katharine-braddick-speech-at-the-uk-finance-annual-dinner",
+        "publishedAt": "2026-11-18"
+      }
+    ],
+    "upcoming": [
+      {
+        "date": "2026-12-09",
+        "institution": "Bank of Canada",
+        "title": "Bank of Canada interest rate announcement",
+        "sourceUrl": "https://www.bankofcanada.ca/2026/12/interest-rate-announcement-december-9-2026/"
+      },
+      {
+        "date": "2026-12-09",
+        "institution": "Federal Reserve",
+        "title": "FOMC meeting and rate decision",
+        "sourceUrl": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+      },
+      {
+        "date": "2026-12-17",
+        "institution": "Bank of England",
+        "title": "Bank of England Monetary Policy Committee decision",
+        "sourceUrl": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates"
+      }
+    ],
+    "notes": [
+      "Monthly figures are compared from 2026-11-23, when ATLAS Explain began recording the day each one is published; daily rates are compared from 2026-10-24."
+    ]
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-23T17:25:50.321Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "Each figure and document names its source; show it with the item"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

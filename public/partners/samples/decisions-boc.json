@@ -1,0 +1,82 @@
+{
+  "data": {
+    "bank": "boc",
+    "institution": "Bank of Canada",
+    "decision": {
+      "action": "raise",
+      "rate": 2.5,
+      "range": null,
+      "bp": 25,
+      "date": "2026-10-28",
+      "url": "https://www.bankofcanada.ca/2026/10/fad-press-release-2026-10-28/"
+    },
+    "previous": {
+      "action": "hold",
+      "rate": 2.25,
+      "range": null,
+      "bp": 0,
+      "date": "2026-09-02",
+      "url": "https://www.bankofcanada.ca/2026/09/fad-press-release-2026-09-02/"
+    },
+    "comparison": {
+      "mode": "sentences",
+      "changedShare": 0.71,
+      "newSentenceCount": 42,
+      "droppedCount": 31
+    },
+    "changes": [],
+    "newSentences": [
+      "The Bank of Canada today increased its target for the overnight rate by 25 basis points to 2.5%, with the Bank Rate at 2.75% and …",
+      "Since the July Monetary Policy Report, global economic activity has remained resilient, despite higher energy prices.",
+      "In the United States, the economy continues to grow at a robust pace, supported by consumer spending and AI-related investment.",
+      "Growth in the euro area has been resilient and broad-based.",
+      "After slowing in the second quarter, Chinese growth rebounded in the third quarter, owing to strength in exports and a pickup in fiscal spending.",
+      "With persistently elevated oil prices and refinery margins, inflation has risen in most countries."
+    ],
+    "watching": [
+      {
+        "text": "This forecast is still subject to considerable uncertainty, particularly regarding Canada-US trade relations.",
+        "source": {
+          "name": "Bank of Canada",
+          "url": "https://www.bankofcanada.ca/2026/10/fad-press-release-2026-10-28/"
+        },
+        "asOf": "2026-10-28"
+      },
+      {
+        "text": "Against this backdrop, Governing Council decided to increase the policy rate to reduce the risk that continuing high energy prices spread broadly to the prices of other goods and services.",
+        "source": {
+          "name": "Bank of Canada",
+          "url": "https://www.bankofcanada.ca/2026/10/fad-press-release-2026-10-28/"
+        },
+        "asOf": "2026-10-28"
+      }
+    ],
+    "next": {
+      "date": "2026-12-09",
+      "time": "2026-12-09T14:45:00.000Z",
+      "url": "https://www.bankofcanada.ca/2026/12/interest-rate-announcement-december-9-2026/"
+    },
+    "sources": [
+      {
+        "name": "Bank of Canada, Bank of Canada raises the policy rate by 25 basis points to 2½%",
+        "url": "https://www.bankofcanada.ca/2026/10/fad-press-release-2026-10-28/",
+        "asOf": "2026-10-28"
+      },
+      {
+        "name": "Bank of Canada, Bank of Canada maintains the policy rate at 2¼%",
+        "url": "https://www.bankofcanada.ca/2026/09/fad-press-release-2026-09-02/",
+        "asOf": "2026-09-02"
+      }
+    ]
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-23T17:25:49.962Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "Each bank's own statement, linked; quotes from the Bank of Canada and the Bank of England are kept short"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

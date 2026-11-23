@@ -1,0 +1,295 @@
+{
+  "data": {
+    "budget": 800,
+    "debts": [
+      {
+        "name": "Credit card",
+        "balance": 6000,
+        "ratePct": 22.99,
+        "minPayment": 180
+      },
+      {
+        "name": "Car loan",
+        "balance": 9000,
+        "ratePct": 6.9,
+        "minPayment": 250
+      },
+      {
+        "name": "Line of credit",
+        "balance": 2500,
+        "ratePct": 9.5,
+        "minPayment": 60
+      }
+    ],
+    "plans": [
+      {
+        "method": "avalanche",
+        "months": 25,
+        "totalInterest": 2046.82,
+        "totalPaid": 19546.82,
+        "order": [
+          {
+            "name": "Credit card",
+            "month": 15
+          },
+          {
+            "name": "Line of credit",
+            "month": 18
+          },
+          {
+            "name": "Car loan",
+            "month": 25
+          }
+        ],
+        "points": [
+          {
+            "month": 0,
+            "balance": 17500
+          },
+          {
+            "month": 1,
+            "balance": 16886.49
+          },
+          {
+            "month": 2,
+            "balance": 16264.33
+          },
+          {
+            "month": 3,
+            "balance": 15633.38
+          },
+          {
+            "month": 4,
+            "balance": 14993.5
+          },
+          {
+            "month": 5,
+            "balance": 14344.52
+          },
+          {
+            "month": 6,
+            "balance": 13686.29
+          },
+          {
+            "month": 7,
+            "balance": 13018.66
+          },
+          {
+            "month": 8,
+            "balance": 12341.47
+          },
+          {
+            "month": 9,
+            "balance": 11654.54
+          },
+          {
+            "month": 10,
+            "balance": 10957.72
+          },
+          {
+            "month": 11,
+            "balance": 10250.83
+          },
+          {
+            "month": 12,
+            "balance": 9533.71
+          },
+          {
+            "month": 13,
+            "balance": 8806.17
+          },
+          {
+            "month": 14,
+            "balance": 8068.04
+          },
+          {
+            "month": 15,
+            "balance": 7319.14
+          },
+          {
+            "month": 16,
+            "balance": 6564.3
+          },
+          {
+            "month": 17,
+            "balance": 5803.94
+          },
+          {
+            "month": 18,
+            "balance": 5038.03
+          },
+          {
+            "month": 19,
+            "balance": 4267
+          },
+          {
+            "month": 20,
+            "balance": 3491.54
+          },
+          {
+            "month": 21,
+            "balance": 2711.62
+          },
+          {
+            "month": 22,
+            "balance": 1927.21
+          },
+          {
+            "month": 23,
+            "balance": 1138.29
+          },
+          {
+            "month": 24,
+            "balance": 344.84
+          },
+          {
+            "month": 25,
+            "balance": 0
+          }
+        ]
+      },
+      {
+        "method": "snowball",
+        "months": 25,
+        "totalInterest": 2397.19,
+        "totalPaid": 19897.19,
+        "order": [
+          {
+            "name": "Line of credit",
+            "month": 7
+          },
+          {
+            "name": "Credit card",
+            "month": 19
+          },
+          {
+            "name": "Car loan",
+            "month": 25
+          }
+        ],
+        "points": [
+          {
+            "month": 0,
+            "balance": 17500
+          },
+          {
+            "month": 1,
+            "balance": 16886.49
+          },
+          {
+            "month": 2,
+            "balance": 16267.82
+          },
+          {
+            "month": 3,
+            "balance": 15643.93
+          },
+          {
+            "month": 4,
+            "balance": 15014.79
+          },
+          {
+            "month": 5,
+            "balance": 14380.33
+          },
+          {
+            "month": 6,
+            "balance": 13740.5
+          },
+          {
+            "month": 7,
+            "balance": 13095.24
+          },
+          {
+            "month": 8,
+            "balance": 12444.38
+          },
+          {
+            "month": 9,
+            "balance": 11783.81
+          },
+          {
+            "month": 10,
+            "balance": 11113.37
+          },
+          {
+            "month": 11,
+            "balance": 10432.89
+          },
+          {
+            "month": 12,
+            "balance": 9742.18
+          },
+          {
+            "month": 13,
+            "balance": 9041.08
+          },
+          {
+            "month": 14,
+            "balance": 8329.39
+          },
+          {
+            "month": 15,
+            "balance": 7606.93
+          },
+          {
+            "month": 16,
+            "balance": 6873.51
+          },
+          {
+            "month": 17,
+            "balance": 6128.93
+          },
+          {
+            "month": 18,
+            "balance": 5373
+          },
+          {
+            "month": 19,
+            "balance": 4605.53
+          },
+          {
+            "month": 20,
+            "balance": 3832.01
+          },
+          {
+            "month": 21,
+            "balance": 3054.04
+          },
+          {
+            "month": 22,
+            "balance": 2271.6
+          },
+          {
+            "month": 23,
+            "balance": 1484.66
+          },
+          {
+            "month": 24,
+            "balance": 693.2
+          },
+          {
+            "month": 25,
+            "balance": 0
+          }
+        ]
+      }
+    ],
+    "lines": [
+      "Avalanche (highest rate first): debt-free in 2 years and 1 month, paying $2,047 in interest ($19,547 in all). Paid off in this order: Credit card (month 15), Line of credit (month 18), Car loan (month 25).",
+      "Snowball (smallest balance first): debt-free in 2 years and 1 month, paying $2,397 in interest ($19,897 in all). Paid off in this order: Line of credit (month 7), Credit card (month 19), Car loan (month 25).",
+      "The avalanche costs $350 less in interest; the snowball clears its first debt in month 7, 8 months before the avalanche clears its first, which some people find easier to stick with.",
+      "Worked out month by month on the rates and payments given, with interest added monthly (the yearly rate ÷ 12). A lender's own figures can differ slightly; this compares methods and doesn't say which to choose."
+    ]
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-23T17:25:50.398Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "Arithmetic on the numbers given"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

@@ -14,6 +14,11 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: six more partner API endpoints
+
+- The REST API now offers everything the connector does (except crypto prices): `GET /decisions/{bank}`, `GET /speeches/{bank}`, `GET /whats-changed`, `GET /inflation`, `POST /rate-impact` and `POST /debt-payoff`, each with the same inputs and answers as its connector tool. In the OpenAPI spec, with a real sample of each on /partners.
+- Credits when switched on: `decisions` 3, `whats-changed` 2, the rest 1.
+
 ## 2026-11-23: rates people pay in the US, UK and euro area (1.26.0)
 
 - Seven monthly figures join the economy data: US national average savings, 12-month CD and 5-year CD rates (FDIC; `us_savings_rate`, `us_cd_12m`, `us_cd_5y`), the UK's quoted 2- and 5-year fixed mortgage rates at 75% loan-to-value (Bank of England; `uk_mortgage_2y`, `uk_mortgage_5y`), and the euro area's cost of borrowing for a home and household deposit rate up to one year (ECB; `euro_mortgage_rate`, `euro_deposits_1y`). Each says what kind of average it is.

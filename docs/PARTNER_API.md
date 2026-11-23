@@ -30,6 +30,12 @@ connector at `/mcp` without a key is unchanged and stays free.
 | `GET /api/v1/figures?q=` | Treasury yields, ECB and Bank of Canada rates, EIA energy, SEC-filed company figures |
 | `POST /api/v1/scam-check` `{"text": "…"}` | Which investment-fraud warning signs a message shows; where to check and report |
 | `POST /api/v1/money` `{"calculation": "fees", …}` | Compound growth, fees, inflation or diversification from given numbers (same inputs as `money_maths`) |
+| `GET /api/v1/decisions/{bank}?date=` | `fed`, `boc`, `ecb` or `boe`: the latest rate decision (or the one before), how the statement changed word for word, and what the bank says it is watching, quoted with links. Bank of Canada and Bank of England quotes are kept to 25 words while their reuse terms are confirmed ⚑ |
+| `GET /api/v1/speeches/{bank}?days=` | Recent speeches by that bank's policymakers, with the bank's own description and a link |
+| `GET /api/v1/whats-changed?topic=&since=&days=` | Every official figure that moved since a date (up to 90 days), the statements and speeches since, and the next decisions |
+| `GET /api/v1/inflation?amount=&from_year=&to_year=&country=` | What money from one year buys in another (US from 1913, Canada from 1914, UK from 1988, euro area from 1997) |
+| `POST /api/v1/rate-impact` `{"product": "heloc", …}` | What a rate change does to a variable mortgage, HELOC, savings or GIC/CD, to the cent (same inputs as `rate_change_impact`) |
+| `POST /api/v1/debt-payoff` `{"debts": [...], "monthly_budget": …}` | The avalanche and snowball methods side by side (same inputs as `debt_payoff`) |
 
 Every answer is `{ "data": …, "meta": { "apiVersion", "generatedAt", "educationOnly": true, "notice", "credit", "terms" } }`.
 `meta.credit` says what must be shown with the data. Errors are `{ "error": { "code", "message" } }`:

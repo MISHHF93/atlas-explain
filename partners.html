@@ -55,9 +55,15 @@
             <tr><td><code>GET /figures</code></td><td>Treasury yields, ECB and Bank of Canada rates, energy prices, SEC-filed company figures</td><td><a href="/partners/samples/figures.json">figures.json</a></td></tr>
             <tr><td><code>POST /scam-check</code></td><td>Which investment-fraud warning signs a message shows, and where to check and report</td><td><a href="/partners/samples/scam-check.json">scam-check.json</a></td></tr>
             <tr><td><code>POST /money</code></td><td>Compound growth, fees, inflation or diversification from your numbers</td><td><a href="/partners/samples/money.json">money.json</a></td></tr>
+            <tr><td><code>GET /decisions/{bank}</code></td><td>A central bank's latest rate decision (Fed, Bank of Canada, ECB or Bank of England), how its statement's wording changed, and what it says it is watching, quoted with links</td><td><a href="/partners/samples/decisions-boc.json">decisions-boc.json</a></td></tr>
+            <tr><td><code>GET /speeches/{bank}</code></td><td>Recent speeches by each bank's policymakers, with the bank's own description and a link to the full text</td><td><a href="/partners/samples/speeches-fed.json">speeches-fed.json</a></td></tr>
+            <tr><td><code>GET /whats-changed</code></td><td>Every official figure that moved since a date, the statements and speeches since, and the next rate decisions</td><td><a href="/partners/samples/whats-changed.json">whats-changed.json</a></td></tr>
+            <tr><td><code>GET /inflation</code></td><td>What money from one year buys in another, from the official price index of the US, Canada, the UK or the euro area</td><td><a href="/partners/samples/inflation.json">inflation.json</a></td></tr>
+            <tr><td><code>POST /rate-impact</code></td><td>What a rate change does to a variable mortgage, HELOC, savings or GIC/CD, to the cent, with today's reference rate</td><td><a href="/partners/samples/rate-impact.json">rate-impact.json</a></td></tr>
+            <tr><td><code>POST /debt-payoff</code></td><td>Several debts and one monthly amount: the avalanche and snowball methods side by side</td><td><a href="/partners/samples/debt-payoff.json">debt-payoff.json</a></td></tr>
           </tbody>
         </table></div>
-        <p class="fine">Samples were captured from live data on 18 Nov 2026. Full description: <a href="/partners/openapi.json">OpenAPI 3.1 spec</a> · <a href="https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md">partner documentation</a>.</p>
+        <p class="fine">Samples were captured from live data on 18 Nov 2026 (the last six on 23 Nov 2026). Full description: <a href="/partners/openapi.json">OpenAPI 3.1 spec</a> · <a href="https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md">partner documentation</a>.</p>
 
         <h2 id="how">How it works</h2>
         <ol class="flow">

@@ -1,0 +1,64 @@
+{
+  "data": {
+    "product": "variable_mortgage",
+    "country": "CA",
+    "inputs": {
+      "balance": 400000,
+      "ratePct": 4.95,
+      "changePts": -0.25,
+      "newRatePct": 4.7,
+      "months": 300,
+      "compounding": "semi-annual"
+    },
+    "rows": [
+      {
+        "label": "Monthly payment",
+        "before": 2315.05,
+        "after": 2258.58,
+        "change": -56.47
+      },
+      {
+        "label": "Interest in the first month",
+        "before": 1633.24,
+        "after": 1551.54,
+        "change": -81.7
+      },
+      {
+        "label": "Payments over a year",
+        "before": 27780.6,
+        "after": 27102.96,
+        "change": -677.64
+      }
+    ],
+    "lines": [
+      "At 4.95%, a $400,000 mortgage paid off over 300 months costs $2,315.05 a month. At 4.7% (−0.25 pt) it would be $2,258.58: −$56.47 a month, −$677.64 a year.",
+      "If your payment stays fixed while the rate moves (common with Canadian variable mortgages), the payment doesn't change; instead about $81.70 a month less goes to interest, and the rest to paying down the balance.",
+      "This works out your numbers under the change you gave. It doesn't say whether rates will change; that's for each central bank and lender to decide."
+    ],
+    "follows": "Variable-rate mortgages in Canada move with the lender's prime rate, which follows the Bank of Canada's policy rate, usually by the same amount within a day or two of a decision.",
+    "assumptions": [
+      "Interest compounded twice a year (how Canadian lenders state mortgage rates), paid monthly, rounded to the cent.",
+      "The rate stays at 4.7% for the rest of the 300 months."
+    ],
+    "reference": {
+      "id": "ca_prime_rate",
+      "name": "Canada prime rate (chartered banks)",
+      "valuePct": 4.7,
+      "asOf": "2026-11-18",
+      "source": {
+        "name": "Bank of Canada",
+        "url": "https://www.bankofcanada.ca/rates/banking-and-financial-statistics/posted-interest-rates-offered-by-chartered-banks/"
+      }
+    }
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-23T17:25:50.397Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "Arithmetic on the numbers given; a reference rate names its source"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

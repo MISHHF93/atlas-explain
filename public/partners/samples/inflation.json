@@ -1,0 +1,179 @@
+{
+  "data": {
+    "country": "US",
+    "amount": 1000,
+    "fromYear": 1990,
+    "toYear": 2025,
+    "value": 2463.22,
+    "changePct": 146.3,
+    "yearlyPct": 2.6,
+    "points": [
+      {
+        "year": 1990,
+        "value": 1000
+      },
+      {
+        "year": 1991,
+        "value": 1042.08
+      },
+      {
+        "year": 1992,
+        "value": 1073.45
+      },
+      {
+        "year": 1993,
+        "value": 1105.59
+      },
+      {
+        "year": 1994,
+        "value": 1133.89
+      },
+      {
+        "year": 1995,
+        "value": 1166.03
+      },
+      {
+        "year": 1996,
+        "value": 1200.46
+      },
+      {
+        "year": 1997,
+        "value": 1228
+      },
+      {
+        "year": 1998,
+        "value": 1247.13
+      },
+      {
+        "year": 1999,
+        "value": 1274.67
+      },
+      {
+        "year": 2000,
+        "value": 1317.52
+      },
+      {
+        "year": 2001,
+        "value": 1355.01
+      },
+      {
+        "year": 2002,
+        "value": 1376.43
+      },
+      {
+        "year": 2003,
+        "value": 1407.8
+      },
+      {
+        "year": 2004,
+        "value": 1445.29
+      },
+      {
+        "year": 2005,
+        "value": 1494.26
+      },
+      {
+        "year": 2006,
+        "value": 1542.46
+      },
+      {
+        "year": 2007,
+        "value": 1586.4
+      },
+      {
+        "year": 2008,
+        "value": 1647.31
+      },
+      {
+        "year": 2009,
+        "value": 1641.45
+      },
+      {
+        "year": 2010,
+        "value": 1668.37
+      },
+      {
+        "year": 2011,
+        "value": 1721.03
+      },
+      {
+        "year": 2012,
+        "value": 1756.65
+      },
+      {
+        "year": 2013,
+        "value": 1782.38
+      },
+      {
+        "year": 2014,
+        "value": 1811.29
+      },
+      {
+        "year": 2015,
+        "value": 1813.44
+      },
+      {
+        "year": 2016,
+        "value": 1836.32
+      },
+      {
+        "year": 2017,
+        "value": 1875.44
+      },
+      {
+        "year": 2018,
+        "value": 1921.25
+      },
+      {
+        "year": 2019,
+        "value": 1956.06
+      },
+      {
+        "year": 2020,
+        "value": 1980.19
+      },
+      {
+        "year": 2021,
+        "value": 2073.22
+      },
+      {
+        "year": 2022,
+        "value": 2239.14
+      },
+      {
+        "year": 2023,
+        "value": 2331.31
+      },
+      {
+        "year": 2024,
+        "value": 2400.07
+      },
+      {
+        "year": 2025,
+        "value": 2463.22
+      }
+    ],
+    "lines": [
+      "In the US, $1,000 in 1990 buys about what $2,463 buys in 2025.",
+      "Prices rose 146.3% between 1990 and 2025, about 2.6% a year on average.",
+      "Put the other way: money kept as cash from 1990 to 2025 lost about 59.4% of its buying power.",
+      "From US consumer price index (CPI-U, all items, U.S. city average), yearly averages (U.S. Bureau of Labor Statistics). A single month or a person's own spending can differ; this describes the past and is not a forecast."
+    ],
+    "source": {
+      "name": "U.S. Bureau of Labor Statistics",
+      "series": "US consumer price index (CPI-U, all items, U.S. city average)",
+      "url": "https://www.bls.gov/cpi/",
+      "licence": "Public domain (US government work). Credit the source."
+    }
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-23T17:25:50.324Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "The national statistics agency named in the answer (BLS, Statistics Canada, ONS or ECB)"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

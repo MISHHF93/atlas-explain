@@ -1,0 +1,151 @@
+{
+  "data": {
+    "bank": "fed",
+    "institution": "Federal Reserve",
+    "speeches": [
+      {
+        "bank": "fed",
+        "date": "2026-11-20",
+        "title": "The U.S. Economy in Global Context",
+        "speaker": "Cook",
+        "about": "Speech At the XXIX Annual Conference of the Central Bank of Chile, Santiago, Chile",
+        "url": "https://www.federalreserve.gov/newsevents/speech/cook20261120a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/cook20261120a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-20",
+        "title": "Opening Remarks",
+        "speaker": "Waller",
+        "about": "Speech At the 2026 College Fed Challenge Finals, Board of Governors of the Federal Reserve System, Washington, D.C.",
+        "url": "https://www.federalreserve.gov/newsevents/speech/waller20261120a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/waller20261120a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-19",
+        "title": "Monetary Policy amid Frequent and Complex Shocks",
+        "speaker": "Jefferson",
+        "about": "Speech At the International Monetary Fund and Central Bank of Brazil Conference “A Quarter Century of Inflation Targeting in Latin America: Progress, Challenges, and the Road Ahead,” Brasília, Brazil",
+        "url": "https://www.federalreserve.gov/newsevents/speech/jefferson20261119a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/jefferson20261119a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-18",
+        "title": "Investing in America’s Underserved Communities",
+        "speaker": "Barr",
+        "about": "Speech At Making Missing Markets: Catalyzing Capital and Igniting Innovation, Federal Reserve Bank of New York, New York, New York",
+        "url": "https://www.federalreserve.gov/newsevents/speech/barr20261118a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/barr20261118a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-17",
+        "title": "Considerations at the Intersection of Payments and Tokenized Markets",
+        "speaker": "Waller",
+        "about": "Speech At “Navigating the Future of Banking and Payments,” The Clearing House Annual Conference 2026, New York, New York",
+        "url": "https://www.federalreserve.gov/newsevents/speech/waller20261117a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/waller20261117a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-16",
+        "title": "Opening Remarks",
+        "speaker": "Warsh",
+        "about": "Speech At the Productivity and Jobs Task Force Conference, hosted by the Federal Reserve Board and the Federal Reserve Bank of San Francisco, San Francisco, California",
+        "url": "https://www.federalreserve.gov/newsevents/speech/warsh20261116a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/warsh20261116a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-16",
+        "title": "Some Potential Financial Stability Implications of Artificial Intelligence",
+        "speaker": "Barr",
+        "about": "Speech At the Seventh Annual Association for Computing Machinery International Conference on Artificial Intelligence in Finance, Milan, Italy",
+        "url": "https://www.federalreserve.gov/newsevents/speech/barr20261116a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/barr20261116a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-14",
+        "title": "New Technology, Old Questions: Productivity Puzzles and the Macroeconomy",
+        "speaker": "Jefferson",
+        "about": "Speech At the University of California, San Diego Economic Roundtable, San Diego, California",
+        "url": "https://www.federalreserve.gov/newsevents/speech/jefferson20261113a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/jefferson20261113a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-12",
+        "title": "American Inequality and the Future of AI",
+        "speaker": "Barr",
+        "about": "Speech At Yale University, New Haven, Connecticut",
+        "url": "https://www.federalreserve.gov/newsevents/speech/barr20261112a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/barr20261112a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-10",
+        "title": "The U.S. Economy and Considerations for Monetary Policy",
+        "speaker": "Bowman",
+        "about": "Speech At the C. Peter McColough Series on International Economics Council on Foreign Relations, Washington, D.C.",
+        "url": "https://www.federalreserve.gov/newsevents/speech/bowman20261110a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/bowman20261110a.htm"
+        }
+      },
+      {
+        "bank": "fed",
+        "date": "2026-11-10",
+        "title": "The Economic Outlook and Some Thoughts on Labor Market Dynamism",
+        "speaker": "Waller",
+        "about": "Speech At the Bank of England Watchers Conference King’s Business School and Money, Macro and Finance Society, London, United Kingdom",
+        "url": "https://www.federalreserve.gov/newsevents/speech/waller20261110a.htm",
+        "source": {
+          "name": "Federal Reserve",
+          "url": "https://www.federalreserve.gov/newsevents/speech/waller20261110a.htm"
+        }
+      }
+    ],
+    "refreshedAt": "2026-11-23T15:37:26.443Z"
+  },
+  "meta": {
+    "apiVersion": "v1-sandbox",
+    "generatedAt": "2026-11-23T17:25:50.005Z",
+    "educationOnly": true,
+    "notice": "Educational information, not investment advice. ATLAS Explain never tells anyone to trade.",
+    "credit": [
+      "Each bank's own speech list, linked"
+    ],
+    "terms": "https://github.com/MISHHF93/atlas-explain/blob/main/docs/PARTNER_API.md"
+  }
+}

@@ -12,7 +12,7 @@
  * 5 minutes, so usage stays inside the free plan's 1,000 KV writes a day; the limit is approximate by design.
  */
 import { searchTerms } from "../core/terms";
-import { EDUCATION_LINE, compareCountries, dataSeries, economySnapshot, evidenceBrief, moneyMathsTool, notableToday, officialFigures, scamRedFlags, treasuryAuctions, upcomingEvents, type Fetcher, type ToolResult } from "./server";
+import { EDUCATION_LINE, compareCountries, dataSeries, debtPayoffTool, decisionExplainer, economySnapshot, evidenceBrief, inflationCalculatorTool, moneyMathsTool, notableToday, officialFigures, rateChangeImpactTool, scamRedFlags, speechTracker, treasuryAuctions, upcomingEvents, whatsChangedTool, type Fetcher, type ToolResult } from "./server";
 import { comingUp } from "../core/coming-up";
 import { eventIcs } from "../core/scenarios";
 import { readEconomyFile } from "../data/economy";
@@ -30,7 +30,7 @@ export const PARTNER_HIDDEN_TOOLS: ReadonlySet<string> = new Set(["crypto_prices
  * every request counts as one call, exactly as before.
  */
 export const TOOL_CREDITS: Readonly<Record<string, number>> = { evidence_brief: 3, decision_explainer: 3, data_series: 2, notable_today: 2 };
-export const REST_CREDITS: Readonly<Record<string, number>> = { brief: 3, series: 2, notable: 2 };
+export const REST_CREDITS: Readonly<Record<string, number>> = { brief: 3, series: 2, notable: 2, decisions: 3, "whats-changed": 2 };
 export const creditCost = (name: string, kind: "tool" | "rest"): number => (kind === "tool" ? TOOL_CREDITS : REST_CREDITS)[name] ?? 1;
 let creditsOn = false;
 /** The Worker passes its CREDITS_ENABLED variable on each request ("1" or "true" turns credits on). */
@@ -160,6 +160,12 @@ export const ENDPOINTS = [
   { method: "GET", path: "/api/v1/figures?q=", what: "Official figures: Treasury yields, ECB and Bank of Canada rates, EIA energy, SEC-filed company figures." },
   { method: "POST", path: "/api/v1/scam-check", what: "Body {\"text\": \"…\"}: which investment-fraud warning signs a message shows, where to check and report." },
   { method: "POST", path: "/api/v1/money", what: "Body like money_maths' inputs: compound growth, fees, inflation or diversification from given numbers." },
+  { method: "GET", path: "/api/v1/decisions/{bank}?date=", what: "fed, boc, ecb or boe: the latest rate decision (or the one before), how the statement's wording changed, and what the bank says it is watching, quoted with links." },
+  { method: "GET", path: "/api/v1/speeches/{bank}?days=", what: "fed, boc, ecb or boe: recent speeches by its policymakers, with the bank's own description and a link to the full text." },
+  { method: "GET", path: "/api/v1/whats-changed?topic=&since=&days=", what: "Every official figure that moved since a date (up to 90 days), the central banks' statements and speeches since, and the next rate decisions." },
+  { method: "GET", path: "/api/v1/inflation?amount=&from_year=&to_year=&country=", what: "What money from one year buys in another, from the official price index of the US, Canada, the UK or the euro area." },
+  { method: "POST", path: "/api/v1/rate-impact", what: "Body like rate_change_impact's inputs: what a rate change does to a variable mortgage, HELOC, savings or GIC/CD, to the cent." },
+  { method: "POST", path: "/api/v1/debt-payoff", what: "Body like debt_payoff's inputs: several debts and one monthly amount, by the avalanche and snowball methods." },
 ] as const;
 
 const CREDIT: Record<string, string[]> = {
@@ -174,6 +180,12 @@ const CREDIT: Record<string, string[]> = {
   figures: ["Each figure names its source"],
   "scam-check": ["SEC Investor.gov and FINRA (linked per warning sign)"],
   money: ["Arithmetic on the numbers given"],
+  decisions: ["Each bank's own statement, linked; quotes from the Bank of Canada and the Bank of England are kept short"],
+  speeches: ["Each bank's own speech list, linked"],
+  "whats-changed": ["Each figure and document names its source; show it with the item"],
+  inflation: ["The national statistics agency named in the answer (BLS, Statistics Canada, ONS or ECB)"],
+  "rate-impact": ["Arithmetic on the numbers given; a reference rate names its source"],
+  "debt-payoff": ["Arithmetic on the numbers given"],
 };
 
 /** Charges an answer (nothing for an error) and returns its headers and meta.credits. */
@@ -284,6 +296,24 @@ export async function handlePartnerApi(request: Request, store: PartnerStore, fe
       break;
     case "money":
       if (want("POST")) return envelope("money", moneyMathsTool(await body()), gate);
+      break;
+    case "decisions":
+      if (want("GET") && arg) return envelope("decisions", await decisionExplainer(decodeURIComponent(arg), q("date"), fetcher, now), gate);
+      break;
+    case "speeches":
+      if (want("GET") && arg) return envelope("speeches", await speechTracker(decodeURIComponent(arg), q("days") == null ? undefined : Number(q("days")), fetcher, now), gate);
+      break;
+    case "whats-changed":
+      if (want("GET")) return envelope("whats-changed", await whatsChangedTool({ topic: q("topic"), since: q("since"), days: q("days") == null ? undefined : Number(q("days")) }, fetcher, now), gate);
+      break;
+    case "inflation":
+      if (want("GET")) return envelope("inflation", inflationCalculatorTool({ amount: q("amount"), from_year: q("from_year"), to_year: q("to_year"), country: q("country") }), gate);
+      break;
+    case "rate-impact":
+      if (want("POST")) return envelope("rate-impact", await rateChangeImpactTool(await body(), fetcher), gate);
+      break;
+    case "debt-payoff":
+      if (want("POST")) return envelope("debt-payoff", debtPayoffTool(await body()), gate);
       break;
     default:
       return problem(404, "not_found", `No endpoint ${API_PREFIX}/${name}. See ${API_PREFIX} for the list.`);
