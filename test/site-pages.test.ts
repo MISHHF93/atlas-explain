@@ -79,18 +79,19 @@ describe("one header and one footer for every site page", () => {
     const hrefs = [...footer.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(hrefs).size).toBe(hrefs.length);
     expect(hrefs).toEqual(expect.arrayContaining(["/app", "/#setup", "/#questions", "/partners", "/privacy", "/terms"]));
-    // One way into the product: Get started is the app (sign-in first when needed), listed once, then the setup steps.
+    // The web app (sign-in first when needed) is listed once, then the connector's setup steps.
     expect(hrefs.filter((h) => h === "/app")).toHaveLength(1);
     expect(hrefs.slice(0, 2)).toEqual(["/app", "/#setup"]);
   });
 });
 
 describe("the website and the app read as separate places", () => {
-  it("leads into the product one way, Get started, and names the app plainly ATLAS Explain, with no extra badge", () => {
+  it("leads into the product one way, the connector, and names the app plainly ATLAS Explain, with no extra badge", () => {
     for (const f of SITE_PAGES) {
       const page = sitePage(f);
       expect(page, f).not.toMatch(/>Open the web app<|>Open the app<|>The app</);
-      expect(page, f).toContain('href="/app" data-start-cta>Get started</a>');
+      expect(page, f).toContain('<a class="btn btn-primary btn-sm" href="/#setup">Add to your AI assistant</a>');
+      expect(page, f).toContain('href="/app"');
     }
     expect(readFileSync("src/wallet/shell.ts", "utf8")).not.toContain("app-badge");
     expect(readFileSync("src/app/routes.ts", "utf8")).not.toContain("ATLAS Explain app");
