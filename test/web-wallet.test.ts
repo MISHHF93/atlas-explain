@@ -50,9 +50,11 @@ describe("public site", () => {
   it("is a landing page led by the AI-assistant connector, with the browser option and its hybrid story in static HTML", () => {
     expect(page).toContain('class="hero"');
     const hero = /<section class="hero"[\s\S]*?<\/section>/.exec(page)?.[0] ?? "";
-    // The main button starts the journey (Sign in, then choose); the connector's steps are one click away.
-    expect(hero).toContain('<a class="btn btn-primary btn-lg" href="/app" data-start-cta>Get started</a>');
-    expect(hero).toContain('<a class="btn" href="#setup">Add to your AI assistant</a>');
+    // Connector first (24 Nov 2026): the main button goes to the setup steps; the web app is the second way in.
+    expect(hero).toContain('<a class="btn btn-primary btn-lg" href="#setup">Add to your AI assistant</a>');
+    expect(hero).toContain('<a class="btn" href="/app" data-start-cta>Try it in your browser</a>');
+    expect(hero).toContain("Your money and the economy, <span>explained with sources.</span>");
+    expect(hero).toContain('src="/shots/connector-inflation.png"');
     expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(page)?.[0]).toContain('href="/app" data-start-cta>Get started</a>');
     expect(page).toContain('id="browser"');
     expect(page).toMatch(/Gemini Nano, on this device/);

@@ -1,7 +1,7 @@
 {
   "name": "atlas-explain",
   "version": "0.1.0",
-  "description": "Market jargon in plain language: an MCP connector for AI assistants and a web app with Firebase AI Logic hybrid inference. Education only, not financial advice.",
+  "description": "Your money and the economy in plain words, with sources: an MCP connector for AI assistants and a web app with Firebase AI Logic hybrid inference. Education only, not financial advice.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {

@@ -1,7 +1,7 @@
 {
   "name": "ATLAS Explain",
   "short_name": "ATLAS Explain",
-  "description": "Market jargon explained in plain language, with official figures and sources. Education only.",
+  "description": "Your money and the economy in plain words: official figures with their sources. Education only.",
   "id": "/app",
   "start_url": "/app",
   "scope": "/",

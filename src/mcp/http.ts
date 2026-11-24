@@ -59,7 +59,7 @@ export function serverCard(origin: string) {
     $schema: "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
     name: REGISTRY_NAME,
     title: "ATLAS Explain",
-    description: "Market jargon in plain language: terms, official figures, crypto prices and charts, headlines.",
+    description: "Your money and the economy in plain words: official rates, inflation, mortgages, savings, prices.",
     version: SERVER_VERSION,
     websiteUrl: CONNECT_PAGE,
     repository: { url: "https://github.com/MISHHF93/atlas-explain", source: "github" },

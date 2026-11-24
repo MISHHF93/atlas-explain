@@ -78,7 +78,7 @@ describe("labels that say what things are", () => {
     expect(BRIEF_APP_HTML).toContain('d.newsNamesIt === false ? "Latest official releases (none name it)" : "In the news"');
   });
 
-  it("the home page's chart says it's an example and when it was captured", () => {
-    expect(readFileSync("index.html", "utf8")).toContain("<figcaption>An example answer, captured 15 November 2026. Ask your assistant for today's prices.</figcaption>");
+  it("the home page's answer is a real one, and says where its numbers come from", () => {
+    expect(readFileSync("index.html", "utf8")).toContain("<figcaption>A real answer from the connector: $1,000 from 1990 in 2025 US prices, as it draws in Claude. Source: U.S. Bureau of Labor Statistics.</figcaption>");
   });
 });

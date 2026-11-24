@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>ATLAS Explain · Market jargon explained in your AI assistant</title>
-    <meta name="description" content="ATLAS Explain is a free MCP connector: ask Claude, ChatGPT, Cursor or VS Code about any market term and get plain, sourced answers. Education only." />
+    <title>ATLAS Explain · Your money and the economy, explained with sources</title>
+    <meta name="description" content="A free connector for Claude, ChatGPT, Cursor and VS Code: official figures on rates, inflation, mortgages and savings, in plain words with sources. Education only." />
     <link rel="canonical" href="https://atlas-explain.web.app/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="ATLAS Explain" />
-    <meta property="og:title" content="ATLAS Explain · Market jargon explained in your AI assistant" />
-    <meta property="og:description" content="ATLAS Explain is a free MCP connector: ask Claude, ChatGPT, Cursor or VS Code about any market term and get plain, sourced answers. Education only." />
+    <meta property="og:title" content="ATLAS Explain · Your money and the economy, explained with sources" />
+    <meta property="og:description" content="A free connector for Claude, ChatGPT, Cursor and VS Code: official figures on rates, inflation, mortgages and savings, in plain words with sources. Education only." />
     <meta property="og:url" content="https://atlas-explain.web.app/" />
     <meta property="og:image" content="https://atlas-explain.web.app/og/atlas-explain.png" />
     <meta property="og:image:width" content="1200" />
@@ -29,17 +29,17 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
           <p class="hero-tag"><span class="hero-dot" aria-hidden="true"></span>A connector for Claude, ChatGPT, Cursor and VS Code</p>
-          <h1 id="hero-title" class="hero-title">Market jargon, explained <span>inside your AI assistant.</span></h1>
-          <p class="hero-lede">Add ATLAS Explain to your AI assistant and ask about any market term, asset or move. It answers in plain language, with official figures, prices and charts, and names the source and time of every number. Free, and no account needed.</p>
+          <h1 id="hero-title" class="hero-title">Your money and the economy, <span>explained with sources.</span></h1>
+          <p class="hero-lede">What a rate cut does to your mortgage, what $1,000 from 1990 is worth today, what a central bank just changed: official figures for the US, Canada, the UK and the euro area, in plain words, each with its source and time. Free, and the connector needs no account.</p>
           <div class="hero-cta">
-            <a class="btn btn-primary btn-lg" href="/app" data-start-cta>Get started</a>
-            <a class="btn" href="#setup">Add to your AI assistant</a>
+            <a class="btn btn-primary btn-lg" href="#setup">Add to your AI assistant</a>
+            <a class="btn" href="/app" data-start-cta>Try it in your browser</a>
           </div>
           <p class="fine">Educational information, not investment advice. It never tells anyone to trade.</p>
         </div>
         <figure class="hero-shot hero-shot-wide">
-          <img src="/shots/connector-chart.png" width="1200" height="696" alt="ATLAS Explain inside a chat: Bitcoin's price over the 7 days to 15 November 2026 as an interactive chart, with the high, the low and the price source." />
-          <figcaption>An example answer, captured 15 November 2026. Ask your assistant for today's prices.</figcaption>
+          <img src="/shots/connector-inflation.png" width="1200" height="1070" alt="An ATLAS Explain answer as drawn in Claude: in the US, $1,000 in 1990 buys about what $2,463 buys in 2025, charted year by year from the Bureau of Labor Statistics' consumer price index, with buttons to explain it or compare another country." />
+          <figcaption>A real answer from the connector: $1,000 from 1990 in 2025 US prices, as it draws in Claude. Source: U.S. Bureau of Labor Statistics.</figcaption>
         </figure>
       </section>
 
@@ -111,22 +111,37 @@
       <section class="band" id="what-to-ask" aria-labelledby="ask-title">
         <h2 id="ask-title" class="band-title">What you can ask it</h2>
         <p class="band-lede">25 tools and 11 one-click prompts. In Claude, the answers that have numbers open as interactive charts you can explore, with buttons that ask the next question for you.</p>
-        <ul class="ask-grid">
-          <li class="card"><h3>What's notable today?</h3><p>Unusual crypto moves, an inverted yield curve, rate decisions this week, figures that just changed, each with its source and the rule that picked it.</p></li>
-          <li class="card"><h3>How is the economy doing?</h3><p>Inflation, unemployment, policy rates and US debt from the agencies that publish them, with a year of history and the next rate decisions.</p></li>
-          <li class="card"><h3>How did Bitcoin move this week?</h3><p>Ten major coins over 24 hours, 7 or 30 days: start, end, high and low with their times, drawn as a chart.</p></li>
-          <li class="card"><h3>What does a spread cost me?</h3><p>A coin's bid, ask and order book, and how far the price moves when filling $1,000, $10,000 or $100,000.</p></li>
-          <li class="card"><h3>Give me the full picture on Apple</h3><p>An evidence brief: filed figures, the backdrop, headlines that name it, terms to know, and what the facts don't tell you.</p></li>
-          <li class="card"><h3>Is this offer a scam?</h3><p>Paste a message and see which warning signs regulators describe it shows, and where to check and report. It never decides for you.</p></li>
-          <li class="card"><h3>What is $1,000 from 1990 worth today?</h3><p>What money from one year buys in another, from the official price index of the US, Canada, the UK or the euro area, back to 1913.</p></li>
-          <li class="card"><h3>Which debt should I pay off first?</h3><p>Two methods side by side, highest rate first or smallest balance first, with how long each takes and the interest each costs on your own numbers.</p></li>
-          <li class="card"><h3>What does a 1% fee cost me?</h3><p>Compound growth, fees and inflation worked out from your own numbers, drawn as a chart you can change.</p></li>
-          <li class="card"><h3>What would a rate cut do to my mortgage?</h3><p>Your own payment, HELOC interest, savings interest or GIC/CD renewal, to the cent, and which central bank drives it. It never says whether rates will change.</p></li>
-          <li class="card"><h3>What did the Bank of Canada just change?</h3><p>The latest Fed, Bank of Canada, ECB or Bank of England decision, how the statement's wording changed, word for word, and what the bank says it is watching.</p></li>
-          <li class="card"><h3>What have central bankers been saying?</h3><p>Recent speeches by each bank's policymakers: who spoke, when, and a link to the full text. Nothing added or interpreted.</p></li>
-          <li class="card"><h3>Make me a chart of inflation in the G20</h3><p>Charts, tables and one-page reports from official series (rates, inflation, growth, share-price indices), each naming its source and licence.</p></li>
-          <li class="card"><h3>Quiz me on interest rates</h3><p>A learning path through the glossary, one plain-language term at a time, with short questions to check you've got it.</p></li>
-        </ul>
+        <div class="ask-groups">
+          <div class="ask-group">
+            <h3 id="ask-money">Your money</h3>
+            <ul class="ask-grid">
+              <li class="card"><h4>What would a rate cut do to my mortgage?</h4><p>Your own payment, HELOC interest, savings interest or GIC/CD renewal, to the cent, and which central bank drives it. It never says whether rates will change.</p></li>
+              <li class="card"><h4>Which debt should I pay off first?</h4><p>Two methods side by side, highest rate first or smallest balance first, with how long each takes and the interest each costs on your own numbers.</p></li>
+              <li class="card"><h4>What is $1,000 from 1990 worth today?</h4><p>What money from one year buys in another, from the official price index of the US, Canada, the UK or the euro area, back to 1913.</p></li>
+              <li class="card"><h4>What does a 1% fee cost me?</h4><p>Compound growth, fees and inflation worked out from your own numbers, drawn as a chart you can change.</p></li>
+              <li class="card"><h4>Is this offer a scam?</h4><p>Paste a message and see which warning signs regulators describe it shows, and where to check and report. It never decides for you.</p></li>
+            </ul>
+          </div>
+          <div class="ask-group">
+            <h3 id="ask-economy">The economy</h3>
+            <ul class="ask-grid">
+              <li class="card"><h4>How is the economy doing?</h4><p>Inflation, unemployment, policy rates and US debt from the agencies that publish them, with a year of history and the next rate decisions.</p></li>
+              <li class="card"><h4>What's notable today?</h4><p>Unusual crypto moves, an inverted yield curve, rate decisions this week, figures that just changed, each with its source and the rule that picked it.</p></li>
+              <li class="card"><h4>What did the Bank of Canada just change?</h4><p>The latest Fed, Bank of Canada, ECB or Bank of England decision, how the statement's wording changed, word for word, and what the bank says it is watching.</p></li>
+              <li class="card"><h4>What have central bankers been saying?</h4><p>Recent speeches by each bank's policymakers: who spoke, when, and a link to the full text. Nothing added or interpreted.</p></li>
+              <li class="card"><h4>Make me a chart of inflation in the G20</h4><p>Charts, tables and one-page reports from official series (rates, inflation, growth, share-price indices), each naming its source and licence.</p></li>
+            </ul>
+          </div>
+          <div class="ask-group">
+            <h3 id="ask-markets">Markets, and learning the words</h3>
+            <ul class="ask-grid">
+              <li class="card"><h4>How did Bitcoin move this week?</h4><p>Ten major coins over 24 hours, 7 or 30 days: start, end, high and low with their times, drawn as a chart.</p></li>
+              <li class="card"><h4>What does a spread cost me?</h4><p>A coin's bid, ask and order book, and how far the price moves when filling $1,000, $10,000 or $100,000.</p></li>
+              <li class="card"><h4>Give me the full picture on Apple</h4><p>An evidence brief: filed figures, the backdrop, headlines that name it, terms to know, and what the facts don't tell you.</p></li>
+              <li class="card"><h4>Quiz me on interest rates</h4><p>Three quick questions per topic of the learning path, from the glossary, and each topic you pass comes back for review after 1, 7 and 28 days.</p></li>
+            </ul>
+          </div>
+        </div>
         <div class="shots shots-2">
           <figure><img src="/directory/crypto-board.png" width="1200" height="1094" loading="lazy" decoding="async" alt="The crypto board inside Claude: ten coins with their price, change and a 24-hour sparkline." /><figcaption>The crypto board: pick a coin to open its chart.</figcaption></figure>
           <figure><img src="/directory/yield-curve.png" width="1200" height="1486" loading="lazy" decoding="async" alt="The US Treasury yield curve inside Claude, with each term's yield and its source." /><figcaption>Official figures, with the yield curve drawn from Treasury data.</figcaption></figure>

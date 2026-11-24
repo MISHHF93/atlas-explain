@@ -12,7 +12,9 @@ describe("one journey: website, Sign in, then straight into the app (no page in 
   it("sends Get started straight to the app: the header, the hero and the footer", () => {
     const home = sitePage("index.html");
     expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(home)?.[0]).toContain('<a class="btn btn-primary btn-sm" href="/app" data-start-cta>Get started</a>');
-    expect(home).toContain('<a class="btn btn-primary btn-lg" href="/app" data-start-cta>Get started</a>');
+    // The hero leads with the connector (24 Nov 2026); the web app is the second button.
+    expect(home).toContain('<a class="btn btn-primary btn-lg" href="#setup">Add to your AI assistant</a>');
+    expect(home).toContain('<a class="btn" href="/app" data-start-cta>Try it in your browser</a>');
     expect(home).not.toContain('href="/start"');
     // The connector's setup steps stay public, on the home page, for the directory and for people who already know.
     expect(home).toContain('href="#setup"');
