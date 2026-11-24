@@ -5,7 +5,7 @@ import { GLOSSARY, type GlossaryEntry } from "./glossary";
  * no trade instructions, no balances, no accounts.
  */
 export interface TermEntry extends GlossaryEntry {
-  group: "atlas" | "orders" | "market" | "risk" | "economy" | "saving" | "ai";
+  group: "atlas" | "orders" | "market" | "risk" | "economy" | "saving" | "household" | "ai";
 }
 
 export const TRADING_TERMS: readonly TermEntry[] = [
@@ -394,6 +394,112 @@ export const TRADING_TERMS: readonly TermEntry[] = [
     summary:
       "How far an investment has fallen from its highest point before recovering, for example from $10,000 to $7,000 is a 30% drawdown. It shows how bad the fall felt, which an average return hides.",
   },
+  // Borrowing and saving at home (24 Nov 2026): the ideas behind rate_change_impact, debt_payoff and the posted rates.
+  {
+    id: "credit_score",
+    group: "household",
+    title: "Credit score",
+    summary:
+      "A number that sums up how someone has handled credit: paying on time, how much of their limits they use, how long they have had credit and how often they apply for more. Lenders use it to decide whether to lend and at what rate. US scores usually run from 300 to 850 and Canadian ones from 300 to 900; in the UK each credit agency uses its own scale.",
+  },
+  {
+    id: "credit_utilization",
+    group: "household",
+    title: "Credit utilization",
+    summary:
+      "How much of the credit available on cards and lines is in use, as a share: $1,500 owed on a $5,000 limit is 30%. It is one of the larger parts of a credit score, and a lower share usually counts in the borrower's favour.",
+  },
+  {
+    id: "principal",
+    group: "household",
+    title: "Principal",
+    summary:
+      "The amount borrowed, or what is still owed of it, as opposed to the interest charged on it. A loan payment usually covers the interest due first; the rest reduces the principal.",
+  },
+  {
+    id: "amortization",
+    group: "household",
+    title: "Amortization",
+    summary:
+      "Paying off a loan in regular payments that cover the interest and part of the amount borrowed, so the balance reaches zero at the end. Early payments are mostly interest and later ones mostly principal. In Canada the amortization period is the whole time to pay a mortgage off, often 25 years.",
+  },
+  {
+    id: "mortgage_term",
+    group: "household",
+    title: "Mortgage term",
+    summary:
+      "In Canada, the length of the current mortgage contract, often 5 years, after which the rate and conditions are renewed; the amortization is the full payoff period. In the US the term is usually the whole life of the loan, such as 30 years. In the UK a fixed-rate deal usually lasts 2 or 5 years before the rate changes.",
+  },
+  {
+    id: "fixed_variable_rate",
+    group: "household",
+    title: "Fixed and variable rates",
+    summary:
+      "A fixed rate stays the same for an agreed period, so the payments are known in advance. A variable (or floating) rate moves with a reference rate such as the prime rate or a central bank's rate, so the interest cost changes whenever that rate does.",
+  },
+  {
+    id: "prime_rate",
+    group: "household",
+    title: "Prime rate",
+    summary:
+      "The rate a bank uses as the base for many variable loans, such as variable mortgages and lines of credit, which are priced at prime plus or minus a margin. Banks set it themselves, and it usually moves when the central bank changes its policy rate.",
+  },
+  {
+    id: "home_equity",
+    group: "household",
+    title: "Home equity",
+    summary:
+      "The part of a home's value the owner holds outright: its market value minus what is still owed on loans against it. A $500,000 home with a $300,000 mortgage has $200,000 of equity.",
+  },
+  {
+    id: "heloc",
+    group: "household",
+    title: "Home equity line of credit (HELOC)",
+    summary:
+      "A line of credit secured by the borrower's home, up to a share of its value minus what is still owed on the mortgage. Interest is usually variable and charged only on the amount drawn; because the home is the security, it can be at risk if payments are missed.",
+  },
+  {
+    id: "down_payment",
+    group: "household",
+    title: "Down payment",
+    summary:
+      "The part of a home's price paid upfront; the rest is borrowed. A larger down payment means a smaller loan. In Canada a down payment under 20% requires mortgage default insurance, and in the US a conventional loan with under 20% down usually comes with private mortgage insurance.",
+  },
+  {
+    id: "refinancing",
+    group: "household",
+    title: "Refinancing",
+    summary:
+      "Replacing an existing loan with a new one, often to change the rate, the length or the amount owed. It can lower the payments or the total interest, but it usually has costs, such as fees or a penalty for ending a fixed rate early.",
+  },
+  {
+    id: "minimum_payment",
+    group: "household",
+    title: "Minimum payment",
+    summary:
+      "The least a credit card or loan requires each month to stay in good standing. Paying only the minimum keeps the account current, but it can take years to clear the balance and cost far more interest, because much of each payment goes to interest.",
+  },
+  {
+    id: "debt_avalanche_snowball",
+    group: "household",
+    title: "Avalanche and snowball",
+    summary:
+      "Two ways to order extra payments across several debts while paying every minimum. The avalanche puts the extra money on the highest interest rate first, which usually costs the least interest; the snowball clears the smallest balance first, for quicker visible progress.",
+  },
+  {
+    id: "gic_cd",
+    group: "household",
+    title: "GIC and CD (term deposits)",
+    summary:
+      "Money left with a bank for a fixed time, such as 1 or 5 years, at a rate set at the start. It is called a GIC (guaranteed investment certificate) in Canada and a CD (certificate of deposit) in the US. Taking the money out early may not be allowed, or may cost some of the interest.",
+  },
+  {
+    id: "deposit_insurance",
+    group: "household",
+    title: "Deposit insurance",
+    summary:
+      "Government-backed protection for bank deposits if the bank fails, up to a limit: $250,000 per depositor, per bank, for each ownership category in the US (FDIC); $100,000 per eligible category in Canada (CDIC); and £120,000 per person, per banking group in the UK (FSCS, since 1 December 2025).",
+  },
 ];
 
 /** ATLAS research vocabulary. Kept for desk deep links; never listed in the public glossary. */
@@ -414,6 +520,7 @@ export const TERM_GROUP_LABEL: Record<TermEntry["group"], string> = {
   risk: "Risk",
   economy: "Economy",
   saving: "Saving and investing",
+  household: "Borrowing and saving",
   ai: "How it works",
 };
 

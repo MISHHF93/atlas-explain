@@ -14,6 +14,13 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-24: borrowing and saving at home, in the glossary (1.29.0)
+
+- **15 new glossary terms** in a new group, "Borrowing and saving": principal, amortization, mortgage term, fixed and variable rates, prime rate, home equity, HELOC, down payment, refinancing, credit score, credit utilization, minimum payment, avalanche and snowball, GIC and CD, and deposit insurance (FDIC, CDIC and FSCS limits, the UK's at £120,000 since 1 December 2025). Each says where the US, Canada and the UK differ. Descriptive only.
+- **A new learning-path topic**, "Borrowing and saving at home", so `learning_hub` quizzes and reviews them.
+- **Linked from the answers that use them:** `debt_payoff` and `rate_change_impact` add `terms` and a "Terms to know" line; `notable_today` links a mortgage, prime, GIC/CD or savings figure to its own terms.
+- Check-yourself questions also blank each half of an "X and Y" name and any all-capitals abbreviation, so a question never shows its own answer.
+
 ## 2026-11-23: numbers that agree and say how old they are (1.28.3)
 
 - **Crypto changes are over the last 24 hours.** `crypto_prices`, the board and the web app measured from 00:00 UTC, which resets daily (just after midnight every coin looked flat while `notable_today` spoke of 24-hour moves). Each coin's `changePct` is now measured from the hourly close nearest 24 hours ago, with `changeWindow` "over 24 hours"; a coin without such a close keeps the window it came with.

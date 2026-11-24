@@ -55,7 +55,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.28.3";
+export const SERVER_VERSION = "1.29.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -515,6 +515,7 @@ export const V2_TOOLS = [
         points: { type: "array", items: { type: "object", properties: { month: { type: "number" }, balance: { type: "number" } } } },
       } } },
       lines: { type: "array", items: { type: "string" } },
+      terms: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" } } } },
     }, ["plans", "lines"]),
   },
   {
@@ -580,6 +581,7 @@ export const V2_TOOLS = [
       follows: { type: "string" },
       assumptions: { type: "array", items: { type: "string" } },
       reference: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, valuePct: { type: "number" }, asOf: { type: "string" }, source: { type: "object" } } },
+      terms: { type: "array", items: { type: "object", properties: { id: { type: "string" }, title: { type: "string" } } } },
     }, ["product", "rows", "lines", "follows"]),
   },
   {
@@ -667,7 +669,13 @@ export function debtPayoffTool(args: Record<string, unknown>): ToolResult {
   const method = args.method === "avalanche" || args.method === "snowball" ? args.method : "both";
   const r = debtPayoff({ debts, budget: n(args.monthly_budget), method });
   if ("error" in r) return text(r.error, true);
-  return data(r.lines.join("\n"), r as unknown as Record<string, unknown>);
+  const terms = termRefs("debt_avalanche_snowball", "minimum_payment", "principal");
+  return data(`${r.lines.join("\n")}${termsToKnow(terms)}`, { ...(r as unknown as Record<string, unknown>), terms });
+}
+
+/** One line naming the glossary terms behind an answer, so the assistant can offer to explain them. */
+function termsToKnow(terms: { title: string }[]): string {
+  return terms.length ? `\nTerms to know (explain_term): ${terms.map((t) => t.title).join(", ")}.` : "";
 }
 
 export async function whatsChangedTool(args: Record<string, unknown>, fetcher: Fetcher, now = Date.now()): Promise<ToolResult> {
@@ -726,8 +734,9 @@ export async function rateChangeImpactTool(args: Record<string, unknown>, fetche
     : ({ savings: "us_savings_rate", gic_cd: "us_cd_12m" } as Partial<Record<ImpactProduct, IndicatorId>>))[r.product];
   const ref = refId && fetcher ? (await loadEconomy(fetcher).catch(() => null))?.indicators.find((i) => i.id === refId) ?? null : null;
   const refLine = ref ? `\nFor reference: ${ref.name} is ${ref.value.toFixed(2)}% (${/^\d{4}-\d{2}$/.test(ref.period) ? "for" : "weekly figures for"} ${ref.period}, ${ref.source}, ${ref.sourceUrl}). ${refId === "ca_prime_rate" ? "Variable mortgages are usually priced at prime minus a discount, HELOCs at prime plus a margin; your own rate is the one worked out above." : refId?.startsWith("us_") ? "It's an average across all banks; the best accounts pay much more. Your own rate is the one worked out above." : "Other banks and credit unions often pay more; your own rate is the one worked out above."}` : "";
-  const out: Record<string, unknown> = { ...(r as unknown as Record<string, unknown>), ...(ref ? { reference: { id: ref.id, name: ref.name, valuePct: ref.value, asOf: ref.period, source: { name: ref.source, url: ref.sourceUrl } } } : {}) };
-  return data(`${r.lines.join("\n")}\n\nWhich rate it follows: ${r.follows}\nAssumed: ${r.assumptions.join(" ")}${countryNote}${refLine}`, out);
+  const terms = termRefs(...({ variable_mortgage: ["fixed_variable_rate", "prime_rate", "amortization"], heloc: ["heloc", "prime_rate", "home_equity"], savings: ["apr_apy", "deposit_insurance"], gic_cd: ["gic_cd", "deposit_insurance"] } as Record<ImpactProduct, string[]>)[r.product]);
+  const out: Record<string, unknown> = { ...(r as unknown as Record<string, unknown>), ...(ref ? { reference: { id: ref.id, name: ref.name, valuePct: ref.value, asOf: ref.period, source: { name: ref.source, url: ref.sourceUrl } } } : {}), terms };
+  return data(`${r.lines.join("\n")}\n\nWhich rate it follows: ${r.follows}\nAssumed: ${r.assumptions.join(" ")}${countryNote}${refLine}${termsToKnow(terms)}`, out);
 }
 
 /* ---------- decision_explainer and speech_tracker (v2 phase 2), from docs.json ---------- */
@@ -1570,7 +1579,10 @@ export const NEW_FIGURE_DAYS = 7;
 function figureTerms(id: string): { id: string; title: string }[] {
   if (/cpi|hicp/.test(id)) return termRefs("inflation", "cpi");
   if (/unemployment/.test(id)) return termRefs("unemployment_rate");
-  if (/mortgage|prime|gic|cd_|savings|deposits/.test(id)) return termRefs("apr_apy", "basis_point");
+  if (/mortgage/.test(id)) return termRefs("fixed_variable_rate", "amortization");
+  if (/prime/.test(id)) return termRefs("prime_rate", "fixed_variable_rate");
+  if (/gic|cd_/.test(id)) return termRefs("gic_cd", "apr_apy");
+  if (/savings|deposits/.test(id)) return termRefs("apr_apy", "deposit_insurance");
   if (/debt/.test(id)) return [];
   return termRefs("policy_rate", "basis_point");
 }

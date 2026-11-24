@@ -111,20 +111,26 @@ function shuffled<T>(list: readonly T[], next: () => number): T[] {
   return out;
 }
 
-const GENERIC_WORDS = new Set(["rate", "price", "market", "bank", "order", "fund", "account", "contract", "ratio", "options", "point"]);
+const GENERIC_WORDS = new Set(["rate", "price", "market", "bank", "order", "fund", "account", "contract", "ratio", "options", "point", "credit"]);
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /**
  * The summary with the term's name blanked, so the answer isn't given away: the full name, the name
  * without its bracketed part, a short bracketed abbreviation ("IV", "CPI"), and the name's last word
- * ("yield" in "Bond yield", "point" in "Basis point"), each also as a plural ("pips").
+ * ("yield" in "Bond yield", "point" in "Basis point"), each half of an "X and Y" name ("avalanche",
+ * "snowball"), and any all-capitals abbreviation in it ("GIC", "CD"), each also as a plural ("pips").
  */
 export function blankTitle(term: TermEntry): string {
   const bare = term.title.replace(/\s*\(.*?\)\s*/g, " ").trim();
   const abbreviations = [...term.title.matchAll(/\(([^(),]+)\)/g)].map((m) => m[1]!.trim());
+  const generic = (w: string) => GENERIC_WORDS.has(w.toLowerCase());
   const lastWord = bare.split(/\s+/).pop() ?? "";
   // A generic last word ("rate", "market", "bank") isn't the answer on its own, so it stays.
-  const last = GENERIC_WORDS.has(lastWord.toLowerCase()) ? "" : lastWord;
-  const names = [term.title, bare, ...abbreviations, last]
+  const last = generic(lastWord) ? "" : lastWord;
+  // Each half, and its first word ("variable" in "variable rates", "put" in "put options").
+  const halves = bare.split(/\s+and\s+/i).map((h) => h.trim()).filter((h) => h !== bare)
+    .flatMap((h) => [h, h.split(/[\s,]+/)[0] ?? ""]).filter((h) => h && !generic(h));
+  const capitals = bare.split(/[\s,]+/).filter((w) => /^[A-Z]{2,}$/.test(w));
+  const names = [term.title, bare, ...abbreviations, ...halves, ...capitals, last]
     .filter((n, i, a) => n.length > 1 && a.indexOf(n) === i)
     // Longest first, so "Bond yield" is blanked whole before "yield" alone.
     .sort((a, b) => b.length - a.length);

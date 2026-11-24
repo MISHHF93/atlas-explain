@@ -16,6 +16,7 @@ export const LEARN_PATH: readonly LearnStep[] = [
   { id: "risk", title: "Measuring risk", terms: ["margin", "drawdown", "hit_rate"] },
   { id: "markets", title: "How markets work", terms: ["market_hours", "index", "etf", "filings"] },
   { id: "saving", title: "Saving and investing", terms: ["index_fund", "mutual_fund", "expense_ratio", "compound_growth", "diversification", "asset_allocation", "rebalancing", "dollar_cost_averaging", "risk_tolerance", "time_horizon", "emergency_fund", "tax_advantaged_account", "brokerage_account", "capital_gain", "bull_market", "bear_market", "apr_apy"] },
+  { id: "household", title: "Borrowing and saving at home", terms: ["principal", "amortization", "mortgage_term", "fixed_variable_rate", "prime_rate", "home_equity", "heloc", "down_payment", "refinancing", "credit_score", "credit_utilization", "minimum_payment", "debt_avalanche_snowball", "gic_cd", "deposit_insurance"] },
   { id: "rates", title: "Rates and currencies", terms: ["yield", "yield_curve", "basis_point", "pip", "reference_rate"] },
   { id: "economy", title: "The economy", terms: ["inflation", "cpi", "central_bank", "policy_rate", "gdp", "recession", "unemployment_rate", "real_return"] },
   { id: "companies", title: "Companies and bonds", terms: ["market_cap", "dividend", "pe_ratio", "bond"] },

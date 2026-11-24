@@ -38,7 +38,7 @@ describe("what's notable today is about what's new", () => {
     const item = n.observations.find((o) => o.kind === "economic_change")!;
     expect(item.title).toContain("UK 2-year fixed mortgage rate");
     expect(item.rule).toContain(`first published in the last ${NEW_FIGURE_DAYS} days`);
-    expect(item.terms.map((t) => t.id)).toEqual(["apr_apy", "basis_point"]);
+    expect(item.terms.map((t) => t.id)).toEqual(["fixed_variable_rate", "amortization"]);
   });
 
   it("leaves out an older figure, and says it did so", async () => {

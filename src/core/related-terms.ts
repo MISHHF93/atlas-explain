@@ -10,7 +10,7 @@ function keysFor(term: TermEntry): string[] {
   if (abbr) keys.add(abbr);
   // "Bid-ask spread" should also match "spread"; "Stop-limit order" should match "stop-limit".
   const last = bare.split(/\s+/).pop();
-  if (last && last.length >= 5 && !["order", "metrics", "layers"].includes(last)) keys.add(last);
+  if (last && last.length >= 5 && !["order", "metrics", "layers", "rates", "payment", "insurance", "score", "equity"].includes(last)) keys.add(last);
   // "stop-limit" alone is specific enough; "market" alone is not.
   if (bare.endsWith(" order") && bare.includes("-")) keys.add(bare.slice(0, -" order".length));
   return [...keys].filter((key) => key.length >= 2);
