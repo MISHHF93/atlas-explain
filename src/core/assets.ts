@@ -233,8 +233,8 @@ export function formatChange(pct: number | null): { text: string; tone: "up" | "
 
 /** "over 24h" / "since the 2026-11-06 close". */
 export function changeWindowText(q: Pick<QuoteView, "changeWindow">): string {
-  // A window that already reads as a phrase ("since …", "in the last 24 hours") is kept as it is.
-  return /^(since|in)\b/i.test(q.changeWindow) ? q.changeWindow : `over ${q.changeWindow}`;
+  // A window that already reads as a phrase ("since …", "in the last 24 hours", "over 24 hours") is kept as it is.
+  return /^(since|in|over)\b/i.test(q.changeWindow) ? q.changeWindow : `over ${q.changeWindow}`;
 }
 
 export function sampleLabel(l: LeanView): string {

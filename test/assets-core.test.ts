@@ -71,6 +71,8 @@ describe("quotes and freshness", () => {
     expect(formatPrice(null)).toBe("—");
     expect(changeWindowText({ changeWindow: "24h" })).toBe("over 24h");
     expect(changeWindowText({ changeWindow: "since the 2026-11-06 close" })).toBe("since the 2026-11-06 close");
+    // The captured file says "over 24 hours" since 1.28.3: never "over over 24 hours".
+    expect(changeWindowText({ changeWindow: "over 24 hours" })).toBe("over 24 hours");
     expect(formatChange(null).text).toBe("—");
   });
 });
