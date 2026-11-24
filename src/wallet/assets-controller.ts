@@ -136,7 +136,7 @@ export function mountAssets(options: {
                 chosenRange = days;
                 const points = await prices.loadLiveChart(a.symbol, range.days, feed, options.fetcher);
                 if (openKey !== a.id || chosenRange !== days) return;
-                if (points.length >= 2) page.setSpark(points, `${range.caption}, from CoinGecko`);
+                if (points.length >= 2) page.setSpark(points, range.caption);
                 page.markRange(days);
               },
             },

@@ -29,8 +29,9 @@ describe("hosting security headers", () => {
     expect(csp).toMatch(/frame-ancestors 'self';/);
     expect(csp).not.toContain("chrome-extension:");
     expect(csp).toMatch(/connect-src[^;]*https:\/\/\*\.googleapis\.com/);
-    expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.kraken\.com/);
-    expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.coingecko\.com/);
+    // Prices come only from ATLAS Explain's own data file; the browser streams Kraken's ticks and calls no price API itself.
+    expect(csp).toMatch(/connect-src[^;]*wss:\/\/ws\.kraken\.com/);
+    expect(csp).not.toMatch(/connect-src[^;]*(api\.kraken\.com|api\.coingecko\.com)/);
   });
 
   it("sets the standard hardening headers", () => {

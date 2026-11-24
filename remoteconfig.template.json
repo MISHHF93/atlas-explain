@@ -105,20 +105,6 @@
       "description": "Stripe customer portal login link (https://billing.stripe.com/p/login/...), where subscribers change or cancel. Public, not a secret.",
       "valueType": "STRING"
     },
-    "price_provider": {
-      "defaultValue": {
-        "value": "coingecko"
-      },
-      "description": "Live crypto prices: coingecko (default: free with attribution, includes coin images) or kraken (demo only: its terms restrict third-party apps).",
-      "valueType": "STRING"
-    },
-    "coingecko_demo_api_key": {
-      "defaultValue": {
-        "value": ""
-      },
-      "description": "Optional CoinGecko Demo API key used only when price_provider is coingecko. Leave empty for keyless public access. Never commit a key.",
-      "valueType": "STRING"
-    },
     "logo_dev_token": {
       "defaultValue": {
         "value": ""

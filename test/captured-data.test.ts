@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Fetcher } from "../src/core/assets";
 import { capturedCatalog, capturedChart, resetCapturedCache } from "../src/core/captured-prices";
 import { CRYPTO_DATA_URL, DATA_SITE_URL, MCP_ORIGIN } from "../src/core/links";
-import { loadLiveCatalog, createPriceCache } from "../src/core/price-provider";
+import { loadLiveCatalog, PRICES_UNAVAILABLE } from "../src/core/price-provider";
 import { captureCrypto, captureMarket, mergeCloses, WORKER_MARKET_PARTS, type CaptureEnv } from "../src/data/capture";
 import { CRYPTO_COINS, CRYPTO_SCHEMA, type CryptoFile } from "../src/data/crypto";
 import { MARKET_SCHEMA, type MarketFile } from "../src/data/market-sources";
@@ -69,14 +69,14 @@ describe("one address for live data", () => {
   });
 });
 
-describe("the app reads the captured prices first", () => {
+describe("the app reads only the captured prices", () => {
   it("uses a fresh captured file and calls no provider", async () => {
     const seen: string[] = [];
     const fetcher: Fetcher = async (url) => {
       seen.push(String(url));
       return String(url) === CRYPTO_DATA_URL ? json(file("2026-11-16T11:55:00Z")) : json({}, 500);
     };
-    const state = await loadLiveCatalog({ provider: "coingecko" }, fetcher, NOW, 8000, createPriceCache(), null);
+    const state = await loadLiveCatalog({}, fetcher, NOW, 8000);
     expect(state.kind).toBe("ready");
     if (state.kind !== "ready") return;
     expect(state.catalog.source).toBe("kraken");
@@ -86,13 +86,14 @@ describe("the app reads the captured prices first", () => {
     expect(seen).toEqual([CRYPTO_DATA_URL]);
   });
 
-  it("falls back to the provider when the captured file is too old, and says which one answered", async () => {
-    const fetcher: Fetcher = async (url) =>
-      String(url) === CRYPTO_DATA_URL
-        ? json(file("2026-11-16T10:00:00Z"))
-        : json([{ id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 64448, price_change_percentage_24h: -1.48, last_updated: "2026-11-16T11:59:00.000Z" }]);
-    const state = await loadLiveCatalog({ provider: "coingecko" }, fetcher, NOW, 8000, createPriceCache(), null);
-    expect(state.kind === "ready" && state.catalog.source).toBe("coingecko");
+  it("says plainly when the captured file is too old, and asks no other feed", async () => {
+    const seen: string[] = [];
+    const fetcher: Fetcher = async (url) => {
+      seen.push(String(url));
+      return String(url) === CRYPTO_DATA_URL ? json(file("2026-11-16T10:00:00Z")) : json([{ id: "bitcoin", current_price: 1 }]);
+    };
+    expect(await loadLiveCatalog({}, fetcher, NOW, 8000)).toEqual({ kind: "error", reason: PRICES_UNAVAILABLE });
+    expect(seen.every((u) => u === CRYPTO_DATA_URL)).toBe(true);
   });
 
   it("never calls stale captured prices live, and draws every chart range from the hourly closes", () => {

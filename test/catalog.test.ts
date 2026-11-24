@@ -16,14 +16,14 @@ import {
   readRecent,
   searchAssets,
 } from "../src/core/catalog";
-import { readCoinGeckoMarkets } from "../src/core/coingecko";
+import { liveCatalog } from "./helpers/live-catalog";
 import { ALL_TERMS } from "../src/core/terms";
 
 const NOW = Date.parse("2026-11-13T21:00:00Z");
-const btc = assetsFromLiveCatalog(readCoinGeckoMarkets([
-  { id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 68169.7, price_change_percentage_24h: -0.1, last_updated: "2026-11-13T20:59:00.000Z" },
-  { id: "ethereum", symbol: "eth", name: "Ethereum", current_price: 2000, price_change_percentage_24h: 1.5, last_updated: "2026-11-13T20:59:00.000Z" },
-], NOW)!);
+const btc = assetsFromLiveCatalog(liveCatalog([
+  { symbol: "BTC", name: "Bitcoin", priceUsd: 68169.7, changePct: -0.1 },
+  { symbol: "ETH", name: "Ethereum", priceUsd: 2000, changePct: 1.5 },
+], "2026-11-13T20:59:00.000Z"));
 
 const eurusd: Asset = {
   id: "fx:EURUSD", symbol: "EUR/USD", name: "Euro / US dollar", class: "forex", venue: "ECB", currency: "USD", country: null,
@@ -128,11 +128,13 @@ describe("logos", () => {
     expect(isAllowedLogo("/coins/../app.html")).toBe(false);
     expect(isAllowedLogo("/coins/shib.svg")).toBe(false);
     for (const c of ["btc", "eth", "sol", "xrp", "ada", "doge", "ltc", "dot", "link", "avax"]) expect(existsSync(`public/coins/${c}.svg`), c).toBe(true);
-    const withImage = readCoinGeckoMarkets([{ id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 1, price_change_percentage_24h: 0, last_updated: "2026-11-13T20:59:00.000Z", image: "https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png" }], NOW)!;
+    const withImage = liveCatalog([{ symbol: "BTC", name: "Bitcoin", priceUsd: 1, changePct: 0 }], "2026-11-13T20:59:00.000Z");
+    withImage.assets[0]!.image = "https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png";
     const asset = assetsFromLiveCatalog(withImage)[0]!;
     expect(asset.logo).toBe("/coins/btc.svg");
     expect(validateAsset(asset, NOW).errors).toEqual([]);
-    const spoofed = readCoinGeckoMarkets([{ id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 1, price_change_percentage_24h: 0, last_updated: "2026-11-13T20:59:00.000Z", image: "https://evil.example/b.png" }], NOW)!;
+    const spoofed = liveCatalog([{ symbol: "BTC", name: "Bitcoin", priceUsd: 1, changePct: 0 }], "2026-11-13T20:59:00.000Z");
+    spoofed.assets[0]!.image = "https://evil.example/b.png";
     // A spoofed image never gets through; the coin keeps the site's own logo.
     expect(assetsFromLiveCatalog(spoofed)[0]!.logo).toBe("/coins/btc.svg");
   });

@@ -630,10 +630,11 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     if (!backend) return;
     void backend.loadSettings().then(({ settings, priceFeed: next }) => {
       setupAnalytics(settings.analyticsEnabled);
-      const changed = next.provider !== priceFeed.provider || next.coinGeckoDemoKey !== priceFeed.coinGeckoDemoKey;
-      priceFeed.provider = next.provider;
-      priceFeed.coinGeckoDemoKey = next.coinGeckoDemoKey;
-      if (changed) void assets?.refresh();
+      // Company logos turn on when Remote Config has a Logo.dev key; prices themselves have one source.
+      if (next.logoDevToken !== priceFeed.logoDevToken) {
+        priceFeed.logoDevToken = next.logoDevToken;
+        void assets?.refresh();
+      }
     }).catch(() => undefined);
     void refreshPlan();
     void startAccount(backend);

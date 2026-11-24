@@ -128,8 +128,6 @@ export interface AppSettings {
   proMonthlyLink: string;
   proYearlyLink: string;
   billingPortalLink: string;
-  /** Public live-price feed when ATLAS on this computer is not reachable. */
-  priceProvider: "kraken" | "coingecko";
 }
 
 export interface ExplanationRun {

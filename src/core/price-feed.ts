@@ -1,31 +1,20 @@
 /**
- * Light types and Remote Config parsing for the public live-price feed.
- * Heavy network clients live in price-provider.ts and are loaded on demand
- * so the app's first load stays under the bundle budget.
+ * Light types for crypto prices in the web app. Prices come only from the file ATLAS Explain's data
+ * job captures (price-provider.ts); this file holds what the first load needs without the network code.
  */
 import type { CatalogView } from "./assets";
 
-export const PRICE_PROVIDER_IDS = ["kraken", "coingecko"] as const;
-export type PriceProviderId = (typeof PRICE_PROVIDER_IDS)[number];
-/** CoinGecko by default: free with attribution, and it supplies coin images. Kraken's terms restrict third-party apps. */
-export const DEFAULT_PRICE_PROVIDER: PriceProviderId = "coingecko";
+/** Where captured prices came from: Kraken, or CoinGecko when the data job had to fall back. */
+export type PriceSourceId = "kraken" | "coingecko";
 
 export interface PriceFeedOptions {
-  provider: PriceProviderId;
-  /** Optional CoinGecko Demo API key from Remote Config. Never committed. */
-  coinGeckoDemoKey?: string;
   /** Optional Logo.dev publishable key (pk_…) from Remote Config: turns on company logos, with credit. */
   logoDevToken?: string;
 }
 
-export const DEFAULT_PRICE_FEED: PriceFeedOptions = { provider: DEFAULT_PRICE_PROVIDER };
+export const DEFAULT_PRICE_FEED: PriceFeedOptions = {};
 
-export function parsePriceProvider(raw: string | undefined): PriceProviderId {
-  const value = raw?.trim().toLowerCase();
-  return value === "coingecko" || value === "kraken" ? value : DEFAULT_PRICE_PROVIDER;
-}
-
-export function isLivePriceSource(source: CatalogView["source"] | undefined): source is PriceProviderId {
+export function isLivePriceSource(source: CatalogView["source"] | undefined): source is PriceSourceId {
   return source === "kraken" || source === "coingecko";
 }
 
@@ -36,19 +25,8 @@ export function priceAttribution(source: CatalogView["source"] | undefined): { t
   return null;
 }
 
-export function readCoinGeckoDemoKey(raw: string | undefined): string | undefined {
-  const value = raw?.trim() ?? "";
-  if (!value) return undefined;
-  if (!/^[A-Za-z0-9_-]{8,128}$/.test(value)) return undefined;
-  return value;
-}
-
 export function priceFeedFromRemoteValues(values: Record<string, string>): PriceFeedOptions {
-  return {
-    provider: parsePriceProvider(values.price_provider),
-    coinGeckoDemoKey: readCoinGeckoDemoKey(values.coingecko_demo_api_key),
-    logoDevToken: readLogoDevToken(values.logo_dev_token),
-  };
+  return { logoDevToken: readLogoDevToken(values.logo_dev_token) };
 }
 
 /** Logo.dev publishable keys start with pk_ and are meant to be used in the browser. */

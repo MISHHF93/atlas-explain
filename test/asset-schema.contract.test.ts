@@ -11,8 +11,7 @@ import {
   type ModelInsight,
   type ProviderAdapter,
 } from "../src/core/asset-schema";
-import { readCoinGeckoMarkets } from "../src/core/coingecko";
-import { readKrakenTicker } from "../src/core/kraken";
+import { liveCatalog } from "./helpers/live-catalog";
 
 const NOW = Date.parse("2026-11-13T21:00:00Z");
 
@@ -110,11 +109,9 @@ describe("routing", () => {
   });
 });
 
-describe("today's live crypto feeds meet the contract", () => {
-  it("maps CoinGecko rows to valid assets with attribution", () => {
-    const catalog = readCoinGeckoMarkets([
-      { id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 90000, price_change_percentage_24h: 2.27, last_updated: "2026-11-13T20:59:00.000Z" },
-    ], NOW)!;
+describe("captured crypto prices meet the contract", () => {
+  it("maps CoinGecko-captured rows to valid assets with attribution", () => {
+    const catalog = liveCatalog([{ symbol: "BTC", name: "Bitcoin", priceUsd: 90000, changePct: 2.27 }], "2026-11-13T20:59:00.000Z", "coingecko");
     const asset = assetFromLiveRow(catalog.assets[0]!, catalog.source)!;
     expect(asset.id).toBe("crypto:BTC");
     expect(asset.quote?.source.attribution.text).toBe("Prices by CoinGecko");
@@ -122,8 +119,8 @@ describe("today's live crypto feeds meet the contract", () => {
     expect(validateAsset(asset, NOW)).toEqual({ ok: true, errors: [] });
   });
 
-  it("maps Kraken rows to valid assets", () => {
-    const catalog = readKrakenTicker({ error: [], result: { XXBTZUSD: { c: ["90000.0", "0.1"], o: "88000.0" }, XETHZUSD: { c: ["2000.0", "1"], o: "2100.0" } } }, NOW)!;
+  it("maps Kraken-captured rows to valid assets", () => {
+    const catalog = liveCatalog([{ symbol: "BTC", name: "Bitcoin", priceUsd: 90000, changePct: 2.27 }, { symbol: "ETH", name: "Ethereum", priceUsd: 2000, changePct: -4.76 }], "2026-11-13T20:59:00.000Z", "kraken");
     expect(catalog.assets).toHaveLength(2);
     for (const view of catalog.assets) {
       const asset = assetFromLiveRow(view, catalog.source)!;
@@ -133,9 +130,7 @@ describe("today's live crypto feeds meet the contract", () => {
   });
 
   it("keeps ATLAS rows out of the public catalog", () => {
-    const catalog = readCoinGeckoMarkets([
-      { id: "bitcoin", symbol: "btc", name: "Bitcoin", current_price: 90000, price_change_percentage_24h: 1, last_updated: "2026-11-13T20:59:00.000Z" },
-    ], NOW)!;
+    const catalog = liveCatalog([{ symbol: "BTC", name: "Bitcoin", priceUsd: 90000, changePct: 1 }], "2026-11-13T20:59:00.000Z");
     expect(assetFromLiveRow(catalog.assets[0]!, "atlas")).toBeNull();
   });
 });

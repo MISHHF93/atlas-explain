@@ -20,7 +20,7 @@
 import { CLASS_INFO, findAsset, formatChange as assetChange, formatValue, readMarketFile, searchAssets } from "../core/catalog";
 import type { Asset } from "../core/asset-schema";
 import { formatChange, formatPrice } from "../core/assets";
-import { thinEvenly } from "../core/coingecko";
+import { thinEvenly } from "../core/thin";
 import { EDUCATION_ASSETS } from "../core/education-assets";
 import { CRYPTO_COINS, CRYPTO_CREDIT, readCryptoFile, type CryptoFile, type CryptoSource } from "../data/crypto";
 import { LEARN_PATH, learnTerms } from "../core/learn";

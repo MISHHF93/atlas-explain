@@ -1,5 +1,4 @@
 import { DEFAULT_PRO_CLOUD_DAILY_LIMIT, isPaymentLink, isPortalLink } from "./billing";
-import { parsePriceProvider } from "./price-feed";
 import { DEFAULT_PROMPT_TEMPLATE } from "./prompt";
 import { DEFAULT_TAXONOMY, parseTaxonomyConfig } from "./taxonomy";
 import type { AppSettings, InferenceModeName } from "./types";
@@ -22,7 +21,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   proMonthlyLink: "",
   proYearlyLink: "",
   billingPortalLink: "",
-  priceProvider: "coingecko",
 };
 
 export const REMOTE_CONFIG_KEYS = [
@@ -41,8 +39,6 @@ export const REMOTE_CONFIG_KEYS = [
   "pro_monthly_link",
   "pro_yearly_link",
   "billing_portal_link",
-  "price_provider",
-  "coingecko_demo_api_key",
   "logo_dev_token",
 ] as const;
 
@@ -65,8 +61,6 @@ export function remoteConfigDefaults(): Record<RemoteConfigKey, string> {
     pro_monthly_link: "",
     pro_yearly_link: "",
     billing_portal_link: "",
-    price_provider: DEFAULT_SETTINGS.priceProvider,
-    coingecko_demo_api_key: "",
     logo_dev_token: "",
   };
 }
@@ -184,15 +178,6 @@ export function parseRemoteSettings(values: Record<string, string>): {
     "max_output_tokens",
     warnings,
   );
-
-  const providerRaw = values.price_provider?.trim();
-  if (providerRaw) {
-    const provider = parsePriceProvider(providerRaw);
-    if (provider !== providerRaw.toLowerCase()) {
-      warnings.push(`price_provider "${providerRaw}" is not kraken or coingecko. Using ${DEFAULT_SETTINGS.priceProvider}.`);
-    }
-    settings.priceProvider = provider;
-  }
 
   return { settings, warnings };
 }

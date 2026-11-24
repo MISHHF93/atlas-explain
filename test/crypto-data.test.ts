@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { COINGECKO_COINS } from "../src/core/coingecko";
-import { KRAKEN_PAIRS } from "../src/core/kraken";
 import { CRYPTO_COINS, parseCoinGeckoChart, parseCoinGeckoMarkets, parseKrakenOhlc, parseKrakenTicker, readCryptoFile } from "../src/data/crypto";
 
 describe("crypto data on ATLAS Explain's own data site", () => {
-  it("keeps one list of coins, which the app's CoinGecko and Kraken lists come from", () => {
+  it("keeps one list of ten coins, each with its Kraken pair and CoinGecko id", () => {
     expect(CRYPTO_COINS).toHaveLength(10);
-    expect(COINGECKO_COINS.map((c) => c.id)).toEqual(CRYPTO_COINS.map((c) => c.coingeckoId));
-    expect(KRAKEN_PAIRS.map((p) => p.pair)).toEqual(CRYPTO_COINS.map((c) => c.krakenPair));
+    for (const c of CRYPTO_COINS) expect(c.krakenPair && c.coingeckoId, c.symbol).toBeTruthy();
   });
 
   it("reads Kraken and CoinGecko as they answer, and drops anything malformed", () => {

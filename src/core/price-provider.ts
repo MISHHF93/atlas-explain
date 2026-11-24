@@ -1,152 +1,34 @@
 /**
- * Live public crypto prices when ATLAS on this computer is not reachable.
- * First choice: the prices ATLAS Explain captures itself (captured-prices.ts), the same file the
- * connector reads. Only when that file is missing or too old does the app ask a public provider
- * directly; Firebase Remote Config `price_provider` picks which one.
+ * Crypto prices in the web app, from one place: the file ATLAS Explain's data job captures every
+ * 10 minutes (captured-prices.ts), the same file the connector reads. The data job fetches Kraken,
+ * with CoinGecko as its backup, so the browser never asks either itself. While the page is open,
+ * Kraken's public tick stream (live-ticker.ts) moves the captured prices between captures.
+ * When the file can't be read, the app says so; it never fills the gap from somewhere else.
  * These network clients are loaded on demand. Prices are never used for ML or training.
  */
-import { CRYPTO_STALE_MS, type AssetDetailView, type AssetsState, type Fetcher, type SparkPoint } from "./assets";
+import type { AssetDetailView, AssetsState, Fetcher, SparkPoint } from "./assets";
 import { capturedCatalog, capturedChart, capturedCitation, isFresh, loadCapturedFile } from "./captured-prices";
 import { startTicker, withTicks } from "./live-ticker";
-export { onTicks } from "./live-ticker";
-import { COINGECKO_CITATION, COINGECKO_COINS, loadCoinGeckoCatalog, loadCoinGeckoChart } from "./coingecko";
-import { KRAKEN_API, KRAKEN_CITATION, KRAKEN_PAIRS, loadKrakenCatalog, readKrakenOhlc } from "./kraken";
 import { type PriceFeedOptions, DEFAULT_PRICE_FEED } from "./price-feed";
+export { onTicks } from "./live-ticker";
+export { DEFAULT_PRICE_FEED, isLivePriceSource, priceAttribution, priceFeedFromRemoteValues, type PriceFeedOptions } from "./price-feed";
 
-export {
-  DEFAULT_PRICE_FEED,
-  DEFAULT_PRICE_PROVIDER,
-  PRICE_PROVIDER_IDS,
-  isLivePriceSource,
-  parsePriceProvider,
-  priceAttribution,
-  priceFeedFromRemoteValues,
-  readCoinGeckoDemoKey,
-  type PriceFeedOptions,
-  type PriceProviderId,
-} from "./price-feed";
-
-export const PRICE_CACHE_MS = 60_000;
 export const PRICE_FETCH_TIMEOUT_MS = 8_000;
-
-export interface PriceCache {
-  catalog: { key: string; at: number; state: AssetsState } | null;
-  details: Map<string, { at: number; detail: AssetDetailView }>;
-}
-
-export function createPriceCache(): PriceCache {
-  return { catalog: null, details: new Map() };
-}
-
-const sharedCache = createPriceCache();
-
-/** Where the last good price list is kept between page loads. Prices only: nothing about the visitor. */
-export interface PriceStore {
-  read(): string | null;
-  write(value: string): void;
-}
-
-export const PRICE_STORE_KEY = "atlas-explain-live-prices";
-
-/** This browser's storage, or null where there is none (tests, private mode). */
-export function browserPriceStore(): PriceStore | null {
-  try {
-    const storage = (globalThis as { localStorage?: Storage }).localStorage;
-    if (!storage || typeof storage.getItem !== "function") return null;
-    return {
-      read: () => {
-        try {
-          return storage.getItem(PRICE_STORE_KEY);
-        } catch {
-          return null;
-        }
-      },
-      write: (value) => {
-        try {
-          storage.setItem(PRICE_STORE_KEY, value);
-        } catch {
-          // Storage full or blocked: the list is simply fetched again next time.
-        }
-      },
-    };
-  } catch {
-    return null;
-  }
-}
-
-type CatalogHit = NonNullable<PriceCache["catalog"]>;
-
-function readStored(store: PriceStore | null, key: string): CatalogHit | null {
-  if (!store) return null;
-  try {
-    const hit = JSON.parse(store.read() ?? "null") as Partial<CatalogHit> | null;
-    if (!hit || hit.key !== key || typeof hit.at !== "number" || hit.state?.kind !== "ready" || !Array.isArray(hit.state.catalog?.assets)) return null;
-    return hit as CatalogHit;
-  } catch {
-    return null;
-  }
-}
-
-function catalogCacheKey(feed: PriceFeedOptions): string {
-  return `${feed.provider}:${feed.coinGeckoDemoKey ? "demo" : "public"}`;
-}
-
-async function getJson(url: string, fetcher: Fetcher, timeoutMs: number): Promise<unknown> {
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), timeoutMs);
-  try {
-    const res = await fetcher(url, { signal: ctl.signal, cache: "no-store", credentials: "omit" });
-    if (!res.ok) throw new Error(`Price feed answered ${res.status}.`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
+export const PRICES_UNAVAILABLE = "Live prices couldn't be loaded right now. We'll try again shortly.";
 
 export async function loadLiveCatalog(
-  feed: PriceFeedOptions = DEFAULT_PRICE_FEED,
+  _feed: PriceFeedOptions = DEFAULT_PRICE_FEED,
   fetcher: Fetcher = fetch,
   now: number = Date.now(),
   timeoutMs: number = PRICE_FETCH_TIMEOUT_MS,
-  cache: PriceCache = sharedCache,
-  store: PriceStore | null = cache === sharedCache ? browserPriceStore() : null,
 ): Promise<AssetsState> {
-  // The captured file first: one copy of the prices for the app and the connector.
   const captured = await loadCapturedFile(fetcher, now, timeoutMs);
-  const fromCapture = captured ? capturedCatalog(captured, now) : null;
-  if (fromCapture) {
-    // Kraken-captured prices go real time: the page streams Kraken's ticks over them while open.
-    if (fromCapture.source !== "kraken") return { kind: "ready", catalog: fromCapture };
-    startTicker();
-    return { kind: "ready", catalog: withTicks(fromCapture, now) };
-  }
-
-  const key = catalogCacheKey(feed);
-  /** The hit, when it is for this feed and younger than maxAge. */
-  const within = (hit: CatalogHit | null, maxAge: number): CatalogHit | null =>
-    hit && hit.key === key && hit.state.kind === "ready" && now - hit.at >= 0 && now - hit.at < maxAge ? hit : null;
-  const inMemory = within(cache.catalog, PRICE_CACHE_MS);
-  if (inMemory) return inMemory.state;
-  // A reload within the minute reuses the stored list, so reloading never hammers a free feed.
-  const stored = readStored(store, key);
-  const justStored = within(stored, PRICE_CACHE_MS);
-  if (justStored) {
-    cache.catalog = justStored;
-    return justStored.state;
-  }
-  const state =
-    feed.provider === "coingecko"
-      ? await loadCoinGeckoCatalog(fetcher, now, timeoutMs, feed.coinGeckoDemoKey)
-      : await loadKrakenCatalog(fetcher, now, timeoutMs);
-  if (state.kind === "ready") {
-    cache.catalog = { key, at: now, state };
-    store?.write(JSON.stringify(cache.catalog));
-    return state;
-  }
-  // The feed refused or failed: show the last good list while it is still recent. Its own
-  // "as of" time is shown next to the prices, so nothing is passed off as newer than it is.
-  const last = within(cache.catalog, CRYPTO_STALE_MS) ?? within(stored, CRYPTO_STALE_MS);
-  return last ? last.state : state;
+  const catalog = captured ? capturedCatalog(captured, now) : null;
+  if (!catalog) return { kind: "error", reason: PRICES_UNAVAILABLE };
+  // Kraken-captured prices go real time: the page streams Kraken's ticks over them while open.
+  if (catalog.source !== "kraken") return { kind: "ready", catalog };
+  startTicker();
+  return { kind: "ready", catalog: withTicks(catalog, now) };
 }
 
 export type ChartRange = 1 | 7 | 30;
@@ -155,91 +37,41 @@ export const CHART_RANGES: readonly { days: ChartRange; label: string; caption: 
   { days: 7, label: "7D", caption: "last 7 days" },
   { days: 30, label: "30D", caption: "last 30 days" },
 ];
-/** A chosen range is reused for five minutes, so switching back and forth never hammers the free API. */
-export const CHART_CACHE_MS = 5 * 60_000;
-const chartCache = new Map<string, { at: number; points: SparkPoint[] }>();
 
-/**
- * Whether a chosen range can be drawn. The captured file holds 30 days of hourly closes, so every
- * range works from it; without it, only CoinGecko's direct API can (Kraken's free bars are 2 days).
- */
-export function supportsChartRanges(_feed: PriceFeedOptions): boolean {
+/** The captured file holds 30 days of hourly closes, so every range can be drawn from it. */
+export function supportsChartRanges(_feed: PriceFeedOptions = DEFAULT_PRICE_FEED): boolean {
   return true;
 }
 
-/** A coin's price over a chosen range: captured first, CoinGecko direct as the fallback. Empty when neither answers. */
+/** A coin's price over a chosen range, from the captured file. Empty when it can't be read or is too old. */
 export async function loadLiveChart(
   symbol: string,
   days: ChartRange,
-  feed: PriceFeedOptions = DEFAULT_PRICE_FEED,
+  _feed: PriceFeedOptions = DEFAULT_PRICE_FEED,
   fetcher: Fetcher = fetch,
   now: number = Date.now(),
 ): Promise<SparkPoint[]> {
   const captured = await loadCapturedFile(fetcher, now);
-  if (captured && isFresh(captured, now)) {
-    const points = capturedChart(captured, symbol, days, now);
-    if (points.length) return points;
-  }
-  if (feed.provider !== "coingecko") return [];
-  const coin = COINGECKO_COINS.find((item) => item.symbol === symbol);
-  if (!coin) return [];
-  const key = `${coin.id}:${days}`;
-  const hit = chartCache.get(key);
-  if (hit && now - hit.at < CHART_CACHE_MS) return hit.points;
-  const points = await loadCoinGeckoChart(coin.id, fetcher, PRICE_FETCH_TIMEOUT_MS, feed.coinGeckoDemoKey, days).catch(() => []);
-  if (points.length >= 2) chartCache.set(key, { at: now, points });
-  return points;
+  return captured && isFresh(captured, now) ? capturedChart(captured, symbol, days, now) : [];
 }
 
+/** One coin's price with its last two days of hourly closes, from the captured file. */
 export async function loadLiveDetail(
   symbol: string,
   feed: PriceFeedOptions = DEFAULT_PRICE_FEED,
   fetcher: Fetcher = fetch,
   now: number = Date.now(),
   timeoutMs: number = PRICE_FETCH_TIMEOUT_MS,
-  cache: PriceCache = sharedCache,
 ): Promise<AssetDetailView | null> {
-  const list = await loadLiveCatalog(feed, fetcher, now, timeoutMs, cache);
+  const list = await loadLiveCatalog(feed, fetcher, now, timeoutMs);
   if (list.kind !== "ready") return null;
   const base = list.catalog.assets.find((asset) => asset.symbol === symbol);
-  if (!base) return null;
-  // Captured prices come with their own 30 days of hourly closes: the last two days draw the sparkline.
   const captured = await loadCapturedFile(fetcher, now, timeoutMs);
-  if (captured && isFresh(captured, now) && list.catalog.source === captured.prices.source) {
-    const points = capturedChart(captured, symbol, 2, now);
-    return {
-      ...base,
-      spark: { interval: "1h", points, reason: points.length ? null : "Not enough recent hourly prices were collected to draw a sparkline." },
-      citation: capturedCitation(captured),
-    };
-  }
-  const key = `${catalogCacheKey(feed)}:${symbol}`;
-  const hit = cache.details.get(key);
-  if (hit && now - hit.at < PRICE_CACHE_MS) return hit.detail;
-
-  let points: SparkPoint[];
-  let reason: string | null;
-  let citation: string;
-  if (feed.provider === "coingecko") {
-    const coin = COINGECKO_COINS.find((item) => item.symbol === symbol);
-    if (!coin) return null;
-    points = await loadCoinGeckoChart(coin.id, fetcher, timeoutMs, feed.coinGeckoDemoKey).catch(() => []);
-    reason = points.length >= 2 ? null : "CoinGecko did not return enough recent prices to draw a sparkline.";
-    citation = COINGECKO_CITATION;
-  } else {
-    const pair = KRAKEN_PAIRS.find((item) => item.symbol === symbol);
-    if (!pair) return null;
-    points = await getJson(`${KRAKEN_API}/OHLC?pair=${pair.pair}&interval=60`, fetcher, timeoutMs)
-      .then((body) => readKrakenOhlc(body))
-      .catch(() => []);
-    reason = points.length >= 2 ? null : "Kraken did not return enough hourly bars to draw a sparkline.";
-    citation = KRAKEN_CITATION;
-  }
-  const detail: AssetDetailView = {
+  if (!base || !captured) return null;
+  const points = isFresh(captured, now) ? capturedChart(captured, symbol, 2, now) : [];
+  return {
     ...base,
-    spark: { interval: "1h", points: points.length >= 2 ? points : [], reason },
-    citation,
+    spark: { interval: "1h", points, reason: points.length ? null : "Not enough recent hourly prices were collected to draw a sparkline." },
+    citation: capturedCitation(captured),
   };
-  cache.details.set(key, { at: now, detail });
-  return detail;
 }
