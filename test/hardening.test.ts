@@ -13,7 +13,7 @@ function header(key: string): string {
 }
 
 describe("hosting security headers", () => {
-  it("sends a strict CSP that still lets the local ATLAS desk and Firebase through", () => {
+  it("sends a strict CSP that lets Firebase through and nothing on this computer", () => {
     const csp = header("Content-Security-Policy");
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("object-src 'none'");
@@ -25,8 +25,8 @@ describe("hosting security headers", () => {
     expect(csp).toContain("upgrade-insecure-requests");
     expect(csp).not.toMatch(/connect-src[^;]*localhost/);
     expect(csp).not.toMatch(/connect-src[^;]*127\.0\.0\.1/);
-    // The owner's ATLAS desk (on localhost) embeds the app for "Explain this move"; only it may frame us.
-    expect(csp).toMatch(/frame-ancestors 'self' http:\/\/localhost:3000 http:\/\/127\.0\.0\.1:3000;/);
+    // Only the site itself may frame the app (the separate local ATLAS app no longer embeds it).
+    expect(csp).toMatch(/frame-ancestors 'self';/);
     expect(csp).not.toContain("chrome-extension:");
     expect(csp).toMatch(/connect-src[^;]*https:\/\/\*\.googleapis\.com/);
     expect(csp).toMatch(/connect-src[^;]*https:\/\/api\.kraken\.com/);

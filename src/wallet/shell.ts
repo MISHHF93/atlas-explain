@@ -435,7 +435,7 @@ export function createWalletShell(options: {
     if (hiddenTabs.has("signal") || !view.connected) {
       // The chip's visible text ("Live prices") names it; no separate label to fall out of step with it.
       status.removeAttribute("aria-label");
-      status.title = connectionCopy((status.dataset.state ?? "none") as ConnectionState).title;
+      status.title = connectionCopy((status.dataset.state ?? "hosted") as ConnectionState).title;
     } else {
       status.setAttribute("aria-label", `Signal light: ${copy.headline}. ${statusLabel.textContent}. Open the Signal tab.`);
       status.title = `${copy.headline}. Open the Signal tab.`;

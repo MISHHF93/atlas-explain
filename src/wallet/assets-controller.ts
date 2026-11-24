@@ -1,35 +1,21 @@
-import {
-  explainAssetQuestion,
-  loadCatalog,
-  loadDetail,
-  nextPollMs,
-  POLL_CRYPTO_MS,
-  POLL_STOCK_MS,
-  type AssetDetailView,
-  type AssetView,
-  type AssetsState,
-  type Fetcher,
-} from "../core/assets";
+import { nextPollMs, POLL_CRYPTO_MS, type AssetsState, type Fetcher } from "../core/assets";
 import type { Asset } from "../core/asset-schema";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../core/price-feed";
-import { assetDetail, assetsPanel, sparkSpan } from "./assets";
 import type { CatalogPanelHandle } from "./catalog-view";
 import type { Watchlist } from "../core/watchlist";
 import { el } from "./dom";
 import type { WalletShell } from "./shell";
 
 /**
- * Mounts the Assets tab. The public catalog (every class, on the Asset schema) is the default;
- * the ATLAS view with paper lights appears only when ATLAS on this computer answers.
- * Polls only while visible: crypto about every 15 s, stocks every 15 min.
+ * Mounts the Assets tab: the public catalog (every class, on the Asset schema), with crypto prices
+ * from the captured file. Polls only while visible: crypto about every 15 s, stocks every 15 min.
  */
 export function mountAssets(options: {
   shell: WalletShell;
-  canReachAtlas: boolean;
   onExplain: (question: string) => void;
   fetcher?: Fetcher;
   onState?: (state: AssetsState) => void;
-  /** Public live-price feed used when ATLAS is not reachable. */
+  /** Price-feed options (company logos). */
   priceFeed?: PriceFeedOptions;
   /** Called when an asset's page opens (the web app gives it its own address). */
   onOpen?: (symbol: string) => void;
@@ -39,15 +25,9 @@ export function mountAssets(options: {
   const { shell } = options;
   const head = el("div", "panel-title");
   head.append(el("h1", undefined, "Assets"), el("span", "fine", "Education only"));
-  // ATLAS view (owner only): the original list with paper lights.
-  const panel = assetsPanel({
-    onOpen: (a) => void openAtlasAsset(a),
-    onRetry: () => void refresh(),
-  });
-  panel.node.hidden = true;
-  // Public catalog: loaded on demand.
+  // The catalog: loaded on demand.
   const publicSlot = el("div");
-  shell.panels.assets.append(head, panel.node, publicSlot);
+  shell.panels.assets.append(head, publicSlot);
 
   let catalog: CatalogPanelHandle | null = null;
   let catalogUi: typeof import("./catalog-view") | null = null;
@@ -56,7 +36,6 @@ export function mountAssets(options: {
   let detailTimer: number | undefined;
   let openKey: string | null = null;
   let last: AssetsState = { kind: "loading" };
-  let fromAtlas = false;
   let busy = false;
   let stopTicks: (() => void) | undefined;
 
@@ -75,8 +54,6 @@ export function mountAssets(options: {
 
   async function showPublic(state: Parameters<CatalogPanelHandle["update"]>[0]): Promise<void> {
     await ui();
-    // With ATLAS on this computer, its list stays on top; the full catalog is always shown below it.
-    panel.node.hidden = !fromAtlas;
     publicSlot.hidden = false;
     catalog?.update(state);
   }
@@ -86,16 +63,7 @@ export function mountAssets(options: {
     busy = true;
     try {
       last = await readState();
-      if (fromAtlas) {
-        // Owner: the ATLAS desk's own list (crypto and stocks with paper lights) first, then the full
-        // public catalog below it (currencies, rates, ETFs, energy, filings, explainers), so nothing is hidden.
-        panel.node.hidden = false;
-        panel.update(last);
-        const v = await ui();
-        const official = await v.loadMarketData();
-        publicAssets = v.withCompanyLogos([...official, ...v.EDUCATION_ASSETS], options.priceFeed?.logoDevToken);
-        await showPublic({ kind: "ready", assets: publicAssets });
-      } else if (last.kind !== "loading") {
+      if (last.kind !== "loading") {
         // Public catalog: live crypto plus the official data published by the scheduled job.
         const v = await ui();
         const official = await v.loadMarketData();
@@ -116,19 +84,10 @@ export function mountAssets(options: {
   }
 
   async function readState(): Promise<AssetsState> {
-    // ATLAS on this computer first (owner only). Otherwise the public catalog.
-    if (options.canReachAtlas) {
-      const atlas = await loadCatalog(options.fetcher);
-      if (atlas.kind === "ready" || atlas.kind === "error") {
-        fromAtlas = true;
-        return atlas;
-      }
-    }
-    fromAtlas = false;
     const { loadLiveCatalog, onTicks } = await import("../core/price-provider");
     // Real time: redraw the list (and Today, through onState) as Kraken's live ticks arrive.
     stopTicks ??= onTicks(() => {
-      if (visible() && !fromAtlas) void refresh();
+      if (visible()) void refresh();
     });
     return loadLiveCatalog(options.priceFeed ?? DEFAULT_PRICE_FEED, options.fetcher);
   }
@@ -217,44 +176,9 @@ export function mountAssets(options: {
     await tick();
   }
 
-  /* ---------- ATLAS asset page (owner only) ---------- */
-
-  async function openAtlasAsset(a: AssetView): Promise<void> {
-    openKey = a.symbol;
-    options.onOpen?.(a.symbol);
-    const view = assetDetail(a, {
-      onExplain: (x) => {
-        shell.closeSheet();
-        options.onExplain(explainAssetQuestion(x));
-      },
-      onWhy: (x) => {
-        shell.closeSheet();
-        options.onExplain(`Why would an educational paper light for ${x.name} (${x.symbol}) show "${x.light.label}"? ATLAS says: ${x.light.reason} Explain hit rate, sample size and the evidence gate. Do not recommend a trade.`);
-      },
-      priceSource: last.kind === "ready" ? last.catalog.source : undefined,
-    });
-    shell.openSheet(a.name, view.nodes);
-    const tick = async (): Promise<void> => {
-      if (openKey !== a.symbol) return;
-      const d: AssetDetailView | null = await loadDetail(a.symbol, options.fetcher);
-      if (openKey !== a.symbol) return;
-      if (d) view.update(d);
-      window.clearTimeout(detailTimer);
-      if (visible()) detailTimer = window.setTimeout(() => void tick(), a.klass === "crypto" ? POLL_CRYPTO_MS : POLL_STOCK_MS);
-    };
-    await tick();
-  }
-
   /** Opens an asset by symbol or id. Resolves false when the catalog has no such asset right now. */
   async function open(key: string): Promise<boolean> {
     if (last.kind !== "ready") await refresh();
-    if (fromAtlas) {
-      const want = key.toUpperCase();
-      const a = last.kind === "ready" ? last.catalog.assets.find((x) => x.symbol.toUpperCase() === want) : undefined;
-      if (!a) return false;
-      await openAtlasAsset(a);
-      return true;
-    }
     const a = (await ui()).findAsset(publicAssets, key);
     if (!a) return false;
     await openPublic(a);
@@ -288,4 +212,11 @@ function writeRecent(v: CatalogUi, id: string): void {
   } catch {
     // Private mode: recently viewed lasts for this visit only.
   }
+}
+
+/** "last 24 hours" for 24 hourly closes, "last 30 days" for 30 daily ones. */
+export function sparkSpan(points: number, interval: string): string {
+  if (/^1h$/i.test(interval)) return `last ${points} hours`;
+  if (/^1d$/i.test(interval)) return `last ${points} days`;
+  return `last ${points} ${interval} closes`;
 }

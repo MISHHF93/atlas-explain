@@ -1,27 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  ASSETS_SCHEMA,
   changeWindowText,
-  canReachLocalAtlas,
-  carriesPrivateFields,
-  explainAssetQuestion,
-  filterAssets,
   formatChange,
   formatPrice,
-  loadCatalog,
-  loadDetail,
   mapLean,
   mapQuote,
   nextPollMs,
-  readCatalog,
-  readDetail,
   sparkPath,
   POLL_CRYPTO_MS,
   POLL_STOCK_MS,
-  type Fetcher,
 } from "../src/core/assets";
-import { connectionCopy } from "../src/core/app-copy";
 
 
 const box = JSON.parse(readFileSync("test/fixtures/atlas-catalog.json", "utf8")) as { capturedAt: string; list: unknown; details: Record<string, unknown> };
@@ -86,86 +75,10 @@ describe("quotes and freshness", () => {
   });
 });
 
-describe("catalog from the real ATLAS route (box capture)", () => {
-  const cat = readCatalog(box.list, NOW);
-
-  it("parses every asset with one source each", () => {
-    expect(cat).not.toBeNull();
-    expect(cat!.assets.length).toBeGreaterThan(10);
-    const btc = cat!.assets.find((a) => a.symbol === "BTC-USD")!;
-    expect(btc).toMatchObject({ klass: "crypto", badge: "Live", sourceLabel: "Kraken spot" });
-    const aapl = cat!.assets.find((a) => a.symbol === "AAPL")!;
-    expect(aapl).toMatchObject({ klass: "stock", badge: "Daily" });
-    expect(cat!.assets.every((a) => a.light.colour === "grey")).toBe(true);
-    expect(cat!.stockCitation).toMatch(/IEX/);
-  });
-
-  it("filters by search text and class", () => {
-    const all = cat!.assets;
-    expect(filterAssets(all, "btc").map((a) => a.symbol)).toEqual(["BTC-USD"]);
-    expect(filterAssets(all, "apple").map((a) => a.symbol)).toEqual(["AAPL"]);
-    expect(filterAssets(all, "", "crypto").every((a) => a.klass === "crypto")).toBe(true);
-    expect(filterAssets(all, "", "stock").every((a) => a.klass === "stock")).toBe(true);
-    expect(filterAssets(all, "zzzz")).toEqual([]);
-  });
-
-  it("reads a detail with a sparkline", () => {
-    const d = readDetail(box.details["BTC-USD"], NOW)!;
-    expect(d.spark.points.length).toBeGreaterThan(10);
-    expect(sparkPath(d.spark.points, 312, 64)).toMatch(/^M[\d.]+ [\d.]+ L/);
-    expect(readDetail(box.details["AAPL"], NOW)!.citation).toMatch(/IEX/);
+describe("sparklines and polling", () => {
+  it("draws a sparkline path, and nothing for no points", () => {
+    expect(sparkPath([{ t: "2026-11-23T00:00:00Z", c: 1 }, { t: "2026-11-23T01:00:00Z", c: 2 }], 312, 64)).toMatch(/^M[\d.]+ [\d.]+ L/);
     expect(sparkPath([], 10, 10)).toBe("");
-  });
-
-  it("refuses wrong schemas, non-paper payloads and junk rows", () => {
-    expect(readCatalog({ schema: "other", paperOnly: true, assets: [] })).toBeNull();
-    expect(readCatalog({ schema: ASSETS_SCHEMA, paperOnly: false, assets: [] })).toBeNull();
-    const c = readCatalog({ schema: ASSETS_SCHEMA, paperOnly: true, assets: [{ symbol: "<img>", class: "crypto" }, { symbol: "ETH-USD", class: "forex" }, { symbol: "ETH-USD", class: "crypto", name: "Short squeeze coin" }] });
-    expect(c!.assets.map((a) => [a.symbol, a.name])).toEqual([["ETH-USD", "ETH-USD"]]);
-  });
-
-  it("builds an education-only question for the Explain tab", () => {
-    const q = explainAssetQuestion(cat!.assets[0]!);
-    expect(q).toMatch(/Do not recommend a trade/);
-    // A withheld (grey) lean is not mentioned at all; there is nothing to explain about it.
-    expect(q).not.toMatch(/grey|paper light/i);
-    expect(q).toContain(cat!.assets[0]!.symbol);
-    expect(q.replace("Do not recommend a trade", "")).not.toMatch(TRADE);
-  });
-});
-
-describe("connection", () => {
-  const ok = (body: unknown): Fetcher => async () => new Response(JSON.stringify(body), { status: 200 });
-
-  it("names the local ATLAS connection in the header", () => {
-    expect(connectionCopy("local").label).toBe("ATLAS connected");
-  });
-
-  it("never lets the hosted web app call localhost", () => {
-    expect(canReachLocalAtlas({ protocol: "https:", hostname: "atlas-explain.web.app" })).toBe(false);
-    expect(canReachLocalAtlas({ protocol: "http:", hostname: "localhost" })).toBe(true);
-  });
-
-  it("maps an unreachable ATLAS to the grey connect state", async () => {
-    const down: Fetcher = async () => { throw new TypeError("Failed to fetch"); };
-    expect(await loadCatalog(down)).toMatchObject({ kind: "not_connected" });
-    expect(await loadCatalog(async () => new Response("{}", { status: 404 }))).toMatchObject({ kind: "error" });
-    expect(await loadCatalog(ok({ schema: "nope" }))).toMatchObject({ kind: "error" });
-  });
-
-  it("reads a live catalog and drops payloads with private fields", async () => {
-    const seen: { url: string; credentials: string }[] = [];
-    const spy: Fetcher = async (url, init) => {
-      seen.push({ url, credentials: init.credentials });
-      return new Response(JSON.stringify(box.list), { status: 200 });
-    };
-    expect((await loadCatalog(spy, NOW)).kind).toBe("ready");
-    expect(seen[0]).toEqual({ url: "http://localhost:3000/api/mcp/public", credentials: "omit" });
-    expect(seen.some((s) => s.url === "http://localhost:3000/api/explain/assets" && s.credentials === "omit")).toBe(true);
-    expect(carriesPrivateFields({ assets: [{ quote: { balance: 1 } }] })).toBe(true);
-    expect(await loadCatalog(ok({ ...(box.list as object), account: { id: 1 } }))).toMatchObject({ kind: "error" });
-    expect(await loadDetail("BTC-USD", ok(box.details["BTC-USD"]), NOW)).not.toBeNull();
-    expect(await loadDetail("../etc", ok({}))).toBeNull();
   });
 
   it("polls crypto about every 15 s, stocks every 15 min, and pauses when hidden", () => {

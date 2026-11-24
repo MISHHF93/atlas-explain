@@ -1,14 +1,10 @@
 import { CloudAllowanceUsed, PREVIEW_BILLING_LINKS, PRO_PRICE_LABELS, WatchlistAllowance, billingSnapshot, pricingActions, pricingView, type BillingSnapshot, type ProInterval } from "../core/billing";
-import { parseContextHash, type ParsedContextLink } from "../core/context-link";
-import { conceptQuestion, getConcept } from "../core/glossary";
-import { EXPLAIN_LOAD_MESSAGE, inboundReply, readInboundMessage } from "../core/inbound";
-import { applyPrivateFields, parseMoveCardJson, publicMoveCard } from "../core/move-card";
+import { applyPrivateFields, parseMoveCardJson } from "../core/move-card";
 import { ExplanationParseError } from "../core/parse-explanation";
-import { ATLAS_DESK_URL, SAMPLE_TERM, connectionFor } from "../core/app-copy";
+import { SAMPLE_TERM, connectionFor } from "../core/app-copy";
 import { OnDeviceUnavailableError } from "../core/run-explanation";
 import { SAMPLE_MOVES, type SampleMove } from "../core/samples";
 import { DEFAULT_SETTINGS } from "../core/settings";
-import { mapSignal, readPublicSignal, type SignalView } from "../core/signal";
 import type { ExplanationRun, MoveCard } from "../core/types";
 import type { WebBackend } from "../platform/web/backend";
 import type { PublicEnvConfig } from "../platform/web/env";
@@ -18,16 +14,11 @@ import {
   onboarding,
   planCard,
   row,
-  signalCard,
 } from "../wallet/cards";
 import { el, labelledButton } from "../wallet/dom";
 import { icon } from "../wallet/icons";
 import { privacyNodes, termsNodes } from "../wallet/legal";
-import { canReachLocalAtlas } from "../core/assets";
 import { DEFAULT_PRICE_FEED, isLivePriceSource, type PriceFeedOptions } from "../core/price-feed";
-import { mayCallLocalAtlas, probeAtlasLocal } from "../connectors";
-import { loadDigest, todayToronto } from "../core/digest";
-import { digestCard } from "../wallet/digest";
 import { EXPLAIN_DEADLINE_MS, cloudErrorCopy, withDeadline } from "../core/timeouts";
 import { CloudRateLimited } from "../core/rate-limit";
 import { classifyCloudError, report } from "../core/monitor";
@@ -37,8 +28,6 @@ import { mountAssets } from "../wallet/assets-controller";
 import { applyTheme, createWalletShell, isTheme, type ThemeChoice } from "../wallet/shell";
 import { explainPanel, type ExplainOutcome, type ExplainRequest } from "../wallet/explain-panel";
 import type { HistoryEntry as RecentEntry } from "../core/history";
-import { marketDigestCard } from "../wallet/market-digest";
-import { buildMarketDigest } from "../core/market-digest";
 import type { CatalogView } from "../core/assets";
 // The glossary (for the related-term chips under an answer) loads just after start, off the first-load budget;
 // an answer takes seconds, so it is always there by then. Until it is, an answer simply shows no chips.
@@ -56,8 +45,6 @@ import { headlinesCard } from "../wallet/headlines";
 import { WEB_LEARN_KEY, WEB_REVIEW_KEY } from "../core/account-data";
 import { yourDataGroup } from "../wallet/your-data";
 import { readAccountHint, saveAccountHint } from "../core/account-hint";
-/** Session storage key for an ATLAS desk link that arrived before sign-in. */
-const PENDING_HASH_KEY = "atlas-explain:pending-link";
 import { createSignInPage } from "../wallet/signin-page";
 import { tracker } from "../core/analytics";
 import { consentBar, storeConsent, storedConsent } from "../wallet/consent-bar";
@@ -154,7 +141,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       { label: "How ATLAS Explain works", icon: "help", run: () => showOnboarding() },
       { label: "Use it in your AI assistant", icon: "plug", run: () => location.assign("/#setup") },
       { label: "Help and support", icon: "info", run: () => location.assign("/#questions") },
-      { id: "desk", hidden: true, label: "Open the ATLAS desk", icon: "external", run: () => window.open(ATLAS_DESK_URL, "_blank", "noreferrer") },
       { label: "Terms", icon: "doc", run: () => openLegal("terms") },
       { label: "Privacy", icon: "shield", run: () => openLegal("privacy") },
       // Signed in only: the same actions as the initials menu, where people look first.
@@ -173,7 +159,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   // visitor never sees the page flash; the real sign-in state is checked again in startAccount().
   if (needsSignInStep(route, location, { signedIn: readAccountHint() != null, dev: import.meta.env.DEV })) {
     const heading = pathFor(route);
-    keepPendingHash();
     history.replaceState(null, "", `/signin?next=${encodeURIComponent(heading)}`);
     route = { kind: "signin" };
     document.title = titleFor(route);
@@ -182,25 +167,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   // lower-case symbol become the canonical path. The query (sign-in links) and hash are kept.
   if (route.kind !== "not_found" && location.pathname !== pathFor(route)) {
     history.replaceState(null, "", pathFor(route) + location.search + location.hash);
-  }
-
-  /** An ATLAS desk link (#c=…) waits in this tab's session storage while the visitor signs in. */
-  function keepPendingHash(): void {
-    if (!location.hash || location.hash === "#") return;
-    try {
-      sessionStorage.setItem(PENDING_HASH_KEY, location.hash);
-    } catch {
-      // Storage blocked: the card is lost and the desk link can simply be opened again.
-    }
-  }
-  function takePendingHash(): string | null {
-    try {
-      const hash = sessionStorage.getItem(PENDING_HASH_KEY);
-      sessionStorage.removeItem(PENDING_HASH_KEY);
-      return hash;
-    } catch {
-      return null;
-    }
   }
 
   /** A link to a lower section (/app/learn, /app/assets, an asset page) lands on that section. */
@@ -265,7 +231,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       if (found === false && route.kind === "asset" && route.symbol === symbol) {
         shell.openSheet(symbol, [
           el("p", undefined, `${symbol} is not in the asset list right now.`),
-          el("p", "fine", "The list shows what the connected price feed or ATLAS reports. Nothing is made up to fill the gap."),
+          el("p", "fine", "The list shows what the published price data reports. Nothing is made up to fill the gap."),
           routeButton("Back to Assets", { kind: "tab", tab: "assets" }),
         ]);
       }
@@ -312,8 +278,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   watchlistInput.autocomplete = "off";
   watchlistInput.placeholder = "AMD, AVGO";
 
-  const fromDesk = el("p", "from-desk");
-  fromDesk.hidden = true;
   const moveSlot = el("div");
   const sampleNote = el("p", "fine");
   const errors = el("ul", "errors");
@@ -359,43 +323,24 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   const engine = panel.engine;
   // One status line for the whole Explain section (links, sign-in messages, the move card).
   const status = panel.status;
-  const brief = digestCard();
-  // Grounded digest: only the live ATLAS catalog on this computer feeds it, never a preview file.
-  let marketCatalog: CatalogView | null = null;
-  // Connection facts. Declared before the first Today render, which reads them.
-  // ATLAS on this computer is present if either check found it: the connectors probe, or the asset
-  // list loading from ATLAS. Each check keeps its own answer, so one cannot overwrite the other.
-  let atlasProbed = false;
-  let atlasCatalog = false;
-  let atlasLocal = false;
-  let marketCard: HTMLElement = marketDigestCard(buildMarketDigest(marketCatalog, { atlasPresent: atlasLocal }));
+  // Prices come from one place: the file ATLAS Explain's data job captures (the same one the connector reads).
   let livePrices = false;
   let liveStatus: "loading" | "ready" | "error" = "loading";
-  // Public live prices (Kraken or CoinGecko) when ATLAS is away: breadth and moves only, never leans.
   let liveCatalog: CatalogView | null = null;
   let liveCard: HTMLElement = liveSnapshotCard(liveCatalog);
   const refreshToday = (): void => {
-    // The Today screen shows the market digest inline; swap in the fresh card when ATLAS answers.
-    const next = marketDigestCard(buildMarketDigest(marketCatalog, { atlasPresent: atlasLocal }));
-    marketCard.replaceWith(next);
-    marketCard = next;
     const nextLive = liveSnapshotCard(liveCatalog);
     liveCard.replaceWith(nextLive);
     liveCard = nextLive;
   };
-  void (canReachLocalAtlas(location)
-    ? loadDigest()
-    : Promise.resolve({ kind: "not_connected" as const, today: todayToronto(), reason: "Today's ATLAS digest isn't ready yet." })
-  ).then((v) => { brief.show(v); refreshToday(); });
 
-  // Market moves (ATLAS desk links, samples, your own card) keep their full flow, one tap away.
-  // Shown to everyone, closed, under Recent: a sample move (or one sent by the ATLAS desk) with
+  // Market moves (samples, or your own card) keep their full flow, one tap away.
+  // Shown to everyone, closed, under Recent: a sample move with
   // optional private notes, which only ever go to the on-device model. This is where the privacy
   // routing of hybrid inference is visible: a cloud fallback drops the notes and says so.
   const moveBox = disclosure("Explain a market move, with private notes", [
     el("p", "fine", "Pick a sample move and press Explain the move. The answer weighs both sides. Samples use rounded figures from public news reports."),
     el("p", "fine", "Add private notes about your own situation if you like: they are used only when Gemini Nano answers on this device. If the answer has to come from the cloud, they are left out and the answer says so."),
-    fromDesk,
     moveSlot,
     sampleRow,
     sampleNote,
@@ -423,20 +368,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     moveBox,
   );
 
-  /* ---------- Signal tab ---------- */
-
-  const signal = signalCard({
-    onWhy: () => openLegal("signal"),
-    deskHint: "The live light stays grey unless the ATLAS desk sends its public signal.",
-  });
-  /* ---------- Today tab: digest first, then the paper light, then the next step ---------- */
+  /* ---------- Today tab ---------- */
 
   const todayHead = el("div", "panel-title");
   todayHead.append(el("h1", undefined, "Today"), el("span", "fine", new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date())));
-  // Shown only to someone running ATLAS research software; the public never sees these blocks.
-  const atlasBlock = el("div", "stack atlas-only");
-  atlasBlock.hidden = true;
-  atlasBlock.append(marketCard, brief.node, el("h2", "section-label", "Paper signal light"), signal.node);
   // In the news: real headlines (GDELT and official releases), each one tap from a plain explanation.
   let headlines: HTMLElement = headlinesCard({ kind: "loading" }, (title) => sendToExplain(title));
   // What stands out (the connector's notable_today) and the central banks' rates, loaded after start.
@@ -446,7 +381,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     liveCard,
     briefSlot,
     headlines,
-    atlasBlock,
   );
   void Promise.all([import("../core/today-brief"), import("../wallet/today-brief")]).then(([data, ui]) => {
     briefSlot.replaceChildren(...ui.todayBriefCards("loading", (text) => sendToExplain(text)));
@@ -460,7 +394,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       headlines.replaceWith(next);
       headlines = next;
     });
-  // marketCard is replaced in place by refreshToday() whenever the catalog or brief changes.
 
   /* ---------- Assets tab ---------- */
 
@@ -472,22 +405,17 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     },
   });
 
-  // The hosted app cannot read ATLAS on the visitor's computer and never calls localhost.
-  // It shows live crypto prices from the configured public feed instead, with every light grey.
+  // Live crypto prices come from the captured file, with Kraken's ticks over them while the page is open.
   let assets: ReturnType<typeof mountAssets> | null = null;
   async function startAssets(priceFeed: PriceFeedOptions = DEFAULT_PRICE_FEED): Promise<void> {
     assets = mountAssets({
       shell,
-      canReachAtlas: canReachLocalAtlas(location),
       priceFeed,
       watchlist,
       onState: (state) => {
-        // A refresh that is still loading keeps the last answer, as the price and digest lines below do.
-        if (state.kind !== "loading") atlasCatalog = state.kind === "ready" && !isLivePriceSource(state.catalog.source);
-        atlasLocal = atlasProbed || atlasCatalog;
+        // A refresh that is still loading keeps the last answer.
         livePrices = state.kind === "ready" && isLivePriceSource(state.catalog.source);
         liveStatus = state.kind === "loading" ? (liveCatalog ? "ready" : "loading") : state.kind === "ready" ? "ready" : "error";
-        if (state.kind !== "loading") marketCatalog = state.kind === "ready" && !isLivePriceSource(state.catalog.source) ? state.catalog : null;
         if (state.kind !== "loading") liveCatalog = state.kind === "ready" && isLivePriceSource(state.catalog.source) ? state.catalog : null;
         refreshToday();
         updateConnection();
@@ -657,28 +585,11 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   explainButton.addEventListener("click", () => void onExplain());
   cardInput.addEventListener("input", () => renderMove());
   window.addEventListener("hashchange", () => applyHash(location.hash));
-  window.addEventListener("message", onInboundMessage);
-  window.addEventListener("online", () => { void refreshLink(); refreshEngine(); });
+  window.addEventListener("online", () => { updateConnection(); refreshEngine(); });
   window.addEventListener("offline", () => { updateConnection(); refreshEngine(); });
 
-  let currentSignal: SignalView = mapSignal({ connected: false });
-  const hosted = !mayCallLocalAtlas(location);
-
   function updateConnection(): void {
-    // ATLAS-only parts appear only when ATLAS itself is here: running locally, or the desk sent its signal.
-    const atlasPresent = atlasLocal || currentSignal.connected;
-    atlasBlock.hidden = !atlasPresent;
-    shell.setMenuItemHidden("desk", !atlasPresent);
-    shell.setConnection(connectionFor({ online: navigator.onLine, deskConnected: currentSignal.connected, atlasLocal, livePrices, hosted }));
-  }
-
-  async function refreshLink(): Promise<void> {
-    const link = await probeAtlasLocal({ allowed: !hosted });
-    atlasProbed = link.state === "local";
-    atlasLocal = atlasProbed || atlasCatalog;
-    // The digest card's wording depends on whether ATLAS answered, not only on its markets.
-    refreshToday();
-    updateConnection();
+    shell.setConnection(connectionFor({ online: navigator.onLine, livePrices }));
   }
 
   function refreshEngine(): void {
@@ -688,9 +599,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   }
 
   refreshEngine();
-  applySignal(currentSignal);
   updateConnection();
-  void refreshLink();
   loadSample(SAMPLE_MOVES[0]);
 
   void start();
@@ -890,7 +799,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   /** Shows the Sign in page when the visitor isn't signed in, keeping where they were in ?next=. */
   function requireSignIn(): void {
     if (route.kind === "signin" || route.kind === "not_found") return;
-    keepPendingHash();
     const heading = pathFor(route);
     history.replaceState(null, "", `/signin?next=${encodeURIComponent(heading)}`);
     navigate({ kind: "signin" }, { replace: true });
@@ -906,8 +814,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     shell.closeSheet();
     // Any app address, the account sheet (/app/account, /app/admin) included; never back to Sign in itself.
     navigate(target && target.kind !== "not_found" && target.kind !== "signin" ? target : { kind: "tab", tab: "explain" }, { replace: true });
-    const pending = takePendingHash();
-    if (pending) location.hash = pending;
   }
 
   function renderSetup(): void {
@@ -932,7 +838,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       "Connect a Firebase project",
       backendError && backendError !== "missing-config"
         ? backendError
-        : `Explanations need Firebase. Still needed: ${missing.join(", ") || "a working config"}. The glossary and signal tabs work without it.`,
+        : `Explanations need Firebase. Still needed: ${missing.join(", ") || "a working config"}. The glossary works without it.`,
     );
     card.append(disclosure("Setup steps", [steps]));
     panel.disable(card);
@@ -951,7 +857,7 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
         scroller.scrollTop = 0;
         scroller.style.scrollBehavior = previous;
       }
-      // The text composer is the main way in (the move-card button is hidden until a desk link opens it).
+      // The text composer is the main way in.
       panel.input.focus({ preventScroll: true });
     }, {
       onTry: () => {
@@ -964,16 +870,9 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     }));
   }
 
-  function openLegal(page: "terms" | "privacy" | "signal"): void {
+  function openLegal(page: "terms" | "privacy"): void {
     if (page === "terms") shell.openSheet("Terms", termsNodes());
-    else if (page === "privacy") shell.openSheet("Privacy", privacyNodes());
-    else {
-      shell.openSheet("About the signal light", [
-        el("p", undefined, "Green means a paper shadow model leans up and has cleared the evidence gate. Red means it leans down and has cleared it. Grey means not enough evidence, which is the honest default today."),
-        el("p", undefined, "The gate needs at least 200 resolved paper samples and a 55% hit rate. The light describes a model, never a trade."),
-        el("p", "fine", "Paper prediction from ATLAS shadow models - not investment advice."),
-      ]);
-    }
+    else shell.openSheet("Privacy", privacyNodes());
   }
 
   /* ---------- today: live prices ---------- */
@@ -981,11 +880,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
   function liveSnapshotCard(catalog: CatalogView | null): HTMLElement {
     const snap = liveSnapshot(catalog);
     if (!snap) {
-      if (atlasLocal) {
-        const none = el("section");
-        none.hidden = true;
-        return none;
-      }
       if (liveStatus === "error") {
         return messageCard("error", "Live prices couldn't be loaded", "The price feed isn't answering right now. Check your connection and try again.", () => void assets?.refresh());
       }
@@ -1106,7 +1000,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
       a.rel = "noreferrer";
       sampleNote.append(a);
     }
-    fromDesk.hidden = true;
     renderErrors([]);
     renderMove();
   }
@@ -1136,56 +1029,10 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
     moveSlot.replaceChildren(node);
   }
 
-  function onInboundMessage(event: MessageEvent): void {
-    if (!event.data || typeof event.data !== "object" || (event.data as { type?: string }).type !== EXPLAIN_LOAD_MESSAGE) return;
-    const parsed = readInboundMessage(event.data, event.origin);
-    const reply = inboundReply(parsed);
-    if (event.source && "postMessage" in event.source) event.source.postMessage(reply, { targetOrigin: event.origin });
-    if (!parsed.ok) {
-      renderErrors(parsed.errors);
-      status.textContent = "The inbound card was not loaded.";
-      return;
-    }
-    const light = readPublicSignal((event.data as { payload?: unknown }).payload);
-    if (light) applySignal(mapSignal({ connected: true, signal: light }));
-    applyInbound(parsed.value, "message");
-  }
-
+  /** Old links to the legal pages (#/terms, #/privacy) still open them. */
   function applyHash(hash: string): void {
-    if (hash === "#/terms") return openLegal("terms");
-    if (hash === "#/privacy") return openLegal("privacy");
-    const parsed = parseContextHash(hash);
-    if (!parsed.ok) {
-      renderErrors(parsed.errors);
-      status.textContent = "That link could not be loaded.";
-      return;
-    }
-    if (!parsed.value.context && !parsed.value.conceptId) return;
-    applyInbound(parsed.value, "link");
-  }
-
-  function applyInbound(parsed: ParsedContextLink, via: "link" | "message"): void {
-    notesInput.value = "";
-    watchlistInput.value = "";
-    shell.select("explain");
-    moveBox.hidden = false;
-    moveBox.open = true;
-    if (parsed.context) {
-      cardInput.value = JSON.stringify(publicMoveCard(parsed.context.card), editorKeys, 2);
-      for (const button of sampleButtons) button.setAttribute("aria-pressed", "false");
-      sampleNote.textContent = parsed.context.card.sourceNote ?? "";
-      fromDesk.replaceChildren(icon("signal", 14), el("span", undefined, via === "link" ? "Opened from the ATLAS desk" : "Sent by an allowed ATLAS page"));
-      fromDesk.hidden = false;
-      renderMove();
-    }
-    if (parsed.context?.question) questionInput.value = parsed.context.question;
-    else if (parsed.conceptId) questionInput.value = conceptQuestion(parsed.conceptId);
-    renderErrors(parsed.warnings.map((message) => ({ path: "context", message })));
-    const concept = parsed.conceptId ? getConcept(parsed.conceptId) : undefined;
-    const stripped = parsed.warnings.length > 0 ? " Private or account fields were removed." : "";
-    status.textContent = parsed.context
-      ? `Public move card loaded.${stripped} Press Explain the move when you want a reading. Nothing was sent.`
-      : `Concept loaded: ${concept?.title ?? parsed.conceptId}. Nothing was sent.`;
+    if (hash === "#/terms") openLegal("terms");
+    else if (hash === "#/privacy") openLegal("privacy");
   }
 
   /* ---------- explain ---------- */
@@ -1316,13 +1163,6 @@ export function mountWebWallet(host: HTMLElement, options: WebWalletOptions): vo
 
   /* ---------- helpers ---------- */
 
-  function applySignal(view: SignalView): void {
-    currentSignal = view;
-    signal.update(view);
-    shell.setSignal(view);
-    updateConnection();
-  }
-
   function renderErrors(items: { path: string; message: string }[]): void {
     errors.replaceChildren(...items.map((item) => el("li", undefined, `${item.path}: ${item.message}`)));
     if (items.length > 0) {
@@ -1403,12 +1243,6 @@ function fieldLabel(id: string, text: string): HTMLLabelElement {
   const label = el("label", "field-label", text);
   label.htmlFor = id;
   return label;
-}
-
-function editorKeys(key: string, value: unknown): unknown {
-  if (key === "notes" || key === "watchlist") return undefined;
-  if (Array.isArray(value) && value.length === 0) return undefined;
-  return value;
 }
 
 /** What happened to private notes on a move answer. Where it ran is said by the shared panel. */

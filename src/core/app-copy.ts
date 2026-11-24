@@ -9,18 +9,12 @@ import {
 
 /** Words and states for the web app. Education only: never trade instructions. */
 
-export type ConnectionState = "desk" | "local" | "live" | "hosted" | "none" | "offline";
+export type ConnectionState = "live" | "hosted" | "offline";
 
-/**
- * Which status the header pill shows. One rule:
- * offline beats everything; the ATLAS desk beats the rest; then ATLAS on this computer,
- * then live public prices. `hosted` is the public website, which never looks for ATLAS.
- */
-export function connectionFor(input: { online: boolean; deskConnected: boolean; atlasLocal: boolean; livePrices: boolean; hosted?: boolean }): ConnectionState {
+/** Which status the header pill shows: offline beats everything; then live prices once they arrive. */
+export function connectionFor(input: { online: boolean; livePrices: boolean }): ConnectionState {
   if (!input.online) return "offline";
-  if (input.deskConnected) return "desk";
-  if (input.hosted) return input.livePrices ? "live" : "hosted";
-  return input.atlasLocal ? "local" : input.livePrices ? "live" : "none";
+  return input.livePrices ? "live" : "hosted";
 }
 
 export interface SignalCopy {
@@ -29,8 +23,6 @@ export interface SignalCopy {
   gate: string;
   icon: "up" | "down" | "flat" | "plug";
 }
-
-export const ATLAS_DESK_URL = "http://localhost:3000/markets";
 
 export function signalCopy(view: SignalView): SignalCopy {
   if (!view.connected || view.reason === CONNECT_ATLAS) {
@@ -65,19 +57,10 @@ export function signalCopy(view: SignalView): SignalCopy {
   };
 }
 
-/**
- * Header chip. Public visitors only ever see "Live prices" or "Offline"; the ATLAS states
- * appear only for someone running ATLAS. "hosted" and "none" have no chip at all.
- */
+/** Header chip: "Live prices" or "Offline"; "hosted" (prices not loaded yet) has no chip. */
 export function connectionCopy(state: ConnectionState): { label: string; title: string } {
   if (state === "offline") {
     return { label: "Offline", title: "You're offline. Answers on this device still work if your browser supports them." };
-  }
-  if (state === "local") {
-    return { label: "ATLAS connected", title: "ATLAS research software is running on this computer." };
-  }
-  if (state === "desk") {
-    return { label: "ATLAS desk", title: "This tab is the ATLAS Markets desk. Only its public paper signal is read." };
   }
   if (state === "live") {
     return { label: "Live prices", title: "Crypto prices are live. The source is named next to the prices." };

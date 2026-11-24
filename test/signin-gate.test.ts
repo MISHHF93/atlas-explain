@@ -30,12 +30,10 @@ describe("signing in is required for the web app", () => {
     expect(needsSignInStep(parseRoute("/app"), loc("?tab=explain"), { signedIn: false, dev: true })).toBe(false);
   });
 
-  it("checks the real sign-in too, not only the browser's hint, and keeps a desk card through sign-in", () => {
+  it("checks the real sign-in too, not only the browser's hint", () => {
     const app = readFileSync("src/web/app.ts", "utf8");
     expect(app).toContain("needsSignInStep(route, location, { signedIn: readAccountHint() != null, dev: import.meta.env.DEV })");
     expect(app).toContain("if (!view?.signedIn && !import.meta.env.DEV) requireSignIn();");
-    expect(app).toContain("keepPendingHash();");
-    expect(app).toContain("const pending = takePendingHash();");
   });
 
   it("no longer offers \"Continue without an account\" anywhere", () => {

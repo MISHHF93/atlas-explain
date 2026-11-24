@@ -38,10 +38,9 @@ describe("links made for the old single-page app", () => {
     expect(at("")).toBeNull();
     expect(legacyRedirect({ pathname: "/privacy", search: "?tab=x", hash: "" })).toBeNull();
   });
-  it("forwards ATLAS desk move links to Explain with the hash intact", () => {
-    expect(at("", "#c=abc")).toBe("/app#c=abc");
-    expect(at("", "#concept=shadow")).toBe("/app#concept=shadow");
-    expect(at("", "#card=%7B%7D")).toBe("/app#card=%7B%7D");
+  it("no longer treats the old ATLAS desk links (#c=, #card=, #concept=) as app links", () => {
+    expect(at("", "#c=abc")).toBeNull();
+    expect(at("", "#concept=shadow")).toBeNull();
   });
   it("forwards extension and email sign-in links to /signin with their codes", () => {
     expect(at("?account=open")).toBe("/signin");

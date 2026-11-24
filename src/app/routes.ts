@@ -118,8 +118,7 @@ const LEGACY_TABS: Record<string, string> = {
 };
 
 /**
- * Links made before the site and app were split still work: ATLAS desk links (#c=...),
- * old account links (?account=open), email sign-in links (?signin=email&oobCode=...)
+ * Links made before the site and app were split still work: old account links (?account=open), email sign-in links (?signin=email&oobCode=...)
  * and the preview flags (?tab=, ?demo=, ...). Returns where "/" should send the visitor, or null
  * to stay on the landing page.
  */
@@ -127,13 +126,10 @@ export function legacyRedirect(loc: { pathname: string; search: string; hash: st
   if (normalisePath(loc.pathname) !== "/") return null;
   const params = new URLSearchParams(loc.search);
   const hash = loc.hash ?? "";
-  // Desk move links: #c=<base64url>, #card=<json>, #concept=<id>, in any order.
-  const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
-  const hasContext = ["c", "card", "concept"].some((key) => hashParams.has(key));
   const legacyHash = hash === "#/terms" ? "/terms" : hash === "#/privacy" ? "/privacy" : null;
   if (legacyHash) return legacyHash;
   const hasLegacyQuery = LEGACY_KEYS.some((key) => params.has(key));
-  if (!hasContext && !hasLegacyQuery) return null;
+  if (!hasLegacyQuery) return null;
   if (params.has("signin") || params.has("oobCode") || params.get("account") === "open") {
     if (params.get("account") === "open") params.delete("account");
     const q = params.toString();

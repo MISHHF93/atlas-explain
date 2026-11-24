@@ -13,9 +13,8 @@ describe("public surface", () => {
     expect(web).not.toMatch(/const DEMO_RUN\b/);
   });
 
-  it("hides ATLAS-only parts until ATLAS itself is present", () => {
-    expect(web).toMatch(/atlasBlock\.hidden = !atlasPresent/);
-    expect(web).toMatch(/setMenuItemHidden\("desk", !atlasPresent\)/);
+  it("has no parts that only another app on this computer could fill", () => {
+    for (const gone of ["atlasBlock", "\"desk\"", "Paper signal light", "ATLAS_DESK_URL", "onInboundMessage"]) expect(web).not.toContain(gone);
   });
 
   it("shows no prompt preview, JSON editor or config names in the web app", () => {

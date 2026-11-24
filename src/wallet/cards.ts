@@ -1,7 +1,6 @@
 import type { PricingView } from "../core/billing";
 import { ANSWER_DISCLAIMER } from "../core/explain-prompt";
 import {
-  ATLAS_DESK_URL,
   EMPTY_BODY,
   EMPTY_TITLE,
   OFFLINE_ANSWER,
@@ -9,119 +8,10 @@ import {
   STEP_DEVICE,
   STEP_READ,
   shortSelection,
-  signalCopy,
 } from "../core/app-copy";
-import type { SignalView } from "../core/signal";
-import { el, externalLink, iconButton, labelledButton, replay } from "./dom";
+import { el, iconButton, labelledButton, replay } from "./dom";
 import { icon, type IconName } from "./icons";
 import { isTheme, type ThemeChoice } from "./shell";
-
-/* ---------- signal card ---------- */
-
-export interface SignalCardHandle {
-  node: HTMLElement;
-  update(view: SignalView): void;
-  setWhyOpen(open: boolean): void;
-}
-
-export function signalCard(options: {
-  compact?: boolean;
-  onWhy?: () => void;
-  onRefresh?: () => Promise<void>;
-  deskHint?: string;
-}): SignalCardHandle {
-  const card = el("section", "card signal");
-  card.dataset.state = "grey";
-  if (options.compact) card.classList.add("compact");
-  const headlineId = `signal-headline-${Math.random().toString(36).slice(2, 7)}`;
-  card.setAttribute("aria-labelledby", headlineId);
-
-  const orb = el("div", "orb");
-  orb.setAttribute("aria-hidden", "true");
-  const core = el("span", "orb-core");
-  orb.append(el("span", "orb-ring"), el("span", "orb-ring orb-ring-2"), core);
-
-  const text = el("div", "signal-text");
-  const headline = el("h2", "headline", "Connect ATLAS");
-  headline.id = headlineId;
-  text.append(el("p", "eyebrow", "Paper signal light"), headline);
-
-  const top = el("div", "signal-top");
-  top.append(orb, text);
-  if (options.onRefresh) {
-    const refresh = iconButton("refresh", "Read the signal again", "icon-btn ghost refresh");
-    refresh.addEventListener("click", () => {
-      refresh.classList.add("spin");
-      void options.onRefresh?.().finally(() => window.setTimeout(() => refresh.classList.remove("spin"), 450));
-    });
-    top.append(refresh);
-  }
-
-  const chips = el("div", "chips");
-  const hit = el("span", "chip");
-  const sample = el("span", "chip");
-  const gate = el("span", "chip chip-gate");
-  chips.append(hit, sample, gate);
-
-  const paper = el("p", "paper");
-
-  const legend = el("ul", "legend");
-  legend.setAttribute("aria-label", "What the colours mean");
-  for (const [state, label] of [["green", "leans up"], ["red", "leans down"], ["grey", "not enough evidence"]] as const) {
-    const item = el("li");
-    item.dataset.state = state;
-    item.append(el("span", "legend-dot"), el("span", undefined, label));
-    legend.append(item);
-  }
-
-  const why = el("details", "why");
-  const summary = el("summary");
-  summary.append(el("span", undefined, "Why this colour?"), icon("chevron", 14));
-  const detail = el("p", "why-body");
-  const desk = el("p", "why-body desk-says");
-  desk.hidden = true;
-  const actions = el("div", "why-actions");
-  if (options.onWhy) {
-    const ask = labelledButton("sparkle", "Explain it in depth", "link-btn");
-    ask.addEventListener("click", () => options.onWhy?.());
-    actions.append(ask);
-  }
-  const deskLink = externalLink("Open the ATLAS desk", ATLAS_DESK_URL);
-  actions.append(deskLink);
-  why.append(summary, detail, desk, actions);
-
-  const hint = options.deskHint ? el("p", "fine hint-line", options.deskHint) : null;
-
-  card.append(top, chips, paper, legend, why);
-  if (hint) card.append(hint);
-
-  let colour = "";
-  function update(view: SignalView): void {
-    const copy = signalCopy(view);
-    card.dataset.state = view.colour;
-    core.replaceChildren(icon(copy.icon, 22));
-    headline.textContent = copy.headline;
-    hit.textContent = view.hitRateLabel;
-    sample.textContent = view.sampleLabel;
-    gate.textContent = copy.gate;
-    paper.textContent = view.paperLabel;
-    detail.textContent = copy.detail;
-    desk.hidden = !view.deskReason;
-    desk.textContent = view.deskReason ? `ATLAS desk: ${view.deskReason}` : "";
-    deskLink.hidden = view.connected;
-    if (hint) hint.hidden = view.connected;
-    if (colour && colour !== view.colour) replay(orb, "pop");
-    colour = view.colour;
-  }
-
-  return {
-    node: card,
-    update,
-    setWhyOpen: (open) => {
-      why.open = open;
-    },
-  };
-}
 
 /* ---------- result states ---------- */
 

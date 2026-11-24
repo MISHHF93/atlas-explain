@@ -11,7 +11,7 @@ describe("one sparkline for every chart", () => {
     expect(svg).toContain('class="spark-end"');
     expect(svg).not.toMatch(/NaN|undefined/);
     expect(sparkSvg([{ t: "2026-11-15T00:00:00Z", c: 10 }])).toBe("");
-    for (const f of ["src/wallet/assets.ts", "src/wallet/catalog-view.ts"]) {
+    for (const f of ["src/wallet/catalog-view.ts"]) {
       expect(readFileSync(f, "utf8"), f).toContain("sparkSvg(");
       expect(readFileSync(f, "utf8"), f).not.toContain("<svg viewBox");
     }
