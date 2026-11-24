@@ -5,11 +5,10 @@
  * markers; the build (vite.config.ts) and the tests (applySiteFrame) put this markup in, so the
  * pages can never drift apart again.
  *
- * One way in: the website's only button into the product is "Get started" (/start). It passes the
- * Sign in page (signing in is required for the web app), then Get started offers the two ways in:
- * the AI-assistant connector (/#setup, public setup steps, no account) and the web app (/app).
- * Signed in on this browser, the button reads "Open ATLAS Explain" and your initials link to your
- * account (src/site/site.ts). There is no separate "Sign in" or "The app" link: they led to the
+ * Connector first (24 Nov 2026): the header's button is "Add to your AI assistant" (/#setup, public setup
+ * steps, no account). The web app (/app, sign-in first) is in the footer and the home page's hero.
+ * Signed in on this browser, the hero's app link reads "Open ATLAS Explain" and your initials link to
+ * your account (src/site/site.ts). There is no separate "Sign in" or "The app" link: they led to the
  * same place.
  */
 import { DATA_SITE_URL, EDUCATION_LINE, MCP_URL } from "../core/links.ts";
@@ -26,7 +25,7 @@ const NAV: readonly { href: string; label: string; page?: SitePage }[] = [
 
 /** Every public destination, once. */
 const FOOTER_LINKS: readonly { href: string; label: string }[] = [
-  { href: "/app", label: "Get started" },
+  { href: "/app", label: "Try it in your browser" },
   { href: "/#setup", label: "Add to your AI assistant" },
   { href: "/#questions", label: "Questions and support" },
   { href: "/partners", label: "For businesses and developers" },
@@ -34,12 +33,7 @@ const FOOTER_LINKS: readonly { href: string; label: string }[] = [
   { href: "/terms", label: "Terms" },
 ];
 
-/** The one way into the product: Get started (Sign in, then the connector or the web app). */
-export function startCta(className: string): string {
-  return `<a class="${className}" href="/app" data-start-cta>Get started</a>`;
-}
-
-/** Straight to the connector's setup steps, for people who already know they want it. */
+/** The main way in, on every page: the connector's setup steps. The web app is in the footer and the home page's hero. */
 export function connectCta(className: string): string {
   return `<a class="${className}" href="/#setup">Add to your AI assistant</a>`;
 }
@@ -53,7 +47,7 @@ export function siteHeader(page: SitePage): string {
     `      <nav class="site-nav" aria-label="Site">${nav}</nav>`,
     // Signed in on this browser: site.ts shows your initials here, linking to your account.
     `      <a class="site-signin" href="/app/account" data-account-link hidden></a>`,
-    `      ${startCta("btn btn-primary btn-sm")}`,
+    `      ${connectCta("btn btn-primary btn-sm")}`,
     `    </header>`,
   ].join("\n");
 }

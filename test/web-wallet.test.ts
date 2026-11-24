@@ -55,7 +55,7 @@ describe("public site", () => {
     expect(hero).toContain('<a class="btn" href="/app" data-start-cta>Try it in your browser</a>');
     expect(hero).toContain("Your money and the economy, <span>explained with sources.</span>");
     expect(hero).toContain('src="/shots/connector-inflation.png"');
-    expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(page)?.[0]).toContain('href="/app" data-start-cta>Get started</a>');
+    expect(/<header class="site-head">[\s\S]*?<\/header>/.exec(page)?.[0]).toContain('<a class="btn btn-primary btn-sm" href="/#setup">Add to your AI assistant</a>');
     expect(page).toContain('id="browser"');
     expect(page).toMatch(/Gemini Nano, on this device/);
     expect(page).toMatch(/Gemini in the cloud, if needed/);
