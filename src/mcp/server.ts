@@ -55,7 +55,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.28.2";
+export const SERVER_VERSION = "1.28.3";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -185,7 +185,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "crypto_prices",
     title: "Crypto prices",
-    description: "Current prices and today's change for ten major coins, biggest moves first, with when they were collected. Use it for how crypto is doing today, or one coin's price. Coins: Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink and Avalanche, each with its last 24 hours of hourly closes. Refreshed about every 10 minutes by ATLAS Explain's data job from Kraken's public market data (CoinGecko as backup) and served from ATLAS Explain's own data site.",
+    description: "Current prices and the change over the last 24 hours for ten major coins, biggest moves first, with when they were collected. Use it for how crypto is doing today, or one coin's price. Coins: Bitcoin, Ethereum, Solana, XRP, Cardano, Dogecoin, Litecoin, Polkadot, Chainlink and Avalanche, each with its last 24 hours of hourly closes. Refreshed about every 10 minutes by ATLAS Explain's data job from Kraken's public market data (CoinGecko as backup) and served from ATLAS Explain's own data site.",
     inputSchema: { type: "object", properties: { coin: str("Optional coin name or symbol, for example 'BTC' or 'Ethereum'.") }, additionalProperties: false },
     annotations: annotations("Crypto prices", true),
     icons: ICONS,
@@ -272,7 +272,7 @@ export const TOOLS: readonly Tool[] = [
       liquidity: { type: ["object", "null"] },
       backdrop: { type: "array", items: { type: "object" } },
       nextDecision: { type: ["object", "null"] },
-      news: { type: "array", items: { type: "object" } },
+      news: { type: "array", items: { type: "object" } }, newsNamesIt: { type: "boolean" },
       terms: { type: "array", items: { type: "object" } },
       weigh: { type: "array", items: { type: "string" } },
       limits: { type: "array", items: { type: "string" } },
@@ -934,12 +934,33 @@ async function getJson(url: string, fetcher: Fetcher): Promise<unknown | null> {
 
 const termRecord = (t: (typeof ALL_TERMS)[number]) => ({ id: t.id, title: t.title, summary: t.summary, group: t.group });
 
+/** "ETF vs mutual fund", "APR or APY": the terms being compared, each looked up on its own. */
+function comparedTerms(query: string): (typeof ALL_TERMS)[number][] {
+  const parts = query.split(/\s+(?:vs\.?|versus|or|and|compared with|compared to)\s+|\s*\/\s*/i).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return [];
+  const found = parts.map((p) => searchTerms(p)[0]).filter((t): t is (typeof ALL_TERMS)[number] => !!t);
+  return found.length === parts.length ? [...new Set(found)] : [];
+}
+
+/** Glossary terms sharing the most words with the query, for "did you mean". */
+function closestTerms(query: string): string[] {
+  const words = query.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
+  if (!words.length) return [];
+  return ALL_TERMS.map((t) => ({ t, n: words.filter((w) => `${t.title} ${t.summary}`.toLowerCase().includes(w)).length }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 3)
+    .map((x) => x.t.title);
+}
+
 export function explainTerm(term: string): ToolResult {
   const query = term.trim();
   if (!query) return text("Give a term to look up, for example 'stop-limit order'.", true);
-  const hits = searchTerms(query).slice(0, 3);
+  let hits = searchTerms(query).slice(0, 3);
+  if (!hits.length) hits = comparedTerms(query);
   if (!hits.length) {
-    return data(`"${query}" is not in the ATLAS Explain glossary. The ATLAS Explain web app can explain any term, sentence or headline in plain language, with both sides: ${APP_URL}`, { query, found: false, terms: [], learnUrl: `${APP_URL}/learn` });
+    const closest = closestTerms(query);
+    return data(`"${query}" is not in the ATLAS Explain glossary.${closest.length ? ` Closest terms in it: ${closest.join(", ")}.` : ""} Explain it in plain language from general knowledge, and say it isn't from the glossary. The web app can also explain any term or sentence: ${APP_URL}`, { query, found: false, terms: [], closest, learnUrl: `${APP_URL}/learn` });
   }
   return data(hits.map((t) => `${t.title}\n${t.summary}`).join("\n\n") + `\n\nSource: ATLAS Explain glossary. More: ${APP_URL}/learn`, { query, found: true, terms: hits.map(termRecord), learnUrl: `${APP_URL}/learn` });
 }
@@ -1523,6 +1544,8 @@ export async function evidenceBrief(key: string, fetcher: Fetcher, now = Date.no
     facts, recentMove, liquidity, backdrop,
     nextDecision: next ? { institution: next.institution, date: next.date, sourceUrl: next.sourceUrl } : null,
     news: news.map((n) => ({ title: n.title, publisher: n.publisher, url: n.url, seenAt: n.seenAt })),
+    // false: no headline names the asset, so these are the latest official releases in general.
+    newsNamesIt: about.length > 0,
     terms, weigh, limits,
   });
 }
@@ -1541,6 +1564,16 @@ const NOTABLE_DAYS_AHEAD = 7;
 /** A central bank's move counts as notable for this many days after it takes effect. */
 export const POLICY_MOVE_DAYS = 14;
 const RELEASE_HOURS = 24;
+/** A monthly figure counts as notable only for this many days after ATLAS Explain first saw it published. */
+export const NEW_FIGURE_DAYS = 7;
+/** Glossary terms that explain each kind of economic figure. */
+function figureTerms(id: string): { id: string; title: string }[] {
+  if (/cpi|hicp/.test(id)) return termRefs("inflation", "cpi");
+  if (/unemployment/.test(id)) return termRefs("unemployment_rate");
+  if (/mortgage|prime|gic|cd_|savings|deposits/.test(id)) return termRefs("apr_apy", "basis_point");
+  if (/debt/.test(id)) return [];
+  return termRefs("policy_rate", "basis_point");
+}
 
 type Observation = { kind: string; title: string; detail: string; asOf: string | null; source: string; sourceUrl: string | null; rule: string; terms: { id: string; title: string }[] };
 const termRefs = (...ids: string[]) => ids.map((id) => ALL_TERMS.find((t) => t.id === id)).filter((t): t is (typeof ALL_TERMS)[number] => !!t).map((t) => ({ id: t.id, title: t.title }));
@@ -1599,8 +1632,8 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
         source: credit,
         sourceUrl: null,
         rule: `Picked because the 24-hour move is at least ${UNUSUAL_MOVE_MULTIPLE}× the coin's own median daily move over the past month, and at least ${UNUSUAL_MOVE_MIN_PCT}%.`,
-        // A fall teaches drawdown; a rise doesn't.
-        terms: st.lastPct < 0 ? termRefs("drawdown", "volume", "implied_volatility") : termRefs("volume", "implied_volatility"),
+        // A fall teaches drawdown; a rise doesn't. (Implied volatility is an options term, so it isn't offered here.)
+        terms: st.lastPct < 0 ? termRefs("drawdown", "volume", "liquidity") : termRefs("volume", "liquidity"),
       });
     }
     if (moves.length && !unusual.length) quiet.push(`None of the ${moves.length} coins moved more than ${UNUSUAL_MOVE_MULTIPLE}× its typical daily move in the last 24 hours.`);
@@ -1658,7 +1691,16 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
       const day = movedOn(i);
       return day != null && now - Date.parse(`${day.slice(0, 10)}T12:00:00Z`) <= POLICY_MOVE_DAYS * 86_400_000;
     };
-    const changed = economy.indicators.filter((i) => i.unit === "%" && i.change != null && Math.abs(i.change) >= ECONOMIC_CHANGE_MIN_PT && recentEnough(i));
+    // A monthly figure is news only while it's new: the September figure stays the latest until October's
+    // arrives, so without this it showed up as "notable today" for weeks.
+    const monthly = (i: Indicator) => /^\d{4}-\d{2}$/.test(i.period);
+    const newlyPublished = (i: Indicator) => {
+      if (!monthly(i)) return true;
+      const seen = economy.firstSeen?.[i.id]?.[i.period];
+      return seen != null && now - Date.parse(seen) <= NEW_FIGURE_DAYS * 86_400_000;
+    };
+    const big = economy.indicators.filter((i) => i.unit === "%" && i.change != null && Math.abs(i.change) >= ECONOMIC_CHANGE_MIN_PT && recentEnough(i));
+    const changed = big.filter(newlyPublished);
     for (const i of changed) {
       observations.push({
         kind: "economic_change",
@@ -1667,11 +1709,12 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
         asOf: economy.generatedAt,
         source: i.source,
         sourceUrl: i.sourceUrl,
-        rule: i.changeWindow === "since the last change" ? `Picked because the rate moved by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points within the last ${POLICY_MOVE_DAYS} days.` : `Picked because it changed by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points since the previous figure.`,
-        terms: termRefs("basis_point", "rates"),
+        rule: i.changeWindow === "since the last change" ? `Picked because the rate moved by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points within the last ${POLICY_MOVE_DAYS} days.` : monthly(i) ? `Picked because it changed by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points since the previous figure and was first published in the last ${NEW_FIGURE_DAYS} days.` : `Picked because it changed by at least ${ECONOMIC_CHANGE_MIN_PT} percentage points since the previous figure.`,
+        terms: figureTerms(i.id),
       });
     }
-    if (economy.indicators.length && !changed.length) quiet.push(`No inflation, jobs or rate figure changed by ${ECONOMIC_CHANGE_MIN_PT} percentage points or more in its latest release.`);
+    const older = big.length - changed.length;
+    if (economy.indicators.length && !changed.length) quiet.push(`No inflation, jobs or rate figure published in the last ${NEW_FIGURE_DAYS} days changed by ${ECONOMIC_CHANGE_MIN_PT} percentage points or more${older ? ` (${older} older ${older === 1 ? "figure" : "figures"} did, and ${older === 1 ? "is" : "are"} in economy_snapshot)` : ""}.`);
   } else unavailable.push("Economic data couldn't be loaded, so rate decisions and economic figures weren't checked.");
 
   // 5. Official releases from the last day.

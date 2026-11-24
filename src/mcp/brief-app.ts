@@ -49,7 +49,7 @@ export const BRIEF_APP_HTML = appPage({
     const parts = [grid];
     parts.push(...list("The backdrop", (d.backdrop || []).map((b) => b.name + ": " + b.value + " for " + b.period + " (" + b.source + ")")));
     if (d.nextDecision) parts.push(...list("Next rate decision", [d.nextDecision.institution + ", " + day(d.nextDecision.date)]));
-    parts.push(...list("Recent official releases", (d.news || []).slice(0, 3).map((n) => n.title + " (" + n.publisher + ")")));
+    parts.push(...list(d.newsNamesIt === false ? "Latest official releases (none name it)" : "In the news", (d.news || []).slice(0, 3).map((n) => n.title + " (" + n.publisher + ")")));
     parts.push(...list("What people weigh", d.weigh || []));
     if ((d.terms || []).length) {
       parts.push(el("p", "label", "Terms to know"));

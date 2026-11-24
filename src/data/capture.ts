@@ -262,7 +262,7 @@ export async function captureCrypto(env: CaptureEnv, prev: CryptoFile | null, op
   // The 10-minute cron brings the history up to date.
   if (options.history === false && prev) {
     env.log(`crypto: ${prices.coins.length} prices (${prices.source}); history kept from ${prev.history.asOf}`);
-    return { schema: CRYPTO_SCHEMA, generatedAt: at, prices, history: prev.history, ...(prev.books ? { books: prev.books } : {}) };
+    return { schema: CRYPTO_SCHEMA, generatedAt: at, prices: rolling24h(prices, prev.history.series, env.now), history: prev.history, ...(prev.books ? { books: prev.books } : {}) };
   }
 
   const series: Record<string, [number, number][]> = {};
@@ -306,7 +306,27 @@ export async function captureCrypto(env: CaptureEnv, prev: CryptoFile | null, op
   const bookCount = Object.keys(books).length;
   env.log(`crypto: order books for ${bookCount} coins`);
   const keptBooks = bookCount ? { books: { source: "kraken" as const, asOf: at, books } } : prev?.books ? { books: prev.books } : {};
-  return { schema: CRYPTO_SCHEMA, generatedAt: at, prices, history: { source, asOf: at, interval: "1h", series }, ...keptBooks };
+  return { schema: CRYPTO_SCHEMA, generatedAt: at, prices: rolling24h(prices, series, env.now), history: { source, asOf: at, interval: "1h", series }, ...keptBooks };
+}
+
+/**
+ * Every coin's change over the last 24 hours, from the hourly close nearest to 24 hours ago (within 90
+ * minutes). Kraken's ticker measures from 00:00 UTC, which resets daily: just after midnight UTC every coin
+ * looked flat while the same screen's "what stands out" spoke of 24-hour moves. A coin with no close near
+ * 24 hours ago keeps the change and window it came with, which say what they measure.
+ */
+export function rolling24h(prices: CryptoFile["prices"], series: Record<string, [number, number][]>, nowMs: number): CryptoFile["prices"] {
+  const target = nowMs / 1000 - 86_400;
+  return {
+    ...prices,
+    coins: prices.coins.map((c) => {
+      const closes = series[c.symbol] ?? [];
+      let best: [number, number] | null = null;
+      for (const p of closes) if (!best || Math.abs(p[0] - target) < Math.abs(best[0] - target)) best = p;
+      if (!best || Math.abs(best[0] - target) > 90 * 60 || !(best[1] > 0)) return c;
+      return { ...c, changePct: Number((((c.priceUsd - best[1]) / best[1]) * 100).toFixed(2)), changeWindow: "over 24 hours" };
+    }),
+  };
 }
 
 /* ---------- the economy (data/v1/economy.json) ---------- */

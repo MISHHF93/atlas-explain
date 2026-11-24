@@ -14,6 +14,13 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-23: numbers that agree and say how old they are (1.28.3)
+
+- **Crypto changes are over the last 24 hours.** `crypto_prices`, the board and the web app measured from 00:00 UTC, which resets daily (just after midnight every coin looked flat while `notable_today` spoke of 24-hour moves). Each coin's `changePct` is now measured from the hourly close nearest 24 hours ago, with `changeWindow` "over 24 hours"; a coin without such a close keeps the window it came with.
+- **`notable_today` shows only new monthly figures.** A monthly figure counts as notable for 7 days after ATLAS Explain first saw it published (`firstSeen`), so last month's inflation no longer shows up every day; `quiet` says how many older figures are left out. Each figure links to terms that explain it (inflation and CPI, unemployment rate, policy rate, APR and APY), and crypto moves no longer offer implied volatility, an options term.
+- **`evidence_brief` adds `newsNamesIt`**: false when no headline names the asset and the list is the latest official releases in general.
+- **`explain_term`** answers comparisons ("ETF vs mutual fund") with both terms, and a miss returns `closest`, the glossary terms nearest the question.
+
 ## 2026-11-23: shorter lists inside the conversation (1.28.2)
 
 - Claude's MCP Apps guidelines keep an inline card to about 4–5 items. Inside the conversation, the crypto board shows the five biggest coins, the countries view the top five, official figures up to five cards (three under a yield curve) and Treasury auctions the next two and the three latest results, each with "Show all", which opens the side panel with everything. Where an assistant has no side panel, everything shows as before.
