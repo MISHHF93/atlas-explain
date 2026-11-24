@@ -55,7 +55,7 @@ import { decisionTime, readEconomyFile, upcoming, type Auction, type CalendarEve
 import { ALL_TERMS, searchTerms, TERM_GROUP_LABEL } from "../core/terms";
 
 export const SERVER_NAME = "atlas-explain";
-export const SERVER_VERSION = "1.29.0";
+export const SERVER_VERSION = "1.30.0";
 /**
  * Dual-era (MCP 2026-07-28, "Versioning and Compatibility"): modern clients put their protocol
  * version and capabilities in every request's _meta and need no handshake; legacy clients open with
@@ -1059,7 +1059,7 @@ export async function officialFigures(query: string | undefined, fetcher: Fetche
   return data(body, { figures: matches.map(figureRecord) });
 }
 
-const coinFor = (key: string) => {
+export const coinFor = (key: string) => {
   const k = key.trim().toLowerCase();
   return CRYPTO_COINS.find((c) => c.symbol.toLowerCase() === k || c.name.toLowerCase() === k || c.coingeckoId === k);
 };
@@ -1587,6 +1587,8 @@ function figureTerms(id: string): { id: string; title: string }[] {
   return termRefs("policy_rate", "basis_point");
 }
 
+/** What notable_today says when the crypto file isn't there (partner answers replace it: src/mcp/partner.ts). */
+export const NOTABLE_NO_CRYPTO = "Crypto prices couldn't be loaded, so crypto moves weren't checked.";
 type Observation = { kind: string; title: string; detail: string; asOf: string | null; source: string; sourceUrl: string | null; rule: string; terms: { id: string; title: string }[] };
 const termRefs = (...ids: string[]) => ids.map((id) => ALL_TERMS.find((t) => t.id === id)).filter((t): t is (typeof ALL_TERMS)[number] => !!t).map((t) => ({ id: t.id, title: t.title }));
 const signedPt = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(2)}`;
@@ -1649,7 +1651,7 @@ export async function notableToday(fetcher: Fetcher, now = Date.now()): Promise<
       });
     }
     if (moves.length && !unusual.length) quiet.push(`None of the ${moves.length} coins moved more than ${UNUSUAL_MOVE_MULTIPLE}× its typical daily move in the last 24 hours.`);
-  } else unavailable.push("Crypto prices couldn't be loaded, so crypto moves weren't checked.");
+  } else unavailable.push(NOTABLE_NO_CRYPTO);
 
   // 2. The US Treasury yield curve: inverted or flat.
   if (official) {
@@ -1945,9 +1947,9 @@ export async function dataSeries(series: string | undefined, countries: string |
   const econ = (economy?.indicators ?? []).filter((i) => i.series.length > 1);
   const worldMetas = WORLD_INDICATORS.filter((w) => world?.indicators.some((d) => d.id === w.id));
   const catalog = [
-    ...econ.map((i) => ({ id: i.id as string, name: i.name, unit: i.unit as string, points: i.series.length, source: i.source, needsCountry: false })),
-    ...worldMetas.map((w) => ({ id: `world_${w.id}`, name: `${w.name} by country`, unit: w.unit as string, points: world!.indicators.find((d) => d.id === w.id)!.rows[0]?.series.length ?? 0, source: world!.source.name, needsCountry: true })),
-    ...(world?.sharePrices ? [{ id: "world_share_prices", name: "Share prices by country (OECD, all shares, 2015 = 100)", unit: "index", points: world.sharePrices.rows[0]?.series.length ?? 0, source: OECD_SHARES_SOURCE.name, needsCountry: true }] : []),
+    ...econ.map((i) => ({ id: i.id as string, name: i.name, unit: i.unit as string, points: i.series.length, source: i.source, licence: SERIES_LICENCE[i.source] ?? `Credit ${i.source}; check its terms before reuse.`, needsCountry: false })),
+    ...worldMetas.map((w) => ({ id: `world_${w.id}`, name: `${w.name} by country`, unit: w.unit as string, points: world!.indicators.find((d) => d.id === w.id)!.rows[0]?.series.length ?? 0, source: world!.source.name, licence: `${world!.source.licence}. Credit the World Bank.`, needsCountry: true })),
+    ...(world?.sharePrices ? [{ id: "world_share_prices", name: "Share prices by country (OECD, all shares, 2015 = 100)", unit: "index", points: world.sharePrices.rows[0]?.series.length ?? 0, source: OECD_SHARES_SOURCE.name, licence: OECD_SHARES_SOURCE.licence, needsCountry: true }] : []),
   ];
   if (!catalog.length) return text("ATLAS Explain's data series couldn't be loaded right now. Nothing is shown in their place; try again later.", true);
   const asked = (series ?? "").split(",").map((w) => w.trim()).filter(Boolean);
@@ -1955,7 +1957,7 @@ export async function dataSeries(series: string | undefined, countries: string |
     const lines = catalog.map((c) => `- ${c.id}: ${c.name} (${c.unit}), ${c.points} points, ${c.source}${c.needsCountry ? "; give countries" : ""}`);
     return data(
       `Data series ATLAS Explain can give as rows, for charts, spreadsheets or reports:\n${lines.join("\n")}\n\nAsk for one to four by id or name, for example "us_cpi, uk_bank_rate", or "world_inflation" with countries "Japan, Germany". Crypto and stock prices aren't offered as data: their sources don't allow it.`,
-      { series: [], available: catalog.map((c) => ({ id: c.id, name: c.name, unit: c.unit, points: c.points, source: c.source })), csv: "" },
+      { series: [], available: catalog.map((c) => ({ id: c.id, name: c.name, unit: c.unit, points: c.points, source: c.source, licence: c.licence })), csv: "" },
     );
   }
   if (asked.length > 4) return text("Ask for at most four series at a time.", true);

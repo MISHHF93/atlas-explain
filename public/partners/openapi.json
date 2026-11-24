@@ -945,6 +945,24 @@
           }
         }
       }
+    },
+    "/catalog": {
+      "get": {
+        "summary": "Everything an organization can get, as one JSON object: tools with their input and output schemas, REST endpoints, data series, and what may be reused (public, no key)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The output catalog (schema atlas-explain-output-catalog-v1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

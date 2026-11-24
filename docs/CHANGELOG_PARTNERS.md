@@ -14,6 +14,12 @@ Each entry says what's new, where its numbers come from, under what licence, and
 
 **Status:** switched off. Partners still see one call per request, as before. Nothing is charged; switching credits on doesn't charge anything either. Billing is a separate, later step.
 
+## 2026-11-24: the output catalog, and no crypto prices on partner keys (1.30.0)
+
+- **`GET /api/v1/catalog`**, public: one JSON object with every connector tool a partner key can use (input and output JSON Schema), every REST endpoint, every data series with its licence, and what may be done with each.
+- **Fixed: crypto prices on `/mcp` with a partner key.** `evidence_brief`, `asset_details` and `notable_today` could still return Kraken or CoinGecko prices, which these docs said were not offered. A partner's call now can't read the crypto file at all; questions about a coin are refused (`-32602`), and the finished answer is checked again. The REST API already left them out of briefs and notable items. The public connector is unchanged.
+- `data_series`' list of available series now names each one's licence.
+
 ## 2026-11-24: borrowing and saving at home, in the glossary (1.29.0)
 
 - **15 new glossary terms** in a new group, "Borrowing and saving": principal, amortization, mortgage term, fixed and variable rates, prime rate, home equity, HELOC, down payment, refinancing, credit score, credit utilization, minimum payment, avalanche and snowball, GIC and CD, and deposit insurance (FDIC, CDIC and FSCS limits, the UK's at £120,000 since 1 December 2025). Each says where the US, Canada and the UK differ. Descriptive only.

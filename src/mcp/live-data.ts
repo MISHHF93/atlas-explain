@@ -309,6 +309,6 @@ export function handleRequest(request: Request, env: WorkerEnv, ctx?: WaitContex
   if (file) return serveData(request, env, file, ctx);
   // The partner sandbox (src/mcp/partner.ts): REST under /api/v1, and the connector under a partner key.
   if (path === API_PREFIX || path.startsWith(`${API_PREFIX}/`)) return handlePartnerApi(request, env.DATA, ownDataFetch(env, ctx), ctx);
-  if (path === MCP_PATH && bearer(request)?.startsWith("atlx_")) return handlePartnerMcp(request, env.DATA, ctx, (r) => handleHttp(r, ownDataFetch(env, ctx), onCall));
+  if (path === MCP_PATH && bearer(request)?.startsWith("atlx_")) return handlePartnerMcp(request, env.DATA, ctx, (r, guard) => handleHttp(r, guard(ownDataFetch(env, ctx)), onCall));
   return handleHttp(request, ownDataFetch(env, ctx), onCall);
 }

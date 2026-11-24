@@ -14,7 +14,9 @@ describe("the partner page, API spec and samples stay in step with the API", () 
       expect(spec.paths[path], path).toBeDefined();
       expect(spec.paths[path]![e.method.toLowerCase()], `${e.method} ${path}`).toBeDefined();
     }
-    expect(Object.keys(spec.paths)).toHaveLength(ENDPOINTS.length);
+    // Plus the public output catalog, which needs no key.
+    expect(spec.paths["/catalog"]!.get).toMatchObject({ security: [] });
+    expect(Object.keys(spec.paths)).toHaveLength(ENDPOINTS.length + 1);
   });
 
   it("every sample linked from the page exists, is a real answer, and has no crypto prices", () => {

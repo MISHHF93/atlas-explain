@@ -13,7 +13,8 @@ or for sale: the partner terms below are a draft for a lawyer to review first.
 | REST | `https://atlas-explain-mcp.atlas-explain.workers.dev/api/v1/…` | A partner's own app or back end |
 | MCP | `https://atlas-explain-mcp.atlas-explain.workers.dev/mcp` with the partner key | A partner's AI agent |
 
-Both take `Authorization: Bearer atlx_sbx_…`. `GET /api/v1` lists the endpoints without a key. The public
+Both take `Authorization: Bearer atlx_sbx_…`. `GET /api/v1` lists the endpoints without a key, and
+`GET /api/v1/catalog` (no key) gives everything as one JSON object: tools with their schemas, endpoints, series and reuse rules. The public
 connector at `/mcp` without a key is unchanged and stays free.
 
 ## Endpoints
@@ -42,7 +43,10 @@ Every answer is `{ "data": …, "meta": { "apiVersion", "generatedAt", "educatio
 `missing_key` / `invalid_key` (401), `not_licensed` (403), `not_found` (404), `method_not_allowed` (405),
 `daily_limit` (429, with `Retry-After`), `not_available` (404 or 503).
 
-On `/mcp` a partner key hides `crypto_prices`, `price_history` and `market_depth` and refuses calls to them.
+On `/mcp` a partner key hides `crypto_prices`, `price_history` and `market_depth` and refuses calls to them. Since
+1.30.0 a partner's call also can't read the crypto file at all, so `evidence_brief` and `asset_details` refuse
+questions about a coin and `notable_today` leaves crypto moves out; before that, those three could still carry
+crypto prices on `/mcp`. The finished answer is checked again before it is sent.
 
 ## Limits
 

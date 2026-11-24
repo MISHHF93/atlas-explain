@@ -5,24 +5,44 @@
  *   - REST at /api/v1/…: JSON with what must be credited, education only.
  *   - The same connector at /mcp, identified by "Authorization: Bearer atlx_…"; the public connector stays
  *     free and keyless.
- *   - Crypto prices are left out everywhere (Kraken's and CoinGecko's terms don't allow redistribution).
+ *   - Crypto prices are left out everywhere (Kraken's and CoinGecko's terms don't allow redistribution):
+ *     a partner's call can't read the crypto file at all (withoutCrypto), and the finished answer is checked
+ *     again for the feeds' credit lines before it is sent.
+ *   - GET /api/v1/catalog, public: everything an organization can get, as one JSON object (./catalog.ts).
  *
  * Keys are stored only as SHA-256 hashes (KV "partners/keys/<hash>"), issued by scripts/partners/issue-key.mjs.
  * Each key has a daily call limit, counted in this Worker instance and written to KV every 25 calls or
  * 5 minutes, so usage stays inside the free plan's 1,000 KV writes a day; the limit is approximate by design.
  */
 import { searchTerms } from "../core/terms";
-import { EDUCATION_LINE, compareCountries, dataSeries, debtPayoffTool, decisionExplainer, economySnapshot, evidenceBrief, inflationCalculatorTool, moneyMathsTool, notableToday, officialFigures, rateChangeImpactTool, scamRedFlags, speechTracker, treasuryAuctions, upcomingEvents, whatsChangedTool, type Fetcher, type ToolResult } from "./server";
+import { EDUCATION_LINE, NOTABLE_NO_CRYPTO, coinFor, compareCountries, dataSeries, debtPayoffTool, decisionExplainer, economySnapshot, evidenceBrief, inflationCalculatorTool, moneyMathsTool, notableToday, officialFigures, rateChangeImpactTool, scamRedFlags, speechTracker, treasuryAuctions, upcomingEvents, whatsChangedTool, type Fetcher, type ToolResult } from "./server";
 import { comingUp } from "../core/coming-up";
 import { eventIcs } from "../core/scenarios";
 import { readEconomyFile } from "../data/economy";
-import { ECONOMY_DATA_URL } from "../core/links";
+import { CRYPTO_DATA_URL, ECONOMY_DATA_URL } from "../core/links";
+import { CRYPTO_CREDIT } from "../data/crypto";
+import { outputCatalog } from "./catalog";
 
 export const API_PREFIX = "/api/v1";
 export const API_VERSION = "v1-sandbox";
 const KEY_PATTERN = /^atlx_(sbx|live)_[A-Za-z0-9]{32}$/;
 /** Tools a partner key can't use: crypto prices aren't licensed for redistribution. */
 export const PARTNER_HIDDEN_TOOLS: ReadonlySet<string> = new Set(["crypto_prices", "price_history", "market_depth"]);
+const NOT_LICENSED = "Crypto prices come from sources that don't allow redistribution, so coins aren't offered to partners.";
+const NO_CRYPTO_HERE = "Crypto moves aren't part of partner answers.";
+
+/** Every crypto price in the connector comes from one file; a partner's call can't read it, whichever tool asks. */
+export function withoutCrypto(fetcher: Fetcher): Fetcher {
+  return async (url, init) => (url.startsWith(CRYPTO_DATA_URL) ? new Response("Not licensed for partners", { status: 403 }) : fetcher(url, init));
+}
+/** True when an answer carries a crypto feed's credit line, so something got past withoutCrypto. */
+const carriesCrypto = (body: string): boolean => Object.values(CRYPTO_CREDIT).some((c) => body.includes(c));
+/** notable_today without the crypto file says it "couldn't be loaded"; for a partner, say what's true instead. */
+const tidyNotable = (body: string): string => body.replaceAll(NOTABLE_NO_CRYPTO, NO_CRYPTO_HERE);
+/** A question about a coin, to a tool that would answer with its price. */
+const asksAboutCoin = (name: string, args: Record<string, unknown> | undefined): boolean =>
+  (name === "evidence_brief" || name === "asset_details") && typeof args?.asset === "string" && coinFor(args.asset) !== undefined;
+
 /**
  * ATLAS credits (docs/USAGE_PRICING.md, section 3). With credits on, a key's daily limit is counted in credits:
  * a simple answer costs 1, a series or the notable list 2, a brief or a decision explanation 3, and an
@@ -215,12 +235,19 @@ function meta(name: string) {
 }
 
 /** Handles /api/v1 and /api/v1/… . */
-export async function handlePartnerApi(request: Request, store: PartnerStore, fetcher: Fetcher, ctx?: Ctx, now = Date.now()): Promise<Response> {
+export async function handlePartnerApi(request: Request, store: PartnerStore, rawFetcher: Fetcher, ctx?: Ctx, now = Date.now()): Promise<Response> {
+  const fetcher = withoutCrypto(rawFetcher);
   const url = new URL(request.url);
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   const route = url.pathname.slice(API_PREFIX.length).replace(/^\/+|\/+$/g, "");
   // The index is public: what exists, and how to ask for a key.
-  if (!route) return json({ apiVersion: API_VERSION, about: "ATLAS Explain partner sandbox: education-only explanations and sourced official figures. Send 'Authorization: Bearer atlx_…'.", endpoints: ENDPOINTS, docs: meta("index").terms });
+  if (!route) return json({ apiVersion: API_VERSION, about: "ATLAS Explain partner sandbox: education-only explanations and sourced official figures. Send 'Authorization: Bearer atlx_…'.", endpoints: ENDPOINTS, catalog: `${url.origin}${API_PREFIX}/catalog`, docs: meta("index").terms });
+  // The output catalog is public too: an organization can see every output before asking for a key.
+  if (route === "catalog") {
+    if (request.method !== "GET" && request.method !== "HEAD") return problem(405, "method_not_allowed", `Use GET for ${API_PREFIX}/catalog.`);
+    const list = (await dataSeries(undefined, undefined, fetcher)).structuredContent?.available as { id: string; name: string; unit: string; points: number; source: string; licence: string }[] | undefined;
+    return json(outputCatalog({ endpoints: ENDPOINTS, credit: CREDIT, hidden: PARTNER_HIDDEN_TOOLS, series: list ?? null, now }), 200, { "Cache-Control": list ? "public, max-age=3600" : "no-store" });
+  }
   const gate = await admit(request, store, ctx, now);
   if (!gate.ok) return gate.response;
   const q = (k: string) => url.searchParams.get(k) ?? undefined;
@@ -243,17 +270,14 @@ export async function handlePartnerApi(request: Request, store: PartnerStore, fe
     }
     case "brief": {
       if (!want("GET") || !arg) break;
-      const r = await evidenceBrief(decodeURIComponent(arg), fetcher, now);
-      const cls = (r.structuredContent?.asset as { assetClass?: string } | undefined)?.assetClass;
-      if (cls === "crypto") return problem(403, "not_licensed", "Crypto prices come from sources that don't allow redistribution, so briefs on coins aren't offered here.");
-      return envelope("brief", r, gate);
+      const asset = decodeURIComponent(arg);
+      if (coinFor(asset)) return problem(403, "not_licensed", NOT_LICENSED);
+      return envelope("brief", await evidenceBrief(asset, fetcher, now), gate);
     }
     case "notable": {
       if (!want("GET")) break;
       const r = await notableToday(fetcher, now);
-      const sc = r.structuredContent as { observations?: { kind: string }[] } | undefined;
-      if (sc?.observations) sc.observations = sc.observations.filter((o) => o.kind !== "crypto_move");
-      return envelope("notable", r, gate);
+      return envelope("notable", JSON.parse(tidyNotable(JSON.stringify(r))) as ToolResult, gate);
     }
     case "calendar": {
       if (!want("GET")) break;
@@ -325,14 +349,16 @@ export async function handlePartnerApi(request: Request, store: PartnerStore, fe
 
 /**
  * A partner's agent on /mcp: the key is checked and counted, crypto tools are hidden from tools/list and
- * refused in tools/call. Everything else is the public connector unchanged.
+ * refused in tools/call, and so are questions about a coin. `next` must read its data through `guard`
+ * (withoutCrypto); should a caller not, an answer carrying a crypto feed's credit is refused. Everything
+ * else is the public connector unchanged.
  */
-export async function handlePartnerMcp(request: Request, store: PartnerStore, ctx: Ctx | undefined, next: (r: Request) => Promise<Response>, now = Date.now()): Promise<Response> {
-  if (request.method !== "POST") return next(request);
+export async function handlePartnerMcp(request: Request, store: PartnerStore, ctx: Ctx | undefined, next: (r: Request, guard: (f: Fetcher) => Fetcher) => Promise<Response>, now = Date.now()): Promise<Response> {
+  if (request.method !== "POST") return next(request, withoutCrypto);
   const gate = await admit(request, store, ctx, now);
   if (!gate.ok) return gate.response;
   const raw = await request.text();
-  type Msg = { id?: unknown; method?: string; params?: { name?: string } };
+  type Msg = { id?: unknown; method?: string; params?: { name?: string; arguments?: Record<string, unknown> } };
   const parse = (): Msg | null => {
     try {
       const m = JSON.parse(raw) as unknown;
@@ -345,7 +371,17 @@ export async function handlePartnerMcp(request: Request, store: PartnerStore, ct
   if (msg?.method === "tools/call" && msg.params?.name && PARTNER_HIDDEN_TOOLS.has(msg.params.name)) {
     return json({ jsonrpc: "2.0", id: msg.id ?? null, error: { code: -32602, message: `${msg.params.name} isn't available to partner keys: crypto prices aren't licensed for redistribution.` } });
   }
-  const res = await next(new Request(request.url, { method: "POST", headers: request.headers, body: raw }));
+  const refuse = () => json({ jsonrpc: "2.0", id: msg?.id ?? null, error: { code: -32602, message: NOT_LICENSED } });
+  const isCall = msg?.method === "tools/call";
+  if (isCall && typeof msg.params?.name === "string" && asksAboutCoin(msg.params.name, msg.params.arguments)) return refuse();
+  let res = await next(new Request(request.url, { method: "POST", headers: request.headers, body: raw }), withoutCrypto);
+  if (isCall) {
+    const answer = await res.text();
+    if (carriesCrypto(answer)) return refuse();
+    const headers = new Headers(res.headers);
+    headers.delete("Content-Length");
+    res = new Response(tidyNotable(answer), { status: res.status, headers });
+  }
   if (creditsOn) return chargeMcp(res, msg, gate);
   if (msg?.method !== "tools/list" || !res.ok) return res;
   const out = (await res.json()) as { result?: { tools?: { name: string }[] } };
