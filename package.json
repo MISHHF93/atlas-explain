@@ -11,7 +11,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:mcp": "vite build --config vite.mcp.config.ts",
-    "deploy:mcp": "npx wrangler@4 deploy",
+    "deploy:mcp": "wrangler deploy",
     "data:capture": "node scripts/data/build-data.ts",
     "data:publish": "node scripts/data/build-data.ts --upload",
     "preview": "vite preview",
@@ -34,7 +34,8 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "4.167.0"
   },
   "overrides": {
     "@grpc/grpc-js": "^1.13.6",

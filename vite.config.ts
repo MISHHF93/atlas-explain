@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
 import { firebaseChunkGroups } from "./chunking.config";
+import { devWorker } from "./src/site/dev-worker";
 import { applySiteFrame } from "./src/site/frame";
 import { rewriteFor, type HostingRewrite } from "./src/site/hosting-routes";
 
@@ -41,9 +42,11 @@ const siteRoutes = {
 const LOCAL = { host: "127.0.0.1", port: 5173, strictPort: true } as const;
 
 export default defineConfig({
-  plugins: [siteFrame, siteRoutes],
+  // devWorker: the connector Worker runs behind the same address in development (src/site/dev-worker.ts).
+  plugins: [siteFrame, siteRoutes, devWorker()],
+  // One local address for development and for previewing a build: http://127.0.0.1:5173.
   server: LOCAL,
-  preview: { ...LOCAL, port: 4173 },
+  preview: LOCAL,
   build: {
     chunkSizeWarningLimit: 500,
     rolldownOptions: {

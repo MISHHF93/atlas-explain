@@ -44,9 +44,11 @@ describe("ATLAS Explain MCP server", () => {
   });
 
   it("is hosted online, never downloaded, and documented", () => {
-    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string>; devDependencies: Record<string, string> };
     expect(pkg.scripts["build:mcp"]).toBe("vite build --config vite.mcp.config.ts");
-    expect(pkg.scripts["deploy:mcp"]).toBe("npx wrangler@4 deploy");
+    // The pinned wrangler devDependency deploys, the same one npm run dev runs locally.
+    expect(pkg.scripts["deploy:mcp"]).toBe("wrangler deploy");
+    expect(pkg.devDependencies.wrangler).toMatch(/^4\.\d+\.\d+$/);
     expect(readFileSync("wrangler.toml", "utf8")).toContain('main = "src/mcp/worker.ts"');
     expect(existsSync("mcp/atlas-explain-mcp.mjs")).toBe(false);
     expect(existsSync("docs/MCP.md")).toBe(true);

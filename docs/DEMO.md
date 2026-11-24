@@ -71,12 +71,7 @@ Stills in `docs/screenshots/`. `site-home`, `site-connect`, `signin`, `hosted-he
 - `signin.png`: the Sign in page (/signin)
 
 - `hosted-header.png` — hosted web app, pill **Live prices**, header links Today, Learn and Assets
-- `local-header.png` — local loopback build, pill **ATLAS connected** (retake with ATLAS running: it predates the one-page layout and shows "ATLAS local"; load the app at `http://localhost:5173`, not `[::1]`, since the app looks for ATLAS only on `localhost` and `127.0.0.1`)
-- `desk-explain-link.png` — Markets desk with **Explain this move** and **Concepts**
-- `local-full.png` — Today on a local build with ATLAS: today's brief and the paper signal light
 - `hosted-full.png` — hosted app, Today: the biggest crypto moves with source and time
-- `glossary-shadow.png` — `#concept=shadow` educational question, nothing sent yet
-- `signal-grey.png` — the paper signal light, grey, with "Why this colour?"
 
 Still waiting on a real take on the presenter's laptop with Gemini Nano:
 

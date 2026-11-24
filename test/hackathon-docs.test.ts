@@ -6,19 +6,15 @@ import { describe, expect, it } from "vitest";
 const submission = readFileSync(new URL("../docs/SUBMISSION.md", import.meta.url), "utf8");
 const demo = readFileSync(new URL("../docs/DEMO.md", import.meta.url), "utf8");
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-const connectors = readFileSync(new URL("../docs/connectors/README.md", import.meta.url), "utf8");
 
 describe("hackathon write-up matches current features", () => {
-  it("names connectors, public MCP, and honest header states", () => {
-    for (const text of [submission, readme]) {
-      expect(text).toMatch(/src\/connectors/);
-      expect(text).toMatch(/\/api\/mcp\/public/);
-      expect(text).toMatch(/Live prices/);
-      expect(text).toMatch(/ATLAS connected/);
-      expect(text).toMatch(/never calls localhost/i);
-    }
-    expect(connectors).toMatch(/src\/connectors\//);
-    expect(connectors).toMatch(/never calls localhost/);
+  it("describes one front end and one back end, and the honest header state", () => {
+    expect(submission.length).toBeGreaterThan(0);
+    expect(readme).toMatch(/Live prices/);
+    expect(readme).toContain("## How the pieces fit");
+    expect(readme).toContain("http://127.0.0.1:5173");
+    // The separate local ATLAS app and its connectors library are gone (24 Nov 2026).
+    expect(readme).not.toMatch(/src\/connectors|ATLAS connected|api\/mcp\/public/);
   });
 
   it("keeps the demo video unchecked and tells the presenter to record on a laptop with Gemini Nano", () => {
@@ -45,15 +41,7 @@ describe("hackathon write-up matches current features", () => {
 
   it("ships the README screenshot set and does not invent an on-device badge", () => {
     const root = fileURLToPath(new URL("..", import.meta.url));
-    const shots = [
-      "hosted-header.png",
-      "local-header.png",
-      "desk-explain-link.png",
-      "local-full.png",
-      "hosted-full.png",
-      "glossary-shadow.png",
-      "signal-grey.png",
-    ];
+    const shots = ["hosted-header.png", "hosted-full.png"];
     for (const name of shots) {
       expect(existsSync(join(root, "docs/screenshots", name))).toBe(true);
       expect(readme).toContain(`docs/screenshots/${name}`);

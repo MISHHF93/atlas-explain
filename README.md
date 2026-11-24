@@ -62,8 +62,8 @@ Without a Firebase web config and a reCAPTCHA Enterprise site key, `src/main.ts`
 
 ```mermaid
 flowchart TD
-  user[Move card, question, optional notes] --> desk[Web desk]
-  desk --> core[src/core validation, prompt, path]
+  user[Move card, question, optional notes] --> app[Web app]
+  app --> core[src/core validation, prompt, path]
   core --> mode{Inference mode}
   mode -->|short card, prefer on-device| device[initializeDeviceModel then generateContent]
   mode -->|private notes| deviceOnly[ONLY_ON_DEVICE with notes]
@@ -88,6 +88,8 @@ Requirements: Node.js 22 or newer, a Firebase project on the Spark plan or above
 npm install
 npm run dev
 ```
+
+`npm run dev` serves everything at one address, **http://127.0.0.1:5173**: the website, the web app (`/app`), the owner page (`/admin`) and the connector Worker (`/mcp`, `/health`, `/api/v1`, `/admin/stats`). The Worker runs under `wrangler dev` behind that address (`src/site/dev-worker.ts`); set `ATLAS_DEV_WORKER=0` to run the front end alone. Locally the Worker has an empty data store, so the site and app keep reading the published data from the live Worker. `npm run preview` serves a production build at the same address.
 
 The public web config for project `atlas-explain` is committed in `src/platform/web/firebaseConfig.ts` and is used when the `VITE_` variables are unset. `.env.example` lists optional overrides for a different Firebase project. Copy it to `.env.local` only if you need those overrides. Do not commit service-account keys.
 
@@ -134,53 +136,15 @@ npx firebase-tools deploy --only hosting,firestore:rules,remoteconfig
 
 Billing is shipped switched off. `billing_enabled` defaults to false, checkout is not shown, and the badge says "Free during beta". See [docs/MONETIZATION.md](docs/MONETIZATION.md) before changing that.
 
-## Deep links, desk hand-off, and concepts
+## How the pieces fit
 
-ATLAS Explain can load a public move card from a link or from a message sent by an allowed page. It never auto-runs an explanation. The user still clicks **Explain the move**. Notes, watchlists, balances, and account fields are stripped on the way in and are not written into the editor.
+One repository, one front end and one back end:
 
-The context envelope is version 1:
+- **Front end** (Vite, deployed to Firebase Hosting): the website (`index.html`, `partners.html`, `privacy.html`, `terms.html`), the web app (`app.html`, `src/web/` and `src/wallet/`), the owner page (`admin.html`) and one embeddable calculator (`embed/`).
+- **Back end**: the Cloudflare Worker (`src/mcp/`): the MCP connector, the partner REST API, the owner's usage stats, the scheduled data jobs and the published data files. Firebase supplies sign-in, saved data, settings and Gemini for the web app.
+- **Data**: one copy. The Worker's data jobs capture prices and official figures; the connector, the partner API and the web app all read those same files. The browser never fetches a price feed itself (it only streams Kraken's public ticks between captures).
 
-```json
-{
-  "v": 1,
-  "kind": "move_card",
-  "source": "atlas_desk",
-  "card": { "symbol": "BTCUSDT", "asOf": "2026-11-12", "movePct": -6.2 },
-  "question": "Why might some traders buy this dip while others sell?",
-  "concepts": ["shadow"]
-}
-```
-
-A bare public move card (the existing JSON shape) is also accepted. Allowed card fields are the public `MoveCard` keys in `src/core/move-card.ts`. Forbidden keys include `notes`, `watchlist`, balances, positions, account identifiers, and secrets.
-
-**Hash links** keep the payload out of Hosting query logs:
-
-- `https://atlas-explain.web.app/app/explain#c=<base64url(JSON)>` (links made for `/` still work; they are forwarded here)
-- `https://atlas-explain.web.app/app/explain#card=<uri-encoded JSON>` for a small card
-- `https://atlas-explain.web.app/app/explain#concept=shadow` to open a glossary entry without a card
-
-`src/core/context-link.ts` builds and parses these hashes. Concept ids live in `src/core/glossary.ts`: `shadow`, `signal15`, `chart_layers`, `live_lock`, `paper_only`, `drop_study`, `hybrid_inference`, and `move_card`.
-
-**postMessage**, for a same-machine ATLAS desk tab:
-
-```js
-otherWindow.postMessage(
-  { type: "atlas-explain/v1/load", payload: envelope, concept: "chart_layers" },
-  "https://atlas-explain.web.app",
-);
-```
-
-The app accepts that type only from `https://atlas-explain.web.app`, `https://atlas-explain.firebaseapp.com`, `http://localhost:3000`, and `http://127.0.0.1:3000`. It replies with `atlas-explain/v1/loaded` or `atlas-explain/v1/error`. This repository still does not contain ATLAS models, signals, or account data.
-
-## Connecting to ATLAS
-
-ATLAS Explain never reads balances, positions, or account ids. When it talks to the private ATLAS desk, it uses this repo's connectors library (`src/connectors/`, see [docs/connectors/README.md](docs/connectors/README.md)):
-
-1. The hosted web app at https://atlas-explain.web.app **never calls localhost**. Its header pill says **Live prices** when the public price feed answers, and shows nothing otherwise. Everything ATLAS-only (the Signal tab, the desk menu item, the ATLAS digest) is hidden.
-2. A local loopback build may probe ATLAS on this computer. They prefer public MCP (`POST /api/mcp/public`) and fall back to the REST catalog (`GET /api/explain/assets`).
-3. The header says **ATLAS connected** only when one of those probes actually answers, and only then do the ATLAS-only parts appear. It says **ATLAS desk** when this tab is the Markets desk and **Offline** when the browser is offline. It does not fake a connection, and it never shows a "Not connected" state to people who don't run ATLAS.
-
-The desk can also open this app with a public move card (`#c=` / `#card=`) or a glossary concept (`#concept=`). Loading a card does not run the model until you click **Explain the move**.
+Older links to the app's legal pages (`#/terms`, `#/privacy`) still open them. The links and messages a separate local ATLAS app once used (`#c=`, `#card=`, `#concept=`, `postMessage` from `localhost:3000`) were removed on 24 Nov 2026, with everything else that talked to that app.
 
 ## For AI assistants (MCP)
 
@@ -188,36 +152,15 @@ ATLAS Explain also has a free, read-only MCP server hosted online (Cloudflare Wo
 
 ## Screenshots
 
-Stills live in [docs/screenshots/](docs/screenshots/). Six were retaken on 15 Nov 2026 from the live site and a local build; `local-header.png` (ATLAS was not running at the time) and `desk-explain-link.png` (a crop of the private desk) are older. They show honest header states, the desk hand-off, today's brief, and the grey signal light. An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
+Stills live in [docs/screenshots/](docs/screenshots/). An on-device badge is **not** included: that still needs a recording on a laptop with Gemini Nano (see [docs/DEMO.md](docs/DEMO.md)).
 
 ![Hosted app header](docs/screenshots/hosted-header.png)
 
-The hosted web app at https://atlas-explain.web.app/app is one page: Explain at the top, then Today, Learn and Assets, reached from the header. The pill shows **Live prices**; the hosted app never calls localhost.
-
-![ATLAS local header](docs/screenshots/local-header.png)
-
-A local loopback build shows **ATLAS connected** only when public MCP or the REST catalog on this computer answers. (This still predates the one-page layout and shows the older "ATLAS local" label.)
-
-![Explain this move on the ATLAS desk](docs/screenshots/desk-explain-link.png)
-
-The private ATLAS desk can open this app with a public move card (`#c=` / `#card=`) or a glossary concept (`#concept=`).
-
-![Today's brief when ATLAS is local](docs/screenshots/local-full.png)
-
-With ATLAS on this computer, Today adds the brief and the paper signal light. An earlier official note is labelled as not today's, and is not presented as today's brief.
+The web app at https://atlas-explain.web.app/app is one page: Explain at the top, then Today, Economy, Assets, Tools and Learn, reached from the header. The pill shows **Live prices** once prices arrive.
 
 ![Hosted app, Today](docs/screenshots/hosted-full.png)
 
-On the hosted app, Today shows the biggest crypto moves from the public price feed, with the source and time. The ATLAS digest and the signal light appear only when ATLAS runs on the visitor's own computer.
-
-![Glossary concept question](docs/screenshots/glossary-shadow.png)
-
-A `#concept=shadow` link opens "Explain a market move" with an educational question filled in. Nothing is sent until you click **Explain the move**.
-
-![Signal light, grey default](docs/screenshots/signal-grey.png)
-
-The paper signal light stays grey unless the desk sends its public signal. This is the honest default when there is not enough evidence, or when this tab is not the desk.
-
+Today shows the biggest crypto moves over 24 hours from the captured prices, with the source and time.
 
 ## On-device model in Chrome
 

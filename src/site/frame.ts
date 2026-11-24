@@ -12,7 +12,7 @@
  * account (src/site/site.ts). There is no separate "Sign in" or "The app" link: they led to the
  * same place.
  */
-import { DATA_SITE_URL, EDUCATION_LINE, MCP_URL } from "../core/links";
+import { DATA_SITE_URL, EDUCATION_LINE, MCP_URL } from "../core/links.ts";
 
 export type SitePage = "home" | "partners" | "privacy" | "terms" | "404";
 
